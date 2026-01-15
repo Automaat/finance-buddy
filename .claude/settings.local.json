@@ -1,0 +1,15 @@
+{
+	"permissions": {
+		"allow": [
+			"Bash(python3:*)",
+			"Bash(unzip:*)",
+			"Bash(git init:*)",
+			"Bash(git checkout:*)",
+			"Bash(npm create svelte@latest --template skeleton --types typescript --no-eslint --no-prettier --no-vitest --no-playwright .)",
+			"Bash(npm install)",
+			"Bash(npm view:*)",
+			"Bash(npm run check:*)",
+			"Bash(npm run lint)"
+		]
+	}
+}
