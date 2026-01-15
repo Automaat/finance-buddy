@@ -24,6 +24,5 @@ services:
   #   restart: unless-stopped
   #   ports:
   #     - '5432:5432'
-
 # volumes:
 #   postgres-data:
