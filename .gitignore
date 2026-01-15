@@ -1,0 +1,47 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# SvelteKit
+.svelte-kit
+build
+.output
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Data files
+*.xlsx
+Finansowa Forteca.xlsx
+*.db
+*.sqlite
+data/
+
+# Testing
+coverage
+
+# Misc
+.vercel
+.netlify
