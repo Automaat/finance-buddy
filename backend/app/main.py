@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api import dashboard
 from app.core.config import settings
 
 app = FastAPI(title="Finance Buddy API", version="1.0.0")
@@ -12,6 +13,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include routers
+app.include_router(dashboard.router)
 
 
 @app.get("/health")
