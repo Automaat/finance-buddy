@@ -11,31 +11,84 @@
 	];
 </script>
 
-<div class="min-h-screen bg-background">
-	<nav class="border-b bg-card">
-		<div class="container mx-auto px-4 py-4">
-			<div class="flex items-center justify-between">
-				<h1 class="text-2xl font-bold text-primary">💪 Finansowa Forteca</h1>
+<div class="app">
+	<nav class="navbar">
+		<div class="container nav-container">
+			<h1 class="brand">💪 Finansowa Forteca</h1>
 
-				<div class="flex gap-2">
-					{#each navItems as item}
-						<a
-							href={item.href}
-							class="px-4 py-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors font-medium"
-							class:bg-primary={$page.url.pathname === item.href}
-							class:text-primary-foreground={$page.url.pathname === item.href}
-							class:text-foreground={$page.url.pathname !== item.href}
-						>
-							<span class="mr-2">{item.icon}</span>
-							{item.label}
-						</a>
-					{/each}
-				</div>
+			<div class="nav-links">
+				{#each navItems as item}
+					<a href={item.href} class="nav-link" class:active={$page.url.pathname === item.href}>
+						<span class="icon">{item.icon}</span>
+						{item.label}
+					</a>
+				{/each}
 			</div>
 		</div>
 	</nav>
 
-	<main class="container mx-auto px-4 py-8">
+	<main class="container main">
 		<slot />
 	</main>
 </div>
+
+<style>
+	.app {
+		min-height: 100vh;
+	}
+
+	.navbar {
+		background: var(--color-bg-card);
+		border-bottom: 1px solid var(--color-border);
+		margin-bottom: var(--size-6);
+	}
+
+	.nav-container {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding-block: var(--size-4);
+	}
+
+	.brand {
+		font-size: var(--font-size-4);
+		font-weight: var(--font-weight-7);
+		color: var(--color-primary);
+		margin: 0;
+	}
+
+	.nav-links {
+		display: flex;
+		gap: var(--size-2);
+	}
+
+	.nav-link {
+		display: flex;
+		align-items: center;
+		gap: var(--size-2);
+		padding: var(--size-2) var(--size-4);
+		border-radius: var(--radius-2);
+		color: var(--color-text);
+		text-decoration: none;
+		font-weight: var(--font-weight-5);
+		transition: all 0.2s;
+	}
+
+	.nav-link:hover {
+		background: var(--color-accent);
+		color: var(--nord6);
+	}
+
+	.nav-link.active {
+		background: var(--color-primary);
+		color: var(--nord6);
+	}
+
+	.icon {
+		font-size: var(--font-size-3);
+	}
+
+	.main {
+		padding-block: var(--size-6);
+	}
+</style>

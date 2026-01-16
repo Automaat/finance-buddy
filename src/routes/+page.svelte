@@ -1,8 +1,11 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import * as echarts from 'echarts';
 	import type { EChartsOption } from 'echarts';
-	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import Card from '$lib/components/Card.svelte';
+	import CardHeader from '$lib/components/CardHeader.svelte';
+	import CardTitle from '$lib/components/CardTitle.svelte';
+	import CardContent from '$lib/components/CardContent.svelte';
 	import { formatPLN, formatPercent } from '$lib/utils/format';
 	import { calculateChange } from '$lib/utils/calculations';
 
@@ -129,66 +132,141 @@
 	<title>Dashboard | Finansowa Forteca</title>
 </svelte:head>
 
-<div class="space-y-8">
-	<div>
-		<h1 class="text-4xl font-bold mb-2">Dashboard</h1>
-		<p class="text-muted-foreground">Twoja sytuacja finansowa w jednym miejscu</p>
+<div class="dashboard">
+	<div class="page-header">
+		<h1>Dashboard</h1>
+		<p class="subtitle">Twoja sytuacja finansowa w jednym miejscu</p>
 	</div>
 
 	<!-- KPI Cards -->
-	<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+	<div class="kpi-grid">
 		<Card>
 			<CardHeader>
-				<CardTitle class="text-sm font-medium">Wartość Netto</CardTitle>
+				<CardTitle>Wartość Netto</CardTitle>
 			</CardHeader>
 			<CardContent>
-				<div class="text-3xl font-bold">{formatPLN(data.current_net_worth)}</div>
-				<p
-					class="text-sm mt-2"
-					class:text-nord-14={data.change_vs_last_month >= 0}
-					class:text-nord-11={data.change_vs_last_month < 0}
-				>
+				<div class="kpi-value">{formatPLN(data.current_net_worth)}</div>
+				<p class="kpi-change" class:positive={data.change_vs_last_month >= 0} class:negative={data.change_vs_last_month < 0}>
 					{data.change_vs_last_month >= 0 ? '↑' : '↓'}
 					{formatPLN(Math.abs(data.change_vs_last_month))}
 					({formatPercent(Math.abs(change.percent))})
-					<span class="text-muted-foreground">vs poprzedni miesiąc</span>
+					<span class="muted">vs poprzedni miesiąc</span>
 				</p>
 			</CardContent>
 		</Card>
 
 		<Card>
 			<CardHeader>
-				<CardTitle class="text-sm font-medium">Aktywa</CardTitle>
+				<CardTitle>Aktywa</CardTitle>
 			</CardHeader>
 			<CardContent>
-				<div class="text-3xl font-bold text-nord-14">{formatPLN(data.total_assets)}</div>
-				<p class="text-sm text-muted-foreground mt-2">Suma wszystkich aktywów</p>
+				<div class="kpi-value positive">{formatPLN(data.total_assets)}</div>
+				<p class="kpi-subtitle">Suma wszystkich aktywów</p>
 			</CardContent>
 		</Card>
 
 		<Card>
 			<CardHeader>
-				<CardTitle class="text-sm font-medium">Zobowiązania</CardTitle>
+				<CardTitle>Zobowiązania</CardTitle>
 			</CardHeader>
 			<CardContent>
-				<div class="text-3xl font-bold text-nord-11">{formatPLN(data.total_liabilities)}</div>
-				<p class="text-sm text-muted-foreground mt-2">Suma wszystkich zobowiązań</p>
+				<div class="kpi-value negative">{formatPLN(data.total_liabilities)}</div>
+				<p class="kpi-subtitle">Suma wszystkich zobowiązań</p>
 			</CardContent>
 		</Card>
 	</div>
 
 	<!-- Charts -->
-	<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+	<div class="charts-grid">
 		<Card>
-			<CardContent class="p-6">
-				<div bind:this={chartContainer} class="w-full h-96"></div>
+			<CardContent>
+				<div bind:this={chartContainer} class="chart-container"></div>
 			</CardContent>
 		</Card>
 
 		<Card>
-			<CardContent class="p-6">
-				<div bind:this={pieChartContainer} class="w-full h-96"></div>
+			<CardContent>
+				<div bind:this={pieChartContainer} class="chart-container"></div>
 			</CardContent>
 		</Card>
 	</div>
 </div>
+
+<style>
+	.dashboard {
+		display: flex;
+		flex-direction: column;
+		gap: var(--size-8);
+	}
+
+	.page-header h1 {
+		font-size: var(--font-size-6);
+		font-weight: var(--font-weight-8);
+		margin: 0 0 var(--size-2) 0;
+	}
+
+	.subtitle {
+		color: var(--color-text-muted);
+		font-size: var(--font-size-2);
+	}
+
+	.kpi-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+		gap: var(--size-6);
+	}
+
+	.kpi-value {
+		font-size: var(--font-size-6);
+		font-weight: var(--font-weight-7);
+		margin-bottom: var(--size-2);
+	}
+
+	.kpi-value.positive {
+		color: var(--color-success);
+	}
+
+	.kpi-value.negative {
+		color: var(--color-error);
+	}
+
+	.kpi-change {
+		font-size: var(--font-size-1);
+		margin: var(--size-2) 0 0 0;
+	}
+
+	.kpi-change.positive {
+		color: var(--color-success);
+	}
+
+	.kpi-change.negative {
+		color: var(--color-error);
+	}
+
+	.kpi-subtitle {
+		font-size: var(--font-size-1);
+		color: var(--color-text-muted);
+		margin: var(--size-2) 0 0 0;
+	}
+
+	.muted {
+		color: var(--color-text-muted);
+	}
+
+	.charts-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+		gap: var(--size-6);
+	}
+
+	.chart-container {
+		width: 100%;
+		height: 400px;
+	}
+
+	@media (max-width: 768px) {
+		.charts-grid {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>
