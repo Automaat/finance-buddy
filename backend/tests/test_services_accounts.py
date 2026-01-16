@@ -245,9 +245,7 @@ def test_update_account_success(test_db_session):
     account_id = account.id
 
     # Update account
-    data = AccountUpdate(
-        name="Updated Name", category="ike", owner="Ewa", currency="EUR"
-    )
+    data = AccountUpdate(name="Updated Name", category="ike", owner="Ewa", currency="EUR")
     result = update_account(test_db_session, account_id, data)
 
     assert result.id == account_id
