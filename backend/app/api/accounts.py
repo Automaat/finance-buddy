@@ -22,7 +22,9 @@ def create_account(data: AccountCreate, db: Session = Depends(get_db)) -> Accoun
 
 @router.put("/{account_id}", response_model=AccountResponse)
 def update_account(
-    account_id: int, data: AccountUpdate, db: Session = Depends(get_db)  # noqa: B008
+    account_id: int,
+    data: AccountUpdate,
+    db: Session = Depends(get_db),  # noqa: B008
 ) -> AccountResponse:
     """Update existing account"""
     return accounts.update_account(db, account_id, data)
