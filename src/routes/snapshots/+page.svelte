@@ -18,9 +18,7 @@
 		<h1 class="page-title">Snapshots</h1>
 		<p class="page-description">Historia zapisanych wartości netto</p>
 	</div>
-	<button class="btn btn-primary" on:click={() => goto('/snapshots/new')}>
-		+ Nowy Snapshot
-	</button>
+	<button class="btn btn-primary" on:click={() => goto('/snapshots/new')}> + Nowy Snapshot </button>
 </div>
 
 <Card>

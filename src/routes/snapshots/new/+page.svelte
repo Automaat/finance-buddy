@@ -16,12 +16,8 @@
 
 	// Separate investments from regular assets
 	const investmentCategories = ['ike', 'ikze', 'ppk', 'bonds', 'stocks'];
-	let investments = data.assets.filter((a: any) =>
-		investmentCategories.includes(a.category)
-	);
-	let regularAssets = data.assets.filter(
-		(a: any) => !investmentCategories.includes(a.category)
-	);
+	let investments = data.assets.filter((a: any) => investmentCategories.includes(a.category));
+	let regularAssets = data.assets.filter((a: any) => !investmentCategories.includes(a.category));
 
 	// Track visible accounts (initially show accounts with value > 0)
 	let visibleAccountIds = new Set<number>(
@@ -38,12 +34,12 @@
 
 	function removeAccount(accountId: number) {
 		visibleAccountIds.delete(accountId);
-		visibleAccountIds = visibleAccountIds; // Trigger reactivity
+		visibleAccountIds = new Set(visibleAccountIds); // Trigger reactivity
 	}
 
 	function addAccount(accountId: number) {
 		visibleAccountIds.add(accountId);
-		visibleAccountIds = visibleAccountIds; // Trigger reactivity
+		visibleAccountIds = new Set(visibleAccountIds); // Trigger reactivity
 	}
 
 	// New account creation state
@@ -65,8 +61,7 @@
 		error = '';
 
 		try {
-			const type =
-				newAccountSection === 'liabilities' ? 'liability' : 'asset';
+			const type = newAccountSection === 'liabilities' ? 'liability' : 'asset';
 			const category =
 				newAccountSection === 'investments'
 					? newAccountCategory || 'other'
@@ -102,7 +97,7 @@
 			// Set initial value and mark as visible
 			values[newAccount.id] = newAccountValue;
 			visibleAccountIds.add(newAccount.id);
-			visibleAccountIds = visibleAccountIds;
+			visibleAccountIds = new Set(visibleAccountIds);
 
 			// Reset form
 			showNewAccountForm = false;
@@ -492,7 +487,11 @@
 					</div>
 				</div>
 				<div class="modal-footer">
-					<button type="button" class="btn btn-secondary" on:click={() => (showNewAccountForm = false)}>
+					<button
+						type="button"
+						class="btn btn-secondary"
+						on:click={() => (showNewAccountForm = false)}
+					>
 						Anuluj
 					</button>
 					<button

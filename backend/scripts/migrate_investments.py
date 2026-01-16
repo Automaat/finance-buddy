@@ -80,9 +80,7 @@ def migrate() -> None:
         account_columns = [
             col
             for col in df.columns
-            if col not in skip_columns
-            and not pd.isna(col)
-            and df[col].notna().any()
+            if col not in skip_columns and not pd.isna(col) and df[col].notna().any()
         ]
 
         print(f"\n💰 Creating {len(account_columns)} investment accounts...")
