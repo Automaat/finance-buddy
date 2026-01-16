@@ -2,7 +2,8 @@ from datetime import date
 from decimal import Decimal
 
 from app.models import Account, Snapshot, SnapshotValue
-from app.services.accounts import get_all_accounts
+from app.schemas.accounts import AccountCreate
+from app.services.accounts import create_account, get_all_accounts
 
 
 def test_get_all_accounts_with_values(test_db_session):
@@ -130,3 +131,104 @@ def test_get_all_accounts_empty_db(test_db_session):
 
     assert len(result.assets) == 0
     assert len(result.liabilities) == 0
+
+
+def test_create_account_asset(test_db_session):
+    """Test creating a new asset account"""
+    data = AccountCreate(
+        name="New Savings Account",
+        type="asset",
+        category="bank",
+        owner="Marcin",
+        currency="PLN",
+    )
+
+    result = create_account(test_db_session, data)
+
+    assert result.id is not None
+    assert result.name == "New Savings Account"
+    assert result.type == "asset"
+    assert result.category == "bank"
+    assert result.owner == "Marcin"
+    assert result.currency == "PLN"
+    assert result.is_active is True
+    assert result.current_value == 0.0
+
+    # Verify account was saved to database
+    saved_account = test_db_session.query(Account).filter_by(id=result.id).first()
+    assert saved_account is not None
+    assert saved_account.name == "New Savings Account"
+
+
+def test_create_account_liability(test_db_session):
+    """Test creating a new liability account"""
+    data = AccountCreate(
+        name="Car Loan", type="liability", category="installment", owner="Ewa", currency="PLN"
+    )
+
+    result = create_account(test_db_session, data)
+
+    assert result.id is not None
+    assert result.name == "Car Loan"
+    assert result.type == "liability"
+    assert result.category == "installment"
+    assert result.owner == "Ewa"
+    assert result.currency == "PLN"
+    assert result.is_active is True
+    assert result.current_value == 0.0
+
+
+def test_create_account_investment(test_db_session):
+    """Test creating an investment account"""
+    data = AccountCreate(
+        name="IKE - Test", type="asset", category="ike", owner="Shared", currency="PLN"
+    )
+
+    result = create_account(test_db_session, data)
+
+    assert result.category == "ike"
+    assert result.owner == "Shared"
+
+    # Verify in database
+    saved_account = test_db_session.query(Account).filter_by(id=result.id).first()
+    assert saved_account.category == "ike"
+
+
+def test_create_account_with_default_currency(test_db_session):
+    """Test creating account uses PLN as default currency"""
+    data = AccountCreate(name="Test Account", type="asset", category="other", owner="Marcin")
+
+    result = create_account(test_db_session, data)
+
+    assert result.currency == "PLN"
+
+
+def test_create_account_duplicate_name(test_db_session):
+    """Test creating account with duplicate name fails"""
+    import pytest
+    from fastapi import HTTPException
+
+    # Create first account
+    data1 = AccountCreate(
+        name="Duplicate Test Account",
+        type="asset",
+        category="bank",
+        owner="Marcin",
+        currency="PLN",
+    )
+    create_account(test_db_session, data1)
+
+    # Try to create account with same name
+    data2 = AccountCreate(
+        name="Duplicate Test Account",
+        type="asset",
+        category="ike",
+        owner="Ewa",
+        currency="PLN",
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        create_account(test_db_session, data2)
+
+    assert exc_info.value.status_code == 400
+    assert "already exists" in exc_info.value.detail

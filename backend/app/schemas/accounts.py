@@ -1,6 +1,57 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+
+
+class AccountCreate(BaseModel):
+    name: str
+    type: str
+    category: str
+    owner: str
+    currency: str = "PLN"
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Name cannot be empty")
+        return v.strip()
+
+    @field_validator("type")
+    @classmethod
+    def validate_type(cls, v: str) -> str:
+        if v not in {"asset", "liability"}:
+            raise ValueError("Type must be 'asset' or 'liability'")
+        return v
+
+    @field_validator("category")
+    @classmethod
+    def validate_category(cls, v: str) -> str:
+        valid_categories = {
+            "bank",
+            "ike",
+            "ikze",
+            "ppk",
+            "fund",
+            "etf",
+            "bonds",
+            "stocks",
+            "real_estate",
+            "vehicle",
+            "mortgage",
+            "installment",
+            "other",
+        }
+        if v not in valid_categories:
+            raise ValueError(f"Category must be one of: {', '.join(sorted(valid_categories))}")
+        return v
+
+    @field_validator("owner")
+    @classmethod
+    def validate_owner(cls, v: str) -> str:
+        if v not in {"Marcin", "Ewa", "Shared"}:
+            raise ValueError("Owner must be 'Marcin', 'Ewa', or 'Shared'")
+        return v
 
 
 class AccountResponse(BaseModel):
