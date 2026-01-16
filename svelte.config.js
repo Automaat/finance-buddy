@@ -7,7 +7,7 @@ const config = {
 	kit: {
 		adapter: adapter(),
 		csrf: {
-			checkOrigin: true
+			trustedOrigins: ['http://localhost:5173']
 		}
 	}
 };
