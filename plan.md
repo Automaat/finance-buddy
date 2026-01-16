@@ -4,18 +4,33 @@ Web app to replace "Finansowa Forteca.xlsx" - beautiful, self-hosted personal fi
 
 ## Tech Stack
 
+**Backend:**
+- **Framework:** FastAPI (Python 3.12+)
+- **Data Processing:** pandas (Excel import, financial calculations, aggregations)
+- **Database:** PostgreSQL + SQLAlchemy ORM
+- **Validation:** Pydantic v2
+- **Package Manager:** uv
+- **Linter:** ruff
+
+**Frontend:**
 - **Framework:** SvelteKit 2.x + TypeScript
-- **Database:** PostgreSQL (existing instance) + Drizzle ORM
 - **UI:** shadcn-svelte + Tailwind CSS
 - **Charts:** Apache ECharts
-- **Deployment:** Docker container
-- **Users:** Multi-user (Marcin + Ewa, shared login for MVP)
+- **API Client:** native fetch
+
+**Deployment:**
+- Docker Compose (FastAPI + SvelteKit)
+- PostgreSQL (existing instance)
+- Multi-user: shared login for MVP
 
 **Why this stack:**
 
+- FastAPI: Modern async Python, auto OpenAPI docs, great DX
+- pandas: Built for financial data - Excel I/O, time series, aggregations, pivot tables
 - SvelteKit: 50% less JS than Next.js, better dashboard performance ([source](https://dev.to/paulthedev/sveltekit-vs-nextjs-in-2026-why-the-underdog-is-winning-a-developers-deep-dive-155b))
 - ECharts: Superior for financial time-series, handles millions of data points ([source](https://www.metabase.com/blog/best-open-source-chart-library))
-- PostgreSQL: Already running, better for multi-user
+- uv: 10-100x faster than pip, built-in venv management
+- ruff: 10-100x faster than pylint/flake8, auto-fix
 
 ## Data Structure (from Excel)
 
@@ -37,20 +52,53 @@ Web app to replace "Finansowa Forteca.xlsx" - beautiful, self-hosted personal fi
 
 ## Phase 1: Project Setup
 
-### 1.1 Initialize SvelteKit Project
+### 1.1 Initialize Python Backend
 
 ```bash
+# Create backend directory
+mkdir backend
+cd backend
+
+# Initialize uv project
+uv init --name finance-buddy-api --python 3.12
+
+# Install dependencies
+uv add fastapi uvicorn[standard] sqlalchemy psycopg pandas openpyxl pydantic-settings python-dotenv
+
+# Install dev dependencies
+uv add --dev ruff pytest pytest-cov httpx
+
+# Create ruff config
+cat > ruff.toml <<EOF
+line-length = 100
+target-version = "py312"
+
+[lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "A", "C4", "DTZ", "T20", "RET", "SIM", "ARG"]
+ignore = []
+
+[lint.isort]
+known-first-party = ["app"]
+EOF
+
+# Create project structure
+mkdir -p app/{api,core,models,schemas,services}
+touch app/__init__.py
+touch app/{api,core,models,schemas,services}/__init__.py
+touch app/main.py
+```
+
+### 1.2 Initialize SvelteKit Frontend
+
+```bash
+cd ..
+mkdir frontend
+cd frontend
+
+# Initialize SvelteKit
 npm create svelte@latest .
 # Choose: Skeleton project, TypeScript, ESLint, Prettier
 npm install
-```
-
-### 1.2 Install Dependencies
-
-```bash
-# Database
-npm install drizzle-orm postgres dotenv
-npm install -D drizzle-kit
 
 # UI Components
 npm install -D tailwindcss postcss autoprefixer
@@ -58,7 +106,7 @@ npx tailwindcss init -p
 npx shadcn-svelte@latest init
 
 # Charts
-npm install echarts echarts-for-svelte
+npm install echarts
 
 # Forms & Validation
 npm install bits-ui formsnap sveltekit-superforms zod
@@ -69,17 +117,23 @@ npm install @internationalized/date
 
 ### 1.3 Configure Environment
 
-Create `.env`:
+**Backend `.env`** (`backend/.env`):
 
 ```env
 DATABASE_URL=postgresql://user:pass@your-postgres-host:5432/finance
 APP_PASSWORD=shared-secret-for-mvp
-PUBLIC_APP_URL=http://localhost:3000
+CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 ```
 
-### 1.4 Setup Tailwind
+**Frontend `.env`** (`frontend/.env`):
 
-Update `tailwind.config.js`:
+```env
+PUBLIC_API_URL=http://localhost:8000
+```
+
+### 1.4 Setup Tailwind (Frontend)
+
+Update `frontend/tailwind.config.js`:
 
 ```js
 export default {
@@ -89,7 +143,7 @@ export default {
 };
 ```
 
-Add to `src/app.css`:
+Add to `frontend/src/app.css`:
 
 ```css
 @tailwind base;
@@ -97,260 +151,408 @@ Add to `src/app.css`:
 @tailwind utilities;
 ```
 
+### 1.5 Create FastAPI App Structure
+
+**File:** `backend/app/core/config.py`
+
+```python
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    database_url: str
+    app_password: str
+    cors_origins: str = "http://localhost:5173"
+
+    model_config = SettingsConfigDict(env_file=".env")
+
+
+settings = Settings()
+```
+
+**File:** `backend/app/main.py`
+
+```python
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.core.config import settings
+
+app = FastAPI(title="Finance Buddy API", version="1.0.0")
+
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins.split(","),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+```
+
+**Test it:**
+
+```bash
+cd backend
+uv run uvicorn app.main:app --reload
+# Visit http://localhost:8000/docs
+```
+
 ---
 
 ## Phase 2: Database Schema
 
-### 2.1 Create Schema File
+### 2.1 Create SQLAlchemy Models
 
-**File:** `src/lib/db/schema.ts`
+**File:** `backend/app/models/account.py`
 
-```typescript
-import {
-	pgTable,
-	serial,
-	text,
-	numeric,
-	timestamp,
-	date,
-	boolean,
-	integer
-} from 'drizzle-orm/pg-core';
+```python
+from sqlalchemy import Boolean, Column, Integer, String, Numeric, DateTime
+from sqlalchemy.sql import func
+from app.core.database import Base
 
-export const accounts = pgTable('accounts', {
-	id: serial('id').primaryKey(),
-	name: text('name').notNull(),
-	type: text('type').notNull(), // 'asset' | 'liability'
-	category: text('category').notNull(), // 'bank', 'ike', 'ikze', 'ppk', 'real_estate', etc.
-	owner: text('owner'), // 'Marcin' | 'Ewa' | 'Shared'
-	currency: text('currency').default('PLN'),
-	isActive: boolean('is_active').default(true),
-	createdAt: timestamp('created_at').defaultNow()
-});
 
-export const snapshots = pgTable('snapshots', {
-	id: serial('id').primaryKey(),
-	date: date('date').notNull().unique(),
-	notes: text('notes'),
-	createdAt: timestamp('created_at').defaultNow()
-});
+class Account(Base):
+    __tablename__ = "accounts"
 
-export const snapshotValues = pgTable('snapshot_values', {
-	id: serial('id').primaryKey(),
-	snapshotId: integer('snapshot_id')
-		.references(() => snapshots.id, { onDelete: 'cascade' })
-		.notNull(),
-	accountId: integer('account_id')
-		.references(() => accounts.id, { onDelete: 'cascade' })
-		.notNull(),
-	value: numeric('value', { precision: 15, scale: 2 }).notNull()
-});
-
-export const goals = pgTable('goals', {
-	id: serial('id').primaryKey(),
-	name: text('name').notNull(),
-	targetAmount: numeric('target_amount', { precision: 15, scale: 2 }).notNull(),
-	targetDate: date('target_date').notNull(),
-	currentAmount: numeric('current_amount', { precision: 15, scale: 2 }).default('0'),
-	monthlyContribution: numeric('monthly_contribution', { precision: 15, scale: 2 }),
-	isCompleted: boolean('is_completed').default(false),
-	createdAt: timestamp('created_at').defaultNow()
-});
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    type = Column(String, nullable=False)  # 'asset' | 'liability'
+    category = Column(String, nullable=False)  # 'bank', 'ike', 'ikze', etc.
+    owner = Column(String)  # 'Marcin' | 'Ewa' | 'Shared'
+    currency = Column(String, default="PLN")
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 ```
 
-### 2.2 Create Database Client
+**File:** `backend/app/models/snapshot.py`
 
-**File:** `src/lib/db/index.ts`
+```python
+from sqlalchemy import Column, Integer, String, Date, DateTime, Numeric, ForeignKey
+from sqlalchemy.sql import func
+from app.core.database import Base
 
-```typescript
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
-import { DATABASE_URL } from '$env/static/private';
-import * as schema from './schema';
 
-const client = postgres(DATABASE_URL);
-export const db = drizzle(client, { schema });
+class Snapshot(Base):
+    __tablename__ = "snapshots"
+
+    id = Column(Integer, primary_key=True, index=True)
+    date = Column(Date, nullable=False, unique=True, index=True)
+    notes = Column(String)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class SnapshotValue(Base):
+    __tablename__ = "snapshot_values"
+
+    id = Column(Integer, primary_key=True, index=True)
+    snapshot_id = Column(Integer, ForeignKey("snapshots.id", ondelete="CASCADE"), nullable=False)
+    account_id = Column(Integer, ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False)
+    value = Column(Numeric(15, 2), nullable=False)
 ```
 
-### 2.3 Configure Drizzle Kit
+**File:** `backend/app/models/goal.py`
 
-**File:** `drizzle.config.ts`
+```python
+from sqlalchemy import Boolean, Column, Integer, String, Numeric, Date, DateTime
+from sqlalchemy.sql import func
+from app.core.database import Base
 
-```typescript
-import type { Config } from 'drizzle-kit';
-import * as dotenv from 'dotenv';
 
-dotenv.config();
+class Goal(Base):
+    __tablename__ = "goals"
 
-export default {
-	schema: './src/lib/db/schema.ts',
-	out: './drizzle',
-	driver: 'pg',
-	dbCredentials: {
-		connectionString: process.env.DATABASE_URL!
-	}
-} satisfies Config;
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    target_amount = Column(Numeric(15, 2), nullable=False)
+    target_date = Column(Date, nullable=False)
+    current_amount = Column(Numeric(15, 2), default=0)
+    monthly_contribution = Column(Numeric(15, 2))
+    is_completed = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 ```
 
-### 2.4 Generate & Run Migrations
+**File:** `backend/app/models/__init__.py`
+
+```python
+from app.models.account import Account
+from app.models.snapshot import Snapshot, SnapshotValue
+from app.models.goal import Goal
+
+__all__ = ["Account", "Snapshot", "SnapshotValue", "Goal"]
+```
+
+### 2.2 Create Database Connection
+
+**File:** `backend/app/core/database.py`
+
+```python
+from sqlalchemy import create_engine
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from app.core.config import settings
+
+engine = create_engine(settings.database_url)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+```
+
+### 2.3 Create Migration Script
+
+**File:** `backend/app/core/init_db.py`
+
+```python
+from app.core.database import engine, Base
+from app.models import Account, Snapshot, SnapshotValue, Goal
+
+
+def init_db():
+    """Create all tables"""
+    Base.metadata.create_all(bind=engine)
+    print("✓ Database tables created")
+
+
+if __name__ == "__main__":
+    init_db()
+```
+
+### 2.4 Run Migrations
 
 ```bash
-npx drizzle-kit generate:pg
-npx drizzle-kit push:pg
+cd backend
+uv run python -m app.core.init_db
 ```
 
 ---
 
-## Phase 3: Excel Data Migration
+## Phase 3: Excel Data Migration (Learn pandas!)
 
-### 3.1 Create Migration Script
+### 3.1 Create Migration Script with pandas
 
-**File:** `scripts/migrate_excel.py`
+**File:** `backend/scripts/migrate_excel.py`
 
 ```python
-import pandas as pd
-import psycopg2
-from datetime import datetime
+"""
+Excel to PostgreSQL migration using pandas.
+Great for learning pandas operations:
+- read_excel(): Load Excel sheets
+- DataFrame.columns: Access column names
+- DataFrame.iterrows(): Iterate rows
+- pd.isna(), pd.notna(): Handle missing values
+- Boolean indexing: df[condition]
+- String operations: .str.lower(), .str.contains()
+"""
 import os
+from pathlib import Path
 
-# Configuration
-EXCEL_FILE = 'Finansowa Forteca.xlsx'
-DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://user:pass@localhost:5432/finance')
+import pandas as pd
+from dotenv import load_dotenv
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
-def determine_type(account_name):
-    """Determine if account is asset or liability"""
-    liabilities = ['raty 0', 'hipoteka']
-    return 'liability' if any(l in account_name.lower() for l in liabilities) else 'asset'
+# Add parent directory to path to import models
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-def determine_category(account_name):
-    """Map account name to category"""
+from app.models import Account, Snapshot, SnapshotValue, Goal
+from app.core.database import engine
+
+load_dotenv()
+
+EXCEL_FILE = "Finansowa Forteca.xlsx"
+
+
+def determine_type(account_name: str) -> str:
+    """Determine if account is asset or liability using pandas-style logic"""
+    liabilities = ["raty 0", "hipoteka"]
+    return "liability" if any(l in account_name.lower() for l in liabilities) else "asset"
+
+
+def determine_category(account_name: str) -> str:
+    """Map account name to category - could use pandas.Series.map() for bulk operations"""
     name_lower = account_name.lower()
-    if 'ike' in name_lower: return 'ike'
-    if 'ikze' in name_lower: return 'ikze'
-    if 'ppk' in name_lower: return 'ppk'
-    if 'konto' in name_lower or 'oszczednosc' in name_lower: return 'bank'
-    if 'mieszkanie' in name_lower or 'działka' in name_lower: return 'real_estate'
-    if 'samochod' in name_lower: return 'vehicle'
-    if 'obligacje' in name_lower: return 'bonds'
-    if 'akcje' in name_lower: return 'stocks'
-    if 'hipoteka' in name_lower: return 'mortgage'
-    if 'raty' in name_lower: return 'installment'
-    return 'other'
+    category_map = {
+        "ike": "ike",
+        "ikze": "ikze",
+        "ppk": "ppk",
+        "konto": "bank",
+        "oszczednosc": "bank",
+        "mieszkanie": "real_estate",
+        "działka": "real_estate",
+        "samochod": "vehicle",
+        "obligacje": "bonds",
+        "akcje": "stocks",
+        "hipoteka": "mortgage",
+        "raty": "installment",
+    }
 
-def determine_owner(account_name):
-    """Determine account owner from name"""
+    for key, value in category_map.items():
+        if key in name_lower:
+            return value
+    return "other"
+
+
+def determine_owner(account_name: str) -> str:
+    """Determine owner - demonstrates pattern matching in pandas workflows"""
     name_lower = account_name.lower()
-    if 'marcin' in name_lower: return 'Marcin'
-    if 'ewa' in name_lower: return 'Ewa'
-    return 'Shared'
+    if "marcin" in name_lower:
+        return "Marcin"
+    if "ewa" in name_lower:
+        return "Ewa"
+    return "Shared"
+
 
 def migrate():
-    # Read Excel
-    print(f"Reading {EXCEL_FILE}...")
-    df_net_worth = pd.read_excel(EXCEL_FILE, sheet_name='wartosc_netto')
-    df_goals = pd.read_excel(EXCEL_FILE, sheet_name='cele_krotkoterminowe')
+    """Main migration - demonstrates pandas Excel I/O and data transformation"""
 
-    # Connect to PostgreSQL
-    print("Connecting to database...")
-    conn = psycopg2.connect(DATABASE_URL)
-    cur = conn.cursor()
+    # pandas: read_excel() - Load multiple sheets
+    print(f"📖 Reading {EXCEL_FILE}...")
+    df_net_worth = pd.read_excel(EXCEL_FILE, sheet_name="wartosc_netto")
+    df_goals = pd.read_excel(EXCEL_FILE, sheet_name="cele_krotkoterminowe")
 
-    # 1. Create accounts
-    print("Creating accounts...")
+    print(f"  Net worth sheet: {df_net_worth.shape[0]} rows, {df_net_worth.shape[1]} columns")
+    print(f"  Goals sheet: {df_goals.shape[0]} rows, {df_goals.shape[1]} columns")
+
+    # SQLAlchemy session
+    db = Session(engine)
+
+    # 1. Create accounts from DataFrame columns
+    print("\n💰 Creating accounts...")
     accounts_map = {}
-    skip_columns = ['Data', 'ROR', 'wartość netto']
+    skip_columns = ["Data", "ROR", "wartość netto"]
 
-    for column in df_net_worth.columns:
-        if column not in skip_columns and not pd.isna(df_net_worth[column].iloc[0]):
-            cur.execute(
-                """
-                INSERT INTO accounts (name, type, category, owner)
-                VALUES (%s, %s, %s, %s)
-                RETURNING id
-                """,
-                (column, determine_type(column), determine_category(column), determine_owner(column))
+    # pandas: .columns returns Index of column names
+    account_columns = [col for col in df_net_worth.columns if col not in skip_columns]
+
+    for column in account_columns:
+        # pandas: .iloc[0] - first row value check
+        if pd.notna(df_net_worth[column].iloc[0]):
+            account = Account(
+                name=column,
+                type=determine_type(column),
+                category=determine_category(column),
+                owner=determine_owner(column),
             )
-            accounts_map[column] = cur.fetchone()[0]
-            print(f"  Created: {column} (ID: {accounts_map[column]})")
+            db.add(account)
+            db.flush()  # Get ID before commit
+            accounts_map[column] = account.id
+            print(f"  ✓ {column} → {account.category} ({account.owner})")
 
-    # 2. Create snapshots with values
-    print("Creating snapshots...")
+    db.commit()
+    print(f"  Created {len(accounts_map)} accounts")
+
+    # 2. Create snapshots from DataFrame rows
+    print("\n📸 Creating snapshots...")
     snapshot_count = 0
 
-    for _, row in df_net_worth.iterrows():
-        date = row['Data']
+    # pandas: .iterrows() - iterate over DataFrame rows
+    for idx, row in df_net_worth.iterrows():
+        date = row["Data"]
+
+        # pandas: pd.isna() - check for NaN/None values
         if pd.isna(date):
             continue
 
         # Create snapshot
-        cur.execute(
-            "INSERT INTO snapshots (date) VALUES (%s) RETURNING id",
-            (date,)
-        )
-        snapshot_id = cur.fetchone()[0]
+        snapshot = Snapshot(date=date)
+        db.add(snapshot)
+        db.flush()
 
-        # Add values for each account
+        # pandas: Access row values by column name
         for account_name, account_id in accounts_map.items():
             value = row[account_name]
+
+            # pandas: pd.notna() - check value exists
             if pd.notna(value) and value != 0:
-                cur.execute(
-                    """
-                    INSERT INTO snapshot_values (snapshot_id, account_id, value)
-                    VALUES (%s, %s, %s)
-                    """,
-                    (snapshot_id, account_id, float(value))
+                snapshot_value = SnapshotValue(
+                    snapshot_id=snapshot.id, account_id=account_id, value=float(value)
                 )
+                db.add(snapshot_value)
 
         snapshot_count += 1
         if snapshot_count % 10 == 0:
             print(f"  Processed {snapshot_count} snapshots...")
+            db.commit()  # Commit in batches
 
-    print(f"Created {snapshot_count} snapshots")
+    db.commit()
+    print(f"  ✓ Created {snapshot_count} snapshots")
 
     # 3. Import goals
-    print("Creating goals...")
+    print("\n🎯 Creating goals...")
     goal_count = 0
 
+    # pandas: Could use .dropna(subset=['Cel']) to filter rows first
     for _, row in df_goals.iterrows():
-        if pd.notna(row['Cel']):
-            cur.execute(
-                """
-                INSERT INTO goals (name, target_amount, target_date, current_amount, monthly_contribution)
-                VALUES (%s, %s, %s, %s, %s)
-                """,
-                (
-                    row['Cel'],
-                    float(row['Kwota']) if pd.notna(row['Kwota']) else 0,
-                    row['Termin'] if pd.notna(row['Termin']) else None,
-                    float(row['Ile już mamy']) if pd.notna(row['Ile już mamy']) else 0,
-                    float(row['Ile miesięcznie musimy odkładać']) if pd.notna(row['Ile miesięcznie musimy odkładać']) else None
-                )
+        if pd.notna(row["Cel"]):
+            goal = Goal(
+                name=row["Cel"],
+                target_amount=float(row["Kwota"]) if pd.notna(row["Kwota"]) else 0,
+                target_date=row["Termin"] if pd.notna(row["Termin"]) else None,
+                current_amount=float(row["Ile już mamy"]) if pd.notna(row["Ile już mamy"]) else 0,
+                monthly_contribution=float(row["Ile miesięcznie musimy odkładać"])
+                if pd.notna(row["Ile miesięcznie musimy odkładać"])
+                else None,
             )
+            db.add(goal)
             goal_count += 1
 
-    print(f"Created {goal_count} goals")
+    db.commit()
+    db.close()
 
-    # Commit and close
-    conn.commit()
-    cur.close()
-    conn.close()
+    print(f"  ✓ Created {goal_count} goals")
+    print("\n✅ Migration completed successfully!")
+    print(f"  📊 {len(accounts_map)} accounts")
+    print(f"  📸 {snapshot_count} snapshots")
+    print(f"  🎯 {goal_count} goals")
 
-    print("\n✓ Migration completed successfully!")
-    print(f"  - {len(accounts_map)} accounts")
-    print(f"  - {snapshot_count} snapshots")
-    print(f"  - {goal_count} goals")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     migrate()
 ```
 
 ### 3.2 Run Migration
 
 ```bash
-cd scripts
-pip3 install pandas openpyxl psycopg2-binary python-dotenv
-python3 migrate_excel.py
+cd backend
+
+# Place Excel file in backend directory
+# cp ~/path/to/"Finansowa Forteca.xlsx" .
+
+# Run migration
+uv run python scripts/migrate_excel.py
 ```
+
+**pandas Learning Notes:**
+
+Key operations demonstrated:
+- `pd.read_excel()` - Load Excel sheets
+- `df.shape` - Get (rows, columns)
+- `df.columns` - Access column names
+- `df.iterrows()` - Iterate rows
+- `df.iloc[0]` - Position-based indexing
+- `pd.isna()` / `pd.notna()` - Handle missing values
+- `row['column']` - Access values
+
+**Next pandas features to explore in Phase 5+:**
+- `df.groupby()` - Aggregate data (total by category/owner)
+- `df.pivot_table()` - Create summary tables
+- `df.resample()` - Time series aggregation (monthly/yearly)
+- `df.merge()` - Join DataFrames
+- `df.query()` - SQL-like filtering
 
 ---
 
@@ -474,94 +676,236 @@ export function calculateMonthsRemaining(targetDate: Date): number {
 
 ---
 
-## Phase 5: Dashboard Page (Priority 1)
+## Phase 5: Dashboard API (Learn pandas aggregations!)
 
-### 5.1 Server-side Data Loading
+### 5.1 Create Pydantic Schemas
 
-**File:** `src/routes/+page.server.ts`
+**File:** `backend/app/schemas/dashboard.py`
+
+```python
+from datetime import date
+from decimal import Decimal
+
+from pydantic import BaseModel
+
+
+class NetWorthPoint(BaseModel):
+    date: date
+    value: float
+
+
+class AllocationItem(BaseModel):
+    category: str
+    owner: str | None
+    value: float
+
+
+class DashboardResponse(BaseModel):
+    net_worth_history: list[NetWorthPoint]
+    current_net_worth: float
+    change_vs_last_month: float
+    total_assets: float
+    total_liabilities: float
+    allocation: list[AllocationItem]
+```
+
+### 5.2 Create Dashboard Service with pandas
+
+**File:** `backend/app/services/dashboard.py`
+
+```python
+"""
+Dashboard service using pandas for financial calculations.
+Demonstrates: groupby, pivot, merge, aggregations, time series
+"""
+from datetime import date
+from decimal import Decimal
+
+import pandas as pd
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.models import Account, Snapshot, SnapshotValue
+from app.schemas.dashboard import AllocationItem, DashboardResponse, NetWorthPoint
+
+
+def get_dashboard_data(db: Session) -> DashboardResponse:
+    """
+    Calculate dashboard metrics using pandas.
+
+    pandas features used:
+    - pd.DataFrame(): Create from query results
+    - df.merge(): Join DataFrames (like SQL JOIN)
+    - df.groupby(): Aggregate data
+    - df.pivot_table(): Reshape data
+    - df.sort_values(): Order data
+    """
+
+    # Fetch all data needed
+    accounts_query = select(Account).where(Account.is_active.is_(True))
+    accounts_df = pd.read_sql(accounts_query, db.get_bind())
+
+    snapshots_query = select(Snapshot).order_by(Snapshot.date)
+    snapshots_df = pd.read_sql(snapshots_query, db.get_bind())
+
+    values_query = select(SnapshotValue)
+    values_df = pd.read_sql(values_query, db.get_bind())
+
+    # pandas: merge() - Join snapshot values with accounts
+    # Similar to SQL: SELECT * FROM snapshot_values JOIN accounts
+    df = values_df.merge(accounts_df, left_on="account_id", right_on="id", suffixes=("", "_account"))
+    df = df.merge(snapshots_df, left_on="snapshot_id", right_on="id", suffixes=("", "_snapshot"))
+
+    # Calculate net worth per snapshot
+    # pandas: groupby() + vectorized aggregations - Efficient aggregation per group
+    net_worth_by_date = (
+        df.groupby(["date", "type"])["value"]
+        .sum()
+        .unstack(fill_value=0)
+        .reset_index()
+    )
+    # Ensure missing asset/liability columns are treated as zero
+    if "asset" not in net_worth_by_date.columns:
+        net_worth_by_date["asset"] = 0.0
+    if "liability" not in net_worth_by_date.columns:
+        net_worth_by_date["liability"] = 0.0
+    net_worth_by_date["net_worth"] = (
+        net_worth_by_date["asset"] - net_worth_by_date["liability"]
+    )
+    net_worth_by_date = net_worth_by_date[["date", "net_worth"]]
+
+    # pandas: sort_values() - Order by date
+    net_worth_by_date = net_worth_by_date.sort_values("date")
+
+    # Convert to response format
+    net_worth_history = [
+        NetWorthPoint(date=row["date"], value=row["net_worth"])
+        for _, row in net_worth_by_date.iterrows()
+    ]
+
+    # Current metrics (latest snapshot)
+    if len(net_worth_by_date) > 0:
+        current_net_worth = float(net_worth_by_date.iloc[-1]["net_worth"])
+        last_month_net_worth = (
+            float(net_worth_by_date.iloc[-2]["net_worth"]) if len(net_worth_by_date) > 1 else 0
+        )
+    else:
+        current_net_worth = 0
+        last_month_net_worth = 0
+
+    # Latest snapshot data for current totals
+    latest_snapshot = snapshots_df.iloc[-1] if len(snapshots_df) > 0 else None
+
+    if latest_snapshot is not None:
+        # pandas: Boolean indexing - Filter rows
+        latest_df = df[df["snapshot_id"] == latest_snapshot["id"]]
+
+        # pandas: groupby() + sum() - Aggregate by type
+        totals_by_type = latest_df.groupby("type")["value"].sum()
+
+        total_assets = float(totals_by_type.get("asset", 0))
+        total_liabilities = float(totals_by_type.get("liability", 0))
+
+        # Asset allocation
+        # pandas: Query filter + groupby multiple columns
+        assets_df = latest_df[latest_df["type"] == "asset"]
+
+        # pandas: groupby() with multiple columns
+        allocation_df = assets_df.groupby(["category", "owner"])["value"].sum().reset_index()
+
+        allocation = [
+            AllocationItem(
+                category=row["category"], owner=row["owner"], value=float(row["value"])
+            )
+            for _, row in allocation_df.iterrows()
+        ]
+    else:
+        total_assets = 0
+        total_liabilities = 0
+        allocation = []
+
+    return DashboardResponse(
+        net_worth_history=net_worth_history,
+        current_net_worth=current_net_worth,
+        change_vs_last_month=current_net_worth - last_month_net_worth,
+        total_assets=total_assets,
+        total_liabilities=total_liabilities,
+        allocation=allocation,
+    )
+```
+
+### 5.3 Create Dashboard API Endpoint
+
+**File:** `backend/app/api/dashboard.py`
+
+```python
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
+from app.core.database import get_db
+from app.schemas.dashboard import DashboardResponse
+from app.services.dashboard import get_dashboard_data
+
+router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
+
+
+@router.get("", response_model=DashboardResponse)
+def get_dashboard(db: Session = Depends(get_db)):
+    """Get dashboard data with net worth history and allocation"""
+    return get_dashboard_data(db)
+```
+
+**Update:** `backend/app/main.py`
+
+```python
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.core.config import settings
+from app.api import dashboard  # Add this
+
+app = FastAPI(title="Finance Buddy API", version="1.0.0")
+
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins.split(","),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include routers
+app.include_router(dashboard.router)  # Add this
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+```
+
+**Create:** `backend/app/api/__init__.py` (empty file)
+
+**Create:** `backend/app/schemas/__init__.py` (empty file)
+
+**Create:** `backend/app/services/__init__.py` (empty file)
+
+### 5.4 Update Frontend to Fetch from API
+
+**File:** `frontend/src/routes/+page.ts`
 
 ```typescript
-import { db } from '$lib/db';
-import { snapshots, snapshotValues, accounts } from '$lib/db/schema';
-import { sql, eq, desc } from 'drizzle-orm';
+import { env } from '$env/dynamic/public';
 
-export async function load() {
-	// Get net worth history
-	const history = await db
-		.select({
-			date: snapshots.date,
-			netWorth: sql<number>`
-        COALESCE(SUM(
-          CASE
-            WHEN ${accounts.type} = 'asset' THEN ${snapshotValues.value}::numeric
-            ELSE -${snapshotValues.value}::numeric
-          END
-        ), 0)
-      `.as('net_worth')
-		})
-		.from(snapshots)
-		.leftJoin(snapshotValues, eq(snapshots.id, snapshotValues.snapshotId))
-		.leftJoin(accounts, eq(snapshotValues.accountId, accounts.id))
-		.where(eq(accounts.isActive, true))
-		.groupBy(snapshots.id, snapshots.date)
-		.orderBy(snapshots.date);
-
-	// Get latest snapshot for current values
-	const latest = await db
-		.select({
-			type: accounts.type,
-			total: sql<number>`SUM(${snapshotValues.value}::numeric)`.as('total')
-		})
-		.from(snapshotValues)
-		.innerJoin(accounts, eq(snapshotValues.accountId, accounts.id))
-		.innerJoin(snapshots, eq(snapshotValues.snapshotId, snapshots.id))
-		.where(eq(accounts.isActive, true))
-		.groupBy(accounts.type)
-		.orderBy(desc(snapshots.date))
-		.limit(1);
-
-	const totalAssets = latest.find((l) => l.type === 'asset')?.total || 0;
-	const totalLiabilities = latest.find((l) => l.type === 'liability')?.total || 0;
-	const currentNetWorth = Number(history[history.length - 1]?.netWorth || 0);
-	const lastMonthNetWorth = Number(history[history.length - 2]?.netWorth || 0);
-
-	// Get asset allocation
-	const allocation = await db
-		.select({
-			category: accounts.category,
-			owner: accounts.owner,
-			total: sql<number>`SUM(${snapshotValues.value}::numeric)`.as('total')
-		})
-		.from(snapshotValues)
-		.innerJoin(accounts, eq(snapshotValues.accountId, accounts.id))
-		.innerJoin(
-			sql`(SELECT id FROM ${snapshots} ORDER BY date DESC LIMIT 1)`,
-			sql`${snapshotValues.snapshotId} = id`
-		)
-		.where(eq(accounts.type, 'asset'))
-		.groupBy(accounts.category, accounts.owner);
-
-	return {
-		netWorthHistory: history.map((h) => ({
-			date: h.date,
-			value: Number(h.netWorth)
-		})),
-		currentNetWorth,
-		changeVsLastMonth: currentNetWorth - lastMonthNetWorth,
-		totalAssets: Number(totalAssets),
-		totalLiabilities: Number(totalLiabilities),
-		allocation: allocation.map((a) => ({
-			category: a.category,
-			owner: a.owner,
-			value: Number(a.total)
-		}))
-	};
+export async function load({ fetch }) {
+	const response = await fetch(`${env.PUBLIC_API_URL}/api/dashboard`);
+	const data = await response.json();
+	return data;
 }
 ```
 
-### 5.2 Dashboard Component
+### 5.5 Dashboard Component
 
-**File:** `src/routes/+page.svelte`
+**File:** `frontend/src/routes/+page.svelte`
 
 ```svelte
 <script lang="ts">
@@ -1472,10 +1816,22 @@ export default {
 
 ### 10.4 Testing Checklist
 
-- [ ] Run `npm run dev` - app starts without errors
+**Backend:**
+- [ ] FastAPI starts: `cd backend && uv run uvicorn app.main:app --reload`
+- [ ] Swagger docs available at http://localhost:8000/docs
+- [ ] ruff linter passes: `cd backend && uv run ruff check .`
+- [ ] ruff formatter passes: `cd backend && uv run ruff format --check .`
+- [ ] Tests pass: `cd backend && uv run pytest`
+- [ ] Coverage ≥80%: Check coverage report
+- [ ] Migration imports Excel data successfully
+- [ ] Dashboard API returns correct data
+
+**Frontend:**
+- [ ] Run `cd frontend && npm run dev` - app starts
+- [ ] Connects to backend API successfully
 - [ ] Login page works with APP_PASSWORD
 - [ ] Dashboard displays net worth chart
-- [ ] Dashboard shows correct KPIs (net worth, assets, liabilities)
+- [ ] Dashboard shows correct KPIs
 - [ ] Asset allocation pie chart renders
 - [ ] Accounts page lists all accounts
 - [ ] Create snapshot form pre-fills with latest values
@@ -1483,24 +1839,39 @@ export default {
 - [ ] Goals page shows all goals with progress
 - [ ] Responsive on mobile (test with dev tools)
 - [ ] Build succeeds: `npm run build`
+
+**Integration:**
 - [ ] Docker build succeeds: `docker build -t finance-buddy .`
-- [ ] Docker container runs and connects to PostgreSQL
-- [ ] Migration script imports Excel data successfully
+- [ ] Docker containers run and connect to PostgreSQL
+- [ ] Both frontend and backend work together
 
 ---
 
 ## Summary
 
 **Total phases:** 10
-**Estimated development time:** 5-7 days (focused work)
 
 **Tech Stack:**
 
+**Backend:**
+- FastAPI + Python 3.12
+- pandas (data processing & financial calculations)
+- PostgreSQL + SQLAlchemy
+- Pydantic v2
+- uv (package manager)
+- ruff (linter/formatter)
+- pytest + coverage
+
+**Frontend:**
 - SvelteKit + TypeScript
-- PostgreSQL + Drizzle ORM
-- shadcn-svelte + Tailwind
+- shadcn-svelte + Tailwind CSS
 - Apache ECharts
-- Docker
+- Vitest + @testing-library/svelte
+
+**DevOps:**
+- Docker Compose
+- GitHub Actions CI
+- codecov (80% coverage target)
 
 **MVP Features:**
 ✅ Dashboard with net worth chart
