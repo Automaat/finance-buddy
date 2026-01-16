@@ -63,10 +63,10 @@ cd backend
 uv init --name finance-buddy-api --python 3.12
 
 # Install dependencies
-uv add fastapi uvicorn[standard] sqlalchemy psycopg2-binary pandas openpyxl pydantic-settings python-dotenv
+uv add fastapi uvicorn[standard] sqlalchemy psycopg pandas openpyxl pydantic-settings python-dotenv
 
 # Install dev dependencies
-uv add --dev ruff pytest httpx
+uv add --dev ruff pytest pytest-cov httpx
 
 # Create ruff config
 cat > ruff.toml <<EOF
@@ -292,14 +292,15 @@ __all__ = ["Account", "Snapshot", "SnapshotValue", "Goal"]
 
 ```python
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from app.core.config import settings
 
 engine = create_engine(settings.database_url)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 
 def get_db():
@@ -741,14 +742,14 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
     """
 
     # Fetch all data needed
-    accounts_query = select(Account).where(Account.is_active == True)  # noqa: E712
-    accounts_df = pd.read_sql(accounts_query, db.connection())
+    accounts_query = select(Account).where(Account.is_active.is_(True))
+    accounts_df = pd.read_sql(accounts_query, db.get_bind())
 
     snapshots_query = select(Snapshot).order_by(Snapshot.date)
-    snapshots_df = pd.read_sql(snapshots_query, db.connection())
+    snapshots_df = pd.read_sql(snapshots_query, db.get_bind())
 
     values_query = select(SnapshotValue)
-    values_df = pd.read_sql(values_query, db.connection())
+    values_df = pd.read_sql(values_query, db.get_bind())
 
     # pandas: merge() - Join snapshot values with accounts
     # Similar to SQL: SELECT * FROM snapshot_values JOIN accounts
@@ -756,17 +757,22 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
     df = df.merge(snapshots_df, left_on="snapshot_id", right_on="id", suffixes=("", "_snapshot"))
 
     # Calculate net worth per snapshot
-    # pandas: groupby() + apply() - Custom aggregation per group
-    def calculate_net_worth(group):
-        assets = group[group["type"] == "asset"]["value"].sum()
-        liabilities = group[group["type"] == "liability"]["value"].sum()
-        return float(assets - liabilities)
-
-    # pandas: groupby() groups rows, then we aggregate
+    # pandas: groupby() + vectorized aggregations - Efficient aggregation per group
     net_worth_by_date = (
-        df.groupby("date").apply(calculate_net_worth, include_groups=False).reset_index()
+        df.groupby(["date", "type"])["value"]
+        .sum()
+        .unstack(fill_value=0)
+        .reset_index()
     )
-    net_worth_by_date.columns = ["date", "net_worth"]
+    # Ensure missing asset/liability columns are treated as zero
+    if "asset" not in net_worth_by_date.columns:
+        net_worth_by_date["asset"] = 0.0
+    if "liability" not in net_worth_by_date.columns:
+        net_worth_by_date["liability"] = 0.0
+    net_worth_by_date["net_worth"] = (
+        net_worth_by_date["asset"] - net_worth_by_date["liability"]
+    )
+    net_worth_by_date = net_worth_by_date[["date", "net_worth"]]
 
     # pandas: sort_values() - Order by date
     net_worth_by_date = net_worth_by_date.sort_values("date")
