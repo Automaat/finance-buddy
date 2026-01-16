@@ -17,3 +17,6 @@ renovate.json
 
 # Claude settings
 .claude/settings.local.json
+
+# Planning documents
+plan.md
