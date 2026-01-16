@@ -21,8 +21,9 @@ import pandas as pd
 from dotenv import load_dotenv
 from sqlalchemy.orm import Session
 
-# Add parent directory to path to import models
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add parent directory to path for direct script execution
+if __name__ == "__main__":
+    sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.core.database import engine
 from app.models import Account, Snapshot, SnapshotValue

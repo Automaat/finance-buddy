@@ -1,12 +1,6 @@
 """Tests for Excel migration script helper functions."""
 
-import sys
-from pathlib import Path
-
-# Add scripts directory to path to import migration functions
-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
-
-from migrate_excel import determine_category, determine_owner, determine_type
+from scripts.migrate_excel import determine_category, determine_owner, determine_type
 
 
 class TestDetermineType:
