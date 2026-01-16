@@ -39,51 +39,10 @@ jobs:
       - name: Build
         run: npm run build
 
-  backend:
-    runs-on: ubuntu-24.04
-    if: always() && hashFiles('backend/pyproject.toml') != ''
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6.0.2
-
-      - uses: jdx/mise-action@146a28175021df8ca24f8ee1828cc2a60f980bd5 # v3.5.1
-        with:
-          experimental: true
-
-      - uses: astral-sh/setup-uv@v5
-
-      - name: Install dependencies
-        run: uv sync
-        working-directory: backend
-
-      - name: Run ruff linter
-        run: uv run ruff check .
-        working-directory: backend
-
-      - name: Run ruff formatter
-        run: uv run ruff format --check .
-        working-directory: backend
-
-      - name: Run tests with coverage
-        run: uv run pytest
-        working-directory: backend
-
-      - name: Upload backend coverage
-        uses: codecov/codecov-action@5c47607acb93fed5485fdbf7232e8a31425f672a # v5.0.7
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./backend/coverage.xml
-          flags: backend
-          name: backend-coverage
-
   docker-build:
     runs-on: ubuntu-24.04
-    needs: [frontend, backend]
-    if: |
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/main' &&
-      always() &&
-      needs.frontend.result == 'success' &&
-      (needs.backend.result == 'success' || needs.backend.result == 'skipped')
+    needs: [frontend]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6.0.2
 
