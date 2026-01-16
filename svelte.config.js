@@ -8,6 +8,11 @@ const config = {
 		adapter: adapter(),
 		csrf: {
 			trustedOrigins: ['http://localhost:5173']
+		},
+		files: {
+			lib: 'frontend/lib',
+			routes: 'frontend/routes',
+			appTemplate: 'frontend/app.html'
 		}
 	}
 };
