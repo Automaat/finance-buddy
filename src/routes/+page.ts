@@ -5,6 +5,9 @@ import { browser } from '$app/environment';
 export async function load({ fetch }) {
 	try {
 		const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
+		if (!apiUrl) {
+			throw error(500, 'API URL is not configured');
+		}
 		const response = await fetch(`${apiUrl}/api/dashboard`);
 
 		if (!response.ok) {
