@@ -3,6 +3,14 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
+class AccountCreate(BaseModel):
+    name: str
+    type: str
+    category: str
+    owner: str
+    currency: str = "PLN"
+
+
 class AccountResponse(BaseModel):
     id: int
     name: str

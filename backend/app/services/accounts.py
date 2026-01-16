@@ -2,7 +2,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
 from app.models import Account, Snapshot, SnapshotValue
-from app.schemas.accounts import AccountResponse, AccountsListResponse
+from app.schemas.accounts import AccountCreate, AccountResponse, AccountsListResponse
 
 
 def get_all_accounts(db: Session) -> AccountsListResponse:
@@ -46,3 +46,30 @@ def get_all_accounts(db: Session) -> AccountsListResponse:
             liabilities.append(account_response)
 
     return AccountsListResponse(assets=assets, liabilities=liabilities)
+
+
+def create_account(db: Session, data: AccountCreate) -> AccountResponse:
+    """Create new account"""
+    account = Account(
+        name=data.name,
+        type=data.type,
+        category=data.category,
+        owner=data.owner,
+        currency=data.currency,
+        is_active=True,
+    )
+    db.add(account)
+    db.commit()
+    db.refresh(account)
+
+    return AccountResponse(
+        id=account.id,
+        name=account.name,
+        type=account.type,
+        category=account.category,
+        owner=account.owner,
+        currency=account.currency,
+        is_active=account.is_active,
+        created_at=account.created_at,
+        current_value=0.0,
+    )
