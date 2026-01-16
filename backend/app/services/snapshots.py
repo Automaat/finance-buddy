@@ -21,9 +21,16 @@ def create_snapshot(db: Session, data: SnapshotCreate) -> SnapshotResponse:
     if existing:
         raise HTTPException(status_code=400, detail=f"Snapshot for date {data.date} already exists")
 
-    # Validate all accounts exist
+    # Validate all accounts exist and no duplicates
     account_ids = [v.account_id for v in data.values]
-    accounts = db.execute(select(Account).where(Account.id.in_(account_ids))).scalars().all()
+    if len(account_ids) != len(set(account_ids)):
+        raise HTTPException(status_code=400, detail="Duplicate account IDs in snapshot values")
+
+    accounts = (
+        db.execute(select(Account).where(Account.id.in_(account_ids), Account.is_active.is_(True)))
+        .scalars()
+        .all()
+    )
     if len(accounts) != len(account_ids):
         found_ids = {a.id for a in accounts}
         missing = set(account_ids) - found_ids
@@ -49,9 +56,7 @@ def create_snapshot(db: Session, data: SnapshotCreate) -> SnapshotResponse:
         db.commit()
     except IntegrityError as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=f"Database constraint violation: {e}") from e
-
-    db.refresh(snapshot)
+        raise HTTPException(status_code=400, detail="Failed to create snapshot") from e
 
     # Build response
     account_map = {a.id: a.name for a in accounts}
@@ -118,19 +123,3 @@ def get_snapshot_by_id(db: Session, snapshot_id: int) -> SnapshotResponse:
     return SnapshotResponse(
         id=snapshot.id, date=snapshot.date, notes=snapshot.notes, values=value_responses
     )
-
-
-def get_latest_snapshot_values(db: Session) -> dict[int, float]:
-    """Get latest snapshot values mapped by account_id for form pre-fill"""
-    latest_snapshot = db.execute(
-        select(Snapshot).order_by(desc(Snapshot.date)).limit(1)
-    ).scalar_one_or_none()
-
-    if not latest_snapshot:
-        return {}
-
-    values = db.execute(
-        select(SnapshotValue).where(SnapshotValue.snapshot_id == latest_snapshot.id)
-    ).scalars()
-
-    return {sv.account_id: float(sv.value) for sv in values}

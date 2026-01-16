@@ -24,9 +24,3 @@ def get_snapshots(db: Session = Depends(get_db)) -> list[SnapshotListItem]:  # n
 def get_snapshot(snapshot_id: int, db: Session = Depends(get_db)) -> SnapshotResponse:  # noqa: B008
     """Get single snapshot with all account values"""
     return snapshots.get_snapshot_by_id(db, snapshot_id)
-
-
-@router.get("/latest/values", response_model=dict[int, float])
-def get_latest_values(db: Session = Depends(get_db)) -> dict[int, float]:  # noqa: B008
-    """Get latest snapshot values for form pre-fill (account_id -> value)"""
-    return snapshots.get_latest_snapshot_values(db)

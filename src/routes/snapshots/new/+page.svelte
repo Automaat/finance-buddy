@@ -29,10 +29,16 @@
 			const payload = {
 				date: snapshotDate,
 				notes: notes || null,
-				values: Object.entries(values).map(([accountId, value]) => ({
-					account_id: parseInt(accountId),
-					value: parseFloat(value.toString()) || 0
-				}))
+				values: Object.entries(values).map(([accountId, value]) => {
+					const parsedValue = parseFloat(value.toString());
+					if (Number.isNaN(parsedValue)) {
+						throw new Error('Invalid value for account. Please enter a valid number.');
+					}
+					return {
+						account_id: parseInt(accountId),
+						value: parsedValue
+					};
+				})
 			};
 
 			const response = await fetch(`${env.PUBLIC_API_URL}/api/snapshots`, {

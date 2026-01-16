@@ -9,7 +9,6 @@ from app.schemas.snapshots import SnapshotCreate, SnapshotValueInput
 from app.services.snapshots import (
     create_snapshot,
     get_all_snapshots,
-    get_latest_snapshot_values,
     get_snapshot_by_id,
 )
 
@@ -160,45 +159,74 @@ def test_get_snapshot_by_id_not_found(test_db_session):
     assert "not found" in exc_info.value.detail
 
 
-def test_get_latest_snapshot_values(test_db_session):
-    """Test getting latest snapshot values for pre-fill"""
-    # Create accounts
-    account1 = Account(name="Bank", type="asset", category="bank", owner="Test", currency="PLN")
-    account2 = Account(name="IKE", type="asset", category="ike", owner="Test", currency="PLN")
-    test_db_session.add_all([account1, account2])
+def test_create_snapshot_duplicate_account_ids(test_db_session):
+    """Test creating snapshot with duplicate account IDs fails"""
+    # Create account
+    account = Account(name="Test Bank", type="asset", category="bank", owner="Test", currency="PLN")
+    test_db_session.add(account)
     test_db_session.commit()
 
-    # Create snapshots
-    old_snapshot = Snapshot(date=date(2024, 1, 31))
-    latest_snapshot = Snapshot(date=date(2024, 2, 29))
-    test_db_session.add_all([old_snapshot, latest_snapshot])
-    test_db_session.commit()
-
-    # Add values (latest should be returned)
-    test_db_session.add_all(
-        [
-            SnapshotValue(
-                snapshot_id=old_snapshot.id, account_id=account1.id, value=Decimal("1000")
-            ),
-            SnapshotValue(
-                snapshot_id=latest_snapshot.id, account_id=account1.id, value=Decimal("2000")
-            ),
-            SnapshotValue(
-                snapshot_id=latest_snapshot.id, account_id=account2.id, value=Decimal("3000")
-            ),
-        ]
+    # Try to create snapshot with duplicate account IDs
+    data = SnapshotCreate(
+        date=date(2024, 1, 31),
+        notes="Test",
+        values=[
+            SnapshotValueInput(account_id=account.id, value=1000),
+            SnapshotValueInput(account_id=account.id, value=2000),
+        ],
     )
+
+    with pytest.raises(HTTPException) as exc_info:
+        create_snapshot(test_db_session, data)
+
+    assert exc_info.value.status_code == 400
+    assert "Duplicate account IDs" in exc_info.value.detail
+
+
+def test_create_snapshot_empty_values():
+    """Test creating snapshot with empty values list fails"""
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError) as exc_info:
+        SnapshotCreate(date=date(2024, 1, 31), notes="Test", values=[])
+
+    assert "at least one account value" in str(exc_info.value)
+
+
+def test_create_snapshot_inactive_account(test_db_session):
+    """Test creating snapshot with inactive account fails"""
+    # Create active and inactive accounts
+    active_account = Account(
+        name="Active Bank",
+        type="asset",
+        category="bank",
+        owner="Test",
+        currency="PLN",
+        is_active=True,
+    )
+    inactive_account = Account(
+        name="Inactive Bank",
+        type="asset",
+        category="bank",
+        owner="Test",
+        currency="PLN",
+        is_active=False,
+    )
+    test_db_session.add_all([active_account, inactive_account])
     test_db_session.commit()
 
-    # Get latest values
-    result = get_latest_snapshot_values(test_db_session)
+    # Try to create snapshot with inactive account
+    data = SnapshotCreate(
+        date=date(2024, 1, 31),
+        notes="Test",
+        values=[
+            SnapshotValueInput(account_id=active_account.id, value=1000),
+            SnapshotValueInput(account_id=inactive_account.id, value=2000),
+        ],
+    )
 
-    assert len(result) == 2
-    assert result[account1.id] == 2000.0
-    assert result[account2.id] == 3000.0
+    with pytest.raises(HTTPException) as exc_info:
+        create_snapshot(test_db_session, data)
 
-
-def test_get_latest_snapshot_values_empty(test_db_session):
-    """Test getting latest values when no snapshots exist"""
-    result = get_latest_snapshot_values(test_db_session)
-    assert result == {}
+    assert exc_info.value.status_code == 404
+    assert "not found" in exc_info.value.detail

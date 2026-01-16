@@ -1,6 +1,6 @@
 from datetime import date
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class SnapshotValueInput(BaseModel):
@@ -16,6 +16,13 @@ class SnapshotCreate(BaseModel):
     date: date
     notes: str | None = None
     values: list[SnapshotValueInput]
+
+    @field_validator("values")
+    @classmethod
+    def validate_values_not_empty(cls, v: list[SnapshotValueInput]) -> list[SnapshotValueInput]:
+        if len(v) == 0:
+            raise ValueError("Snapshot must contain at least one account value")
+        return v
 
 
 class SnapshotValueResponse(BaseModel):

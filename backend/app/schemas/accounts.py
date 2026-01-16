@@ -8,7 +8,7 @@ class AccountResponse(BaseModel):
     name: str
     type: str
     category: str
-    owner: str | None
+    owner: str
     currency: str
     is_active: bool
     created_at: datetime
