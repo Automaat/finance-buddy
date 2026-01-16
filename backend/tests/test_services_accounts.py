@@ -11,9 +11,7 @@ def test_get_all_accounts_with_values(test_db_session):
     asset1 = Account(
         name="Bank Account", type="asset", category="bank", owner="Marcin", currency="PLN"
     )
-    asset2 = Account(
-        name="IKE", type="asset", category="ike", owner="Marcin", currency="PLN"
-    )
+    asset2 = Account(name="IKE", type="asset", category="ike", owner="Marcin", currency="PLN")
     liability = Account(
         name="Mortgage",
         type="liability",
@@ -39,16 +37,12 @@ def test_get_all_accounts_with_values(test_db_session):
 
     test_db_session.add_all(
         [
-            SnapshotValue(
-                snapshot_id=snapshot.id, account_id=asset1.id, value=Decimal("50000")
-            ),
+            SnapshotValue(snapshot_id=snapshot.id, account_id=asset1.id, value=Decimal("50000")),
             SnapshotValue(snapshot_id=snapshot.id, account_id=asset2.id, value=Decimal("20000")),
             SnapshotValue(
                 snapshot_id=snapshot.id, account_id=liability.id, value=Decimal("100000")
             ),
-            SnapshotValue(
-                snapshot_id=snapshot.id, account_id=inactive.id, value=Decimal("1000")
-            ),
+            SnapshotValue(snapshot_id=snapshot.id, account_id=inactive.id, value=Decimal("1000")),
         ]
     )
     test_db_session.commit()

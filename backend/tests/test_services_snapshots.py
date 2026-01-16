@@ -20,9 +20,7 @@ def test_create_snapshot_success(test_db_session):
     account1 = Account(
         name="Test Bank", type="asset", category="bank", owner="Test", currency="PLN"
     )
-    account2 = Account(
-        name="Test IKE", type="asset", category="ike", owner="Test", currency="PLN"
-    )
+    account2 = Account(name="Test IKE", type="asset", category="ike", owner="Test", currency="PLN")
     test_db_session.add_all([account1, account2])
     test_db_session.commit()
 
@@ -48,9 +46,7 @@ def test_create_snapshot_success(test_db_session):
 def test_create_snapshot_duplicate_date(test_db_session):
     """Test creating snapshot with duplicate date fails"""
     # Create account
-    account = Account(
-        name="Test Bank", type="asset", category="bank", owner="Test", currency="PLN"
-    )
+    account = Account(name="Test Bank", type="asset", category="bank", owner="Test", currency="PLN")
     test_db_session.add(account)
     test_db_session.commit()
 
@@ -94,9 +90,7 @@ def test_create_snapshot_invalid_account(test_db_session):
 def test_get_all_snapshots(test_db_session):
     """Test getting all snapshots with net worth calculation"""
     # Create accounts
-    asset = Account(
-        name="Bank", type="asset", category="bank", owner="Test", currency="PLN"
-    )
+    asset = Account(name="Bank", type="asset", category="bank", owner="Test", currency="PLN")
     liability = Account(
         name="Mortgage", type="liability", category="mortgage", owner="Test", currency="PLN"
     )
@@ -113,13 +107,9 @@ def test_get_all_snapshots(test_db_session):
     test_db_session.add_all(
         [
             SnapshotValue(snapshot_id=snapshot1.id, account_id=asset.id, value=Decimal("10000")),
-            SnapshotValue(
-                snapshot_id=snapshot1.id, account_id=liability.id, value=Decimal("2000")
-            ),
+            SnapshotValue(snapshot_id=snapshot1.id, account_id=liability.id, value=Decimal("2000")),
             SnapshotValue(snapshot_id=snapshot2.id, account_id=asset.id, value=Decimal("11000")),
-            SnapshotValue(
-                snapshot_id=snapshot2.id, account_id=liability.id, value=Decimal("1800")
-            ),
+            SnapshotValue(snapshot_id=snapshot2.id, account_id=liability.id, value=Decimal("1800")),
         ]
     )
     test_db_session.commit()
@@ -138,9 +128,7 @@ def test_get_all_snapshots(test_db_session):
 def test_get_snapshot_by_id(test_db_session):
     """Test getting single snapshot by ID"""
     # Create account and snapshot
-    account = Account(
-        name="Test Bank", type="asset", category="bank", owner="Test", currency="PLN"
-    )
+    account = Account(name="Test Bank", type="asset", category="bank", owner="Test", currency="PLN")
     test_db_session.add(account)
     test_db_session.commit()
 
@@ -148,9 +136,7 @@ def test_get_snapshot_by_id(test_db_session):
     test_db_session.add(snapshot)
     test_db_session.commit()
 
-    value = SnapshotValue(
-        snapshot_id=snapshot.id, account_id=account.id, value=Decimal("5000.50")
-    )
+    value = SnapshotValue(snapshot_id=snapshot.id, account_id=account.id, value=Decimal("5000.50"))
     test_db_session.add(value)
     test_db_session.commit()
 
@@ -177,12 +163,8 @@ def test_get_snapshot_by_id_not_found(test_db_session):
 def test_get_latest_snapshot_values(test_db_session):
     """Test getting latest snapshot values for pre-fill"""
     # Create accounts
-    account1 = Account(
-        name="Bank", type="asset", category="bank", owner="Test", currency="PLN"
-    )
-    account2 = Account(
-        name="IKE", type="asset", category="ike", owner="Test", currency="PLN"
-    )
+    account1 = Account(name="Bank", type="asset", category="bank", owner="Test", currency="PLN")
+    account2 = Account(name="IKE", type="asset", category="ike", owner="Test", currency="PLN")
     test_db_session.add_all([account1, account2])
     test_db_session.commit()
 
