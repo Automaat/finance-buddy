@@ -41,7 +41,6 @@ jobs:
 
   backend:
     runs-on: ubuntu-24.04
-    if: always() && hashFiles('backend/pyproject.toml') != ''
     services:
       postgres:
         image: postgres:16-alpine
