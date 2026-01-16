@@ -41,7 +41,20 @@ jobs:
 
   backend:
     runs-on: ubuntu-24.04
-    if: always() && hashFiles('backend/pyproject.toml') != ''
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: finance
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: finance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
@@ -63,9 +76,17 @@ jobs:
         run: uv run ruff format --check .
         working-directory: backend
 
+      - name: Run type checker
+        run: uv run pyrefly check .
+        working-directory: backend
+
       - name: Run tests with coverage
         run: uv run pytest
         working-directory: backend
+        env:
+          DATABASE_URL: postgresql://finance:password@localhost:5432/finance
+          APP_PASSWORD: test
+          CORS_ORIGINS: http://localhost:3000
 
       - name: Upload backend coverage
         uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2

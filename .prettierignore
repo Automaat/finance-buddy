@@ -17,3 +17,13 @@ renovate.json
 
 # Claude settings
 .claude/settings.local.json
+
+# Planning documents
+plan.md
+
+# Test coverage and cache
+backend/htmlcov
+backend/.pytest_cache
+
+# Python virtual environment
+.venv
