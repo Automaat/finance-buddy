@@ -2,8 +2,8 @@ from datetime import date
 from decimal import Decimal
 
 from app.models import Account, Snapshot, SnapshotValue
-from app.schemas.accounts import AccountCreate
-from app.services.accounts import create_account, get_all_accounts
+from app.schemas.accounts import AccountCreate, AccountUpdate
+from app.services.accounts import create_account, delete_account, get_all_accounts, update_account
 
 
 def test_get_all_accounts_with_values(test_db_session):
@@ -232,3 +232,152 @@ def test_create_account_duplicate_name(test_db_session):
 
     assert exc_info.value.status_code == 400
     assert "already exists" in exc_info.value.detail
+
+
+def test_update_account_success(test_db_session):
+    """Test updating an account successfully"""
+    import pytest
+    from fastapi import HTTPException
+
+    # Create account
+    account = Account(
+        name="Original Name", type="asset", category="bank", owner="Marcin", currency="PLN"
+    )
+    test_db_session.add(account)
+    test_db_session.commit()
+    account_id = account.id
+
+    # Update account
+    data = AccountUpdate(
+        name="Updated Name", category="ike", owner="Ewa", currency="EUR"
+    )
+    result = update_account(test_db_session, account_id, data)
+
+    assert result.id == account_id
+    assert result.name == "Updated Name"
+    assert result.type == "asset"  # type unchanged
+    assert result.category == "ike"
+    assert result.owner == "Ewa"
+    assert result.currency == "EUR"
+    assert result.is_active is True
+
+
+def test_update_account_duplicate_name(test_db_session):
+    """Test updating account with duplicate name fails"""
+    import pytest
+    from fastapi import HTTPException
+
+    # Create two accounts
+    account1 = Account(
+        name="Account 1", type="asset", category="bank", owner="Marcin", currency="PLN"
+    )
+    account2 = Account(
+        name="Account 2", type="asset", category="bank", owner="Marcin", currency="PLN"
+    )
+    test_db_session.add_all([account1, account2])
+    test_db_session.commit()
+
+    # Try to update account2 with account1's name
+    data = AccountUpdate(name="Account 1")
+
+    with pytest.raises(HTTPException) as exc_info:
+        update_account(test_db_session, account2.id, data)
+
+    assert exc_info.value.status_code == 400
+    assert "already exists" in exc_info.value.detail
+
+
+def test_update_account_not_found(test_db_session):
+    """Test updating non-existent account fails"""
+    import pytest
+    from fastapi import HTTPException
+
+    data = AccountUpdate(name="New Name")
+
+    with pytest.raises(HTTPException) as exc_info:
+        update_account(test_db_session, 999, data)
+
+    assert exc_info.value.status_code == 404
+    assert "not found" in exc_info.value.detail
+
+
+def test_update_account_partial(test_db_session):
+    """Test partial update of account"""
+    import pytest
+    from fastapi import HTTPException
+
+    # Create account
+    account = Account(
+        name="Original", type="asset", category="bank", owner="Marcin", currency="PLN"
+    )
+    test_db_session.add(account)
+    test_db_session.commit()
+    account_id = account.id
+
+    # Update only name
+    data = AccountUpdate(name="Updated Only Name")
+    result = update_account(test_db_session, account_id, data)
+
+    assert result.name == "Updated Only Name"
+    assert result.type == "asset"
+    assert result.category == "bank"
+    assert result.owner == "Marcin"
+    assert result.currency == "PLN"
+
+
+def test_delete_account_success(test_db_session):
+    """Test soft deleting an account"""
+    import pytest
+    from fastapi import HTTPException
+
+    # Create account
+    account = Account(
+        name="To Delete", type="asset", category="bank", owner="Marcin", currency="PLN"
+    )
+    test_db_session.add(account)
+    test_db_session.commit()
+    account_id = account.id
+
+    # Delete account
+    delete_account(test_db_session, account_id)
+
+    # Verify soft delete
+    deleted = test_db_session.query(Account).filter_by(id=account_id).first()
+    assert deleted is not None
+    assert deleted.is_active is False
+
+
+def test_delete_account_not_found(test_db_session):
+    """Test deleting non-existent account fails"""
+    import pytest
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException) as exc_info:
+        delete_account(test_db_session, 999)
+
+    assert exc_info.value.status_code == 404
+    assert "not found" in exc_info.value.detail
+
+
+def test_delete_account_idempotent(test_db_session):
+    """Test deleting already deleted account is idempotent"""
+    import pytest
+    from fastapi import HTTPException
+
+    # Create account
+    account = Account(
+        name="Already Deleted", type="asset", category="bank", owner="Marcin", currency="PLN"
+    )
+    test_db_session.add(account)
+    test_db_session.commit()
+    account_id = account.id
+
+    # Delete once
+    delete_account(test_db_session, account_id)
+
+    # Delete again - should not raise error
+    delete_account(test_db_session, account_id)
+
+    # Verify still deleted
+    deleted = test_db_session.query(Account).filter_by(id=account_id).first()
+    assert deleted.is_active is False

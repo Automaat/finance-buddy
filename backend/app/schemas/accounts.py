@@ -68,7 +68,6 @@ class AccountResponse(BaseModel):
 
 class AccountUpdate(BaseModel):
     name: str | None = None
-    type: str | None = None
     category: str | None = None
     owner: str | None = None
     currency: str | None = None
@@ -80,13 +79,6 @@ class AccountUpdate(BaseModel):
             if not v or not v.strip():
                 raise ValueError("Name cannot be empty")
             return v.strip()
-        return v
-
-    @field_validator("type")
-    @classmethod
-    def validate_type(cls, v: str | None) -> str | None:
-        if v is not None and v not in {"asset", "liability"}:
-            raise ValueError("Type must be 'asset' or 'liability'")
         return v
 
     @field_validator("category")

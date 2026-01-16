@@ -118,8 +118,6 @@ def update_account(db: Session, account_id: int, data: AccountUpdate) -> Account
     # Update fields
     if data.name is not None:
         account.name = data.name
-    if data.type is not None:
-        account.type = data.type
     if data.category is not None:
         account.category = data.category
     if data.owner is not None:
@@ -165,6 +163,10 @@ def delete_account(db: Session, account_id: int) -> None:
 
     if not account:
         raise HTTPException(status_code=404, detail=f"Account with id {account_id} not found")
+
+    # Idempotent: if already deleted, return early
+    if not account.is_active:
+        return
 
     account.is_active = False
     db.commit()

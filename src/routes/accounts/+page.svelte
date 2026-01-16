@@ -3,8 +3,10 @@
 	import CardHeader from '$lib/components/CardHeader.svelte';
 	import CardTitle from '$lib/components/CardTitle.svelte';
 	import CardContent from '$lib/components/CardContent.svelte';
+	import Modal from '$lib/components/Modal.svelte';
 	import { formatPLN } from '$lib/utils/format';
 	import { env } from '$env/dynamic/public';
+	import { invalidateAll } from '$app/navigation';
 	import type { Account } from './+page';
 
 	export let data;
@@ -13,6 +15,8 @@
 
 	let showForm = false;
 	let editingAccount: Account | null = null;
+	let showDeleteModal = false;
+	let accountToDelete: number | null = null;
 
 	const categoryLabels: Record<string, string> = {
 		bank: 'Konto bankowe',
@@ -95,7 +99,8 @@
 				throw new Error(data.detail || 'Failed to save account');
 			}
 
-			window.location.reload();
+			await invalidateAll();
+			cancelForm();
 		} catch (err) {
 			if (err instanceof Error) {
 				error = err.message;
@@ -105,13 +110,21 @@
 		}
 	}
 
-	async function handleDelete(accountId: number) {
-		if (!confirm('Czy na pewno chcesz usunąć to konto?')) {
-			return;
-		}
+	function handleDelete(accountId: number) {
+		accountToDelete = accountId;
+		showDeleteModal = true;
+	}
+
+	function cancelDelete() {
+		showDeleteModal = false;
+		accountToDelete = null;
+	}
+
+	async function confirmDelete() {
+		if (!accountToDelete) return;
 
 		try {
-			const response = await fetch(`${apiUrl}/api/accounts/${accountId}`, {
+			const response = await fetch(`${apiUrl}/api/accounts/${accountToDelete}`, {
 				method: 'DELETE'
 			});
 
@@ -119,11 +132,15 @@
 				throw new Error('Failed to delete account');
 			}
 
-			window.location.reload();
+			await invalidateAll();
+			showDeleteModal = false;
+			accountToDelete = null;
 		} catch (err) {
 			if (err instanceof Error) {
 				error = err.message;
 			}
+			showDeleteModal = false;
+			accountToDelete = null;
 		}
 	}
 </script>
@@ -300,6 +317,16 @@
 		{/if}
 	</CardContent>
 </Card>
+
+<Modal
+	open={showDeleteModal}
+	title="Potwierdzenie usunięcia"
+	onConfirm={confirmDelete}
+	onCancel={cancelDelete}
+>
+	<p>Czy na pewno chcesz usunąć to konto?</p>
+	<p>Operacja ta ustawi konto jako nieaktywne.</p>
+</Modal>
 
 <style>
 	.page-header {
