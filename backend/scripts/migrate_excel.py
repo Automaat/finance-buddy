@@ -101,7 +101,7 @@ def migrate() -> None:
     try:
         # 1. Create accounts from net worth DataFrame columns
         print("\n💰 Creating accounts from net worth sheet...")
-        accounts_map: dict[str, tuple[int, str]] = {}  # name -> (id, type)
+        accounts_map: dict[str, int] = {}
         skip_columns = ["Data", "wartość netto", "wartosc netto"]
 
         # pandas: .columns returns Index of column names
@@ -119,7 +119,7 @@ def migrate() -> None:
                 )
                 db.add(account)
                 db.flush()  # Get ID before commit
-                accounts_map[column] = (account.id, account.type)
+                accounts_map[column] = account.id
                 print(f"  ✓ {column} → {account.category} ({account.owner})")
 
         db.commit()
@@ -147,7 +147,7 @@ def migrate() -> None:
                 db.flush()
 
             # pandas: Access row values by column name
-            for account_name, (account_id, account_type) in accounts_map.items():
+            for account_name, account_id in accounts_map.items():
                 value = row[account_name]
 
                 # pandas: pd.notna() - check value exists
