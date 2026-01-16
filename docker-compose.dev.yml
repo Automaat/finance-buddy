@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: finance-postgres
+    environment:
+      - POSTGRES_USER=finance
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=finance
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finance"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: finance-backend
+    volumes:
+      - ./backend:/app
+    ports:
+      - '8000:8000'
+    environment:
+      - DATABASE_URL=postgresql://finance:password@postgres:5432/finance
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: finance-frontend
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - '5173:5173'
+    environment:
+      - PUBLIC_API_URL=http://backend:8000
+      - PUBLIC_API_URL_BROWSER=http://localhost:8000
+    depends_on:
+      - backend
+
+volumes:
+  postgres-data:
