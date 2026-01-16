@@ -18,7 +18,7 @@
 		"oxlint": "1.39.0",
 		"prettier": "3.8.0",
 		"prettier-plugin-svelte": "3.3.2",
-		"svelte": "5.16.0",
+		"svelte": "5.46.4",
 		"svelte-check": "4.3.5",
 		"typescript": "5.7.3",
 		"vite": "6.4.1"
