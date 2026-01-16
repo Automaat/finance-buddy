@@ -58,7 +58,9 @@ def test_db_engine_postgres(postgres_container):
 @pytest.fixture(scope="function")
 def test_db_session_postgres(test_db_engine_postgres) -> Generator[Session]:
     """Create test database session using PostgreSQL."""
-    test_session_local = sessionmaker(autocommit=False, autoflush=False, bind=test_db_engine_postgres)
+    test_session_local = sessionmaker(
+        autocommit=False, autoflush=False, bind=test_db_engine_postgres
+    )
     session = test_session_local()
     try:
         yield session
