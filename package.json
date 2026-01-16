@@ -8,6 +8,8 @@
 		"preview": "vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"test": "vitest",
+		"test:coverage": "vitest run --coverage",
 		"lint": "oxlint && prettier --check .",
 		"format": "prettier --write ."
 	},
@@ -15,13 +17,15 @@
 		"@sveltejs/adapter-node": "5.5.1",
 		"@sveltejs/kit": "2.49.5",
 		"@sveltejs/vite-plugin-svelte": "5.1.1",
+		"@vitest/coverage-v8": "^4.0.17",
 		"oxlint": "1.39.0",
 		"prettier": "3.8.0",
 		"prettier-plugin-svelte": "3.3.2",
 		"svelte": "5.46.4",
 		"svelte-check": "4.3.5",
 		"typescript": "5.9.3",
-		"vite": "6.4.1"
+		"vite": "6.4.1",
+		"vitest": "^4.0.17"
 	},
 	"type": "module"
 }
