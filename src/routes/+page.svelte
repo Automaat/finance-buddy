@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import * as echarts from 'echarts';
 	import type { EChartsOption } from 'echarts';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
@@ -96,10 +96,17 @@
 		pieChart.setOption(pieOption);
 
 		// Responsive resize
-		window.addEventListener('resize', () => {
+		const handleResize = () => {
 			lineChart.resize();
 			pieChart.resize();
-		});
+		};
+
+		window.addEventListener('resize', handleResize);
+
+		// Cleanup
+		return () => {
+			window.removeEventListener('resize', handleResize);
+		};
 	});
 
 	const change = calculateChange(

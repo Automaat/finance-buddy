@@ -73,7 +73,12 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
         last_month_net_worth = 0
 
     # Latest snapshot data for current totals
-    latest_snapshot = snapshots_df.iloc[-1] if len(snapshots_df) > 0 else None
+    # Use merged df to determine latest snapshot (handles case where merge filters out snapshots)
+    if not df.empty and "snapshot_id" in df.columns:
+        latest_snapshot_id = df["snapshot_id"].max()
+        latest_snapshot = snapshots_df[snapshots_df["id"] == latest_snapshot_id].iloc[0]
+    else:
+        latest_snapshot = None
 
     if latest_snapshot is not None:
         # pandas: Boolean indexing - Filter rows
