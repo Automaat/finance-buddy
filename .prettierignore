@@ -20,6 +20,7 @@ renovate.json
 
 # Planning documents
 plan.md
+CLAUDE.md
 
 # Test coverage and cache
 backend/htmlcov
