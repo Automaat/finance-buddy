@@ -14,3 +14,6 @@ yarn.lock
 # GitHub bot configs
 renovate.json
 .github/renovate.json
+
+# Claude settings
+.claude/settings.local.json
