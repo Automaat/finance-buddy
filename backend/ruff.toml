@@ -1,0 +1,8 @@
+line-length = 100
+target-version = "py314"
+
+[lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "A", "C4", "DTZ", "T20", "RET", "SIM", "ARG"]
+
+[lint.isort]
+known-first-party = ["app"]
