@@ -15,7 +15,7 @@
 	let error = '';
 
 	// Separate investments from regular assets
-	const investmentCategories = ['ike', 'ikze', 'ppk', 'bonds', 'stocks'];
+	const investmentCategories = ['ike', 'ikze', 'ppk', 'bonds', 'stocks', 'fund', 'etf'];
 	let investments = data.assets.filter((a: any) => investmentCategories.includes(a.category));
 	let regularAssets = data.assets.filter((a: any) => !investmentCategories.includes(a.category));
 
@@ -62,10 +62,7 @@
 
 		try {
 			const type = newAccountSection === 'liabilities' ? 'liability' : 'asset';
-			const category =
-				newAccountSection === 'investments'
-					? newAccountCategory || 'other'
-					: newAccountCategory || 'other';
+			const category = newAccountCategory || 'other';
 
 			const response = await fetch(`${env.PUBLIC_API_URL_BROWSER}/api/accounts`, {
 				method: 'POST',
@@ -80,7 +77,14 @@
 			});
 
 			if (!response.ok) {
-				throw new Error('Failed to create account');
+				const errorData = await response.json().catch(() => null);
+				const message =
+					(errorData &&
+						typeof errorData === 'object' &&
+						'detail' in errorData &&
+						errorData.detail) ||
+					'Failed to create account';
+				throw new Error(String(message));
 			}
 
 			const newAccount = await response.json();
@@ -131,7 +135,7 @@
 
 		try {
 			// Build payload: visible accounts with values, hidden accounts with 0
-			const allAccounts = [...data.assets, ...data.liabilities];
+			const allAccounts = [...investments, ...regularAssets, ...data.liabilities];
 			const payload = {
 				date: snapshotDate,
 				notes: notes || null,

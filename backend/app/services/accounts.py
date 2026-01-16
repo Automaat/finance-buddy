@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
@@ -50,6 +51,20 @@ def get_all_accounts(db: Session) -> AccountsListResponse:
 
 def create_account(db: Session, data: AccountCreate) -> AccountResponse:
     """Create new account"""
+    # Check for duplicate active account name
+    existing = (
+        db.execute(
+            select(Account).where(
+                Account.name == data.name,
+                Account.is_active.is_(True),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Active account '{data.name}' already exists")
+
     account = Account(
         name=data.name,
         type=data.type,

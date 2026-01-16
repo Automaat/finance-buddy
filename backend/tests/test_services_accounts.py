@@ -201,3 +201,34 @@ def test_create_account_with_default_currency(test_db_session):
     result = create_account(test_db_session, data)
 
     assert result.currency == "PLN"
+
+
+def test_create_account_duplicate_name(test_db_session):
+    """Test creating account with duplicate name fails"""
+    import pytest
+    from fastapi import HTTPException
+
+    # Create first account
+    data1 = AccountCreate(
+        name="Duplicate Test Account",
+        type="asset",
+        category="bank",
+        owner="Marcin",
+        currency="PLN",
+    )
+    create_account(test_db_session, data1)
+
+    # Try to create account with same name
+    data2 = AccountCreate(
+        name="Duplicate Test Account",
+        type="asset",
+        category="ike",
+        owner="Ewa",
+        currency="PLN",
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        create_account(test_db_session, data2)
+
+    assert exc_info.value.status_code == 400
+    assert "already exists" in exc_info.value.detail

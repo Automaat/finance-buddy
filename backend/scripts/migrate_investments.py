@@ -85,6 +85,7 @@ def migrate() -> None:
 
         print(f"\n💰 Creating {len(account_columns)} investment accounts...")
         accounts_map: dict[str, int] = {}
+        new_account_count = 0
 
         for column in account_columns:
             # Check if account already exists
@@ -104,10 +105,11 @@ def migrate() -> None:
             db.add(account)
             db.flush()
             accounts_map[column] = account.id
+            new_account_count += 1
             print(f"  ✓ {column} → {account.category} ({account.owner})")
 
         db.commit()
-        print(f"  Created {len([k for k, v in accounts_map.items() if v > 44])} new accounts")
+        print(f"  Created {new_account_count} new accounts")
 
         # Import historical values
         print("\n📸 Importing snapshot values...")
