@@ -3,6 +3,7 @@
 		"typescript": "warn",
 		"correctness": "warn",
 		"suspicious": "warn",
-		"perf": "warn"
+		"perf": "warn",
+		"eslint/no-unassigned-vars": "off"
 	}
 }
