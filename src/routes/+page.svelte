@@ -44,12 +44,12 @@
 					smooth: true,
 					areaStyle: {
 						color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-							{ offset: 0, color: 'rgba(59, 130, 246, 0.5)' },
-							{ offset: 1, color: 'rgba(59, 130, 246, 0.1)' }
+							{ offset: 0, color: 'rgba(94, 129, 172, 0.5)' }, // Nord10 #5E81AC
+							{ offset: 1, color: 'rgba(94, 129, 172, 0.1)' }
 						])
 					},
 					lineStyle: {
-						color: 'rgb(59, 130, 246)',
+						color: '#5E81AC', // Nord10
 						width: 2
 					}
 				}
@@ -74,6 +74,16 @@
 				trigger: 'item',
 				formatter: '{b}: {c} PLN ({d}%)'
 			},
+			color: [
+				'#5E81AC', // Nord10 - Frost blue
+				'#88C0D0', // Nord8 - Frost cyan
+				'#81A1C1', // Nord9 - Frost light blue
+				'#8FBCBB', // Nord7 - Frost teal
+				'#A3BE8C', // Nord14 - Aurora green
+				'#EBCB8B', // Nord13 - Aurora yellow
+				'#D08770', // Nord12 - Aurora orange
+				'#B48EAD' // Nord15 - Aurora purple
+			],
 			series: [
 				{
 					type: 'pie',
@@ -135,8 +145,8 @@
 				<div class="text-3xl font-bold">{formatPLN(data.current_net_worth)}</div>
 				<p
 					class="text-sm mt-2"
-					class:text-green-600={data.change_vs_last_month >= 0}
-					class:text-red-600={data.change_vs_last_month < 0}
+					class:text-nord-14={data.change_vs_last_month >= 0}
+					class:text-nord-11={data.change_vs_last_month < 0}
 				>
 					{data.change_vs_last_month >= 0 ? '↑' : '↓'}
 					{formatPLN(Math.abs(data.change_vs_last_month))}
@@ -151,7 +161,7 @@
 				<CardTitle class="text-sm font-medium">Aktywa</CardTitle>
 			</CardHeader>
 			<CardContent>
-				<div class="text-3xl font-bold text-green-600">{formatPLN(data.total_assets)}</div>
+				<div class="text-3xl font-bold text-nord-14">{formatPLN(data.total_assets)}</div>
 				<p class="text-sm text-muted-foreground mt-2">Suma wszystkich aktywów</p>
 			</CardContent>
 		</Card>
@@ -161,7 +171,7 @@
 				<CardTitle class="text-sm font-medium">Zobowiązania</CardTitle>
 			</CardHeader>
 			<CardContent>
-				<div class="text-3xl font-bold text-red-600">{formatPLN(data.total_liabilities)}</div>
+				<div class="text-3xl font-bold text-nord-11">{formatPLN(data.total_liabilities)}</div>
 				<p class="text-sm text-muted-foreground mt-2">Suma wszystkich zobowiązań</p>
 			</CardContent>
 		</Card>

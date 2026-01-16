@@ -1,24 +1,62 @@
 @import 'tailwindcss';
 
+/**
+ * Nord Theme - Light Mode
+ * https://www.nordtheme.com/
+ *
+ * Palette:
+ * - Polar Night: #2E3440, #3B4252, #434C5E, #4C566A
+ * - Snow Storm: #D8DEE9, #E5E9F0, #ECEFF4
+ * - Frost: #8FBCBB, #88C0D0, #81A1C1, #5E81AC
+ * - Aurora: #BF616A, #D08770, #EBCB8B, #A3BE8C, #B48EAD
+ */
+
 @theme {
-	--color-background: 0 0% 100%;
-	--color-foreground: 222.2 84% 4.9%;
-	--color-card: 0 0% 100%;
-	--color-card-foreground: 222.2 84% 4.9%;
-	--color-popover: 0 0% 100%;
-	--color-popover-foreground: 222.2 84% 4.9%;
-	--color-primary: 222.2 47.4% 11.2%;
-	--color-primary-foreground: 210 40% 98%;
-	--color-secondary: 210 40% 96.1%;
-	--color-secondary-foreground: 222.2 47.4% 11.2%;
-	--color-muted: 210 40% 96.1%;
-	--color-muted-foreground: 215.4 16.3% 46.9%;
-	--color-accent: 210 40% 96.1%;
-	--color-accent-foreground: 222.2 47.4% 11.2%;
-	--color-destructive: 0 84.2% 60.2%;
-	--color-destructive-foreground: 210 40% 98%;
-	--color-border: 214.3 31.8% 91.4%;
-	--color-input: 214.3 31.8% 91.4%;
-	--color-ring: 222.2 84% 4.9%;
+	/* Background colors - Snow Storm */
+	--color-background: 220 27% 94%; /* #ECEFF4 */
+	--color-foreground: 220 16% 22%; /* #2E3440 */
+
+	/* Card colors */
+	--color-card: 218 27% 92%; /* #E5E9F0 */
+	--color-card-foreground: 220 16% 22%; /* #2E3440 */
+
+	/* Popover colors */
+	--color-popover: 218 27% 92%; /* #E5E9F0 */
+	--color-popover-foreground: 220 16% 22%; /* #2E3440 */
+
+	/* Primary colors - Frost blue */
+	--color-primary: 213 32% 52%; /* #5E81AC */
+	--color-primary-foreground: 220 27% 94%; /* #ECEFF4 */
+
+	/* Secondary colors - Polar Night lighter */
+	--color-secondary: 220 17% 32%; /* #434C5E */
+	--color-secondary-foreground: 220 27% 94%; /* #ECEFF4 */
+
+	/* Muted colors */
+	--color-muted: 220 16% 84%; /* #D8DEE9 */
+	--color-muted-foreground: 220 16% 36%; /* #4C566A */
+
+	/* Accent colors - Frost teal */
+	--color-accent: 179 25% 65%; /* #8FBCBB */
+	--color-accent-foreground: 220 16% 22%; /* #2E3440 */
+
+	/* Destructive colors - Aurora red */
+	--color-destructive: 354 42% 56%; /* #BF616A */
+	--color-destructive-foreground: 220 27% 94%; /* #ECEFF4 */
+
+	/* Success colors - Aurora green */
+	--color-success: 92 28% 65%; /* #A3BE8C */
+	--color-success-foreground: 220 16% 22%; /* #2E3440 */
+
+	/* Warning colors - Aurora yellow */
+	--color-warning: 40 71% 73%; /* #EBCB8B */
+	--color-warning-foreground: 220 16% 22%; /* #2E3440 */
+
+	/* Border and input */
+	--color-border: 220 16% 84%; /* #D8DEE9 */
+	--color-input: 220 16% 84%; /* #D8DEE9 */
+	--color-ring: 213 32% 52%; /* #5E81AC - matches primary */
+
+	/* Border radius */
 	--radius: 0.5rem;
 }
