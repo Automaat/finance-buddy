@@ -101,8 +101,8 @@ def migrate() -> None:
     try:
         # 1. Create accounts from net worth DataFrame columns
         print("\n💰 Creating accounts from net worth sheet...")
-        accounts_map: dict[str, int] = {}
-        skip_columns = ["Data", "ROR", "wartość netto", "wartosc netto"]
+        accounts_map: dict[str, tuple[int, str]] = {}  # name -> (id, type)
+        skip_columns = ["Data", "wartość netto", "wartosc netto"]
 
         # pandas: .columns returns Index of column names
         account_columns = [col for col in df_net_worth.columns if col not in skip_columns]
@@ -119,7 +119,7 @@ def migrate() -> None:
                 )
                 db.add(account)
                 db.flush()  # Get ID before commit
-                accounts_map[column] = account.id
+                accounts_map[column] = (account.id, account.type)
                 print(f"  ✓ {column} → {account.category} ({account.owner})")
 
         db.commit()
@@ -147,15 +147,16 @@ def migrate() -> None:
                 db.flush()
 
             # pandas: Access row values by column name
-            for account_name, account_id in accounts_map.items():
+            for account_name, (account_id, account_type) in accounts_map.items():
                 value = row[account_name]
 
                 # pandas: pd.notna() - check value exists
                 if pd.notna(value) and value != 0:
+                    # Store absolute value - account type determines if asset/liability
                     snapshot_value = SnapshotValue(
                         snapshot_id=snapshot.id,
                         account_id=account_id,
-                        value=Decimal(str(value)),
+                        value=Decimal(str(abs(value))),
                     )
                     db.add(snapshot_value)
 
