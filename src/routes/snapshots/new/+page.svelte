@@ -90,13 +90,7 @@
 		<CardContent>
 			<div class="form-group">
 				<label for="date" class="form-label">Data</label>
-				<input
-					id="date"
-					type="date"
-					bind:value={snapshotDate}
-					required
-					class="form-input"
-				/>
+				<input id="date" type="date" bind:value={snapshotDate} required class="form-input" />
 			</div>
 
 			<div class="form-group">
@@ -176,9 +170,7 @@
 		<button type="submit" disabled={loading} class="btn btn-primary">
 			{loading ? 'Zapisywanie...' : '💾 Zapisz Snapshot'}
 		</button>
-		<button type="button" on:click={() => goto('/')} class="btn btn-secondary">
-			Anuluj
-		</button>
+		<button type="button" on:click={() => goto('/')} class="btn btn-secondary"> Anuluj </button>
 	</div>
 </form>
 
