@@ -78,7 +78,12 @@ jobs:
   docker-build:
     runs-on: ubuntu-24.04
     needs: [frontend, backend]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && always() && needs.frontend.result == 'success' && (needs.backend.result == 'success' || needs.backend.result == 'skipped')
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      always() &&
+      needs.frontend.result == 'success' &&
+      (needs.backend.result == 'success' || needs.backend.result == 'skipped')
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6.0.2
 
