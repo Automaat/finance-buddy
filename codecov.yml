@@ -4,10 +4,28 @@ coverage:
       default:
         target: 80%
         threshold: 1%
+      frontend:
+        flags:
+          - frontend
+        target: 80%
+        threshold: 1%
+      backend:
+        flags:
+          - backend
+        target: 80%
+        threshold: 1%
     patch:
       default:
         target: 80%
         threshold: 1%
+
+flags:
+  frontend:
+    paths:
+      - frontend/
+  backend:
+    paths:
+      - backend/
 
 comment:
   layout: 'reach,diff,flags,tree,footer'
