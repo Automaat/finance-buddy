@@ -236,9 +236,6 @@ def test_create_account_duplicate_name(test_db_session):
 
 def test_update_account_success(test_db_session):
     """Test updating an account successfully"""
-    import pytest
-    from fastapi import HTTPException
-
     # Create account
     account = Account(
         name="Original Name", type="asset", category="bank", owner="Marcin", currency="PLN"
@@ -303,9 +300,6 @@ def test_update_account_not_found(test_db_session):
 
 def test_update_account_partial(test_db_session):
     """Test partial update of account"""
-    import pytest
-    from fastapi import HTTPException
-
     # Create account
     account = Account(
         name="Original", type="asset", category="bank", owner="Marcin", currency="PLN"
@@ -327,9 +321,6 @@ def test_update_account_partial(test_db_session):
 
 def test_delete_account_success(test_db_session):
     """Test soft deleting an account"""
-    import pytest
-    from fastapi import HTTPException
-
     # Create account
     account = Account(
         name="To Delete", type="asset", category="bank", owner="Marcin", currency="PLN"
@@ -361,9 +352,6 @@ def test_delete_account_not_found(test_db_session):
 
 def test_delete_account_idempotent(test_db_session):
     """Test deleting already deleted account is idempotent"""
-    import pytest
-    from fastapi import HTTPException
-
     # Create account
     account = Account(
         name="Already Deleted", type="asset", category="bank", owner="Marcin", currency="PLN"
