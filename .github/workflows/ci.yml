@@ -79,6 +79,10 @@ jobs:
       - name: Run tests with coverage
         run: uv run pytest
         working-directory: backend
+        env:
+          DATABASE_URL: postgresql://finance:password@localhost:5432/finance
+          APP_PASSWORD: test
+          CORS_ORIGINS: http://localhost:3000
 
       - name: Upload backend coverage
         uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
