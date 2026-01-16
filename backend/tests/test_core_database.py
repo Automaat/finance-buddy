@@ -1,3 +1,4 @@
+from contextlib import suppress
 from unittest.mock import patch
 
 from sqlalchemy.orm import Session
@@ -35,10 +36,8 @@ def test_get_db_generator():
     db = next(db_gen)
     assert isinstance(db, Session)
 
-    try:
+    with suppress(StopIteration):
         db_gen.close()
-    except StopIteration:
-        pass
 
 
 def test_get_db_session_cleanup():
@@ -48,10 +47,8 @@ def test_get_db_session_cleanup():
 
     assert not db.is_active or db.is_active
 
-    try:
+    with suppress(StopIteration):
         db_gen.close()
-    except StopIteration:
-        pass
 
 
 def test_get_db_exception_handling():
@@ -60,10 +57,8 @@ def test_get_db_exception_handling():
     db = next(db_gen)
 
     with patch.object(db, "close") as mock_close:
-        try:
+        with suppress(Exception):
             db_gen.throw(Exception("Test exception"))
-        except Exception:
-            pass
 
         mock_close.assert_called_once()
 

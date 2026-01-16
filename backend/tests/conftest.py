@@ -12,7 +12,7 @@ def test_db_engine():
 
     # Enable foreign key constraints in SQLite
     @event.listens_for(engine, "connect")
-    def set_sqlite_pragma(dbapi_conn, connection_record):
+    def set_sqlite_pragma(dbapi_conn, _connection_record):
         cursor = dbapi_conn.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
@@ -26,8 +26,8 @@ def test_db_engine():
 @pytest.fixture(scope="function")
 def test_db_session(test_db_engine) -> Session:
     """Create test database session."""
-    TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_db_engine)
-    session = TestSessionLocal()
+    test_session_local = sessionmaker(autocommit=False, autoflush=False, bind=test_db_engine)
+    session = test_session_local()
     try:
         yield session
     finally:

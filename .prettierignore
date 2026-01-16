@@ -20,3 +20,10 @@ renovate.json
 
 # Planning documents
 plan.md
+
+# Test coverage and cache
+backend/htmlcov
+backend/.pytest_cache
+
+# Python virtual environment
+.venv

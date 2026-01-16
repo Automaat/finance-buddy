@@ -45,20 +45,14 @@ def test_snapshot_optional_notes(test_db_session):
 def test_snapshot_value_creation(test_db_session):
     """Test creating a snapshot value with all required fields."""
     account = Account(
-        name="Savings",
-        type="savings",
-        category="banking",
-        owner="John Doe",
-        currency="USD"
+        name="Savings", type="savings", category="banking", owner="John Doe", currency="USD"
     )
     snapshot = Snapshot(date=date(2024, 1, 1))
     test_db_session.add_all([account, snapshot])
     test_db_session.commit()
 
     snapshot_value = SnapshotValue(
-        snapshot_id=snapshot.id,
-        account_id=account.id,
-        value=Decimal("1000.50")
+        snapshot_id=snapshot.id, account_id=account.id, value=Decimal("1000.50")
     )
     test_db_session.add(snapshot_value)
     test_db_session.commit()
@@ -72,29 +66,17 @@ def test_snapshot_value_creation(test_db_session):
 def test_snapshot_value_unique_constraint(test_db_session):
     """Test that snapshot-account combination must be unique."""
     account = Account(
-        name="Savings",
-        type="savings",
-        category="banking",
-        owner="John Doe",
-        currency="USD"
+        name="Savings", type="savings", category="banking", owner="John Doe", currency="USD"
     )
     snapshot = Snapshot(date=date(2024, 1, 1))
     test_db_session.add_all([account, snapshot])
     test_db_session.commit()
 
-    value1 = SnapshotValue(
-        snapshot_id=snapshot.id,
-        account_id=account.id,
-        value=Decimal("1000.00")
-    )
+    value1 = SnapshotValue(snapshot_id=snapshot.id, account_id=account.id, value=Decimal("1000.00"))
     test_db_session.add(value1)
     test_db_session.commit()
 
-    value2 = SnapshotValue(
-        snapshot_id=snapshot.id,
-        account_id=account.id,
-        value=Decimal("2000.00")
-    )
+    value2 = SnapshotValue(snapshot_id=snapshot.id, account_id=account.id, value=Decimal("2000.00"))
     test_db_session.add(value2)
 
     with pytest.raises(IntegrityError):
@@ -104,20 +86,14 @@ def test_snapshot_value_unique_constraint(test_db_session):
 def test_snapshot_cascade_delete(test_db_session):
     """Test that deleting a snapshot cascades to snapshot values."""
     account = Account(
-        name="Savings",
-        type="savings",
-        category="banking",
-        owner="John Doe",
-        currency="USD"
+        name="Savings", type="savings", category="banking", owner="John Doe", currency="USD"
     )
     snapshot = Snapshot(date=date(2024, 1, 1))
     test_db_session.add_all([account, snapshot])
     test_db_session.commit()
 
     snapshot_value = SnapshotValue(
-        snapshot_id=snapshot.id,
-        account_id=account.id,
-        value=Decimal("1000.00")
+        snapshot_id=snapshot.id, account_id=account.id, value=Decimal("1000.00")
     )
     test_db_session.add(snapshot_value)
     test_db_session.commit()
@@ -133,20 +109,14 @@ def test_snapshot_cascade_delete(test_db_session):
 def test_account_cascade_delete(test_db_session):
     """Test that deleting an account cascades to snapshot values."""
     account = Account(
-        name="Savings",
-        type="savings",
-        category="banking",
-        owner="John Doe",
-        currency="USD"
+        name="Savings", type="savings", category="banking", owner="John Doe", currency="USD"
     )
     snapshot = Snapshot(date=date(2024, 1, 1))
     test_db_session.add_all([account, snapshot])
     test_db_session.commit()
 
     snapshot_value = SnapshotValue(
-        snapshot_id=snapshot.id,
-        account_id=account.id,
-        value=Decimal("1000.00")
+        snapshot_id=snapshot.id, account_id=account.id, value=Decimal("1000.00")
     )
     test_db_session.add(snapshot_value)
     test_db_session.commit()
@@ -162,20 +132,14 @@ def test_account_cascade_delete(test_db_session):
 def test_snapshot_value_decimal_precision(test_db_session):
     """Test that snapshot values maintain decimal precision."""
     account = Account(
-        name="Savings",
-        type="savings",
-        category="banking",
-        owner="John Doe",
-        currency="USD"
+        name="Savings", type="savings", category="banking", owner="John Doe", currency="USD"
     )
     snapshot = Snapshot(date=date(2024, 1, 1))
     test_db_session.add_all([account, snapshot])
     test_db_session.commit()
 
     snapshot_value = SnapshotValue(
-        snapshot_id=snapshot.id,
-        account_id=account.id,
-        value=Decimal("12345678901234.56")
+        snapshot_id=snapshot.id, account_id=account.id, value=Decimal("12345678901234.56")
     )
     test_db_session.add(snapshot_value)
     test_db_session.commit()
