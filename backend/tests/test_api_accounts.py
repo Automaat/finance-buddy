@@ -50,5 +50,3 @@ def test_create_account_invalid_owner(test_client):
     response = test_client.post("/api/accounts", json=payload)
 
     assert response.status_code == 422
-
-
