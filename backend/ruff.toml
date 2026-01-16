@@ -4,5 +4,8 @@ target-version = "py314"
 [lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "A", "C4", "DTZ", "T20", "RET", "SIM", "ARG"]
 
+[lint.per-file-ignores]
+"scripts/*.py" = ["T201"]
+
 [lint.isort]
 known-first-party = ["app"]
