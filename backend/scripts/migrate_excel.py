@@ -15,6 +15,7 @@ pandas operations demonstrated:
 """
 
 import sys
+from decimal import Decimal
 from pathlib import Path
 
 import pandas as pd
@@ -97,82 +98,89 @@ def migrate() -> None:
 
     # SQLAlchemy session
     db = Session(engine)
+    try:
+        # 1. Create accounts from net worth DataFrame columns
+        print("\n💰 Creating accounts from net worth sheet...")
+        accounts_map: dict[str, int] = {}
+        skip_columns = ["Data", "ROR", "wartość netto", "wartosc netto"]
 
-    # 1. Create accounts from net worth DataFrame columns
-    print("\n💰 Creating accounts from net worth sheet...")
-    accounts_map: dict[str, int] = {}
-    skip_columns = ["Data", "ROR", "wartość netto", "wartosc netto"]
+        # pandas: .columns returns Index of column names
+        account_columns = [col for col in df_net_worth.columns if col not in skip_columns]
 
-    # pandas: .columns returns Index of column names
-    account_columns = [col for col in df_net_worth.columns if col not in skip_columns]
-
-    for column in account_columns:
-        # pandas: .iloc[0] - first row value check
-        if pd.notna(df_net_worth[column].iloc[0]):
-            account = Account(
-                name=column,
-                type=determine_type(column),
-                category=determine_category(column),
-                owner=determine_owner(column),
-                currency="PLN",
-            )
-            db.add(account)
-            db.flush()  # Get ID before commit
-            accounts_map[column] = account.id
-            print(f"  ✓ {column} → {account.category} ({account.owner})")
-
-    db.commit()
-    print(f"  Created {len(accounts_map)} accounts")
-
-    # 2. Create snapshots from DataFrame rows
-    print("\n📸 Creating snapshots...")
-    snapshot_count = 0
-
-    # pandas: .iterrows() - iterate over DataFrame rows
-    for _idx, row in df_net_worth.iterrows():
-        date = row["Data"]
-
-        # pandas: pd.isna() - check for NaN/None values
-        if pd.isna(date):
-            continue
-
-        # Create snapshot
-        snapshot = Snapshot(date=date)
-        db.add(snapshot)
-        db.flush()
-
-        # pandas: Access row values by column name
-        for account_name, account_id in accounts_map.items():
-            value = row[account_name]
-
-            # pandas: pd.notna() - check value exists
-            if pd.notna(value) and value != 0:
-                snapshot_value = SnapshotValue(
-                    snapshot_id=snapshot.id,
-                    account_id=account_id,
-                    value=float(value),
+        for column in account_columns:
+            # pandas: check if column has any non-NaN values
+            if df_net_worth[column].notna().any():
+                account = Account(
+                    name=column,
+                    type=determine_type(column),
+                    category=determine_category(column),
+                    owner=determine_owner(column),
+                    currency="PLN",
                 )
-                db.add(snapshot_value)
+                db.add(account)
+                db.flush()  # Get ID before commit
+                accounts_map[column] = account.id
+                print(f"  ✓ {column} → {account.category} ({account.owner})")
 
-        snapshot_count += 1
-        if snapshot_count % 10 == 0:
-            print(f"  Processed {snapshot_count} snapshots...")
-            db.commit()  # Commit in batches
+        db.commit()
+        print(f"  Created {len(accounts_map)} accounts")
 
-    db.commit()
-    print(f"  ✓ Created {snapshot_count} snapshots")
+        # 2. Create snapshots from DataFrame rows
+        print("\n📸 Creating snapshots...")
+        snapshot_count = 0
 
-    # 3. Process investment sheet (informational - structure may vary)
-    print("\n📊 Investment sheet analysis...")
-    print(f"  Columns: {list(df_investments.columns)}")
-    print(f"  Shape: {df_investments.shape}")
-    print("  (Investment data structure varies - manual review recommended)")
+        # pandas: .iterrows() - iterate over DataFrame rows
+        for _idx, row in df_net_worth.iterrows():
+            date = row["Data"]
 
-    db.close()
+            # pandas: pd.isna() - check for NaN/None values
+            if pd.isna(date):
+                continue
 
-    print("\n✅ Migration completed successfully!")
-    print(f"  📊 {len(accounts_map)} accounts")
-    print(f"  📸 {snapshot_count} snapshots")
+            # Create snapshot or use existing for duplicate dates
+            existing = db.query(Snapshot).filter_by(date=date).first()
+            if existing:
+                snapshot = existing
+            else:
+                snapshot = Snapshot(date=date)
+                db.add(snapshot)
+                db.flush()
+
+            # pandas: Access row values by column name
+            for account_name, account_id in accounts_map.items():
+                value = row[account_name]
+
+                # pandas: pd.notna() - check value exists
+                if pd.notna(value) and value != 0:
+                    snapshot_value = SnapshotValue(
+                        snapshot_id=snapshot.id,
+                        account_id=account_id,
+                        value=Decimal(str(value)),
+                    )
+                    db.add(snapshot_value)
+
+            snapshot_count += 1
+            if snapshot_count % 10 == 0:
+                print(f"  Processed {snapshot_count} snapshots...")
+                db.commit()  # Commit in batches
+
+        db.commit()
+        print(f"  ✓ Created {snapshot_count} snapshots")
+
+        # 3. Process investment sheet (informational - structure may vary)
+        print("\n📊 Investment sheet analysis...")
+        print(f"  Columns: {list(df_investments.columns)}")
+        print(f"  Shape: {df_investments.shape}")
+        print("  (Investment data structure varies - manual review recommended)")
+
+        print("\n✅ Migration completed successfully!")
+        print(f"  📊 {len(accounts_map)} accounts")
+        print(f"  📸 {snapshot_count} snapshots")
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
 
 if __name__ == "__main__":
