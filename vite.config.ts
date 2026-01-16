@@ -13,13 +13,7 @@ export default defineConfig({
 		coverage: {
 			provider: 'v8',
 			reporter: ['text', 'json', 'html', 'lcov'],
-			exclude: [
-				'node_modules/**',
-				'.svelte-kit/**',
-				'build/**',
-				'**/*.config.*',
-				'**/.*rc.*'
-			]
+			exclude: ['node_modules/**', '.svelte-kit/**', 'build/**', '**/*.config.*', '**/.*rc.*']
 		}
 	}
 });
