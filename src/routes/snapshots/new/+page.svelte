@@ -229,7 +229,7 @@
 				<CardTitle>📈 Inwestycje</CardTitle>
 			</CardHeader>
 			<CardContent>
-				{#each investments.filter((a) => visibleAccountIds.has(a.id)) as account}
+				{#each investments.filter((a: any) => visibleAccountIds.has(a.id)) as account}
 					<div class="form-group-with-remove">
 						<div class="form-group">
 							<label for="account-{account.id}" class="form-label">
@@ -259,11 +259,11 @@
 				{/each}
 
 				<div class="add-account">
-					{#if investments.filter((a) => !visibleAccountIds.has(a.id)).length > 0}
+					{#if investments.filter((a: any) => !visibleAccountIds.has(a.id)).length > 0}
 						<details>
 							<summary>+ Pokaż ukryte konta</summary>
 							<div class="add-account-list">
-								{#each investments.filter((a) => !visibleAccountIds.has(a.id)) as account}
+								{#each investments.filter((a: any) => !visibleAccountIds.has(a.id)) as account}
 									<button
 										type="button"
 										class="btn-add-account"
@@ -296,7 +296,7 @@
 			<CardTitle>💰 Aktywa</CardTitle>
 		</CardHeader>
 		<CardContent>
-			{#each regularAssets.filter((a) => visibleAccountIds.has(a.id)) as account}
+			{#each regularAssets.filter((a: any) => visibleAccountIds.has(a.id)) as account}
 				<div class="form-group-with-remove">
 					<div class="form-group">
 						<label for="account-{account.id}" class="form-label">
@@ -324,11 +324,11 @@
 			{/each}
 
 			<div class="add-account">
-				{#if regularAssets.filter((a) => !visibleAccountIds.has(a.id)).length > 0}
+				{#if regularAssets.filter((a: any) => !visibleAccountIds.has(a.id)).length > 0}
 					<details>
 						<summary>+ Pokaż ukryte konta</summary>
 						<div class="add-account-list">
-							{#each regularAssets.filter((a) => !visibleAccountIds.has(a.id)) as account}
+							{#each regularAssets.filter((a: any) => !visibleAccountIds.has(a.id)) as account}
 								<button
 									type="button"
 									class="btn-add-account"
@@ -355,7 +355,7 @@
 				<CardTitle>💸 Zobowiązania</CardTitle>
 			</CardHeader>
 			<CardContent>
-				{#each data.liabilities.filter((a) => visibleAccountIds.has(a.id)) as account}
+				{#each data.liabilities.filter((a: any) => visibleAccountIds.has(a.id)) as account}
 					<div class="form-group-with-remove">
 						<div class="form-group">
 							<label for="account-{account.id}" class="form-label">
@@ -383,11 +383,11 @@
 				{/each}
 
 				<div class="add-account">
-					{#if data.liabilities.filter((a) => !visibleAccountIds.has(a.id)).length > 0}
+					{#if data.liabilities.filter((a: any) => !visibleAccountIds.has(a.id)).length > 0}
 						<details>
 							<summary>+ Pokaż ukryte konta</summary>
 							<div class="add-account-list">
-								{#each data.liabilities.filter((a) => !visibleAccountIds.has(a.id)) as account}
+								{#each data.liabilities.filter((a: any) => !visibleAccountIds.has(a.id)) as account}
 									<button
 										type="button"
 										class="btn-add-account"
