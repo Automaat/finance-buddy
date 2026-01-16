@@ -1,3 +1,5 @@
+from collections.abc import Generator
+
 import pytest
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
@@ -24,7 +26,7 @@ def test_db_engine():
 
 
 @pytest.fixture(scope="function")
-def test_db_session(test_db_engine) -> Session:
+def test_db_session(test_db_engine) -> Generator[Session]:
     """Create test database session."""
     test_session_local = sessionmaker(autocommit=False, autoflush=False, bind=test_db_engine)
     session = test_session_local()
