@@ -1,9 +1,14 @@
 import { error } from '@sveltejs/kit';
 import { env } from '$env/dynamic/public';
+import { browser } from '$app/environment';
 
 export async function load({ fetch }) {
 	try {
-		const response = await fetch(`${env.PUBLIC_API_URL}/api/accounts`);
+		const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
+		if (!apiUrl) {
+			throw error(500, 'API base URL is not configured');
+		}
+		const response = await fetch(`${apiUrl}/api/accounts`);
 
 		if (!response.ok) {
 			throw error(response.status, 'Failed to load accounts');

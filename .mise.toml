@@ -8,65 +8,11 @@ NODE_ENV = "development"
 
 [tasks.dev]
 description = "Start all services for development"
-run = """
-#!/usr/bin/env bash
-set -e
-
-# Load environment variables
-if [ -f .env ]; then
-  set -a
-  source .env
-  set +a
-fi
-
-# Start PostgreSQL
-echo "Starting PostgreSQL..."
-docker-compose up -d postgres
-
-# Wait for PostgreSQL to be ready
-echo "Waiting for PostgreSQL..."
-MAX_RETRIES=30
-RETRY_COUNT=0
-until docker exec finance-postgres pg_isready -U finance > /dev/null 2>&1; do
-  RETRY_COUNT=$((RETRY_COUNT + 1))
-  if [ "$RETRY_COUNT" -ge "$MAX_RETRIES" ]; then
-    echo "Error: PostgreSQL did not become ready within ${MAX_RETRIES} seconds. Exiting."
-    docker-compose logs postgres || true
-    exit 1
-  fi
-  sleep 1
-done
-echo "PostgreSQL ready"
-
-# Start backend API in background
-echo "Starting backend API..."
-cd backend
-uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 &
-BACKEND_PID=$!
-cd ..
-
-# Start frontend
-echo "Starting frontend..."
-npm run dev &
-FRONTEND_PID=$!
-
-# Trap to cleanup on exit
-cleanup() {
-  echo "Shutting down..."
-  kill -- -"$BACKEND_PID" -"$FRONTEND_PID" 2>/dev/null || true
-  docker-compose stop postgres
-  exit 0
-}
-trap cleanup SIGINT SIGTERM
-
-# Wait for both processes
-wait "$BACKEND_PID" "$FRONTEND_PID" || true
-cleanup
-"""
+run = "docker-compose -f docker-compose.dev.yml up --build"
 
 [tasks.down]
 description = "Stop all services"
-run = "docker-compose down"
+run = "docker-compose -f docker-compose.dev.yml down"
 
 [tasks.backend]
 description = "Start backend API only"
