@@ -49,7 +49,7 @@ jobs:
         with:
           experimental: true
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
 
       - name: Install dependencies
         run: uv sync
