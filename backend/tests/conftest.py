@@ -45,13 +45,12 @@ def postgres_container():
         yield postgres
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def test_db_engine_postgres(postgres_container):
     """Create PostgreSQL engine for testing using testcontainers."""
     engine = create_engine(postgres_container.get_connection_url(), echo=False)
     Base.metadata.create_all(engine)
     yield engine
-    Base.metadata.drop_all(engine)
     engine.dispose()
 
 
