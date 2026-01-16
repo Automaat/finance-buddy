@@ -9,7 +9,7 @@ from app.core.init_db import init_db
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     # Startup: Initialize database tables
     init_db()
     yield

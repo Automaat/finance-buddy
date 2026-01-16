@@ -146,7 +146,11 @@
 			</CardHeader>
 			<CardContent>
 				<div class="kpi-value">{formatPLN(data.current_net_worth)}</div>
-				<p class="kpi-change" class:positive={data.change_vs_last_month >= 0} class:negative={data.change_vs_last_month < 0}>
+				<p
+					class="kpi-change"
+					class:positive={data.change_vs_last_month >= 0}
+					class:negative={data.change_vs_last_month < 0}
+				>
 					{data.change_vs_last_month >= 0 ? '↑' : '↓'}
 					{formatPLN(Math.abs(data.change_vs_last_month))}
 					({formatPercent(Math.abs(change.percent))})
