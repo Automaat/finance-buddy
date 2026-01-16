@@ -3,7 +3,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
 from app.models import Account, Snapshot, SnapshotValue
-from app.schemas.accounts import AccountCreate, AccountResponse, AccountsListResponse
+from app.schemas.accounts import AccountCreate, AccountResponse, AccountsListResponse, AccountUpdate
 
 
 def get_all_accounts(db: Session) -> AccountsListResponse:
@@ -88,3 +88,83 @@ def create_account(db: Session, data: AccountCreate) -> AccountResponse:
         created_at=account.created_at,
         current_value=0.0,
     )
+
+
+def update_account(db: Session, account_id: int, data: AccountUpdate) -> AccountResponse:
+    """Update existing account"""
+    account = db.execute(select(Account).where(Account.id == account_id)).scalar_one_or_none()
+
+    if not account:
+        raise HTTPException(status_code=404, detail=f"Account with id {account_id} not found")
+
+    # Check for duplicate name if changing name
+    if data.name and data.name != account.name:
+        existing = (
+            db.execute(
+                select(Account).where(
+                    Account.name == data.name,
+                    Account.is_active.is_(True),
+                    Account.id != account_id,
+                )
+            )
+            .scalars()
+            .first()
+        )
+        if existing:
+            raise HTTPException(
+                status_code=400, detail=f"Active account '{data.name}' already exists"
+            )
+
+    # Update fields
+    if data.name is not None:
+        account.name = data.name
+    if data.type is not None:
+        account.type = data.type
+    if data.category is not None:
+        account.category = data.category
+    if data.owner is not None:
+        account.owner = data.owner
+    if data.currency is not None:
+        account.currency = data.currency
+
+    db.commit()
+    db.refresh(account)
+
+    # Get current value
+    latest_snapshot = db.execute(
+        select(Snapshot).order_by(desc(Snapshot.date)).limit(1)
+    ).scalar_one_or_none()
+
+    current_value = 0.0
+    if latest_snapshot:
+        snapshot_value = db.execute(
+            select(SnapshotValue).where(
+                SnapshotValue.snapshot_id == latest_snapshot.id,
+                SnapshotValue.account_id == account.id,
+            )
+        ).scalar_one_or_none()
+        if snapshot_value:
+            current_value = float(snapshot_value.value)
+
+    return AccountResponse(
+        id=account.id,
+        name=account.name,
+        type=account.type,
+        category=account.category,
+        owner=account.owner,
+        currency=account.currency,
+        is_active=account.is_active,
+        created_at=account.created_at,
+        current_value=current_value,
+    )
+
+
+def delete_account(db: Session, account_id: int) -> None:
+    """Soft delete account by setting is_active=False"""
+    account = db.execute(select(Account).where(Account.id == account_id)).scalar_one_or_none()
+
+    if not account:
+        raise HTTPException(status_code=404, detail=f"Account with id {account_id} not found")
+
+    account.is_active = False
+    db.commit()
