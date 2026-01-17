@@ -45,7 +45,7 @@ def test_get_account_transactions_non_investment_account(test_client, test_db_se
     assert "not an investment account" in response.json()["detail"]
 
 
-def test_get_account_transactions_not_found(test_client, test_db_session):  # noqa: ARG001
+def test_get_account_transactions_not_found(test_client):
     """Test GET transactions for non-existent account fails"""
     response = test_client.get("/api/accounts/999/transactions")
 
@@ -145,13 +145,15 @@ def test_delete_transaction_success(test_client, test_db_session):
     )
     test_db_session.add(transaction)
     test_db_session.commit()
+    transaction_id = transaction.id
 
-    response = test_client.delete(f"/api/accounts/{account.id}/transactions/{transaction.id}")
+    response = test_client.delete(f"/api/accounts/{account.id}/transactions/{transaction_id}")
 
     assert response.status_code == 204
 
-    # Verify soft delete
-    deleted = test_db_session.query(Transaction).filter_by(id=transaction.id).first()
+    # Verify soft delete - expire session to see updates from test_client
+    test_db_session.expire_all()
+    deleted = test_db_session.query(Transaction).filter_by(id=transaction_id).first()
     assert deleted.is_active is False
 
 
