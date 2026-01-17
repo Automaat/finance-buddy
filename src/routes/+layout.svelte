@@ -8,8 +8,6 @@
 		{ href: '/transactions', label: 'Transakcje', icon: '💸' },
 		{ href: '/assets', label: 'Majątek', icon: '🏠' },
 		{ href: '/debts', label: 'Zobowiązania', icon: '📋' },
-		{ href: '/goals', label: 'Cele', icon: '🎯' },
-		{ href: '/investments', label: 'Inwestycje', icon: '📈' },
 		{ href: '/snapshots', label: 'Snapshoty', icon: '📸' }
 	];
 </script>

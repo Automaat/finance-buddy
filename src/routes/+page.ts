@@ -8,17 +8,29 @@ export async function load({ fetch }) {
 		if (!apiUrl) {
 			throw error(500, 'API URL is not configured');
 		}
-		const response = await fetch(`${apiUrl}/api/dashboard`);
 
-		if (!response.ok) {
-			throw error(response.status, 'Failed to load dashboard data');
+		const currentYear = new Date().getFullYear();
+
+		const [dashboardRes, retirementRes] = await Promise.all([
+			fetch(`${apiUrl}/api/dashboard`),
+			fetch(`${apiUrl}/api/retirement/stats?year=${currentYear}`)
+		]);
+
+		if (!dashboardRes.ok) {
+			throw error(dashboardRes.status, 'Failed to load dashboard data');
 		}
 
-		const data = await response.json();
-		return data;
+		const dashboard = await dashboardRes.json();
+		const retirement = retirementRes.ok ? await retirementRes.json() : [];
+
+		return {
+			...dashboard,
+			retirementStats: retirement,
+			currentYear
+		};
 	} catch (err) {
 		if (err instanceof Error && 'status' in err) {
-			throw err; // Re-throw SvelteKit errors
+			throw err;
 		}
 		throw error(500, 'Failed to load dashboard data');
 	}

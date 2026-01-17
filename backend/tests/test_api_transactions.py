@@ -42,7 +42,7 @@ def test_get_account_transactions_non_investment_account(test_client, test_db_se
     response = test_client.get(f"/api/accounts/{account.id}/transactions")
 
     assert response.status_code == 400
-    assert "not an investment account" in response.json()["detail"]
+    assert "cannot have transactions" in response.json()["detail"]
 
 
 def test_get_account_transactions_not_found(test_client):

@@ -8,10 +8,45 @@
 	export let confirmDisabled = false;
 	export let confirmVariant: 'primary' | 'danger' = 'danger';
 	export let size: 'small' | 'medium' | 'large' = 'medium';
+	export let showActions = true;
+
+	let firstFocusable: HTMLElement | null = null;
+	let lastFocusable: HTMLElement | null = null;
+
+	$: if (open) {
+		setTimeout(() => {
+			const focusable = document.querySelectorAll(
+				'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+			);
+			if (focusable.length > 0) {
+				firstFocusable = focusable[0] as HTMLElement;
+				lastFocusable = focusable[focusable.length - 1] as HTMLElement;
+				firstFocusable?.focus();
+			}
+		}, 0);
+	}
 
 	function handleOverlayClick(event: MouseEvent) {
 		if (event.target === event.currentTarget) {
 			onCancel();
+		}
+	}
+
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape') {
+			onCancel();
+		}
+	}
+
+	function handleTabTrap(event: KeyboardEvent) {
+		if (event.key !== 'Tab') return;
+
+		if (event.shiftKey && document.activeElement === firstFocusable) {
+			event.preventDefault();
+			lastFocusable?.focus();
+		} else if (!event.shiftKey && document.activeElement === lastFocusable) {
+			event.preventDefault();
+			firstFocusable?.focus();
 		}
 	}
 
@@ -23,33 +58,47 @@
 </script>
 
 {#if open}
-	<div class="modal-overlay" on:click={handleOverlayClick} role="presentation">
+	<div
+		class="modal-overlay"
+		on:click={handleOverlayClick}
+		on:keydown={handleKeydown}
+		role="presentation"
+	>
 		<div
 			class="modal-dialog"
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="modal-title"
+			tabindex="-1"
 			style="max-width: {maxWidths[size]}"
+			on:click|stopPropagation
+			on:keydown={handleTabTrap}
 		>
 			<div class="modal-header">
 				<h2 id="modal-title" class="modal-title">{title}</h2>
 			</div>
-			<div class="modal-content">
+			<div class="modal-body">
 				<slot />
 			</div>
-			<div class="modal-actions">
-				<button type="button" class="btn btn-secondary" on:click={onCancel}>{cancelText}</button>
-				{#if confirmText && onConfirm}
-					<button
-						type="button"
-						class="btn btn-{confirmVariant}"
-						on:click={onConfirm}
-						disabled={confirmDisabled}
-					>
-						{confirmText}
-					</button>
-				{/if}
-			</div>
+			{#if showActions}
+				<div class="modal-actions">
+					<slot name="actions">
+						<button type="button" class="btn btn-secondary" on:click={onCancel}>
+							{cancelText}
+						</button>
+						{#if confirmText && onConfirm}
+							<button
+								type="button"
+								class="btn btn-{confirmVariant}"
+								on:click={onConfirm}
+								disabled={confirmDisabled}
+							>
+								{confirmText}
+							</button>
+						{/if}
+					</slot>
+				</div>
+			{/if}
 		</div>
 	</div>
 {/if}
@@ -93,7 +142,7 @@
 		margin: 0;
 	}
 
-	.modal-content {
+	.modal-body {
 		color: var(--color-text);
 		font-size: var(--font-size-2);
 		line-height: 1.6;
