@@ -10,6 +10,22 @@
 	export let size: 'small' | 'medium' | 'large' = 'medium';
 	export let showActions = true;
 
+	let firstFocusable: HTMLElement | null = null;
+	let lastFocusable: HTMLElement | null = null;
+
+	$: if (open) {
+		setTimeout(() => {
+			const focusable = document.querySelectorAll(
+				'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+			);
+			if (focusable.length > 0) {
+				firstFocusable = focusable[0] as HTMLElement;
+				lastFocusable = focusable[focusable.length - 1] as HTMLElement;
+				firstFocusable?.focus();
+			}
+		}, 0);
+	}
+
 	function handleOverlayClick(event: MouseEvent) {
 		if (event.target === event.currentTarget) {
 			onCancel();
@@ -19,6 +35,18 @@
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === 'Escape') {
 			onCancel();
+		}
+	}
+
+	function handleTabTrap(event: KeyboardEvent) {
+		if (event.key !== 'Tab') return;
+
+		if (event.shiftKey && document.activeElement === firstFocusable) {
+			event.preventDefault();
+			lastFocusable?.focus();
+		} else if (!event.shiftKey && document.activeElement === lastFocusable) {
+			event.preventDefault();
+			firstFocusable?.focus();
 		}
 	}
 
@@ -35,7 +63,6 @@
 		on:click={handleOverlayClick}
 		on:keydown={handleKeydown}
 		role="presentation"
-		tabindex="-1"
 	>
 		<div
 			class="modal-dialog"
@@ -45,7 +72,7 @@
 			tabindex="-1"
 			style="max-width: {maxWidths[size]}"
 			on:click|stopPropagation
-			on:keydown|stopPropagation
+			on:keydown={handleTabTrap}
 		>
 			<div class="modal-header">
 				<h2 id="modal-title" class="modal-title">{title}</h2>

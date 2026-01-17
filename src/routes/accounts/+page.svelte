@@ -580,7 +580,7 @@
 							<div class="form-group">
 								<label for="transaction-type">Typ wpłaty</label>
 								<select id="transaction-type" bind:value={transactionFormData.transaction_type}>
-									<option value={null}>Wpłata pracownika</option>
+									<option value="">Wpłata pracownika</option>
 									{#if selectedAccountWrapper === 'PPK'}
 										<option value="employer">Wpłata pracodawcy</option>
 									{/if}

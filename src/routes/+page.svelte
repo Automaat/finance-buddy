@@ -10,6 +10,7 @@
 	import { formatPLN, formatPercent } from '$lib/utils/format';
 	import { calculateChange } from '$lib/utils/calculations';
 	import { env } from '$env/dynamic/public';
+	import { invalidateAll } from '$app/navigation';
 
 	export let data;
 
@@ -42,7 +43,7 @@
 	async function saveLimits() {
 		const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
 		try {
-			await Promise.all([
+			const responses = await Promise.all([
 				fetch(`${apiUrl}/api/retirement/limits/${limitsYear}/IKE/Marcin`, {
 					method: 'PUT',
 					headers: { 'Content-Type': 'application/json' },
@@ -88,10 +89,17 @@
 					})
 				})
 			]);
+
+			const failedResponses = responses.filter((r) => !r.ok);
+			if (failedResponses.length > 0) {
+				throw new Error(`${failedResponses.length} request(s) failed`);
+			}
+
 			showLimitsModal = false;
-			window.location.reload();
+			await invalidateAll();
 		} catch (err) {
 			console.error('Failed to save limits:', err);
+			alert('Nie udało się zapisać limitów. Spróbuj ponownie później.');
 		}
 	}
 
@@ -283,7 +291,7 @@
 
 							<div
 								class="progress-bar"
-								class:danger={stat.total_contributed === 0}
+								class:danger={stat.percentage_used < 50}
 								class:warning={stat.percentage_used >= 50 && stat.percentage_used < 100}
 								class:success={stat.percentage_used >= 100}
 							>
@@ -297,7 +305,7 @@
 								<span class="remaining">Pozostało: {formatPLN(stat.remaining)}</span>
 								<span
 									class="percentage"
-									class:danger={stat.total_contributed === 0}
+									class:danger={stat.percentage_used < 50}
 									class:warning={stat.percentage_used >= 50 && stat.percentage_used < 100}
 									class:success={stat.percentage_used >= 100}
 								>

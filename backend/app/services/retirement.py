@@ -54,7 +54,6 @@ def get_yearly_stats(db: Session, year: int, owner: str | None = None) -> list[Y
                     Transaction.account_id.in_(account_ids),
                     extract("year", Transaction.date) == year,
                     Transaction.is_active.is_(True),
-                    Transaction.amount > 0,
                 )
                 .first()
             )

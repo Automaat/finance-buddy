@@ -62,7 +62,7 @@ def test_get_account_transactions_non_investment_account(test_db_session):
         get_account_transactions(test_db_session, account.id)
 
     assert exc_info.value.status_code == 400
-    assert "not an investment account" in exc_info.value.detail
+    assert "cannot have transactions" in exc_info.value.detail
 
 
 def test_get_account_transactions_not_found(test_db_session):
@@ -247,7 +247,7 @@ def test_create_transaction_non_investment_account(test_db_session):
         create_transaction(test_db_session, account.id, data)
 
     assert exc_info.value.status_code == 400
-    assert "not an investment account" in exc_info.value.detail
+    assert "cannot have transactions" in exc_info.value.detail
 
 
 def test_create_transaction_account_not_found(test_db_session):
