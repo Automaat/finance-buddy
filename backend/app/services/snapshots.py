@@ -5,7 +5,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models import Account, Snapshot, SnapshotValue
+from app.models import Account, Asset, Snapshot, SnapshotValue
 from app.schemas.snapshots import (
     SnapshotCreate,
     SnapshotListItem,
@@ -15,26 +15,51 @@ from app.schemas.snapshots import (
 
 
 def create_snapshot(db: Session, data: SnapshotCreate) -> SnapshotResponse:
-    """Create new snapshot with all account values atomically"""
+    """Create new snapshot with all asset and account values atomically"""
     # Check if snapshot for this date already exists
     existing = db.execute(select(Snapshot).where(Snapshot.date == data.date)).scalar_one_or_none()
     if existing:
         raise HTTPException(status_code=400, detail=f"Snapshot for date {data.date} already exists")
 
-    # Validate all accounts exist and no duplicates
-    account_ids = [v.account_id for v in data.values]
+    # Separate asset and account IDs
+    asset_ids = [v.asset_id for v in data.values if v.asset_id is not None]
+    account_ids = [v.account_id for v in data.values if v.account_id is not None]
+
+    # Validate no duplicates within each type
+    if len(asset_ids) != len(set(asset_ids)):
+        raise HTTPException(status_code=400, detail="Duplicate asset IDs in snapshot values")
     if len(account_ids) != len(set(account_ids)):
         raise HTTPException(status_code=400, detail="Duplicate account IDs in snapshot values")
 
-    accounts = (
-        db.execute(select(Account).where(Account.id.in_(account_ids), Account.is_active.is_(True)))
-        .scalars()
-        .all()
-    )
-    if len(accounts) != len(account_ids):
-        found_ids = {a.id for a in accounts}
-        missing = set(account_ids) - found_ids
-        raise HTTPException(status_code=404, detail=f"Accounts not found: {missing}")
+    # Validate all assets exist
+    if asset_ids:
+        assets = (
+            db.execute(select(Asset).where(Asset.id.in_(asset_ids), Asset.is_active.is_(True)))
+            .scalars()
+            .all()
+        )
+        if len(assets) != len(asset_ids):
+            found_ids = {a.id for a in assets}
+            missing = set(asset_ids) - found_ids
+            raise HTTPException(status_code=404, detail=f"Assets not found: {missing}")
+    else:
+        assets = []
+
+    # Validate all accounts exist
+    if account_ids:
+        accounts = (
+            db.execute(
+                select(Account).where(Account.id.in_(account_ids), Account.is_active.is_(True))
+            )
+            .scalars()
+            .all()
+        )
+        if len(accounts) != len(account_ids):
+            found_ids = {a.id for a in accounts}
+            missing = set(account_ids) - found_ids
+            raise HTTPException(status_code=404, detail=f"Accounts not found: {missing}")
+    else:
+        accounts = []
 
     # Create snapshot
     snapshot = Snapshot(date=data.date, notes=data.notes)
@@ -46,6 +71,7 @@ def create_snapshot(db: Session, data: SnapshotCreate) -> SnapshotResponse:
     for value_input in data.values:
         sv = SnapshotValue(
             snapshot_id=snapshot.id,
+            asset_id=value_input.asset_id,
             account_id=value_input.account_id,
             value=Decimal(str(value_input.value)),
         )
@@ -59,12 +85,15 @@ def create_snapshot(db: Session, data: SnapshotCreate) -> SnapshotResponse:
         raise HTTPException(status_code=400, detail="Failed to create snapshot") from e
 
     # Build response
+    asset_map = {a.id: a.name for a in assets}
     account_map = {a.id: a.name for a in accounts}
     values = [
         SnapshotValueResponse(
             id=sv.id,
+            asset_id=sv.asset_id,
+            asset_name=asset_map.get(sv.asset_id) if sv.asset_id else None,
             account_id=sv.account_id,
-            account_name=account_map[sv.account_id],
+            account_name=account_map.get(sv.account_id) if sv.account_id else None,
             value=float(sv.value),
         )
         for sv in snapshot_values
@@ -80,15 +109,24 @@ def get_all_snapshots(db: Session) -> list[SnapshotListItem]:
     result = []
     for snapshot in snapshots:
         # Calculate net worth for this snapshot
+        # LEFT JOIN both Asset and Account tables
         values = db.execute(
-            select(SnapshotValue, Account)
-            .join(Account, SnapshotValue.account_id == Account.id)
+            select(SnapshotValue, Asset, Account)
+            .outerjoin(Asset, SnapshotValue.asset_id == Asset.id)
+            .outerjoin(Account, SnapshotValue.account_id == Account.id)
             .where(SnapshotValue.snapshot_id == snapshot.id)
         ).all()
 
-        net_worth = sum(
-            float(sv.value) if acc.type == "asset" else -float(sv.value) for sv, acc in values
-        )
+        net_worth = 0.0
+        for sv, asset, account in values:
+            # Assets contribute positively, account type determines sign
+            if asset is not None:
+                net_worth += float(sv.value)
+            elif account is not None:
+                if account.type == "asset":
+                    net_worth += float(sv.value)
+                else:  # liability
+                    net_worth -= float(sv.value)
 
         result.append(
             SnapshotListItem(
@@ -105,19 +143,25 @@ def get_snapshot_by_id(db: Session, snapshot_id: int) -> SnapshotResponse:
     if not snapshot:
         raise HTTPException(status_code=404, detail=f"Snapshot {snapshot_id} not found")
 
-    # Get all values with account names
+    # Get all values with asset and account names (LEFT JOIN both)
     values_query = (
-        select(SnapshotValue, Account)
-        .join(Account, SnapshotValue.account_id == Account.id)
+        select(SnapshotValue, Asset, Account)
+        .outerjoin(Asset, SnapshotValue.asset_id == Asset.id)
+        .outerjoin(Account, SnapshotValue.account_id == Account.id)
         .where(SnapshotValue.snapshot_id == snapshot_id)
     )
     values = db.execute(values_query).all()
 
     value_responses = [
         SnapshotValueResponse(
-            id=sv.id, account_id=sv.account_id, account_name=acc.name, value=float(sv.value)
+            id=sv.id,
+            asset_id=sv.asset_id,
+            asset_name=asset.name if asset else None,
+            account_id=sv.account_id,
+            account_name=account.name if account else None,
+            value=float(sv.value),
         )
-        for sv, acc in values
+        for sv, asset, account in values
     ]
 
     return SnapshotResponse(
