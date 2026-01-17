@@ -170,7 +170,9 @@ def delete_transaction(db: Session, transaction_id: int) -> None:
     ).scalar_one_or_none()
 
     if not transaction:
-        raise HTTPException(status_code=404, detail=f"Transaction with id {transaction_id} not found")
+        raise HTTPException(
+            status_code=404, detail=f"Transaction with id {transaction_id} not found"
+        )
 
     # Idempotent: if already deleted, return early
     if not transaction.is_active:
@@ -189,4 +191,4 @@ def get_transaction_counts(db: Session) -> dict[int, int]:
         .group_by(Transaction.account_id)
     ).all()
 
-    return {account_id: count for account_id, count in results}
+    return dict(results)

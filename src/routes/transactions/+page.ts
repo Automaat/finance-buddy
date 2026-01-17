@@ -45,9 +45,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 		if (dateTo) params.set('date_to', dateTo);
 
 		// Fetch transactions with filters
-		const transactionsResponse = await fetch(
-			`${apiUrl}/api/transactions?${params.toString()}`
-		);
+		const transactionsResponse = await fetch(`${apiUrl}/api/transactions?${params.toString()}`);
 
 		if (!transactionsResponse.ok) {
 			throw error(transactionsResponse.status, 'Failed to load transactions');

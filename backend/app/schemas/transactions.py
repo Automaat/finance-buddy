@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 
 from pydantic import BaseModel, field_validator
 
@@ -18,7 +18,7 @@ class TransactionCreate(BaseModel):
     @field_validator("date")
     @classmethod
     def validate_date(cls, v: date) -> date:
-        if v > date.today():
+        if v > datetime.now(UTC).date():
             raise ValueError("Date cannot be in the future")
         return v
 

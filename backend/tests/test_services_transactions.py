@@ -107,7 +107,11 @@ def test_get_all_transactions_no_filters(test_db_session):
 
     # Create transactions
     t1 = Transaction(
-        account_id=account1.id, amount=5000.0, date=date(2024, 1, 15), owner="Marcin", is_active=True
+        account_id=account1.id,
+        amount=5000.0,
+        date=date(2024, 1, 15),
+        owner="Marcin",
+        is_active=True,
     )
     t2 = Transaction(
         account_id=account2.id, amount=3000.0, date=date(2024, 2, 10), owner="Ewa", is_active=True
@@ -136,7 +140,11 @@ def test_get_all_transactions_filter_by_account(test_db_session):
 
     # Create transactions
     t1 = Transaction(
-        account_id=account1.id, amount=5000.0, date=date(2024, 1, 15), owner="Marcin", is_active=True
+        account_id=account1.id,
+        amount=5000.0,
+        date=date(2024, 1, 15),
+        owner="Marcin",
+        is_active=True,
     )
     t2 = Transaction(
         account_id=account2.id, amount=3000.0, date=date(2024, 2, 10), owner="Ewa", is_active=True
@@ -318,10 +326,18 @@ def test_get_transaction_counts(test_db_session):
 
     # Create transactions
     t1 = Transaction(
-        account_id=account1.id, amount=5000.0, date=date(2024, 1, 15), owner="Marcin", is_active=True
+        account_id=account1.id,
+        amount=5000.0,
+        date=date(2024, 1, 15),
+        owner="Marcin",
+        is_active=True,
     )
     t2 = Transaction(
-        account_id=account1.id, amount=3000.0, date=date(2024, 2, 10), owner="Marcin", is_active=True
+        account_id=account1.id,
+        amount=3000.0,
+        date=date(2024, 2, 10),
+        owner="Marcin",
+        is_active=True,
     )
     t3 = Transaction(
         account_id=account2.id, amount=2000.0, date=date(2024, 3, 5), owner="Ewa", is_active=True

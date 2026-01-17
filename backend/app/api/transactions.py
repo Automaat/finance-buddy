@@ -23,7 +23,9 @@ def get_account_transactions(
     return transactions.get_account_transactions(db, account_id)
 
 
-@router.post("/accounts/{account_id}/transactions", response_model=TransactionResponse, status_code=201)
+@router.post(
+    "/accounts/{account_id}/transactions", response_model=TransactionResponse, status_code=201
+)
 def create_transaction(
     account_id: int,
     data: TransactionCreate,
@@ -35,7 +37,7 @@ def create_transaction(
 
 @router.delete("/accounts/{account_id}/transactions/{transaction_id}", status_code=204)
 def delete_transaction(
-    account_id: int,
+    account_id: int,  # noqa: ARG001
     transaction_id: int,
     db: Session = Depends(get_db),  # noqa: B008
 ) -> None:
@@ -45,10 +47,10 @@ def delete_transaction(
 
 @router.get("/transactions", response_model=TransactionsListResponse)
 def get_all_transactions(
-    account_id: int | None = Query(None),
-    owner: str | None = Query(None),
-    date_from: date | None = Query(None),
-    date_to: date | None = Query(None),
+    account_id: int | None = Query(None),  # noqa: B008
+    owner: str | None = Query(None),  # noqa: B008
+    date_from: date | None = Query(None),  # noqa: B008
+    date_to: date | None = Query(None),  # noqa: B008
     db: Session = Depends(get_db),  # noqa: B008
 ) -> TransactionsListResponse:
     """Get all active transactions with optional filters"""
