@@ -9,6 +9,9 @@ from testcontainers.postgres import PostgresContainer
 from app.core.database import Base, get_db
 from app.main import app
 
+# Import models to register them with SQLAlchemy before creating tables
+from app.models import Account, Asset, Goal, Snapshot, SnapshotValue  # noqa: F401
+
 
 @pytest.fixture(scope="function")
 def test_db_engine():
