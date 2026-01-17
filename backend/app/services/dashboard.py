@@ -50,12 +50,13 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
     # pandas: Calculate signed value based on whether it's an asset or liability
     # Assets (from Asset table) contribute positively
     # Accounts depend on account.type (asset=+, liability=-)
+    # Note: Inactive accounts/assets will have NaN in name/type after LEFT JOIN, exclude them
     def calculate_signed_value(row):
-        if pd.notna(row["asset_id"]):
-            # From Asset table - always positive
+        if pd.notna(row["asset_id"]) and pd.notna(row.get("name_asset")):
+            # From Asset table - always positive (only if asset was in the join)
             return row["value"]
-        if pd.notna(row["account_id"]):
-            # From Account table - depends on type
+        if pd.notna(row["account_id"]) and pd.notna(row.get("type")):
+            # From Account table - depends on type (only if account was in the join)
             return row["value"] if row["type"] == "asset" else -row["value"]
         return 0
 
