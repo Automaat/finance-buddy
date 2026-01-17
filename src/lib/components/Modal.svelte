@@ -3,17 +3,34 @@
 	export let title = '';
 	export let onConfirm: () => void;
 	export let onCancel: () => void;
+	export let confirmText = 'Potwierdź';
+	export let cancelText = 'Anuluj';
+	export let confirmDisabled = false;
+	export let confirmVariant: 'primary' | 'danger' = 'danger';
+	export let size: 'small' | 'medium' | 'large' = 'medium';
 
 	function handleOverlayClick(event: MouseEvent) {
 		if (event.target === event.currentTarget) {
 			onCancel();
 		}
 	}
+
+	const maxWidths = {
+		small: '400px',
+		medium: '500px',
+		large: '700px'
+	};
 </script>
 
 {#if open}
 	<div class="modal-overlay" on:click={handleOverlayClick} role="presentation">
-		<div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+		<div
+			class="modal-dialog"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="modal-title"
+			style="max-width: {maxWidths[size]}"
+		>
 			<div class="modal-header">
 				<h2 id="modal-title" class="modal-title">{title}</h2>
 			</div>
@@ -21,8 +38,15 @@
 				<slot />
 			</div>
 			<div class="modal-actions">
-				<button type="button" class="btn btn-secondary" on:click={onCancel}>Anuluj</button>
-				<button type="button" class="btn btn-danger" on:click={onConfirm}>Potwierdź</button>
+				<button type="button" class="btn btn-secondary" on:click={onCancel}>{cancelText}</button>
+				<button
+					type="button"
+					class="btn btn-{confirmVariant}"
+					on:click={onConfirm}
+					disabled={confirmDisabled}
+				>
+					{confirmText}
+				</button>
 			</div>
 		</div>
 	</div>
@@ -99,6 +123,20 @@
 
 	.btn-secondary:hover {
 		background: var(--color-accent);
+	}
+
+	.btn-primary {
+		background: var(--color-primary);
+		color: var(--nord6);
+	}
+
+	.btn-primary:hover:not(:disabled) {
+		background: var(--nord9);
+	}
+
+	.btn-primary:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 
 	.btn-danger {

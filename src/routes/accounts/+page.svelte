@@ -20,14 +20,14 @@
 
 	const categoryLabels: Record<string, string> = {
 		bank: 'Konto bankowe',
-		ike: 'IKE',
-		ikze: 'IKZE',
+		saving_account: 'Konto oszczędnościowe',
+		stock: 'Akcje',
+		bond: 'Obligacje',
+		gold: 'Złoto',
+		real_estate: 'Nieruchomość',
 		ppk: 'PPK',
 		fund: 'Fundusz',
 		etf: 'ETF',
-		bonds: 'Obligacje',
-		stocks: 'Akcje',
-		real_estate: 'Nieruchomość',
 		vehicle: 'Pojazd',
 		mortgage: 'Hipoteka',
 		installment: 'Raty',
@@ -54,7 +54,8 @@
 		type: 'asset',
 		category: 'bank',
 		owner: 'Marcin',
-		currency: 'PLN'
+		currency: 'PLN',
+		account_wrapper: null as string | null
 	};
 
 	let error = '';
@@ -66,7 +67,8 @@
 			type: editingAccount.type,
 			category: editingAccount.category,
 			owner: editingAccount.owner,
-			currency: editingAccount.currency
+			currency: editingAccount.currency,
+			account_wrapper: editingAccount.account_wrapper
 		};
 	} else if (showForm) {
 		formData = {
@@ -74,7 +76,8 @@
 			type: 'asset',
 			category: 'bank',
 			owner: 'Marcin',
-			currency: 'PLN'
+			currency: 'PLN',
+			account_wrapper: null
 		};
 	}
 
@@ -157,85 +160,6 @@
 	<button class="btn btn-primary" on:click={startCreate}>+ Nowe Konto</button>
 </div>
 
-{#if showForm}
-	<Card>
-		<CardHeader>
-			<CardTitle>{editingAccount ? '✏️ Edytuj Konto' : '➕ Nowe Konto'}</CardTitle>
-		</CardHeader>
-		<CardContent>
-			<form on:submit|preventDefault={handleSubmit} class="account-form">
-				{#if error}
-					<div class="error-message">{error}</div>
-				{/if}
-
-				<div class="form-row">
-					<div class="form-group">
-						<label for="name">Nazwa</label>
-						<input
-							type="text"
-							id="name"
-							bind:value={formData.name}
-							required
-							placeholder="np. mBank Konto"
-						/>
-					</div>
-
-					<div class="form-group">
-						<label for="type">Typ</label>
-						<select id="type" bind:value={formData.type} required>
-							<option value="asset">Aktywo</option>
-							<option value="liability">Pasywo</option>
-						</select>
-					</div>
-				</div>
-
-				<div class="form-row">
-					<div class="form-group">
-						<label for="category">Kategoria</label>
-						<select id="category" bind:value={formData.category} required>
-							<optgroup label="Aktywa">
-								<option value="bank">Konto bankowe</option>
-								<option value="ike">IKE</option>
-								<option value="ikze">IKZE</option>
-								<option value="ppk">PPK</option>
-								<option value="fund">Fundusz</option>
-								<option value="etf">ETF</option>
-								<option value="bonds">Obligacje</option>
-								<option value="stocks">Akcje</option>
-								<option value="real_estate">Nieruchomość</option>
-								<option value="vehicle">Pojazd</option>
-							</optgroup>
-							<optgroup label="Pasywa">
-								<option value="mortgage">Hipoteka</option>
-								<option value="installment">Raty</option>
-							</optgroup>
-							<option value="other">Inne</option>
-						</select>
-					</div>
-
-					<div class="form-group">
-						<label for="owner">Właściciel</label>
-						<select id="owner" bind:value={formData.owner} required>
-							<option value="Marcin">Marcin</option>
-							<option value="Ewa">Ewa</option>
-							<option value="Shared">Wspólne</option>
-						</select>
-					</div>
-				</div>
-
-				<div class="form-actions">
-					<button type="button" class="btn btn-secondary" on:click={cancelForm} disabled={saving}>
-						Anuluj
-					</button>
-					<button type="submit" class="btn btn-primary" disabled={saving}>
-						{saving ? 'Zapisywanie...' : editingAccount ? 'Zapisz zmiany' : 'Utwórz konto'}
-					</button>
-				</div>
-			</form>
-		</CardContent>
-	</Card>
-{/if}
-
 <Card>
 	<CardHeader>
 		<CardTitle>💰 Aktywa</CardTitle>
@@ -317,6 +241,90 @@
 		{/if}
 	</CardContent>
 </Card>
+
+<Modal
+	open={showForm}
+	title={editingAccount ? 'Edytuj Konto' : 'Nowe Konto'}
+	onConfirm={handleSubmit}
+	onCancel={cancelForm}
+	confirmText={saving ? 'Zapisywanie...' : editingAccount ? 'Zapisz zmiany' : 'Utwórz konto'}
+	confirmDisabled={saving}
+	confirmVariant="primary"
+	size="large"
+>
+	<form on:submit|preventDefault={handleSubmit} class="account-form">
+		{#if error}
+			<div class="error-message">{error}</div>
+		{/if}
+
+		<div class="form-row">
+			<div class="form-group">
+				<label for="name">Nazwa</label>
+				<input
+					type="text"
+					id="name"
+					bind:value={formData.name}
+					required
+					placeholder="np. mBank Konto"
+				/>
+			</div>
+
+			<div class="form-group">
+				<label for="type">Typ</label>
+				<select id="type" bind:value={formData.type} required>
+					<option value="asset">Aktywo</option>
+					<option value="liability">Pasywo</option>
+				</select>
+			</div>
+		</div>
+
+		<div class="form-row">
+			<div class="form-group">
+				<label for="category">Kategoria</label>
+				<select id="category" bind:value={formData.category} required>
+					<optgroup label="Aktywa">
+						<option value="bank">Konto bankowe</option>
+						<option value="saving_account">Konto oszczędnościowe</option>
+						<option value="stock">Akcje</option>
+						<option value="bond">Obligacje</option>
+						<option value="gold">Złoto</option>
+						<option value="real_estate">Nieruchomość</option>
+						<option value="ppk">PPK</option>
+						<option value="fund">Fundusz</option>
+						<option value="etf">ETF</option>
+						<option value="vehicle">Pojazd</option>
+					</optgroup>
+					<optgroup label="Pasywa">
+						<option value="mortgage">Hipoteka</option>
+						<option value="installment">Raty</option>
+					</optgroup>
+					<option value="other">Inne</option>
+				</select>
+			</div>
+
+			<div class="form-group">
+				<label for="owner">Właściciel</label>
+				<select id="owner" bind:value={formData.owner} required>
+					<option value="Marcin">Marcin</option>
+					<option value="Ewa">Ewa</option>
+					<option value="Shared">Wspólne</option>
+				</select>
+			</div>
+		</div>
+
+		<div class="form-row">
+			<div class="form-group">
+				<label for="account_wrapper">Opakowanie rachunku (opcjonalne)</label>
+				<select id="account_wrapper" bind:value={formData.account_wrapper}>
+					<option value={null}>Brak</option>
+					<option value="IKE">IKE</option>
+					<option value="IKZE">IKZE</option>
+					<option value="PPK">PPK</option>
+				</select>
+			</div>
+		</div>
+	</form>
+</Modal>
 
 <Modal
 	open={showDeleteModal}
@@ -478,22 +486,6 @@
 	.form-group select:focus {
 		outline: none;
 		border-color: var(--color-primary);
-	}
-
-	.form-actions {
-		display: flex;
-		gap: var(--size-3);
-		justify-content: flex-end;
-	}
-
-	.btn-secondary {
-		background: transparent;
-		color: var(--color-text);
-		border: 1px solid var(--color-border);
-	}
-
-	.btn-secondary:hover {
-		background: var(--color-accent);
 	}
 
 	.error-message {
