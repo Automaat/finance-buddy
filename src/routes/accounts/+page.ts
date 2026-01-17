@@ -10,6 +10,7 @@ export interface Account {
 	category: string;
 	owner: string;
 	currency: string;
+	account_wrapper: string | null;
 	is_active: boolean;
 	created_at: string;
 	current_value: number;

@@ -12,7 +12,14 @@ def test_get_all_accounts_with_values(test_db_session):
     asset1 = Account(
         name="Bank Account", type="asset", category="bank", owner="Marcin", currency="PLN"
     )
-    asset2 = Account(name="IKE", type="asset", category="ike", owner="Marcin", currency="PLN")
+    asset2 = Account(
+        name="IKE",
+        type="asset",
+        category="fund",
+        owner="Marcin",
+        currency="PLN",
+        account_wrapper="IKE",
+    )
     liability = Account(
         name="Mortgage",
         type="liability",
@@ -181,17 +188,24 @@ def test_create_account_liability(test_db_session):
 def test_create_account_investment(test_db_session):
     """Test creating an investment account"""
     data = AccountCreate(
-        name="IKE - Test", type="asset", category="ike", owner="Shared", currency="PLN"
+        name="IKE - Test",
+        type="asset",
+        category="fund",
+        owner="Shared",
+        currency="PLN",
+        account_wrapper="IKE",
     )
 
     result = create_account(test_db_session, data)
 
-    assert result.category == "ike"
+    assert result.category == "fund"
+    assert result.account_wrapper == "IKE"
     assert result.owner == "Shared"
 
     # Verify in database
     saved_account = test_db_session.query(Account).filter_by(id=result.id).first()
-    assert saved_account.category == "ike"
+    assert saved_account.category == "fund"
+    assert saved_account.account_wrapper == "IKE"
 
 
 def test_create_account_with_default_currency(test_db_session):
@@ -222,9 +236,10 @@ def test_create_account_duplicate_name(test_db_session):
     data2 = AccountCreate(
         name="Duplicate Test Account",
         type="asset",
-        category="ike",
+        category="fund",
         owner="Ewa",
         currency="PLN",
+        account_wrapper="IKE",
     )
 
     with pytest.raises(HTTPException) as exc_info:
@@ -245,13 +260,16 @@ def test_update_account_success(test_db_session):
     account_id = account.id
 
     # Update account
-    data = AccountUpdate(name="Updated Name", category="ike", owner="Ewa", currency="EUR")
+    data = AccountUpdate(
+        name="Updated Name", category="fund", owner="Ewa", currency="EUR", account_wrapper="IKE"
+    )
     result = update_account(test_db_session, account_id, data)
 
     assert result.id == account_id
     assert result.name == "Updated Name"
     assert result.type == "asset"  # type unchanged
-    assert result.category == "ike"
+    assert result.category == "fund"
+    assert result.account_wrapper == "IKE"
     assert result.owner == "Ewa"
     assert result.currency == "EUR"
     assert result.is_active is True

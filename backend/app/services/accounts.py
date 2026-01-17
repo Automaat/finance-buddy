@@ -36,6 +36,7 @@ def get_all_accounts(db: Session) -> AccountsListResponse:
             category=account.category,
             owner=account.owner,
             currency=account.currency,
+            account_wrapper=account.account_wrapper,
             is_active=account.is_active,
             created_at=account.created_at,
             current_value=latest_values.get(account.id, 0.0),
@@ -71,6 +72,7 @@ def create_account(db: Session, data: AccountCreate) -> AccountResponse:
         category=data.category,
         owner=data.owner,
         currency=data.currency,
+        account_wrapper=data.account_wrapper,
         is_active=True,
     )
     db.add(account)
@@ -84,6 +86,7 @@ def create_account(db: Session, data: AccountCreate) -> AccountResponse:
         category=account.category,
         owner=account.owner,
         currency=account.currency,
+        account_wrapper=account.account_wrapper,
         is_active=account.is_active,
         created_at=account.created_at,
         current_value=0.0,
@@ -124,6 +127,8 @@ def update_account(db: Session, account_id: int, data: AccountUpdate) -> Account
         account.owner = data.owner
     if data.currency is not None:
         account.currency = data.currency
+    if data.account_wrapper is not None:
+        account.account_wrapper = data.account_wrapper
 
     db.commit()
     db.refresh(account)
@@ -151,6 +156,7 @@ def update_account(db: Session, account_id: int, data: AccountUpdate) -> Account
         category=account.category,
         owner=account.owner,
         currency=account.currency,
+        account_wrapper=account.account_wrapper,
         is_active=account.is_active,
         created_at=account.created_at,
         current_value=current_value,

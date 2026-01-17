@@ -2,6 +2,7 @@ from datetime import date
 from decimal import Decimal
 
 from app.models.account import Account
+from app.models.asset import Asset
 from app.models.snapshot import Snapshot, SnapshotValue
 from app.services.dashboard import get_dashboard_data
 
@@ -345,3 +346,61 @@ def test_only_liabilities_no_assets(test_db_session):
     assert result.total_liabilities == 1000.0
     assert result.current_net_worth == -1000.0
     assert result.allocation == []  # No assets to allocate
+
+
+def test_assets_and_accounts_both_included(test_db_session):
+    """Test that both Asset table and Account table values are included in net worth."""
+    # Create Asset table entries
+    asset1 = Asset(name="Car", is_active=True)
+    asset2 = Asset(name="Electronics", is_active=True)
+    test_db_session.add_all([asset1, asset2])
+    test_db_session.commit()
+
+    # Create Account table entries
+    account_asset = Account(
+        name="Bank Account",
+        type="asset",
+        category="banking",
+        owner="John",
+        currency="PLN",
+        is_active=True,
+    )
+    account_liability = Account(
+        name="Mortgage",
+        type="liability",
+        category="housing",
+        owner="John",
+        currency="PLN",
+        is_active=True,
+    )
+    test_db_session.add_all([account_asset, account_liability])
+    test_db_session.commit()
+
+    # Create snapshot
+    snapshot = Snapshot(date=date(2024, 1, 1), notes="Test")
+    test_db_session.add(snapshot)
+    test_db_session.commit()
+
+    # Create values for both Assets and Accounts
+    values = [
+        SnapshotValue(snapshot_id=snapshot.id, asset_id=asset1.id, value=Decimal("15000.00")),
+        SnapshotValue(snapshot_id=snapshot.id, asset_id=asset2.id, value=Decimal("5000.00")),
+        SnapshotValue(
+            snapshot_id=snapshot.id, account_id=account_asset.id, value=Decimal("50000.00")
+        ),
+        SnapshotValue(
+            snapshot_id=snapshot.id, account_id=account_liability.id, value=Decimal("30000.00")
+        ),
+    ]
+    test_db_session.add_all(values)
+    test_db_session.commit()
+
+    result = get_dashboard_data(test_db_session)
+
+    # Total assets should include both Asset table (15000 + 5000) and Account assets (50000)
+    assert result.total_assets == 70000.0
+    assert result.total_liabilities == 30000.0
+    # Net worth should include Asset table values: 15000 + 5000 + 50000 - 30000 = 40000
+    assert result.current_net_worth == 40000.0
+    assert len(result.net_worth_history) == 1
+    assert result.net_worth_history[0].value == 40000.0

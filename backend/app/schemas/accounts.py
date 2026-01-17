@@ -9,6 +9,7 @@ class AccountCreate(BaseModel):
     category: str
     owner: str
     currency: str = "PLN"
+    account_wrapper: str | None = None
 
     @field_validator("name")
     @classmethod
@@ -29,14 +30,14 @@ class AccountCreate(BaseModel):
     def validate_category(cls, v: str) -> str:
         valid_categories = {
             "bank",
-            "ike",
-            "ikze",
+            "saving_account",
+            "stock",
+            "bond",
+            "gold",
+            "real_estate",
             "ppk",
             "fund",
             "etf",
-            "bonds",
-            "stocks",
-            "real_estate",
             "vehicle",
             "mortgage",
             "installment",
@@ -44,6 +45,13 @@ class AccountCreate(BaseModel):
         }
         if v not in valid_categories:
             raise ValueError(f"Category must be one of: {', '.join(sorted(valid_categories))}")
+        return v
+
+    @field_validator("account_wrapper")
+    @classmethod
+    def validate_account_wrapper(cls, v: str | None) -> str | None:
+        if v is not None and v not in {"IKE", "IKZE", "PPK"}:
+            raise ValueError("Account wrapper must be 'IKE', 'IKZE', or 'PPK'")
         return v
 
     @field_validator("owner")
@@ -61,6 +69,7 @@ class AccountResponse(BaseModel):
     category: str
     owner: str
     currency: str
+    account_wrapper: str | None
     is_active: bool
     created_at: datetime
     current_value: float
@@ -71,6 +80,7 @@ class AccountUpdate(BaseModel):
     category: str | None = None
     owner: str | None = None
     currency: str | None = None
+    account_wrapper: str | None = None
 
     @field_validator("name")
     @classmethod
@@ -87,14 +97,14 @@ class AccountUpdate(BaseModel):
         if v is not None:
             valid_categories = {
                 "bank",
-                "ike",
-                "ikze",
+                "saving_account",
+                "stock",
+                "bond",
+                "gold",
+                "real_estate",
                 "ppk",
                 "fund",
                 "etf",
-                "bonds",
-                "stocks",
-                "real_estate",
                 "vehicle",
                 "mortgage",
                 "installment",
@@ -102,6 +112,13 @@ class AccountUpdate(BaseModel):
             }
             if v not in valid_categories:
                 raise ValueError(f"Category must be one of: {', '.join(sorted(valid_categories))}")
+        return v
+
+    @field_validator("account_wrapper")
+    @classmethod
+    def validate_account_wrapper(cls, v: str | None) -> str | None:
+        if v is not None and v not in {"IKE", "IKZE", "PPK"}:
+            raise ValueError("Account wrapper must be 'IKE', 'IKZE', or 'PPK'")
         return v
 
     @field_validator("owner")

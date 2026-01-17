@@ -15,5 +15,6 @@ class Account(Base):
     category: Mapped[str] = mapped_column(String(100))
     owner: Mapped[str] = mapped_column(String(100))
     currency: Mapped[str] = mapped_column(String(10))
+    account_wrapper: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(UTC))

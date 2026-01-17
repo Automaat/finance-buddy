@@ -19,7 +19,14 @@ def test_create_snapshot_success(test_db_session):
     account1 = Account(
         name="Test Bank", type="asset", category="bank", owner="Test", currency="PLN"
     )
-    account2 = Account(name="Test IKE", type="asset", category="ike", owner="Test", currency="PLN")
+    account2 = Account(
+        name="Test IKE",
+        type="asset",
+        category="fund",
+        owner="Test",
+        currency="PLN",
+        account_wrapper="IKE",
+    )
     test_db_session.add_all([account1, account2])
     test_db_session.commit()
 
