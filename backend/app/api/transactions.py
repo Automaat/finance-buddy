@@ -37,12 +37,12 @@ def create_transaction(
 
 @router.delete("/accounts/{account_id}/transactions/{transaction_id}", status_code=204)
 def delete_transaction(
-    account_id: int,  # noqa: ARG001
+    account_id: int,
     transaction_id: int,
     db: Session = Depends(get_db),  # noqa: B008
 ) -> None:
     """Delete transaction (soft delete by setting is_active=False)"""
-    transactions.delete_transaction(db, transaction_id)
+    transactions.delete_transaction(db, account_id, transaction_id)
 
 
 @router.get("/transactions", response_model=TransactionsListResponse)

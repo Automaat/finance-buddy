@@ -2,6 +2,7 @@ import { error } from '@sveltejs/kit';
 import { env } from '$env/dynamic/public';
 import { browser } from '$app/environment';
 import type { PageLoad } from './$types';
+import type { Transaction, TransactionsData } from '$lib/types/transactions';
 
 export interface Account {
 	id: number;
@@ -21,21 +22,7 @@ export interface AccountsData {
 	liabilities: Account[];
 }
 
-export interface Transaction {
-	id: number;
-	account_id: number;
-	account_name: string;
-	amount: number;
-	date: string;
-	owner: string;
-	created_at: string;
-}
-
-export interface TransactionsData {
-	transactions: Transaction[];
-	total_invested: number;
-	transaction_count: number;
-}
+export type { Transaction, TransactionsData };
 
 export const load: PageLoad = async ({ fetch }) => {
 	try {

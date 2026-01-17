@@ -275,7 +275,7 @@ def test_delete_transaction_success(test_db_session):
     test_db_session.commit()
     transaction_id = transaction.id
 
-    delete_transaction(test_db_session, transaction_id)
+    delete_transaction(test_db_session, account.id, transaction_id)
 
     deleted = test_db_session.query(Transaction).filter_by(id=transaction_id).first()
     assert deleted is not None
@@ -285,7 +285,7 @@ def test_delete_transaction_success(test_db_session):
 def test_delete_transaction_not_found(test_db_session):
     """Test deleting non-existent transaction fails"""
     with pytest.raises(HTTPException) as exc_info:
-        delete_transaction(test_db_session, 999)
+        delete_transaction(test_db_session, 1, 999)
 
     assert exc_info.value.status_code == 404
 
@@ -305,11 +305,35 @@ def test_delete_transaction_idempotent(test_db_session):
     test_db_session.commit()
     transaction_id = transaction.id
 
-    delete_transaction(test_db_session, transaction_id)
-    delete_transaction(test_db_session, transaction_id)
+    delete_transaction(test_db_session, account.id, transaction_id)
+    delete_transaction(test_db_session, account.id, transaction_id)
 
     deleted = test_db_session.query(Transaction).filter_by(id=transaction_id).first()
     assert deleted.is_active is False
+
+
+def test_delete_transaction_wrong_account(test_db_session):
+    """Test deleting transaction with wrong account_id fails"""
+    account1 = Account(
+        name="IKE Stocks", type="asset", category="stock", owner="Marcin", currency="PLN"
+    )
+    account2 = Account(
+        name="IKE Bonds", type="asset", category="bond", owner="Marcin", currency="PLN"
+    )
+    test_db_session.add_all([account1, account2])
+    test_db_session.commit()
+
+    transaction = Transaction(
+        account_id=account1.id, amount=5000.0, date=date(2024, 1, 15), owner="Marcin", is_active=True
+    )
+    test_db_session.add(transaction)
+    test_db_session.commit()
+
+    with pytest.raises(HTTPException) as exc_info:
+        delete_transaction(test_db_session, account2.id, transaction.id)
+
+    assert exc_info.value.status_code == 403
+    assert "does not belong to account" in exc_info.value.detail
 
 
 def test_get_transaction_counts(test_db_session):

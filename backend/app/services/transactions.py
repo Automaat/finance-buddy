@@ -163,7 +163,7 @@ def create_transaction(
     )
 
 
-def delete_transaction(db: Session, transaction_id: int) -> None:
+def delete_transaction(db: Session, account_id: int, transaction_id: int) -> None:
     """Soft delete transaction by setting is_active=False"""
     transaction = db.execute(
         select(Transaction).where(Transaction.id == transaction_id)
@@ -172,6 +172,13 @@ def delete_transaction(db: Session, transaction_id: int) -> None:
     if not transaction:
         raise HTTPException(
             status_code=404, detail=f"Transaction with id {transaction_id} not found"
+        )
+
+    # Validate transaction belongs to the specified account
+    if transaction.account_id != account_id:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Transaction {transaction_id} does not belong to account {account_id}",
         )
 
     # Idempotent: if already deleted, return early

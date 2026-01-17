@@ -7,11 +7,11 @@
 	import { formatPLN } from '$lib/utils/format';
 	import { env } from '$env/dynamic/public';
 	import { goto, invalidateAll } from '$app/navigation';
-	import { page } from '$app/stores';
 
 	export let data;
 
 	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
+	const defaultOwner = env.PUBLIC_DEFAULT_OWNER || 'Marcin';
 
 	let filterAccountId = data.filters.account_id || '';
 	let filterOwner = data.filters.owner || '';
@@ -23,7 +23,7 @@
 		account_id: '',
 		amount: 0,
 		date: new Date().toISOString().split('T')[0],
-		owner: 'Marcin'
+		owner: defaultOwner
 	};
 	let transactionError = '';
 	let savingTransaction = false;
@@ -75,7 +75,7 @@
 			account_id: '',
 			amount: 0,
 			date: new Date().toISOString().split('T')[0],
-			owner: 'Marcin'
+			owner: defaultOwner
 		};
 		transactionError = '';
 		showNewTransactionModal = true;

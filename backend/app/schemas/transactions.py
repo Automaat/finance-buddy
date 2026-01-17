@@ -2,6 +2,8 @@ from datetime import UTC, date, datetime
 
 from pydantic import BaseModel, field_validator
 
+from app.core.config import settings
+
 
 class TransactionCreate(BaseModel):
     amount: float
@@ -25,8 +27,9 @@ class TransactionCreate(BaseModel):
     @field_validator("owner")
     @classmethod
     def validate_owner(cls, v: str) -> str:
-        if v not in {"Marcin", "Ewa", "Shared"}:
-            raise ValueError("Owner must be 'Marcin', 'Ewa', or 'Shared'")
+        allowed_owners = settings.owner_names_list
+        if v not in allowed_owners:
+            raise ValueError(f"Owner must be one of: {', '.join(allowed_owners)}")
         return v
 
 

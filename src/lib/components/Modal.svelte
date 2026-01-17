@@ -1,9 +1,9 @@
 <script lang="ts">
 	export let open = false;
 	export let title = '';
-	export let onConfirm: () => void;
+	export let onConfirm: (() => void) | undefined = undefined;
 	export let onCancel: () => void;
-	export let confirmText = 'Potwierdź';
+	export let confirmText: string | undefined = undefined;
 	export let cancelText = 'Anuluj';
 	export let confirmDisabled = false;
 	export let confirmVariant: 'primary' | 'danger' = 'danger';
@@ -39,14 +39,16 @@
 			</div>
 			<div class="modal-actions">
 				<button type="button" class="btn btn-secondary" on:click={onCancel}>{cancelText}</button>
-				<button
-					type="button"
-					class="btn btn-{confirmVariant}"
-					on:click={onConfirm}
-					disabled={confirmDisabled}
-				>
-					{confirmText}
-				</button>
+				{#if confirmText && onConfirm}
+					<button
+						type="button"
+						class="btn btn-{confirmVariant}"
+						on:click={onConfirm}
+						disabled={confirmDisabled}
+					>
+						{confirmText}
+					</button>
+				{/if}
 			</div>
 		</div>
 	</div>

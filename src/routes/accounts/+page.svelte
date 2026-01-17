@@ -7,11 +7,14 @@
 	import { formatPLN } from '$lib/utils/format';
 	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
+	import { onMount } from 'svelte';
+	import { INVESTMENT_CATEGORIES } from '$lib/constants';
 	import type { Account, Transaction, TransactionsData } from './+page';
 
 	export let data;
 
 	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
+	const defaultOwner = env.PUBLIC_DEFAULT_OWNER || 'Marcin';
 
 	let showForm = false;
 	let editingAccount: Account | null = null;
@@ -26,12 +29,10 @@
 	let transactionFormData = {
 		amount: 0,
 		date: new Date().toISOString().split('T')[0],
-		owner: 'Marcin'
+		owner: defaultOwner
 	};
 	let transactionError = '';
 	let savingTransaction = false;
-
-	const investmentCategories = new Set(['stock', 'bond', 'fund', 'etf']);
 
 	const categoryLabels: Record<string, string> = {
 		bank: 'Konto bankowe',
@@ -68,7 +69,7 @@
 		name: '',
 		type: 'asset',
 		category: 'bank',
-		owner: 'Marcin',
+		owner: defaultOwner,
 		currency: 'PLN',
 		account_wrapper: null as string | null
 	};
@@ -90,7 +91,7 @@
 			name: '',
 			type: 'asset',
 			category: 'bank',
-			owner: 'Marcin',
+			owner: defaultOwner,
 			currency: 'PLN',
 			account_wrapper: null
 		};
@@ -173,11 +174,9 @@
 		}
 	}
 
-	$: {
-		if (data) {
-			loadTransactionCounts();
-		}
-	}
+	onMount(() => {
+		loadTransactionCounts();
+	});
 
 	function openTransactions(accountId: number, accountName: string) {
 		selectedAccountId = accountId;
@@ -211,7 +210,7 @@
 		transactionFormData = {
 			amount: 0,
 			date: new Date().toISOString().split('T')[0],
-			owner: 'Marcin'
+			owner: defaultOwner
 		};
 		transactionError = '';
 	}
@@ -237,7 +236,7 @@
 			transactionFormData = {
 				amount: 0,
 				date: new Date().toISOString().split('T')[0],
-				owner: 'Marcin'
+				owner: defaultOwner
 			};
 
 			await loadTransactions();
@@ -318,7 +317,7 @@
 								<td class="value-cell">{formatPLN(account.current_value)}</td>
 								<td class="actions-cell">
 									<button class="btn-icon" on:click={() => startEdit(account)}>✏️</button>
-									{#if investmentCategories.has(account.category)}
+									{#if INVESTMENT_CATEGORIES.has(account.category)}
 										<button
 											class="btn-icon transaction-btn"
 											title="Transakcje"
@@ -477,10 +476,7 @@
 	open={showTransactionsModal}
 	title="Transakcje - {selectedAccountName}"
 	onCancel={closeTransactions}
-	onConfirm={() => {}}
 	size="large"
-	confirmText=""
-	confirmDisabled={true}
 >
 	<div class="transactions-modal">
 		{#if transactionError}

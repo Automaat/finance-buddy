@@ -2,22 +2,10 @@ import { error } from '@sveltejs/kit';
 import { env } from '$env/dynamic/public';
 import { browser } from '$app/environment';
 import type { PageLoad } from './$types';
+import type { Transaction, TransactionsData } from '$lib/types/transactions';
+import { INVESTMENT_CATEGORIES } from '$lib/constants';
 
-export interface Transaction {
-	id: number;
-	account_id: number;
-	account_name: string;
-	amount: number;
-	date: string;
-	owner: string;
-	created_at: string;
-}
-
-export interface TransactionsData {
-	transactions: Transaction[];
-	total_invested: number;
-	transaction_count: number;
-}
+export type { Transaction, TransactionsData };
 
 export interface Account {
 	id: number;
@@ -59,10 +47,9 @@ export const load: PageLoad = async ({ fetch, url }) => {
 
 		if (accountsResponse.ok) {
 			const accountsData = await accountsResponse.json();
-			const investmentCategories = new Set(['stock', 'bond', 'fund', 'etf']);
 
 			investmentAccounts = accountsData.assets
-				.filter((acc: Account) => investmentCategories.has(acc.category))
+				.filter((acc: Account) => INVESTMENT_CATEGORIES.has(acc.category))
 				.map((acc: Account) => ({ id: acc.id, name: acc.name, category: acc.category }));
 		}
 
