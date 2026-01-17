@@ -7,11 +7,11 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 from testcontainers.postgres import PostgresContainer
 
-# Import models BEFORE app to register them with SQLAlchemy Base.metadata
-from app.models import Account, Asset, Goal, Snapshot, SnapshotValue, Transaction  # noqa: F401
-
 from app.core.database import Base, get_db
 from app.main import app
+
+# Import models BEFORE app to register them with SQLAlchemy Base.metadata
+from app.models import Account, Asset, Goal, Snapshot, SnapshotValue, Transaction  # noqa: F401
 
 
 @pytest.fixture(scope="function")
