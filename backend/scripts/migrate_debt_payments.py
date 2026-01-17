@@ -1,7 +1,7 @@
 """
 Migrate mortgage payment history from wplaty_hipoteka sheet.
 
-Imports 106 historical mortgage payments.
+Imports 102 historical mortgage payments.
 """
 
 import sys

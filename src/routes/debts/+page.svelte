@@ -255,6 +255,7 @@
 
 			await loadPayments();
 			await loadPaymentCounts();
+			await invalidateAll();
 		} catch (err) {
 			if (err instanceof Error) {
 				paymentError = err.message;
@@ -291,6 +292,7 @@
 
 			await loadPayments();
 			await loadPaymentCounts();
+			await invalidateAll();
 			showDeletePaymentModal = false;
 			paymentToDelete = null;
 		} catch (err) {

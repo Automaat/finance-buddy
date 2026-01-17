@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import HTTPException
 from sqlalchemy import desc, func, select
 from sqlalchemy.exc import IntegrityError
@@ -7,7 +9,7 @@ from app.models import Account, Debt, DebtPayment, Snapshot, SnapshotValue
 from app.schemas.debts import DebtCreate, DebtResponse, DebtsListResponse, DebtUpdate
 
 
-def _get_latest_balance(db: Session, account_id: int) -> tuple[float | None, any]:
+def _get_latest_balance(db: Session, account_id: int) -> tuple[float | None, date | None]:
     """Get latest snapshot balance for an account"""
     result = db.execute(
         select(Snapshot.date, SnapshotValue.value)
@@ -68,11 +70,17 @@ def get_all_debts(
             if account_id not in latest_balances:
                 latest_balances[account_id] = (float(value), snapshot_date)
 
-    # Get total paid for all accounts
+    # Get total paid for all accounts (batch query to avoid N+1)
     total_paid_dict = {}
     if account_ids:
-        for acc_id in account_ids:
-            total_paid_dict[acc_id] = _get_total_paid(db, acc_id)
+        payment_totals = db.execute(
+            select(DebtPayment.account_id, func.sum(DebtPayment.amount))
+            .where(DebtPayment.account_id.in_(account_ids), DebtPayment.is_active)
+            .group_by(DebtPayment.account_id)
+        ).all()
+        total_paid_dict = {
+            account_id: float(total) if total else 0.0 for account_id, total in payment_totals
+        }
 
     debt_list = []
     for debt, account_name, account_owner in results:
@@ -81,8 +89,13 @@ def get_all_debts(
 
         # Calculate interest paid: total_paid - principal_paid
         # principal_paid = initial_amount - latest_balance
-        principal_paid = float(debt.initial_amount) - (latest_balance if latest_balance else 0.0)
-        interest_paid = total_paid - principal_paid
+        if latest_balance is None:
+            # No snapshot data - cannot calculate reliably
+            principal_paid = 0.0
+            interest_paid = 0.0
+        else:
+            principal_paid = float(debt.initial_amount) - latest_balance
+            interest_paid = total_paid - principal_paid
 
         debt_list.append(
             DebtResponse(
@@ -158,8 +171,12 @@ def create_debt(db: Session, account_id: int, data: DebtCreate) -> DebtResponse:
     latest_balance, latest_balance_date = _get_latest_balance(db, debt.account_id)
     total_paid = _get_total_paid(db, debt.account_id)
 
-    principal_paid = float(debt.initial_amount) - (latest_balance if latest_balance else 0.0)
-    interest_paid = total_paid - principal_paid
+    if latest_balance is None:
+        principal_paid = 0.0
+        interest_paid = 0.0
+    else:
+        principal_paid = float(debt.initial_amount) - latest_balance
+        interest_paid = total_paid - principal_paid
 
     return DebtResponse(
         id=debt.id,
@@ -197,8 +214,12 @@ def get_debt(db: Session, debt_id: int) -> DebtResponse:
     latest_balance, latest_balance_date = _get_latest_balance(db, debt.account_id)
     total_paid = _get_total_paid(db, debt.account_id)
 
-    principal_paid = float(debt.initial_amount) - (latest_balance if latest_balance else 0.0)
-    interest_paid = total_paid - principal_paid
+    if latest_balance is None:
+        principal_paid = 0.0
+        interest_paid = 0.0
+    else:
+        principal_paid = float(debt.initial_amount) - latest_balance
+        interest_paid = total_paid - principal_paid
 
     return DebtResponse(
         id=debt.id,
@@ -255,8 +276,12 @@ def update_debt(db: Session, debt_id: int, data: DebtUpdate) -> DebtResponse:
     latest_balance, latest_balance_date = _get_latest_balance(db, debt.account_id)
     total_paid = _get_total_paid(db, debt.account_id)
 
-    principal_paid = float(debt.initial_amount) - (latest_balance if latest_balance else 0.0)
-    interest_paid = total_paid - principal_paid
+    if latest_balance is None:
+        principal_paid = 0.0
+        interest_paid = 0.0
+    else:
+        principal_paid = float(debt.initial_amount) - latest_balance
+        interest_paid = total_paid - principal_paid
 
     return DebtResponse(
         id=debt.id,
