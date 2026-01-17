@@ -229,7 +229,6 @@
 		}
 	}
 
-
 	async function addPayment() {
 		if (!selectedDebt) return;
 

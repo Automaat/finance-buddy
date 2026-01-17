@@ -114,7 +114,7 @@ def migrate() -> None:
                 print(f"  Processed {payment_count} payments...")
 
         db.commit()
-        print(f"\n✅ Migration completed!")
+        print("\n✅ Migration completed!")
         print(f"  ✓ Imported {payment_count} debt payments")
         print(f"  ↻ Skipped {skipped_count} rows (duplicates or missing data)")
     except Exception:

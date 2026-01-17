@@ -26,7 +26,7 @@ def _get_total_paid(db: Session, account_id: int) -> float:
     """Get total amount paid for a debt account"""
     result = db.execute(
         select(func.sum(DebtPayment.amount))
-        .where(DebtPayment.account_id == account_id, DebtPayment.is_active == True)
+        .where(DebtPayment.account_id == account_id, DebtPayment.is_active)
     ).scalar()
 
     return float(result) if result else 0.0

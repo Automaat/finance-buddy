@@ -239,7 +239,11 @@ def test_get_all_payments_filter_by_account(test_client, test_db_session):
 def test_get_all_payments_filter_by_owner(test_client, test_db_session):
     """Test GET /api/payments with owner filter"""
     account = Account(
-        name="Shared Mortgage", type="liability", category="mortgage", owner="Shared", currency="PLN"
+        name="Shared Mortgage",
+        type="liability",
+        category="mortgage",
+        owner="Shared",
+        currency="PLN",
     )
     test_db_session.add(account)
     test_db_session.commit()
