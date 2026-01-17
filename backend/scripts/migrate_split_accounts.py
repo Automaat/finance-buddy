@@ -47,9 +47,13 @@ def run_migration(dry_run: bool = True) -> None:
     with Session(engine) as db:
         try:
             # Fetch all active accounts
-            accounts = db.execute(
-                select(Account).where(Account.is_active.is_(True)).order_by(Account.name)
-            ).scalars().all()
+            accounts = (
+                db.execute(
+                    select(Account).where(Account.is_active.is_(True)).order_by(Account.name)
+                )
+                .scalars()
+                .all()
+            )
 
             if not accounts:
                 print("No active accounts found. Nothing to migrate.")
@@ -107,9 +111,11 @@ def run_migration(dry_run: bool = True) -> None:
                 db.flush()  # Get ID
 
                 # Update SnapshotValue FK
-                snapshot_values = db.execute(
-                    select(SnapshotValue).where(SnapshotValue.account_id == account.id)
-                ).scalars().all()
+                snapshot_values = (
+                    db.execute(select(SnapshotValue).where(SnapshotValue.account_id == account.id))
+                    .scalars()
+                    .all()
+                )
 
                 for sv in snapshot_values:
                     sv.asset_id = asset.id
