@@ -10,9 +10,15 @@ def test_init_db_creates_tables():
     with (
         patch("app.core.init_db.Base") as mock_base,
         patch("app.core.init_db.engine") as mock_engine,
+        patch("app.core.init_db.SessionLocal") as mock_session_local,
     ):
         mock_metadata = MagicMock()
         mock_base.metadata = mock_metadata
+
+        # Mock the session and query chain
+        mock_session = MagicMock()
+        mock_session_local.return_value = mock_session
+        mock_session.query.return_value.count.return_value = 1  # Pretend limits exist
 
         init_db()
 
