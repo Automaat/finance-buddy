@@ -53,10 +53,7 @@ def migrate() -> None:
             # Migrate PPK accounts
             print("Migrating PPK accounts...")
             result = conn.execute(
-                text(
-                    "UPDATE accounts SET account_wrapper = 'PPK' "
-                    "WHERE category = 'ppk'"
-                )
+                text("UPDATE accounts SET account_wrapper = 'PPK' WHERE category = 'ppk'")
             )
             print(f"  Updated {result.rowcount} PPK accounts")
 
