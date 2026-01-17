@@ -191,4 +191,4 @@ def get_transaction_counts(db: Session) -> dict[int, int]:
         .group_by(Transaction.account_id)
     ).all()
 
-    return dict(results)
+    return {account_id: int(count) for account_id, count in results}
