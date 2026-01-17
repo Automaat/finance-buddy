@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import accounts, dashboard, snapshots
+from app.api import accounts, assets, dashboard, snapshots
 from app.core.config import settings
 from app.core.init_db import init_db
 
@@ -30,6 +30,7 @@ app.add_middleware(
 # Include routers
 app.include_router(dashboard.router)
 app.include_router(accounts.router)
+app.include_router(assets.router)
 app.include_router(snapshots.router)
 
 

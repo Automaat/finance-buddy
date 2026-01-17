@@ -1,5 +1,5 @@
 from app.core.database import Base, engine
-from app.models import Account, Goal, Snapshot, SnapshotValue  # noqa: F401
+from app.models import Account, Asset, Goal, Snapshot, SnapshotValue  # noqa: F401
 
 
 def init_db() -> None:

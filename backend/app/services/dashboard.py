@@ -7,7 +7,7 @@ import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Account, Snapshot, SnapshotValue
+from app.models import Account, Asset, Snapshot, SnapshotValue
 from app.schemas.dashboard import AllocationItem, DashboardResponse, NetWorthPoint
 
 
@@ -24,6 +24,9 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
     """
 
     # Fetch all data needed
+    assets_query = select(Asset).where(Asset.is_active.is_(True))
+    assets_df = pd.read_sql(assets_query, db.get_bind())
+
     accounts_query = select(Account).where(Account.is_active.is_(True))
     accounts_df = pd.read_sql(accounts_query, db.get_bind())
 
@@ -33,25 +36,34 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
     values_query = select(SnapshotValue)
     values_df = pd.read_sql(values_query, db.get_bind())
 
-    # pandas: merge() - Join snapshot values with accounts
-    # Similar to SQL: SELECT * FROM snapshot_values JOIN accounts
+    # pandas: merge() - LEFT JOIN snapshot values with both assets and accounts
+    # Similar to SQL: SELECT * FROM snapshot_values LEFT JOIN assets LEFT JOIN accounts
     df = values_df.merge(
-        accounts_df, left_on="account_id", right_on="id", suffixes=("", "_account")
+        assets_df, left_on="asset_id", right_on="id", how="left", suffixes=("", "_asset")
+    )
+    df = df.merge(
+        accounts_df, left_on="account_id", right_on="id", how="left", suffixes=("", "_account")
     )
     df = df.merge(snapshots_df, left_on="snapshot_id", right_on="id", suffixes=("", "_snapshot"))
 
     # Calculate net worth per snapshot
-    # pandas: groupby() + vectorized aggregations - Efficient aggregation per group
-    net_worth_by_date = (
-        df.groupby(["date", "type"])["value"].sum().unstack(fill_value=0).reset_index()
-    )
-    # Ensure missing asset/liability columns are treated as zero
-    if "asset" not in net_worth_by_date.columns:
-        net_worth_by_date["asset"] = 0.0
-    if "liability" not in net_worth_by_date.columns:
-        net_worth_by_date["liability"] = 0.0
-    net_worth_by_date["net_worth"] = net_worth_by_date["asset"] - net_worth_by_date["liability"]
-    net_worth_by_date = net_worth_by_date[["date", "net_worth"]]
+    # pandas: Calculate signed value based on whether it's an asset or liability
+    # Assets (from Asset table) contribute positively
+    # Accounts depend on account.type (asset=+, liability=-)
+    def calculate_signed_value(row):
+        if pd.notna(row["asset_id"]):
+            # From Asset table - always positive
+            return row["value"]
+        elif pd.notna(row["account_id"]):
+            # From Account table - depends on type
+            return row["value"] if row["type"] == "asset" else -row["value"]
+        return 0
+
+    df["signed_value"] = df.apply(calculate_signed_value, axis=1)
+
+    # pandas: groupby() + sum() - Aggregate net worth by date
+    net_worth_by_date = df.groupby("date")["signed_value"].sum().reset_index()
+    net_worth_by_date.columns = ["date", "net_worth"]
 
     # pandas: sort_values() - Order by date
     net_worth_by_date = net_worth_by_date.sort_values("date")
@@ -84,18 +96,33 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
         # pandas: Boolean indexing - Filter rows
         latest_df = df[df["snapshot_id"] == latest_snapshot["id"]]
 
-        # pandas: groupby() + sum() - Aggregate by type
-        totals_by_type = latest_df.groupby("type")["value"].sum()
+        # Calculate total assets: from Asset table + from Account table where type="asset"
+        # pandas: Boolean masks for filtering
+        from_asset_table = latest_df[pd.notna(latest_df["asset_id"])]
+        from_account_assets = latest_df[
+            (pd.notna(latest_df["account_id"])) & (latest_df["type"] == "asset")
+        ]
+        total_assets = float(from_asset_table["value"].sum() + from_account_assets["value"].sum())
 
-        total_assets = float(totals_by_type.get("asset", 0))
-        total_liabilities = float(totals_by_type.get("liability", 0))
+        # Calculate total liabilities: from Account table where type="liability"
+        from_account_liabilities = latest_df[
+            (pd.notna(latest_df["account_id"])) & (latest_df["type"] == "liability")
+        ]
+        total_liabilities = float(from_account_liabilities["value"].sum())
 
-        # Asset allocation
-        # pandas: Query filter + groupby multiple columns
-        assets_df = latest_df[latest_df["type"] == "asset"]
+        # Asset allocation - ONLY from accounts (not from Asset table)
+        # pandas: Filter for accounts with type="asset" that have category and owner
+        account_assets_df = latest_df[
+            (pd.notna(latest_df["account_id"]))
+            & (latest_df["type"] == "asset")
+            & (pd.notna(latest_df["category"]))
+            & (pd.notna(latest_df["owner"]))
+        ]
 
         # pandas: groupby() with multiple columns
-        allocation_df = assets_df.groupby(["category", "owner"])["value"].sum().reset_index()
+        allocation_df = (
+            account_assets_df.groupby(["category", "owner"])["value"].sum().reset_index()
+        )
 
         allocation = [
             AllocationItem(category=row["category"], owner=row["owner"], value=float(row["value"]))

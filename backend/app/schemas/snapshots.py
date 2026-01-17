@@ -1,13 +1,22 @@
 from datetime import date
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 
 class SnapshotValueInput(BaseModel):
-    """Input for single account value in snapshot"""
+    """Input for single account or asset value in snapshot"""
 
-    account_id: int
+    asset_id: int | None = None
+    account_id: int | None = None
     value: float
+
+    @model_validator(mode="after")
+    def validate_exactly_one_id(self) -> "SnapshotValueInput":
+        if self.asset_id is None and self.account_id is None:
+            raise ValueError("Either asset_id or account_id must be provided")
+        if self.asset_id is not None and self.account_id is not None:
+            raise ValueError("Only one of asset_id or account_id can be provided")
+        return self
 
 
 class SnapshotCreate(BaseModel):
@@ -26,11 +35,13 @@ class SnapshotCreate(BaseModel):
 
 
 class SnapshotValueResponse(BaseModel):
-    """Snapshot value for single account"""
+    """Snapshot value for single account or asset"""
 
     id: int
-    account_id: int
-    account_name: str
+    asset_id: int | None = None
+    asset_name: str | None = None
+    account_id: int | None = None
+    account_name: str | None = None
     value: float
 
 

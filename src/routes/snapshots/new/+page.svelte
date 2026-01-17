@@ -19,17 +19,24 @@
 	let investments = data.assets.filter((a: any) => investmentCategories.includes(a.category));
 	let regularAssets = data.assets.filter((a: any) => !investmentCategories.includes(a.category));
 
-	// Track visible accounts (initially show accounts with value > 0)
+	// Track visible accounts and assets (initially show items with value > 0)
 	let visibleAccountIds = new Set<number>(
 		[...data.assets, ...data.liabilities]
 			.filter((a: any) => a.current_value > 0)
 			.map((a: any) => a.id)
 	);
+	let visibleAssetIds = new Set<number>(
+		data.physicalAssets.filter((a: any) => a.current_value > 0).map((a: any) => a.id)
+	);
 
-	// Initialize values with current values from accounts
-	let values: Record<number, number> = {};
+	// Initialize values with current values from accounts and assets
+	let accountValues: Record<number, number> = {};
 	[...data.assets, ...data.liabilities].forEach((account) => {
-		values[account.id] = account.current_value;
+		accountValues[account.id] = account.current_value;
+	});
+	let assetValues: Record<number, number> = {};
+	data.physicalAssets.forEach((asset: any) => {
+		assetValues[asset.id] = asset.current_value;
 	});
 
 	function removeAccount(accountId: number) {
@@ -42,14 +49,28 @@
 		visibleAccountIds = new Set(visibleAccountIds); // Trigger reactivity
 	}
 
-	// New account creation state
+	function removeAsset(assetId: number) {
+		visibleAssetIds.delete(assetId);
+		visibleAssetIds = new Set(visibleAssetIds); // Trigger reactivity
+	}
+
+	function addAsset(assetId: number) {
+		visibleAssetIds.add(assetId);
+		visibleAssetIds = new Set(visibleAssetIds); // Trigger reactivity
+	}
+
+	// New item creation state (accounts and assets)
 	let showNewAccountForm = false;
+	let showNewAssetForm = false;
 	let newAccountSection: 'investments' | 'assets' | 'liabilities' = 'assets';
 	let newAccountName = '';
 	let newAccountCategory = '';
 	let newAccountOwner = 'Shared';
 	let newAccountValue = 0;
 	let creatingAccount = false;
+	let newAssetName = '';
+	let newAssetValue = 0;
+	let creatingAsset = false;
 
 	async function createNewAccount() {
 		if (!newAccountName.trim()) {
@@ -129,28 +150,93 @@
 		showNewAccountForm = true;
 	}
 
+	async function createNewAsset() {
+		if (!newAssetName.trim()) {
+			error = 'Nazwa majątku jest wymagana';
+			return;
+		}
+
+		creatingAsset = true;
+		error = '';
+
+		try {
+			const response = await fetch(`${env.PUBLIC_API_URL_BROWSER}/api/assets`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					name: newAssetName
+				})
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => null);
+				const message =
+					(errorData &&
+						typeof errorData === 'object' &&
+						'detail' in errorData &&
+						errorData.detail) ||
+					'Failed to create asset';
+				throw new Error(String(message));
+			}
+
+			const newAsset = await response.json();
+
+			// Add to physical assets list
+			data.physicalAssets = [...data.physicalAssets, newAsset];
+
+			// Set initial value and mark as visible
+			assetValues[newAsset.id] = newAssetValue;
+			visibleAssetIds.add(newAsset.id);
+			visibleAssetIds = new Set(visibleAssetIds);
+
+			// Reset form
+			showNewAssetForm = false;
+			newAssetName = '';
+			newAssetValue = 0;
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Błąd tworzenia majątku';
+		} finally {
+			creatingAsset = false;
+		}
+	}
+
 	async function handleSubmit() {
 		loading = true;
 		error = '';
 
 		try {
-			// Build payload: visible accounts with values, hidden accounts with 0
+			// Build payload: mix of accounts and assets
 			const allAccounts = [...investments, ...regularAssets, ...data.liabilities];
+			const accountPayloads = allAccounts.map((account) => {
+				const isVisible = visibleAccountIds.has(account.id);
+				const value = isVisible ? accountValues[account.id] : 0;
+				const parsedValue = parseFloat(value.toString());
+				if (Number.isNaN(parsedValue)) {
+					throw new Error('Invalid value for account. Please enter a valid number.');
+				}
+				return {
+					account_id: account.id,
+					value: parsedValue
+				};
+			});
+
+			const assetPayloads = data.physicalAssets.map((asset: any) => {
+				const isVisible = visibleAssetIds.has(asset.id);
+				const value = isVisible ? assetValues[asset.id] : 0;
+				const parsedValue = parseFloat(value.toString());
+				if (Number.isNaN(parsedValue)) {
+					throw new Error('Invalid value for asset. Please enter a valid number.');
+				}
+				return {
+					asset_id: asset.id,
+					value: parsedValue
+				};
+			});
+
 			const payload = {
 				date: snapshotDate,
 				notes: notes || null,
-				values: allAccounts.map((account) => {
-					const isVisible = visibleAccountIds.has(account.id);
-					const value = isVisible ? values[account.id] : 0;
-					const parsedValue = parseFloat(value.toString());
-					if (Number.isNaN(parsedValue)) {
-						throw new Error('Invalid value for account. Please enter a valid number.');
-					}
-					return {
-						account_id: account.id,
-						value: parsedValue
-					};
-				})
+				values: [...accountPayloads, ...assetPayloads]
 			};
 
 			const response = await fetch(`${env.PUBLIC_API_URL_BROWSER}/api/snapshots`, {
@@ -246,7 +332,7 @@
 								id="account-{account.id}"
 								type="number"
 								step="0.01"
-								bind:value={values[account.id]}
+								bind:value={accountValues[account.id]}
 								placeholder="0.00"
 								class="form-input"
 							/>
@@ -297,7 +383,7 @@
 	<!-- Regular Assets -->
 	<Card>
 		<CardHeader>
-			<CardTitle>💰 Aktywa</CardTitle>
+			<CardTitle>💰 Konta finansowe</CardTitle>
 		</CardHeader>
 		<CardContent>
 			{#each regularAssets.filter((a: any) => visibleAccountIds.has(a.id)) as account}
@@ -311,7 +397,7 @@
 							id="account-{account.id}"
 							type="number"
 							step="0.01"
-							bind:value={values[account.id]}
+							bind:value={accountValues[account.id]}
 							placeholder="0.00"
 							class="form-input"
 						/>
@@ -352,6 +438,56 @@
 		</CardContent>
 	</Card>
 
+	<!-- Physical Assets -->
+	<Card>
+		<CardHeader>
+			<CardTitle>🏠 Majątek</CardTitle>
+		</CardHeader>
+		<CardContent>
+			{#each data.physicalAssets.filter((a: any) => visibleAssetIds.has(a.id)) as asset}
+				<div class="form-group-with-remove">
+					<div class="form-group">
+						<label for="asset-{asset.id}" class="form-label">{asset.name}</label>
+						<input
+							id="asset-{asset.id}"
+							type="number"
+							step="0.01"
+							bind:value={assetValues[asset.id]}
+							placeholder="0.00"
+							class="form-input"
+						/>
+					</div>
+					<button
+						type="button"
+						class="btn-remove"
+						on:click={() => removeAsset(asset.id)}
+						title="Usuń pole"
+					>
+						×
+					</button>
+				</div>
+			{/each}
+
+			<div class="add-account">
+				{#if data.physicalAssets.filter((a: any) => !visibleAssetIds.has(a.id)).length > 0}
+					<details>
+						<summary>+ Pokaż ukryty majątek</summary>
+						<div class="add-account-list">
+							{#each data.physicalAssets.filter((a: any) => !visibleAssetIds.has(a.id)) as asset}
+								<button type="button" class="btn-add-account" on:click={() => addAsset(asset.id)}>
+									{asset.name}
+								</button>
+							{/each}
+						</div>
+					</details>
+				{/if}
+				<button type="button" class="btn-new-account" on:click={() => (showNewAssetForm = true)}>
+					+ Dodaj nowy majątek
+				</button>
+			</div>
+		</CardContent>
+	</Card>
+
 	<!-- Liabilities -->
 	{#if data.liabilities.length > 0}
 		<Card>
@@ -370,7 +506,7 @@
 								id="account-{account.id}"
 								type="number"
 								step="0.01"
-								bind:value={values[account.id]}
+								bind:value={accountValues[account.id]}
 								placeholder="0.00"
 								class="form-input"
 							/>
@@ -505,6 +641,67 @@
 						on:click={createNewAccount}
 					>
 						{creatingAccount ? 'Tworzenie...' : 'Utwórz konto'}
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- New Asset Modal -->
+	{#if showNewAssetForm}
+		<div class="modal-overlay" on:click={() => (showNewAssetForm = false)}>
+			<div class="modal" on:click|stopPropagation>
+				<div class="modal-header">
+					<h2>Dodaj nowy majątek</h2>
+					<button
+						type="button"
+						class="btn-close"
+						on:click={() => (showNewAssetForm = false)}
+						title="Zamknij"
+					>
+						×
+					</button>
+				</div>
+				<div class="modal-content">
+					<div class="form-group">
+						<label for="newAssetName" class="form-label">Nazwa *</label>
+						<input
+							id="newAssetName"
+							type="text"
+							bind:value={newAssetName}
+							placeholder="np. Mieszkanie Poznań, Rower"
+							class="form-input"
+							required
+						/>
+					</div>
+
+					<div class="form-group">
+						<label for="newAssetValue" class="form-label">Wartość początkowa</label>
+						<input
+							id="newAssetValue"
+							type="number"
+							step="0.01"
+							bind:value={newAssetValue}
+							placeholder="0.00"
+							class="form-input"
+						/>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button
+						type="button"
+						class="btn btn-secondary"
+						on:click={() => (showNewAssetForm = false)}
+					>
+						Anuluj
+					</button>
+					<button
+						type="button"
+						class="btn btn-primary"
+						disabled={creatingAsset}
+						on:click={createNewAsset}
+					>
+						{creatingAsset ? 'Tworzenie...' : 'Utwórz majątek'}
 					</button>
 				</div>
 			</div>
