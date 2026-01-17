@@ -411,9 +411,7 @@ def test_get_snapshot_by_id_with_assets(test_db_session):
     test_db_session.commit()
 
     # Add values
-    asset_value = SnapshotValue(
-        snapshot_id=snapshot.id, asset_id=asset.id, value=Decimal("50000")
-    )
+    asset_value = SnapshotValue(snapshot_id=snapshot.id, asset_id=asset.id, value=Decimal("50000"))
     account_value = SnapshotValue(
         snapshot_id=snapshot.id, account_id=account.id, value=Decimal("10000")
     )
