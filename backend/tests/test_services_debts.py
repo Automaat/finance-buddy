@@ -401,9 +401,7 @@ def test_get_all_debts_with_snapshots_and_payments(test_db_session):
     test_db_session.add(snapshot)
     test_db_session.commit()
 
-    snapshot_value = SnapshotValue(
-        snapshot_id=snapshot.id, account_id=account.id, value=400000.0
-    )
+    snapshot_value = SnapshotValue(snapshot_id=snapshot.id, account_id=account.id, value=400000.0)
     test_db_session.add(snapshot_value)
     test_db_session.commit()
 
@@ -438,9 +436,7 @@ def test_create_debt_with_snapshots(test_db_session):
     test_db_session.add(snapshot)
     test_db_session.commit()
 
-    snapshot_value = SnapshotValue(
-        snapshot_id=snapshot.id, account_id=account.id, value=450000.0
-    )
+    snapshot_value = SnapshotValue(snapshot_id=snapshot.id, account_id=account.id, value=450000.0)
     test_db_session.add(snapshot_value)
     test_db_session.commit()
 
@@ -491,9 +487,7 @@ def test_get_debt_with_snapshots(test_db_session):
     test_db_session.add(snapshot)
     test_db_session.commit()
 
-    snapshot_value = SnapshotValue(
-        snapshot_id=snapshot.id, account_id=account.id, value=425000.0
-    )
+    snapshot_value = SnapshotValue(snapshot_id=snapshot.id, account_id=account.id, value=425000.0)
     test_db_session.add(snapshot_value)
     test_db_session.commit()
 
@@ -576,9 +570,7 @@ def test_update_debt_with_snapshots(test_db_session):
     test_db_session.add(snapshot)
     test_db_session.commit()
 
-    snapshot_value = SnapshotValue(
-        snapshot_id=snapshot.id, account_id=account.id, value=400000.0
-    )
+    snapshot_value = SnapshotValue(snapshot_id=snapshot.id, account_id=account.id, value=400000.0)
     test_db_session.add(snapshot_value)
     test_db_session.commit()
 
