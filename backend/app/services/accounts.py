@@ -127,7 +127,9 @@ def update_account(db: Session, account_id: int, data: AccountUpdate) -> Account
         account.owner = data.owner
     if data.currency is not None:
         account.currency = data.currency
-    if data.account_wrapper is not None:
+    # For account_wrapper, distinguish between "not provided" and "explicitly set to None"
+    _field_set = getattr(data, "model_fields_set", set())
+    if "account_wrapper" in _field_set:
         account.account_wrapper = data.account_wrapper
 
     db.commit()
