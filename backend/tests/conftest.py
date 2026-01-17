@@ -10,7 +10,8 @@ from app.core.database import Base, get_db
 from app.main import app
 
 # Import models to register them with SQLAlchemy before creating tables
-from app.models import Account, Asset, Goal, Snapshot, SnapshotValue  # noqa: F401
+# IMPORTANT: Import models BEFORE app to ensure they're registered
+from app.models import Account, Asset, Goal, Snapshot, SnapshotValue, Transaction  # noqa: F401
 
 
 @pytest.fixture(scope="function")

@@ -7,7 +7,7 @@
 	import { formatPLN } from '$lib/utils/format';
 	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
-	import type { Account } from './+page';
+	import type { Account, Transaction, TransactionsData } from './+page';
 
 	export let data;
 
@@ -17,6 +17,21 @@
 	let editingAccount: Account | null = null;
 	let showDeleteModal = false;
 	let accountToDelete: number | null = null;
+	let transactionCounts: Record<number, number> = {};
+
+	let showTransactionsModal = false;
+	let selectedAccountId: number | null = null;
+	let selectedAccountName = '';
+	let transactionsData: TransactionsData | null = null;
+	let transactionFormData = {
+		amount: 0,
+		date: new Date().toISOString().split('T')[0],
+		owner: 'Marcin'
+	};
+	let transactionError = '';
+	let savingTransaction = false;
+
+	const investmentCategories = new Set(['stock', 'bond', 'fund', 'etf']);
 
 	const categoryLabels: Record<string, string> = {
 		bank: 'Konto bankowe',
@@ -146,6 +161,119 @@
 			accountToDelete = null;
 		}
 	}
+
+	async function loadTransactionCounts() {
+		try {
+			const response = await fetch(`${apiUrl}/api/transactions/counts`);
+			if (response.ok) {
+				transactionCounts = await response.json();
+			}
+		} catch (err) {
+			console.error('Failed to load transaction counts:', err);
+		}
+	}
+
+	$: {
+		if (data) {
+			loadTransactionCounts();
+		}
+	}
+
+	function openTransactions(accountId: number, accountName: string) {
+		selectedAccountId = accountId;
+		selectedAccountName = accountName;
+		showTransactionsModal = true;
+		loadTransactions();
+	}
+
+	async function loadTransactions() {
+		if (!selectedAccountId) return;
+
+		try {
+			const response = await fetch(`${apiUrl}/api/accounts/${selectedAccountId}/transactions`);
+			if (response.ok) {
+				transactionsData = await response.json();
+			} else {
+				const errorData = await response.json();
+				transactionError = errorData.detail || 'Failed to load transactions';
+			}
+		} catch (err) {
+			console.error('Failed to load transactions:', err);
+			transactionError = 'Failed to load transactions';
+		}
+	}
+
+	function closeTransactions() {
+		showTransactionsModal = false;
+		selectedAccountId = null;
+		selectedAccountName = '';
+		transactionsData = null;
+		transactionFormData = {
+			amount: 0,
+			date: new Date().toISOString().split('T')[0],
+			owner: 'Marcin'
+		};
+		transactionError = '';
+	}
+
+	async function addTransaction() {
+		if (!selectedAccountId) return;
+
+		transactionError = '';
+		savingTransaction = true;
+
+		try {
+			const response = await fetch(`${apiUrl}/api/accounts/${selectedAccountId}/transactions`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(transactionFormData)
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.detail || 'Failed to add transaction');
+			}
+
+			transactionFormData = {
+				amount: 0,
+				date: new Date().toISOString().split('T')[0],
+				owner: 'Marcin'
+			};
+
+			await loadTransactions();
+			await loadTransactionCounts();
+		} catch (err) {
+			if (err instanceof Error) {
+				transactionError = err.message;
+			}
+		} finally {
+			savingTransaction = false;
+		}
+	}
+
+	async function deleteTransaction(transactionId: number) {
+		if (!selectedAccountId) return;
+
+		try {
+			const response = await fetch(
+				`${apiUrl}/api/accounts/${selectedAccountId}/transactions/${transactionId}`,
+				{
+					method: 'DELETE'
+				}
+			);
+
+			if (!response.ok) {
+				throw new Error('Failed to delete transaction');
+			}
+
+			await loadTransactions();
+			await loadTransactionCounts();
+		} catch (err) {
+			if (err instanceof Error) {
+				transactionError = err.message;
+			}
+		}
+	}
 </script>
 
 <svelte:head>
@@ -190,6 +318,15 @@
 								<td class="value-cell">{formatPLN(account.current_value)}</td>
 								<td class="actions-cell">
 									<button class="btn-icon" on:click={() => startEdit(account)}>✏️</button>
+									{#if investmentCategories.has(account.category)}
+										<button
+											class="btn-icon transaction-btn"
+											title="Transakcje"
+											on:click={() => openTransactions(account.id, account.name)}
+										>
+											📊 ({transactionCounts[account.id] || 0})
+										</button>
+									{/if}
 									<button class="btn-icon" on:click={() => handleDelete(account.id)}>🗑️</button>
 								</td>
 							</tr>
@@ -334,6 +471,112 @@
 >
 	<p>Czy na pewno chcesz usunąć to konto?</p>
 	<p>Operacja ta ustawi konto jako nieaktywne.</p>
+</Modal>
+
+<Modal
+	open={showTransactionsModal}
+	title="Transakcje - {selectedAccountName}"
+	onCancel={closeTransactions}
+	onConfirm={() => {}}
+	size="large"
+	confirmText=""
+	confirmDisabled={true}
+>
+	<div class="transactions-modal">
+		{#if transactionError}
+			<div class="error-message">{transactionError}</div>
+		{/if}
+
+		{#if transactionsData}
+			<div class="transactions-header">
+				<h3>Historia transakcji</h3>
+				<p class="total-invested">
+					Zainwestowano łącznie: <strong>{formatPLN(transactionsData.total_invested)}</strong>
+				</p>
+			</div>
+
+			{#if transactionsData.transactions.length === 0}
+				<div class="empty-state">
+					<p>Brak transakcji</p>
+				</div>
+			{:else}
+				<div class="table-container">
+					<table class="transactions-table">
+						<thead>
+							<tr>
+								<th>Data zakupu</th>
+								<th>Kwota</th>
+								<th>Właściciel</th>
+								<th>Akcje</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each transactionsData.transactions as transaction}
+								<tr>
+									<td>{new Date(transaction.date).toLocaleDateString('pl-PL')}</td>
+									<td class="value-cell">{formatPLN(transaction.amount)}</td>
+									<td>{transaction.owner}</td>
+									<td class="actions-cell">
+										<button
+											class="btn-icon"
+											on:click={() => deleteTransaction(transaction.id)}
+											title="Usuń"
+										>
+											🗑️
+										</button>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			{/if}
+
+			<div class="transaction-form">
+				<h3>Dodaj transakcję</h3>
+				<form on:submit|preventDefault={addTransaction}>
+					<div class="form-row">
+						<div class="form-group">
+							<label for="transaction-amount">Kwota (PLN)</label>
+							<input
+								type="number"
+								id="transaction-amount"
+								bind:value={transactionFormData.amount}
+								required
+								min="0.01"
+								step="0.01"
+								placeholder="np. 5000.00"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label for="transaction-date">Data zakupu</label>
+							<input
+								type="date"
+								id="transaction-date"
+								bind:value={transactionFormData.date}
+								required
+								max={new Date().toISOString().split('T')[0]}
+							/>
+						</div>
+
+						<div class="form-group">
+							<label for="transaction-owner">Właściciel</label>
+							<select id="transaction-owner" bind:value={transactionFormData.owner} required>
+								<option value="Marcin">Marcin</option>
+								<option value="Ewa">Ewa</option>
+								<option value="Shared">Wspólne</option>
+							</select>
+						</div>
+					</div>
+
+					<button type="submit" class="btn btn-primary" disabled={savingTransaction}>
+						{savingTransaction ? 'Zapisywanie...' : 'Dodaj transakcję'}
+					</button>
+				</form>
+			</div>
+		{/if}
+	</div>
 </Modal>
 
 <style>
@@ -496,6 +739,81 @@
 		font-size: var(--font-size-2);
 	}
 
+	.transactions-modal {
+		display: flex;
+		flex-direction: column;
+		gap: var(--size-6);
+	}
+
+	.transactions-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding-bottom: var(--size-4);
+		border-bottom: 2px solid var(--color-border);
+	}
+
+	.transactions-header h3 {
+		margin: 0;
+		font-size: var(--font-size-4);
+		font-weight: var(--font-weight-6);
+		color: var(--color-text);
+	}
+
+	.total-invested {
+		margin: 0;
+		font-size: var(--font-size-3);
+		color: var(--color-text-secondary);
+	}
+
+	.total-invested strong {
+		color: var(--color-primary);
+		font-weight: var(--font-weight-7);
+	}
+
+	.transactions-table {
+		width: 100%;
+		border-collapse: collapse;
+	}
+
+	.transactions-table thead {
+		border-bottom: 2px solid var(--color-border);
+	}
+
+	.transactions-table th {
+		text-align: left;
+		padding: var(--size-3) var(--size-4);
+		font-weight: var(--font-weight-6);
+		color: var(--color-text);
+		font-size: var(--font-size-2);
+	}
+
+	.transactions-table tbody tr {
+		border-bottom: 1px solid var(--color-border);
+		transition: background-color 0.2s;
+	}
+
+	.transactions-table tbody tr:hover {
+		background-color: var(--color-accent);
+	}
+
+	.transactions-table td {
+		padding: var(--size-3) var(--size-4);
+		font-size: var(--font-size-2);
+	}
+
+	.transaction-form {
+		padding-top: var(--size-4);
+		border-top: 2px solid var(--color-border);
+	}
+
+	.transaction-form h3 {
+		margin: 0 0 var(--size-4) 0;
+		font-size: var(--font-size-3);
+		font-weight: var(--font-weight-6);
+		color: var(--color-text);
+	}
+
 	@media (max-width: 768px) {
 		.page-header {
 			flex-direction: column;
@@ -504,6 +822,12 @@
 
 		.form-row {
 			grid-template-columns: 1fr;
+		}
+
+		.transactions-header {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: var(--size-2);
 		}
 	}
 </style>

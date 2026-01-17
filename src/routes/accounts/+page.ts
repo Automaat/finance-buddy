@@ -21,6 +21,22 @@ export interface AccountsData {
 	liabilities: Account[];
 }
 
+export interface Transaction {
+	id: number;
+	account_id: number;
+	account_name: string;
+	amount: number;
+	date: string;
+	owner: string;
+	created_at: string;
+}
+
+export interface TransactionsData {
+	transactions: Transaction[];
+	total_invested: number;
+	transaction_count: number;
+}
+
 export const load: PageLoad = async ({ fetch }) => {
 	try {
 		const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
