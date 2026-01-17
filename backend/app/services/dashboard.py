@@ -46,6 +46,17 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
     )
     df = df.merge(snapshots_df, left_on="snapshot_id", right_on="id", suffixes=("", "_snapshot"))
 
+    # Handle case when no snapshots exist
+    if df.empty:
+        return DashboardResponse(
+            net_worth_history=[],
+            current_net_worth=0,
+            change_vs_last_month=0,
+            total_assets=0,
+            total_liabilities=0,
+            allocation=[],
+        )
+
     # Calculate net worth per snapshot
     # pandas: Calculate signed value based on whether it's an asset or liability
     # Assets (from Asset table) contribute positively
