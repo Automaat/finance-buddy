@@ -82,9 +82,7 @@ def get_yearly_stats(db: Session, year: int, owner: str | None = None) -> list[Y
                 continue
 
             remaining = float(limit.limit_amount) - total
-            percentage = (
-                (total / float(limit.limit_amount) * 100) if limit.limit_amount > 0 else 0
-            )
+            percentage = (total / float(limit.limit_amount) * 100) if limit.limit_amount > 0 else 0
 
             stats.append(
                 YearlyStatsResponse(

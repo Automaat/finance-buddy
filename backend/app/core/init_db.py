@@ -18,17 +18,33 @@ def init_db() -> None:
             defaults = [
                 # 2026 limits - Marcin
                 RetirementLimit(
-                    year=2026, account_wrapper="IKE", owner="Marcin", limit_amount=28260.00, notes=""
+                    year=2026,
+                    account_wrapper="IKE",
+                    owner="Marcin",
+                    limit_amount=28260.00,
+                    notes="",
                 ),
                 RetirementLimit(
-                    year=2026, account_wrapper="IKZE", owner="Marcin", limit_amount=11304.00, notes=""
+                    year=2026,
+                    account_wrapper="IKZE",
+                    owner="Marcin",
+                    limit_amount=11304.00,
+                    notes="",
                 ),
                 # 2026 limits - Ewa
                 RetirementLimit(
-                    year=2026, account_wrapper="IKE", owner="Ewa", limit_amount=28260.00, notes=""
+                    year=2026,
+                    account_wrapper="IKE",
+                    owner="Ewa",
+                    limit_amount=28260.00,
+                    notes="",
                 ),
                 RetirementLimit(
-                    year=2026, account_wrapper="IKZE", owner="Ewa", limit_amount=11304.00, notes=""
+                    year=2026,
+                    account_wrapper="IKZE",
+                    owner="Ewa",
+                    limit_amount=11304.00,
+                    notes="",
                 ),
             ]
             db.add_all(defaults)

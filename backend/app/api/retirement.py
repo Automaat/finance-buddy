@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -17,7 +18,9 @@ router = APIRouter(prefix="/api/retirement", tags=["retirement"])
 
 @router.get("/stats", response_model=list[YearlyStatsResponse])
 def get_retirement_stats(
-    year: int | None = None, owner: str | None = None, db: Session = Depends(get_db)
+    db: Annotated[Session, Depends(get_db)],
+    year: int | None = None,
+    owner: str | None = None,
 ) -> list[YearlyStatsResponse]:
     """Get yearly contribution stats for all retirement accounts"""
     if year is None:
@@ -26,7 +29,10 @@ def get_retirement_stats(
 
 
 @router.get("/limits/{year}", response_model=list[RetirementLimitResponse])
-def get_limits_for_year(year: int, db: Session = Depends(get_db)) -> list[RetirementLimitResponse]:
+def get_limits_for_year(
+    db: Annotated[Session, Depends(get_db)],
+    year: int,
+) -> list[RetirementLimitResponse]:
     """Get all limits for a specific year"""
     limits = db.query(RetirementLimit).filter(RetirementLimit.year == year).all()
     return [
@@ -44,7 +50,11 @@ def get_limits_for_year(year: int, db: Session = Depends(get_db)) -> list[Retire
 
 @router.put("/limits/{year}/{wrapper}/{owner}", response_model=RetirementLimitResponse)
 def upsert_limit(
-    year: int, wrapper: str, owner: str, data: RetirementLimitCreate, db: Session = Depends(get_db)
+    db: Annotated[Session, Depends(get_db)],
+    year: int,
+    wrapper: str,
+    owner: str,
+    data: RetirementLimitCreate,
 ) -> RetirementLimitResponse:
     """Create or update retirement limit"""
     limit = retirement.update_limit(db, year, wrapper, owner, data.limit_amount, data.notes)

@@ -1,6 +1,16 @@
+import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { vi } from 'vitest';
 import Page from './+page.svelte';
+
+// Mock SvelteKit env module
+vi.mock('$env/dynamic/public', () => ({
+	env: {
+		PUBLIC_API_URL_BROWSER: 'http://localhost:8000',
+		PUBLIC_API_URL: 'http://localhost:8000',
+		PUBLIC_DEFAULT_OWNER: 'Marcin'
+	}
+}));
 
 // Mock echarts to avoid canvas issues in tests
 vi.mock('echarts', () => ({
@@ -35,7 +45,9 @@ describe('Dashboard Page', () => {
 		allocation: [
 			{ category: 'banking', owner: 'John', value: 5000 },
 			{ category: 'investments', owner: 'John', value: 5000 }
-		]
+		],
+		retirementStats: [],
+		currentYear: 2024
 	};
 
 	it('renders the main heading', () => {
