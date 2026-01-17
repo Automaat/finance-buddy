@@ -120,9 +120,7 @@ def get_all_payments(
     )
 
 
-def create_payment(
-    db: Session, account_id: int, data: DebtPaymentCreate
-) -> DebtPaymentResponse:
+def create_payment(db: Session, account_id: int, data: DebtPaymentCreate) -> DebtPaymentResponse:
     """Create new payment for a liability account"""
     # Validate account exists and is active
     account = db.execute(
@@ -170,9 +168,7 @@ def delete_payment(db: Session, account_id: int, payment_id: int) -> None:
     ).scalar_one_or_none()
 
     if not payment:
-        raise HTTPException(
-            status_code=404, detail=f"Payment with id {payment_id} not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Payment with id {payment_id} not found")
 
     # Validate payment belongs to the specified account
     if payment.account_id != account_id:

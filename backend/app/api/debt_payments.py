@@ -23,9 +23,7 @@ def get_account_payments(
     return debt_payments.get_account_payments(db, account_id)
 
 
-@router.post(
-    "/accounts/{account_id}/payments", response_model=DebtPaymentResponse, status_code=201
-)
+@router.post("/accounts/{account_id}/payments", response_model=DebtPaymentResponse, status_code=201)
 def create_payment(
     account_id: int,
     data: DebtPaymentCreate,
