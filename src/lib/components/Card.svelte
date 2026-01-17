@@ -14,5 +14,6 @@
 		border: 1px solid var(--color-border);
 		box-shadow: var(--shadow-2);
 		overflow: hidden;
+		margin-bottom: var(--size-6);
 	}
 </style>
