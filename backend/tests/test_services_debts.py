@@ -3,7 +3,7 @@ from datetime import date
 import pytest
 from fastapi import HTTPException
 
-from app.models import Account, Debt
+from app.models import Account, Debt, DebtPayment, Snapshot, SnapshotValue
 from app.schemas.debts import DebtCreate, DebtUpdate
 from app.services.debts import create_debt, delete_debt, get_all_debts, get_debt, update_debt
 
@@ -375,3 +375,224 @@ def test_delete_debt_not_found(test_db_session):
         delete_debt(test_db_session, 999)
 
     assert exc_info.value.status_code == 404
+
+
+def test_get_all_debts_with_snapshots_and_payments(test_db_session):
+    """Test getting debts with snapshot balances and payments for interest calculation"""
+    account = Account(
+        name="Hipoteka", type="liability", category="mortgage", owner="Shared", currency="PLN"
+    )
+    test_db_session.add(account)
+    test_db_session.commit()
+
+    debt = Debt(
+        account_id=account.id,
+        name="Mieszkanie",
+        debt_type="mortgage",
+        start_date=date(2020, 1, 15),
+        initial_amount=500000.0,
+        interest_rate=3.5,
+        currency="PLN",
+    )
+    test_db_session.add(debt)
+    test_db_session.commit()
+
+    snapshot = Snapshot(date=date(2024, 12, 31), notes="Year-end 2024")
+    test_db_session.add(snapshot)
+    test_db_session.commit()
+
+    snapshot_value = SnapshotValue(
+        snapshot_id=snapshot.id, account_id=account.id, value=400000.0
+    )
+    test_db_session.add(snapshot_value)
+    test_db_session.commit()
+
+    payment1 = DebtPayment(
+        account_id=account.id, amount=50000.0, date=date(2024, 6, 1), owner="Shared"
+    )
+    payment2 = DebtPayment(
+        account_id=account.id, amount=60000.0, date=date(2024, 12, 1), owner="Shared"
+    )
+    test_db_session.add_all([payment1, payment2])
+    test_db_session.commit()
+
+    result = get_all_debts(test_db_session)
+
+    assert result.total_count == 1
+    debt_response = result.debts[0]
+    assert debt_response.latest_balance == 400000.0
+    assert debt_response.latest_balance_date == date(2024, 12, 31)
+    assert debt_response.total_paid == 110000.0
+    assert debt_response.interest_paid == 10000.0
+
+
+def test_create_debt_with_snapshots(test_db_session):
+    """Test creating debt when snapshot data exists"""
+    account = Account(
+        name="Hipoteka", type="liability", category="mortgage", owner="Shared", currency="PLN"
+    )
+    test_db_session.add(account)
+    test_db_session.commit()
+
+    snapshot = Snapshot(date=date(2024, 1, 31), notes="January snapshot")
+    test_db_session.add(snapshot)
+    test_db_session.commit()
+
+    snapshot_value = SnapshotValue(
+        snapshot_id=snapshot.id, account_id=account.id, value=450000.0
+    )
+    test_db_session.add(snapshot_value)
+    test_db_session.commit()
+
+    payment = DebtPayment(
+        account_id=account.id, amount=55000.0, date=date(2024, 1, 15), owner="Shared"
+    )
+    test_db_session.add(payment)
+    test_db_session.commit()
+
+    data = DebtCreate(
+        name="Mieszkanie",
+        debt_type="mortgage",
+        start_date=date(2020, 1, 15),
+        initial_amount=500000.0,
+        interest_rate=3.5,
+        currency="PLN",
+    )
+
+    result = create_debt(test_db_session, account.id, data)
+
+    assert result.latest_balance == 450000.0
+    assert result.latest_balance_date == date(2024, 1, 31)
+    assert result.total_paid == 55000.0
+    assert result.interest_paid == 5000.0
+
+
+def test_get_debt_with_snapshots(test_db_session):
+    """Test getting debt with snapshot balance"""
+    account = Account(
+        name="Hipoteka", type="liability", category="mortgage", owner="Shared", currency="PLN"
+    )
+    test_db_session.add(account)
+    test_db_session.commit()
+
+    debt = Debt(
+        account_id=account.id,
+        name="Mieszkanie",
+        debt_type="mortgage",
+        start_date=date(2020, 1, 15),
+        initial_amount=500000.0,
+        interest_rate=3.5,
+        currency="PLN",
+    )
+    test_db_session.add(debt)
+    test_db_session.commit()
+
+    snapshot = Snapshot(date=date(2024, 6, 30), notes="Mid-year snapshot")
+    test_db_session.add(snapshot)
+    test_db_session.commit()
+
+    snapshot_value = SnapshotValue(
+        snapshot_id=snapshot.id, account_id=account.id, value=425000.0
+    )
+    test_db_session.add(snapshot_value)
+    test_db_session.commit()
+
+    payment = DebtPayment(
+        account_id=account.id, amount=80000.0, date=date(2024, 6, 15), owner="Shared"
+    )
+    test_db_session.add(payment)
+    test_db_session.commit()
+
+    result = get_debt(test_db_session, debt.id)
+
+    assert result.latest_balance == 425000.0
+    assert result.latest_balance_date == date(2024, 6, 30)
+    assert result.total_paid == 80000.0
+    assert result.interest_paid == 5000.0
+
+
+def test_update_debt_all_fields(test_db_session):
+    """Test updating all updatable debt fields"""
+    account = Account(
+        name="Hipoteka", type="liability", category="mortgage", owner="Shared", currency="PLN"
+    )
+    test_db_session.add(account)
+    test_db_session.commit()
+
+    debt = Debt(
+        account_id=account.id,
+        name="Mieszkanie",
+        debt_type="mortgage",
+        start_date=date(2020, 1, 15),
+        initial_amount=500000.0,
+        interest_rate=3.5,
+        currency="PLN",
+    )
+    test_db_session.add(debt)
+    test_db_session.commit()
+
+    update_data = DebtUpdate(
+        name="Updated Mieszkanie",
+        debt_type="installment_0percent",
+        start_date=date(2020, 2, 1),
+        initial_amount=550000.0,
+        interest_rate=0.0,
+        currency="PLN",
+        notes="Updated notes",
+    )
+
+    result = update_debt(test_db_session, debt.id, update_data)
+
+    assert result.name == "Updated Mieszkanie"
+    assert result.debt_type == "installment_0percent"
+    assert result.start_date == date(2020, 2, 1)
+    assert result.initial_amount == 550000.0
+    assert result.interest_rate == 0.0
+    assert result.currency == "PLN"
+    assert result.notes == "Updated notes"
+
+
+def test_update_debt_with_snapshots(test_db_session):
+    """Test updating debt when snapshot data exists"""
+    account = Account(
+        name="Hipoteka", type="liability", category="mortgage", owner="Shared", currency="PLN"
+    )
+    test_db_session.add(account)
+    test_db_session.commit()
+
+    debt = Debt(
+        account_id=account.id,
+        name="Mieszkanie",
+        debt_type="mortgage",
+        start_date=date(2020, 1, 15),
+        initial_amount=500000.0,
+        interest_rate=3.5,
+        currency="PLN",
+    )
+    test_db_session.add(debt)
+    test_db_session.commit()
+
+    snapshot = Snapshot(date=date(2024, 12, 31), notes="Year-end")
+    test_db_session.add(snapshot)
+    test_db_session.commit()
+
+    snapshot_value = SnapshotValue(
+        snapshot_id=snapshot.id, account_id=account.id, value=400000.0
+    )
+    test_db_session.add(snapshot_value)
+    test_db_session.commit()
+
+    payment = DebtPayment(
+        account_id=account.id, amount=110000.0, date=date(2024, 12, 1), owner="Shared"
+    )
+    test_db_session.add(payment)
+    test_db_session.commit()
+
+    update_data = DebtUpdate(interest_rate=4.0)
+
+    result = update_debt(test_db_session, debt.id, update_data)
+
+    assert result.interest_rate == 4.0
+    assert result.latest_balance == 400000.0
+    assert result.total_paid == 110000.0
+    assert result.interest_paid == 10000.0
