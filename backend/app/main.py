@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import accounts, assets, dashboard, snapshots, transactions
+from app.api import accounts, assets, dashboard, debt_payments, debts, snapshots, transactions
 from app.core.config import settings
 from app.core.init_db import init_db
 
@@ -31,6 +31,8 @@ app.add_middleware(
 app.include_router(dashboard.router)
 app.include_router(accounts.router)
 app.include_router(assets.router)
+app.include_router(debts.router)
+app.include_router(debt_payments.router)
 app.include_router(snapshots.router)
 app.include_router(transactions.router)
 
