@@ -324,7 +324,11 @@ def test_delete_transaction_wrong_account(test_db_session):
     test_db_session.commit()
 
     transaction = Transaction(
-        account_id=account1.id, amount=5000.0, date=date(2024, 1, 15), owner="Marcin", is_active=True
+        account_id=account1.id,
+        amount=5000.0,
+        date=date(2024, 1, 15),
+        owner="Marcin",
+        is_active=True,
     )
     test_db_session.add(transaction)
     test_db_session.commit()
