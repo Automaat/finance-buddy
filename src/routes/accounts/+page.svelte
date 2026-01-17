@@ -25,11 +25,13 @@
 	let showTransactionsModal = false;
 	let selectedAccountId: number | null = null;
 	let selectedAccountName = '';
+	let selectedAccountWrapper: string | null = null;
 	let transactionsData: TransactionsData | null = null;
 	let transactionFormData = {
 		amount: 0,
 		date: new Date().toISOString().split('T')[0],
-		owner: defaultOwner
+		owner: defaultOwner,
+		transaction_type: null as string | null
 	};
 	let transactionError = '';
 	let savingTransaction = false;
@@ -178,9 +180,14 @@
 		loadTransactionCounts();
 	});
 
-	function openTransactions(accountId: number, accountName: string) {
+	function openTransactions(
+		accountId: number,
+		accountName: string,
+		accountWrapper: string | null = null
+	) {
 		selectedAccountId = accountId;
 		selectedAccountName = accountName;
+		selectedAccountWrapper = accountWrapper;
 		showTransactionsModal = true;
 		loadTransactions();
 	}
@@ -206,11 +213,13 @@
 		showTransactionsModal = false;
 		selectedAccountId = null;
 		selectedAccountName = '';
+		selectedAccountWrapper = null;
 		transactionsData = null;
 		transactionFormData = {
 			amount: 0,
 			date: new Date().toISOString().split('T')[0],
-			owner: defaultOwner
+			owner: defaultOwner,
+			transaction_type: null
 		};
 		transactionError = '';
 	}
@@ -236,7 +245,8 @@
 			transactionFormData = {
 				amount: 0,
 				date: new Date().toISOString().split('T')[0],
-				owner: defaultOwner
+				owner: defaultOwner,
+				transaction_type: null
 			};
 
 			await loadTransactions();
@@ -317,11 +327,12 @@
 								<td class="value-cell">{formatPLN(account.current_value)}</td>
 								<td class="actions-cell">
 									<button class="btn-icon" on:click={() => startEdit(account)}>✏️</button>
-									{#if INVESTMENT_CATEGORIES.has(account.category)}
+									{#if INVESTMENT_CATEGORIES.has(account.category) || account.account_wrapper}
 										<button
 											class="btn-icon transaction-btn"
 											title="Transakcje"
-											on:click={() => openTransactions(account.id, account.name)}
+											on:click={() =>
+												openTransactions(account.id, account.name, account.account_wrapper)}
 										>
 											📊 ({transactionCounts[account.id] || 0})
 										</button>
@@ -564,6 +575,19 @@
 								<option value="Shared">Wspólne</option>
 							</select>
 						</div>
+
+						{#if selectedAccountWrapper}
+							<div class="form-group">
+								<label for="transaction-type">Typ wpłaty</label>
+								<select id="transaction-type" bind:value={transactionFormData.transaction_type}>
+									<option value={null}>Wpłata pracownika</option>
+									{#if selectedAccountWrapper === 'PPK'}
+										<option value="employer">Wpłata pracodawcy</option>
+									{/if}
+									<option value="withdrawal">Wypłata</option>
+								</select>
+							</div>
+						{/if}
 					</div>
 
 					<button type="submit" class="btn btn-primary" disabled={savingTransaction}>

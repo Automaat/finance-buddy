@@ -24,12 +24,14 @@ def get_account_transactions(db: Session, account_id: int) -> TransactionsListRe
     if not account:
         raise HTTPException(status_code=404, detail=f"Account with id {account_id} not found")
 
-    # Validate account is investment type
-    if account.category not in INVESTMENT_CATEGORIES:
+    # Validate account is investment type or retirement account
+    if account.category not in INVESTMENT_CATEGORIES and not account.account_wrapper:
         raise HTTPException(
             status_code=400,
-            detail=f"Account '{account.name}' is not an investment account. "
-            f"Only {', '.join(INVESTMENT_CATEGORIES)} accounts can have transactions.",
+            detail=(
+                f"Account '{account.name}' cannot have transactions. "
+                "Only investment or retirement accounts (IKE/IKZE/PPK) can track transactions."
+            ),
         )
 
     # Get active transactions
@@ -55,6 +57,7 @@ def get_account_transactions(db: Session, account_id: int) -> TransactionsListRe
             amount=float(t.amount),
             date=t.date,
             owner=t.owner,
+            transaction_type=t.transaction_type,
             created_at=t.created_at,
         )
         for t in transactions
@@ -106,6 +109,7 @@ def get_all_transactions(
             amount=float(t.amount),
             date=t.date,
             owner=t.owner,
+            transaction_type=t.transaction_type,
             created_at=t.created_at,
         )
         for t, account_name in results
@@ -132,12 +136,14 @@ def create_transaction(
     if not account:
         raise HTTPException(status_code=404, detail=f"Account with id {account_id} not found")
 
-    # Validate account is investment type
-    if account.category not in INVESTMENT_CATEGORIES:
+    # Validate account is investment type or retirement account
+    if account.category not in INVESTMENT_CATEGORIES and not account.account_wrapper:
         raise HTTPException(
             status_code=400,
-            detail=f"Account '{account.name}' is not an investment account. "
-            f"Only {', '.join(INVESTMENT_CATEGORIES)} accounts can have transactions.",
+            detail=(
+                f"Account '{account.name}' cannot have transactions. "
+                "Only investment or retirement accounts (IKE/IKZE/PPK) can track transactions."
+            ),
         )
 
     # Create transaction
@@ -146,6 +152,7 @@ def create_transaction(
         amount=data.amount,
         date=data.date,
         owner=data.owner,
+        transaction_type=data.transaction_type,
         is_active=True,
     )
     db.add(transaction)
@@ -159,6 +166,7 @@ def create_transaction(
         amount=float(transaction.amount),
         date=transaction.date,
         owner=transaction.owner,
+        transaction_type=transaction.transaction_type,
         created_at=transaction.created_at,
     )
 

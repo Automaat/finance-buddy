@@ -15,5 +15,6 @@ class Transaction(Base):
     amount: Mapped[Decimal] = mapped_column(Numeric(15, 2))
     date: Mapped[date]
     owner: Mapped[str] = mapped_column(String(100))
+    transaction_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(UTC))

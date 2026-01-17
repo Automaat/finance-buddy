@@ -8,9 +8,16 @@
 	export let confirmDisabled = false;
 	export let confirmVariant: 'primary' | 'danger' = 'danger';
 	export let size: 'small' | 'medium' | 'large' = 'medium';
+	export let showActions = true;
 
 	function handleOverlayClick(event: MouseEvent) {
 		if (event.target === event.currentTarget) {
+			onCancel();
+		}
+	}
+
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape') {
 			onCancel();
 		}
 	}
@@ -23,33 +30,48 @@
 </script>
 
 {#if open}
-	<div class="modal-overlay" on:click={handleOverlayClick} role="presentation">
+	<div
+		class="modal-overlay"
+		on:click={handleOverlayClick}
+		on:keydown={handleKeydown}
+		role="presentation"
+		tabindex="-1"
+	>
 		<div
 			class="modal-dialog"
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="modal-title"
+			tabindex="-1"
 			style="max-width: {maxWidths[size]}"
+			on:click|stopPropagation
+			on:keydown|stopPropagation
 		>
 			<div class="modal-header">
 				<h2 id="modal-title" class="modal-title">{title}</h2>
 			</div>
-			<div class="modal-content">
+			<div class="modal-body">
 				<slot />
 			</div>
-			<div class="modal-actions">
-				<button type="button" class="btn btn-secondary" on:click={onCancel}>{cancelText}</button>
-				{#if confirmText && onConfirm}
-					<button
-						type="button"
-						class="btn btn-{confirmVariant}"
-						on:click={onConfirm}
-						disabled={confirmDisabled}
-					>
-						{confirmText}
-					</button>
-				{/if}
-			</div>
+			{#if showActions}
+				<div class="modal-actions">
+					<slot name="actions">
+						<button type="button" class="btn btn-secondary" on:click={onCancel}>
+							{cancelText}
+						</button>
+						{#if confirmText && onConfirm}
+							<button
+								type="button"
+								class="btn btn-{confirmVariant}"
+								on:click={onConfirm}
+								disabled={confirmDisabled}
+							>
+								{confirmText}
+							</button>
+						{/if}
+					</slot>
+				</div>
+			{/if}
 		</div>
 	</div>
 {/if}
@@ -93,7 +115,7 @@
 		margin: 0;
 	}
 
-	.modal-content {
+	.modal-body {
 		color: var(--color-text);
 		font-size: var(--font-size-2);
 		line-height: 1.6;

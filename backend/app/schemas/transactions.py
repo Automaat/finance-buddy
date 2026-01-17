@@ -9,6 +9,7 @@ class TransactionCreate(BaseModel):
     amount: float
     date: date
     owner: str
+    transaction_type: str | None = None
 
     @field_validator("amount")
     @classmethod
@@ -32,6 +33,13 @@ class TransactionCreate(BaseModel):
             raise ValueError(f"Owner must be one of: {', '.join(allowed_owners)}")
         return v
 
+    @field_validator("transaction_type")
+    @classmethod
+    def validate_transaction_type(cls, v: str | None) -> str | None:
+        if v and v not in {"employee", "employer", "withdrawal"}:
+            raise ValueError("Transaction type must be employee, employer, or withdrawal")
+        return v
+
 
 class TransactionResponse(BaseModel):
     id: int
@@ -40,6 +48,7 @@ class TransactionResponse(BaseModel):
     amount: float
     date: date
     owner: str
+    transaction_type: str | None
     created_at: datetime
 
 
