@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -9,15 +10,19 @@ from testcontainers.postgres import PostgresContainer
 from app.core.database import Base, get_db
 from app.main import app
 
-# Import models to register them with SQLAlchemy before creating tables
-from app.models import Account, Asset, Goal, Snapshot, SnapshotValue  # noqa: F401
+# Import models BEFORE app to register them with SQLAlchemy Base.metadata
+from app.models import Account, Asset, Goal, Snapshot, SnapshotValue, Transaction  # noqa: F401
 
 
 @pytest.fixture(scope="function")
 def test_db_engine():
-    """Create in-memory SQLite engine for testing."""
+    """Create in-memory SQLite engine for testing with shared cache."""
+    # Use file:memdb?mode=memory&cache=shared to allow multiple connections
+    # to share the same in-memory database
     engine = create_engine(
-        "sqlite:///:memory:", echo=False, connect_args={"check_same_thread": False}
+        "sqlite:///file:memdb?mode=memory&cache=shared&uri=true",
+        echo=False,
+        connect_args={"check_same_thread": False},
     )
 
     # Enable foreign key constraints in SQLite
@@ -76,16 +81,28 @@ def test_db_session_postgres(test_db_engine_postgres) -> Generator[Session]:
 
 
 @pytest.fixture(scope="function")
-def test_client(test_db_session) -> Generator[TestClient]:
+def test_client(test_db_engine) -> Generator[TestClient]:
     """Create test client with overridden database dependency."""
+    # Create a new session for this test
+    test_session_local = sessionmaker(autocommit=False, autoflush=False, bind=test_db_engine)
 
     def override_get_db():
+        session = test_session_local()
         try:
-            yield test_db_session
+            yield session
         finally:
-            pass
+            session.close()
+
+    # Mock init_db to use test engine instead of production engine
+    def mock_init_db():
+        Base.metadata.create_all(bind=test_db_engine)
 
     app.dependency_overrides[get_db] = override_get_db
-    client = TestClient(app)
-    yield client
-    app.dependency_overrides.clear()
+
+    # Patch init_db to use test engine during lifespan
+    with patch("app.core.init_db.init_db", side_effect=mock_init_db):
+        client = TestClient(app, raise_server_exceptions=True)
+        try:
+            yield client
+        finally:
+            app.dependency_overrides.clear()
