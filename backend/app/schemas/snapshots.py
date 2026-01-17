@@ -11,7 +11,7 @@ class SnapshotValueInput(BaseModel):
     value: float
 
     @model_validator(mode="after")
-    def validate_exactly_one_id(self) -> "SnapshotValueInput":
+    def validate_exactly_one_id(self) -> SnapshotValueInput:
         if self.asset_id is None and self.account_id is None:
             raise ValueError("Either asset_id or account_id must be provided")
         if self.asset_id is not None and self.account_id is not None:

@@ -54,7 +54,7 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
         if pd.notna(row["asset_id"]):
             # From Asset table - always positive
             return row["value"]
-        elif pd.notna(row["account_id"]):
+        if pd.notna(row["account_id"]):
             # From Account table - depends on type
             return row["value"] if row["type"] == "asset" else -row["value"]
         return 0

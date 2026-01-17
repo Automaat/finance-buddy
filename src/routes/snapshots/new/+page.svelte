@@ -120,7 +120,7 @@
 			}
 
 			// Set initial value and mark as visible
-			values[newAccount.id] = newAccountValue;
+			accountValues[newAccount.id] = newAccountValue;
 			visibleAccountIds.add(newAccount.id);
 			visibleAccountIds = new Set(visibleAccountIds);
 
@@ -554,8 +554,14 @@
 
 	<!-- New Account Modal -->
 	{#if showNewAccountForm}
-		<div class="modal-overlay" on:click={() => (showNewAccountForm = false)}>
-			<div class="modal" on:click|stopPropagation>
+		<div
+			class="modal-overlay"
+			role="button"
+			tabindex="0"
+			on:click={() => (showNewAccountForm = false)}
+			on:keydown={(e) => e.key === 'Escape' && (showNewAccountForm = false)}
+		>
+			<div class="modal" role="dialog" on:click|stopPropagation>
 				<div class="modal-header">
 					<h2>Dodaj nowe konto</h2>
 					<button
@@ -649,8 +655,14 @@
 
 	<!-- New Asset Modal -->
 	{#if showNewAssetForm}
-		<div class="modal-overlay" on:click={() => (showNewAssetForm = false)}>
-			<div class="modal" on:click|stopPropagation>
+		<div
+			class="modal-overlay"
+			role="button"
+			tabindex="0"
+			on:click={() => (showNewAssetForm = false)}
+			on:keydown={(e) => e.key === 'Escape' && (showNewAssetForm = false)}
+		>
+			<div class="modal" role="dialog" on:click|stopPropagation>
 				<div class="modal-header">
 					<h2>Dodaj nowy majątek</h2>
 					<button
@@ -885,10 +897,6 @@
 
 	.add-account summary:hover {
 		color: var(--nord9);
-	}
-
-	.add-account[open] summary {
-		margin-bottom: var(--size-3);
 	}
 
 	.add-account-list {

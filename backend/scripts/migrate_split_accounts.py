@@ -29,13 +29,17 @@ load_dotenv()
 def classify_account(account_name: str) -> str:
     """Prompt user to classify account as asset or account."""
     while True:
-        response = input(f"\nClassify '{account_name}'?\n  1. Asset (physical item)\n  2. Account (financial)\nChoice (1/2): ").strip()
+        response = input(
+            f"\nClassify '{account_name}'?\n"
+            "  1. Asset (physical item)\n"
+            "  2. Account (financial)\n"
+            "Choice (1/2): "
+        ).strip()
         if response == "1":
             return "asset"
-        elif response == "2":
+        if response == "2":
             return "account"
-        else:
-            print("Invalid choice. Please enter 1 or 2.")
+        print("Invalid choice. Please enter 1 or 2.")
 
 
 def run_migration(dry_run: bool = True) -> None:
@@ -68,7 +72,7 @@ def run_migration(dry_run: bool = True) -> None:
 
             # Summary
             print("\n" + "=" * 60)
-            print(f"\nSummary:")
+            print("\nSummary:")
             print(f"  Accounts to convert to Assets: {len(to_migrate)}")
             for acc in to_migrate:
                 print(f"    - {acc.name}")
@@ -115,7 +119,10 @@ def run_migration(dry_run: bool = True) -> None:
                 account.is_active = False
 
                 migrated_count += 1
-                print(f"    ✓ Created Asset #{asset.id}, updated {len(snapshot_values)} snapshot values")
+                print(
+                    f"    ✓ Created Asset #{asset.id}, "
+                    f"updated {len(snapshot_values)} snapshot values"
+                )
 
             # Commit transaction
             db.commit()
