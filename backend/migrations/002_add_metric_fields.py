@@ -16,10 +16,7 @@ def migrate() -> None:
     try:
         # Add square_meters column to accounts table (nullable)
         db.execute(
-            text(
-                "ALTER TABLE accounts ADD COLUMN IF NOT EXISTS "
-                "square_meters NUMERIC(10, 2)"
-            )
+            text("ALTER TABLE accounts ADD COLUMN IF NOT EXISTS square_meters NUMERIC(10, 2)")
         )
         db.commit()
 
