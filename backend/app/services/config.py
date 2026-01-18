@@ -20,6 +20,8 @@ def get_config(db: Session) -> ConfigResponse | None:
         allocation_bonds=config.allocation_bonds,
         allocation_gold=config.allocation_gold,
         allocation_commodities=config.allocation_commodities,
+        monthly_expenses=config.monthly_expenses,
+        monthly_mortgage_payment=config.monthly_mortgage_payment,
     )
 
 
@@ -52,6 +54,8 @@ def upsert_config(db: Session, data: ConfigCreate) -> ConfigResponse:
         config.allocation_bonds = data.allocation_bonds
         config.allocation_gold = data.allocation_gold
         config.allocation_commodities = data.allocation_commodities
+        config.monthly_expenses = data.monthly_expenses
+        config.monthly_mortgage_payment = data.monthly_mortgage_payment
     else:
         # Create new config with id=1
         config = AppConfig(
@@ -64,6 +68,8 @@ def upsert_config(db: Session, data: ConfigCreate) -> ConfigResponse:
             allocation_bonds=data.allocation_bonds,
             allocation_gold=data.allocation_gold,
             allocation_commodities=data.allocation_commodities,
+            monthly_expenses=data.monthly_expenses,
+            monthly_mortgage_payment=data.monthly_mortgage_payment,
         )
         db.add(config)
 
@@ -80,4 +86,6 @@ def upsert_config(db: Session, data: ConfigCreate) -> ConfigResponse:
         allocation_bonds=config.allocation_bonds,
         allocation_gold=config.allocation_gold,
         allocation_commodities=config.allocation_commodities,
+        monthly_expenses=config.monthly_expenses,
+        monthly_mortgage_payment=config.monthly_mortgage_payment,
     )

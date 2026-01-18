@@ -19,5 +19,9 @@ class AppConfig(Base):
     allocation_bonds: Mapped[int] = mapped_column(nullable=False)
     allocation_gold: Mapped[int] = mapped_column(nullable=False)
     allocation_commodities: Mapped[int] = mapped_column(nullable=False)
+    monthly_expenses: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False, default=0)
+    monthly_mortgage_payment: Mapped[Decimal] = mapped_column(
+        Numeric(15, 2), nullable=False, default=0
+    )
 
     __table_args__ = (CheckConstraint("id = 1", name="single_row"),)

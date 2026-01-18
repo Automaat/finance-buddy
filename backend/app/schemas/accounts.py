@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 
 from pydantic import BaseModel, field_validator
 
@@ -11,6 +12,7 @@ class AccountCreate(BaseModel):
     currency: str = "PLN"
     account_wrapper: str | None = None
     purpose: str
+    square_meters: Decimal | None = None
 
     @field_validator("name")
     @classmethod
@@ -79,6 +81,7 @@ class AccountResponse(BaseModel):
     currency: str
     account_wrapper: str | None
     purpose: str
+    square_meters: float | None
     is_active: bool
     created_at: datetime
     current_value: float
@@ -91,6 +94,7 @@ class AccountUpdate(BaseModel):
     currency: str | None = None
     account_wrapper: str | None = None
     purpose: str | None = None
+    square_meters: Decimal | None = None
 
     @field_validator("name")
     @classmethod

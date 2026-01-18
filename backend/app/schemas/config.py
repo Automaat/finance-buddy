@@ -16,6 +16,8 @@ class ConfigCreate(BaseModel):
     allocation_bonds: int
     allocation_gold: int
     allocation_commodities: int
+    monthly_expenses: Decimal
+    monthly_mortgage_payment: Decimal
 
     @field_validator("birth_date")
     @classmethod
@@ -40,6 +42,13 @@ class ConfigCreate(BaseModel):
     def validate_retirement_monthly_salary(cls, v: Decimal) -> Decimal:
         if v <= 0:
             raise ValueError("Retirement monthly salary must be greater than 0")
+        return v
+
+    @field_validator("monthly_expenses", "monthly_mortgage_payment")
+    @classmethod
+    def validate_positive_decimal(cls, v: Decimal) -> Decimal:
+        if v < 0:
+            raise ValueError("Value must be non-negative")
         return v
 
     @field_validator(
@@ -91,3 +100,5 @@ class ConfigResponse(BaseModel):
     allocation_bonds: int
     allocation_gold: int
     allocation_commodities: int
+    monthly_expenses: Decimal
+    monthly_mortgage_payment: Decimal

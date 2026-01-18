@@ -7,8 +7,20 @@ import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Account, Asset, Snapshot, SnapshotValue
-from app.schemas.dashboard import AllocationItem, DashboardResponse, NetWorthPoint
+from app.models import Account, AppConfig, Asset, Snapshot, SnapshotValue, Transaction
+from app.schemas.dashboard import (
+    AccountWrapperBreakdown,
+    AllocationAnalysis,
+    AllocationBreakdown,
+    AllocationItem,
+    CategoryTimeSeries,
+    DashboardResponse,
+    InvestmentTimeSeriesPoint,
+    MetricCards,
+    NetWorthPoint,
+    RebalancingSuggestion,
+    WrapperTimeSeries,
+)
 
 
 def get_dashboard_data(db: Session) -> DashboardResponse:
@@ -56,6 +68,26 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
             total_liabilities=0,
             allocation=[],
             retirement_account_value=0,
+            metric_cards=MetricCards(
+                property_sqm=0,
+                emergency_fund_months=0,
+                retirement_income_monthly=0,
+                mortgage_remaining=0,
+                mortgage_months_left=0,
+                mortgage_years_left=0,
+                retirement_total=0,
+                investment_contributions=0,
+                investment_returns=0,
+            ),
+            allocation_analysis=AllocationAnalysis(
+                by_category=[],
+                by_wrapper=[],
+                rebalancing=[],
+                total_investment_value=0,
+            ),
+            investment_time_series=[],
+            wrapper_time_series=WrapperTimeSeries(ike=[], ikze=[], ppk=[]),
+            category_time_series=CategoryTimeSeries(stock=[], bond=[]),
         )
 
     # Calculate net worth per snapshot
@@ -155,6 +187,391 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
         allocation = []
         retirement_account_value = 0
 
+    # Calculate metric cards
+    # Fetch AppConfig for monthly_expenses and monthly_mortgage_payment
+    app_config = db.execute(select(AppConfig).where(AppConfig.id == 1)).scalar_one_or_none()
+
+    if app_config and latest_snapshot is not None:
+        # 1. Property square meters - sum square_meters where category='real_estate'
+        # and owner in ['Marcin', 'Shared']
+        property_sqm = float(
+            accounts_df[
+                (accounts_df["category"] == "real_estate")
+                & (accounts_df["owner"].isin(["Marcin", "Shared"]))
+            ]["square_meters"].sum()
+        )
+
+        # 2. Emergency fund months - sum accounts where purpose='emergency_fund' / monthly_expenses
+        emergency_fund_df = latest_df[
+            (pd.notna(latest_df["account_id"]))
+            & (latest_df["type"] == "asset")
+            & (latest_df["purpose"] == "emergency_fund")
+        ]
+        emergency_fund_value = float(emergency_fund_df["value"].sum())
+        emergency_fund_months = (
+            emergency_fund_value / float(app_config.monthly_expenses)
+            if app_config.monthly_expenses > 0
+            else 0
+        )
+
+        # 3. Retirement income (4% rule) - (retirement_account_value * 0.04) / 12
+        retirement_income_monthly = (retirement_account_value * 0.04) / 12
+
+        # 4. Mortgage remaining - latest snapshot value for mortgage accounts (type='liability')
+        mortgage_df = latest_df[
+            (pd.notna(latest_df["account_id"])) & (latest_df["type"] == "liability")
+        ]
+        mortgage_remaining = float(mortgage_df["value"].sum())
+
+        # 5. Months to mortgage payoff - mortgage_remaining / monthly_mortgage_payment
+        mortgage_months_left = int(
+            mortgage_remaining / float(app_config.monthly_mortgage_payment)
+            if app_config.monthly_mortgage_payment > 0
+            else 0
+        )
+
+        # 6. Years to payoff - months_to_payoff / 12
+        mortgage_years_left = mortgage_months_left / 12
+
+        # 7. Retirement savings - already available
+        retirement_total = retirement_account_value
+
+        # 8. Investment contributions - sum of Transaction.amount for investment accounts
+        # 9. Investment returns - Current value - total contributions
+        transactions_query = select(Transaction).where(Transaction.is_active.is_(True))
+        transactions_df = pd.read_sql(transactions_query, db.get_bind())
+
+        if not transactions_df.empty:
+            # Join transactions with accounts to filter investment accounts
+            trans_with_accounts = transactions_df.merge(
+                accounts_df, left_on="account_id", right_on="id", how="left"
+            )
+
+            # Filter for investment accounts (by category: stock, bond, fund, etf, gold, ppk)
+            investment_categories = {"stock", "bond", "fund", "etf", "gold", "ppk"}
+            investment_trans = trans_with_accounts[
+                trans_with_accounts["category"].isin(investment_categories)
+            ]
+            investment_contributions = float(investment_trans["amount"].sum())
+
+            # Get current value of investment accounts
+            investment_accounts_df = latest_df[
+                (pd.notna(latest_df["account_id"]))
+                & (latest_df["type"] == "asset")
+                & (latest_df["category"].isin(investment_categories))
+            ]
+            investment_current_value = float(investment_accounts_df["value"].sum())
+            investment_returns = investment_current_value - investment_contributions
+        else:
+            investment_contributions = 0
+            investment_returns = 0
+
+        metric_cards = MetricCards(
+            property_sqm=property_sqm,
+            emergency_fund_months=emergency_fund_months,
+            retirement_income_monthly=retirement_income_monthly,
+            mortgage_remaining=mortgage_remaining,
+            mortgage_months_left=mortgage_months_left,
+            mortgage_years_left=mortgage_years_left,
+            retirement_total=retirement_total,
+            investment_contributions=investment_contributions,
+            investment_returns=investment_returns,
+        )
+    else:
+        metric_cards = MetricCards(
+            property_sqm=0,
+            emergency_fund_months=0,
+            retirement_income_monthly=0,
+            mortgage_remaining=0,
+            mortgage_months_left=0,
+            mortgage_years_left=0,
+            retirement_total=0,
+            investment_contributions=0,
+            investment_returns=0,
+        )
+
+    # Calculate allocation analysis
+    if app_config and latest_snapshot is not None:
+        # Define investment categories for allocation (exclude PPK)
+        allocation_categories = {"stock", "bond", "fund", "etf", "gold"}
+
+        # Get investment accounts from latest snapshot (excluding PPK)
+        investment_df = latest_df[
+            (pd.notna(latest_df["account_id"]))
+            & (latest_df["type"] == "asset")
+            & (latest_df["category"].isin(allocation_categories))
+        ]
+
+        total_investment_value = float(investment_df["value"].sum())
+
+        # Map categories to allocation groups
+        category_map = {
+            "stock": "stocks",
+            "fund": "stocks",
+            "etf": "stocks",
+            "bond": "bonds",
+            "gold": "gold",
+        }
+
+        # Calculate current allocation by category
+        allocation_by_cat = {}
+        for _, row in investment_df.iterrows():
+            alloc_group = category_map.get(row["category"], "other")
+            allocation_by_cat[alloc_group] = allocation_by_cat.get(alloc_group, 0) + row["value"]
+
+        # Calculate allocation breakdown
+        allocation_breakdown = []
+        target_allocations = {
+            "stocks": app_config.allocation_stocks,
+            "bonds": app_config.allocation_bonds,
+            "gold": app_config.allocation_gold,
+        }
+
+        for category, target_pct in target_allocations.items():
+            current_value = allocation_by_cat.get(category, 0)
+            current_pct = (
+                (current_value / total_investment_value * 100) if total_investment_value > 0 else 0
+            )
+            difference = current_pct - target_pct
+
+            allocation_breakdown.append(
+                AllocationBreakdown(
+                    category=category,
+                    current_value=float(current_value),
+                    current_percentage=float(current_pct),
+                    target_percentage=float(target_pct),
+                    difference=float(difference),
+                )
+            )
+
+        # Calculate breakdown by account wrapper (include all investments including PPK)
+        all_investment_categories = {"stock", "bond", "fund", "etf", "gold", "ppk"}
+        all_investment_df = latest_df[
+            (pd.notna(latest_df["account_id"]))
+            & (latest_df["type"] == "asset")
+            & (latest_df["category"].isin(all_investment_categories))
+        ]
+
+        wrapper_breakdown = {}
+        for _, row in all_investment_df.iterrows():
+            wrapper = row["account_wrapper"] if pd.notna(row["account_wrapper"]) else "Regular"
+            wrapper_breakdown[wrapper] = wrapper_breakdown.get(wrapper, 0) + row["value"]
+
+        wrapper_list = [
+            AccountWrapperBreakdown(
+                wrapper=wrapper,
+                value=float(value),
+                percentage=(
+                    float(value / total_investment_value * 100) if total_investment_value > 0 else 0
+                ),
+            )
+            for wrapper, value in wrapper_breakdown.items()
+        ]
+
+        # Calculate rebalancing suggestions
+        # Formula: amount_to_add = (target_value - current_value) / (1 - target_pct/100)
+        # This calculates how much new money to add to reach target allocation
+        rebalancing_suggestions = []
+        for breakdown in allocation_breakdown:
+            if abs(breakdown.difference) > 1:  # Only suggest if more than 1% off target
+                target_value = total_investment_value * breakdown.target_percentage / 100
+                current_value = breakdown.current_value
+                target_pct = breakdown.target_percentage / 100
+
+                # Calculate how much new money to add (Excel formula)
+                if target_pct < 1:  # Avoid division by zero
+                    amount_to_add = (target_value - current_value) / (1 - target_pct)
+                else:
+                    amount_to_add = 0
+
+                # Only include if amount is significant
+                if abs(amount_to_add) > 100:
+                    rebalancing_suggestions.append(
+                        RebalancingSuggestion(
+                            category=breakdown.category,
+                            action="buy" if amount_to_add > 0 else "sell",
+                            amount=float(abs(amount_to_add)),
+                        )
+                    )
+
+        allocation_analysis = AllocationAnalysis(
+            by_category=allocation_breakdown,
+            by_wrapper=wrapper_list,
+            rebalancing=rebalancing_suggestions,
+            total_investment_value=total_investment_value,
+        )
+    else:
+        allocation_analysis = AllocationAnalysis(
+            by_category=[],
+            by_wrapper=[],
+            rebalancing=[],
+            total_investment_value=0,
+        )
+
+    # Calculate investment time series
+    investment_time_series = []
+    if not df.empty and not snapshots_df.empty:
+        # Define investment categories
+        investment_categories = {"stock", "bond", "fund", "etf", "gold", "ppk"}
+
+        # Get all transactions sorted by date
+        transactions_query = select(Transaction).where(Transaction.is_active.is_(True))
+        transactions_df = pd.read_sql(transactions_query, db.get_bind())
+
+        # For each snapshot, calculate investment metrics
+        for _, snapshot_row in snapshots_df.iterrows():
+            snapshot_date = snapshot_row["date"]
+            snapshot_id = snapshot_row["id"]
+
+            # Get investment values for this snapshot
+            snapshot_investments = df[
+                (df["snapshot_id"] == snapshot_id)
+                & (pd.notna(df["account_id"]))
+                & (df["type"] == "asset")
+                & (df["category"].isin(investment_categories))
+            ]
+            investment_value = float(snapshot_investments["value"].sum())
+
+            # Calculate cumulative contributions up to this snapshot date
+            cumulative_contributions = 0
+            if not transactions_df.empty:
+                # Join transactions with accounts to filter investment accounts
+                trans_with_accounts = transactions_df.merge(
+                    accounts_df, left_on="account_id", right_on="id", how="left"
+                )
+
+                # Filter for investment transactions up to snapshot date
+                investment_trans = trans_with_accounts[
+                    (trans_with_accounts["category"].isin(investment_categories))
+                    & (trans_with_accounts["date"] <= snapshot_date)
+                ]
+                cumulative_contributions = float(investment_trans["amount"].sum())
+
+            # Calculate returns
+            returns = investment_value - cumulative_contributions
+
+            investment_time_series.append(
+                InvestmentTimeSeriesPoint(
+                    date=snapshot_date,
+                    value=investment_value,
+                    contributions=cumulative_contributions,
+                    returns=returns,
+                )
+            )
+
+    # Calculate wrapper-specific time series (IKE, IKZE, PPK)
+    ike_series = []
+    ikze_series = []
+    ppk_series = []
+
+    if not df.empty and not snapshots_df.empty:
+        investment_categories = {"stock", "bond", "fund", "etf", "gold", "ppk"}
+        transactions_query = select(Transaction).where(Transaction.is_active.is_(True))
+        transactions_df = pd.read_sql(transactions_query, db.get_bind())
+
+        for _, snapshot_row in snapshots_df.iterrows():
+            snapshot_date = snapshot_row["date"]
+            snapshot_id = snapshot_row["id"]
+
+            # Calculate for each wrapper
+            for wrapper, series_list in [
+                ("IKE", ike_series),
+                ("IKZE", ikze_series),
+                ("PPK", ppk_series),
+            ]:
+                # Get investment values for this wrapper in this snapshot
+                wrapper_investments = df[
+                    (df["snapshot_id"] == snapshot_id)
+                    & (pd.notna(df["account_id"]))
+                    & (df["type"] == "asset")
+                    & (df["category"].isin(investment_categories))
+                    & (df["account_wrapper"] == wrapper)
+                ]
+                wrapper_value = float(wrapper_investments["value"].sum())
+
+                # Calculate cumulative contributions for this wrapper up to snapshot date
+                cumulative_contributions = 0
+                if not transactions_df.empty:
+                    trans_with_accounts = transactions_df.merge(
+                        accounts_df, left_on="account_id", right_on="id", how="left"
+                    )
+
+                    wrapper_trans = trans_with_accounts[
+                        (trans_with_accounts["category"].isin(investment_categories))
+                        & (trans_with_accounts["account_wrapper"] == wrapper)
+                        & (trans_with_accounts["date"] <= snapshot_date)
+                    ]
+                    cumulative_contributions = float(wrapper_trans["amount"].sum())
+
+                returns = wrapper_value - cumulative_contributions
+
+                series_list.append(
+                    InvestmentTimeSeriesPoint(
+                        date=snapshot_date,
+                        value=wrapper_value,
+                        contributions=cumulative_contributions,
+                        returns=returns,
+                    )
+                )
+
+    wrapper_time_series = WrapperTimeSeries(
+        ike=ike_series,
+        ikze=ikze_series,
+        ppk=ppk_series,
+    )
+
+    # Calculate category-specific time series (stock, bond)
+    stock_series = []
+    bond_series = []
+
+    if not df.empty and not snapshots_df.empty:
+        transactions_query = select(Transaction).where(Transaction.is_active.is_(True))
+        transactions_df = pd.read_sql(transactions_query, db.get_bind())
+
+        for _, snapshot_row in snapshots_df.iterrows():
+            snapshot_date = snapshot_row["date"]
+            snapshot_id = snapshot_row["id"]
+
+            # Calculate for each category
+            for category, series_list in [("stock", stock_series), ("bond", bond_series)]:
+                # Get investment values for this category in this snapshot
+                category_investments = df[
+                    (df["snapshot_id"] == snapshot_id)
+                    & (pd.notna(df["account_id"]))
+                    & (df["type"] == "asset")
+                    & (df["category"] == category)
+                ]
+                category_value = float(category_investments["value"].sum())
+
+                # Calculate cumulative contributions for this category up to snapshot date
+                cumulative_contributions = 0
+                if not transactions_df.empty:
+                    trans_with_accounts = transactions_df.merge(
+                        accounts_df, left_on="account_id", right_on="id", how="left"
+                    )
+
+                    category_trans = trans_with_accounts[
+                        (trans_with_accounts["category"] == category)
+                        & (trans_with_accounts["date"] <= snapshot_date)
+                    ]
+                    cumulative_contributions = float(category_trans["amount"].sum())
+
+                returns = category_value - cumulative_contributions
+
+                series_list.append(
+                    InvestmentTimeSeriesPoint(
+                        date=snapshot_date,
+                        value=category_value,
+                        contributions=cumulative_contributions,
+                        returns=returns,
+                    )
+                )
+
+    category_time_series = CategoryTimeSeries(
+        stock=stock_series,
+        bond=bond_series,
+    )
+
     return DashboardResponse(
         net_worth_history=net_worth_history,
         current_net_worth=current_net_worth,
@@ -163,4 +580,9 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
         total_liabilities=total_liabilities,
         allocation=allocation,
         retirement_account_value=retirement_account_value,
+        metric_cards=metric_cards,
+        allocation_analysis=allocation_analysis,
+        investment_time_series=investment_time_series,
+        wrapper_time_series=wrapper_time_series,
+        category_time_series=category_time_series,
     )
