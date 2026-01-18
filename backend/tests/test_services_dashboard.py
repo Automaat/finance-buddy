@@ -479,3 +479,625 @@ def test_retirement_account_value_calculation(test_db_session):
     # Total assets should include all accounts
     assert result.total_assets == 65000.0
     assert result.current_net_worth == 65000.0
+
+
+def test_metric_cards_calculation(test_db_session):
+    """Test metric cards calculation with AppConfig."""
+    from app.models.app_config import AppConfig
+    from app.models.transaction import Transaction
+
+    # Create AppConfig
+    config = AppConfig(
+        id=1,
+        birth_date=date(1990, 1, 1),
+        retirement_age=67,
+        retirement_monthly_salary=Decimal("8000"),
+        allocation_real_estate=20,
+        allocation_stocks=60,
+        allocation_bonds=30,
+        allocation_gold=8,
+        allocation_commodities=2,
+        monthly_expenses=Decimal("5000"),
+        monthly_mortgage_payment=Decimal("3000"),
+    )
+    test_db_session.add(config)
+    test_db_session.commit()
+
+    # Create accounts
+    real_estate_account = Account(
+        name="Apartment",
+        type="asset",
+        category="real_estate",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+        square_meters=Decimal("65.50"),
+    )
+    emergency_fund_account = Account(
+        name="Emergency Fund",
+        type="asset",
+        category="bank",
+        owner="Marcin",
+        currency="PLN",
+        purpose="emergency_fund",
+    )
+    retirement_account = Account(
+        name="IKE",
+        type="asset",
+        category="stock",
+        owner="Marcin",
+        currency="PLN",
+        purpose="retirement",
+        account_wrapper="IKE",
+    )
+    mortgage_account = Account(
+        name="Mortgage",
+        type="liability",
+        category="housing",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+    )
+    investment_account = Account(
+        name="Stocks",
+        type="asset",
+        category="stock",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+    )
+    test_db_session.add_all(
+        [
+            real_estate_account,
+            emergency_fund_account,
+            retirement_account,
+            mortgage_account,
+            investment_account,
+        ]
+    )
+    test_db_session.commit()
+
+    # Create snapshot
+    snapshot = Snapshot(date=date(2024, 1, 31))
+    test_db_session.add(snapshot)
+    test_db_session.commit()
+
+    # Add snapshot values
+    test_db_session.add_all(
+        [
+            SnapshotValue(
+                snapshot_id=snapshot.id, account_id=real_estate_account.id, value=Decimal("500000")
+            ),
+            SnapshotValue(
+                snapshot_id=snapshot.id, account_id=emergency_fund_account.id, value=Decimal("15000")
+            ),
+            SnapshotValue(
+                snapshot_id=snapshot.id, account_id=retirement_account.id, value=Decimal("100000")
+            ),
+            SnapshotValue(
+                snapshot_id=snapshot.id, account_id=mortgage_account.id, value=Decimal("300000")
+            ),
+            SnapshotValue(
+                snapshot_id=snapshot.id, account_id=investment_account.id, value=Decimal("50000")
+            ),
+        ]
+    )
+    test_db_session.commit()
+
+    # Add transactions for investment contributions
+    test_db_session.add_all(
+        [
+            Transaction(
+                account_id=investment_account.id,
+                amount=Decimal("10000"),
+                date=date(2024, 1, 15),
+                owner="Marcin",
+            ),
+            Transaction(
+                account_id=retirement_account.id,
+                amount=Decimal("20000"),
+                date=date(2024, 1, 10),
+                owner="Marcin",
+            ),
+        ]
+    )
+    test_db_session.commit()
+
+    result = get_dashboard_data(test_db_session)
+
+    # Check metric cards
+    assert result.metric_cards.property_sqm == 65.50
+    assert result.metric_cards.emergency_fund_months == 3.0  # 15000 / 5000
+    assert result.metric_cards.retirement_income_monthly == (100000 * 0.04) / 12
+    assert result.metric_cards.mortgage_remaining == 300000.0
+    assert result.metric_cards.mortgage_months_left == 100  # 300000 / 3000
+    assert result.metric_cards.mortgage_years_left == 100 / 12
+    assert result.metric_cards.retirement_total == 100000.0
+    assert result.metric_cards.investment_contributions == 30000.0  # 10000 + 20000
+    assert result.metric_cards.investment_returns == 120000.0  # (50000 + 100000) - 30000
+
+
+def test_allocation_analysis(test_db_session):
+    """Test allocation analysis with investment accounts."""
+    from app.models.app_config import AppConfig
+
+    # Create AppConfig with allocation targets
+    config = AppConfig(
+        id=1,
+        birth_date=date(1990, 1, 1),
+        retirement_age=67,
+        retirement_monthly_salary=Decimal("8000"),
+        allocation_real_estate=20,
+        allocation_stocks=60,
+        allocation_bonds=30,
+        allocation_gold=10,
+        allocation_commodities=0,
+        monthly_expenses=Decimal("5000"),
+        monthly_mortgage_payment=Decimal("3000"),
+    )
+    test_db_session.add(config)
+    test_db_session.commit()
+
+    # Create investment accounts
+    stock_account = Account(
+        name="Stocks",
+        type="asset",
+        category="stock",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+    )
+    bond_account = Account(
+        name="Bonds",
+        type="asset",
+        category="bond",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+    )
+    gold_account = Account(
+        name="Gold",
+        type="asset",
+        category="gold",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+    )
+    ppk_account = Account(
+        name="PPK",
+        type="asset",
+        category="ppk",
+        owner="Marcin",
+        currency="PLN",
+        purpose="retirement",
+        account_wrapper="PPK",
+    )
+    ike_account = Account(
+        name="IKE",
+        type="asset",
+        category="stock",
+        owner="Marcin",
+        currency="PLN",
+        purpose="retirement",
+        account_wrapper="IKE",
+    )
+    test_db_session.add_all([stock_account, bond_account, gold_account, ppk_account, ike_account])
+    test_db_session.commit()
+
+    # Create snapshot
+    snapshot = Snapshot(date=date(2024, 1, 31))
+    test_db_session.add(snapshot)
+    test_db_session.commit()
+
+    # Add values: stocks 40%, bonds 40%, gold 20% (stocks under-allocated)
+    test_db_session.add_all(
+        [
+            SnapshotValue(
+                snapshot_id=snapshot.id, account_id=stock_account.id, value=Decimal("20000")
+            ),
+            SnapshotValue(
+                snapshot_id=snapshot.id, account_id=bond_account.id, value=Decimal("20000")
+            ),
+            SnapshotValue(snapshot_id=snapshot.id, account_id=gold_account.id, value=Decimal("10000")),
+            SnapshotValue(snapshot_id=snapshot.id, account_id=ppk_account.id, value=Decimal("5000")),
+            SnapshotValue(snapshot_id=snapshot.id, account_id=ike_account.id, value=Decimal("15000")),
+        ]
+    )
+    test_db_session.commit()
+
+    result = get_dashboard_data(test_db_session)
+
+    # Check allocation analysis by category (excludes PPK)
+    # Total: stock (20000 + 15000 IKE) + bonds (20000) + gold (10000) = 65000
+    assert result.allocation_analysis.total_investment_value == 65000.0
+    assert len(result.allocation_analysis.by_category) == 3  # stocks, bonds, gold
+
+    # Find allocations
+    stocks_alloc = next(a for a in result.allocation_analysis.by_category if a.category == "stocks")
+    bonds_alloc = next(a for a in result.allocation_analysis.by_category if a.category == "bonds")
+    gold_alloc = next(a for a in result.allocation_analysis.by_category if a.category == "gold")
+
+    # Stocks: 35000 / 65000 = 53.85% (target 60%, -6.15% under-allocated)
+    assert stocks_alloc.current_value == 35000.0
+    assert abs(stocks_alloc.current_percentage - 53.85) < 0.1
+    assert stocks_alloc.target_percentage == 60.0
+    assert abs(stocks_alloc.difference - (-6.15)) < 0.1
+
+    # Bonds: 20000 / 65000 = 30.77% (target 30%, +0.77%)
+    assert bonds_alloc.current_value == 20000.0
+    assert abs(bonds_alloc.current_percentage - 30.77) < 0.1
+    assert bonds_alloc.target_percentage == 30.0
+    assert abs(bonds_alloc.difference - 0.77) < 0.1
+
+    # Gold: 10000 / 65000 = 15.38% (target 10%, +5.38%)
+    assert gold_alloc.current_value == 10000.0
+    assert abs(gold_alloc.current_percentage - 15.38) < 0.1
+    assert gold_alloc.target_percentage == 10.0
+    assert abs(gold_alloc.difference - 5.38) < 0.1
+
+    # Check wrapper breakdown (includes PPK: 70000 total)
+    assert len(result.allocation_analysis.by_wrapper) > 0
+    wrapper_total = sum(w.value for w in result.allocation_analysis.by_wrapper)
+    assert wrapper_total == 70000.0  # Including PPK
+
+    # Check wrapper percentages sum to 100%
+    wrapper_pct_sum = sum(w.percentage for w in result.allocation_analysis.by_wrapper)
+    assert abs(wrapper_pct_sum - 100.0) < 0.01
+
+    # Rebalancing: Stocks under-allocated, should have buy suggestion
+    assert len(result.allocation_analysis.rebalancing) > 0
+    stocks_rebal = next((r for r in result.allocation_analysis.rebalancing if r.category == "stocks"), None)
+    assert stocks_rebal is not None
+    assert stocks_rebal.action == "buy"
+
+
+def test_investment_time_series(test_db_session):
+    """Test investment time series with transactions."""
+    from app.models.transaction import Transaction
+
+    # Create investment account
+    investment_account = Account(
+        name="Stocks",
+        type="asset",
+        category="stock",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+    )
+    test_db_session.add(investment_account)
+    test_db_session.commit()
+
+    # Create snapshots
+    snapshot1 = Snapshot(date=date(2024, 1, 31))
+    snapshot2 = Snapshot(date=date(2024, 2, 29))
+    test_db_session.add_all([snapshot1, snapshot2])
+    test_db_session.commit()
+
+    # Add snapshot values
+    test_db_session.add_all(
+        [
+            SnapshotValue(
+                snapshot_id=snapshot1.id, account_id=investment_account.id, value=Decimal("10500")
+            ),
+            SnapshotValue(
+                snapshot_id=snapshot2.id, account_id=investment_account.id, value=Decimal("21200")
+            ),
+        ]
+    )
+    test_db_session.commit()
+
+    # Add transactions
+    test_db_session.add_all(
+        [
+            Transaction(
+                account_id=investment_account.id,
+                amount=Decimal("10000"),
+                date=date(2024, 1, 15),
+                owner="Marcin",
+            ),
+            Transaction(
+                account_id=investment_account.id,
+                amount=Decimal("10000"),
+                date=date(2024, 2, 15),
+                owner="Marcin",
+            ),
+        ]
+    )
+    test_db_session.commit()
+
+    result = get_dashboard_data(test_db_session)
+
+    # Check time series
+    assert len(result.investment_time_series) == 2
+
+    # Jan: value=10500, contributions=10000, returns=500
+    assert result.investment_time_series[0].date == date(2024, 1, 31)
+    assert result.investment_time_series[0].value == 10500.0
+    assert result.investment_time_series[0].contributions == 10000.0
+    assert result.investment_time_series[0].returns == 500.0
+
+    # Feb: value=21200, contributions=20000, returns=1200
+    assert result.investment_time_series[1].date == date(2024, 2, 29)
+    assert result.investment_time_series[1].value == 21200.0
+    assert result.investment_time_series[1].contributions == 20000.0
+    assert result.investment_time_series[1].returns == 1200.0
+
+
+def test_wrapper_time_series(test_db_session):
+    """Test wrapper-specific time series (IKE, IKZE, PPK)."""
+    from app.models.transaction import Transaction
+
+    # Create wrapper accounts
+    ike_account = Account(
+        name="IKE",
+        type="asset",
+        category="stock",
+        owner="Marcin",
+        currency="PLN",
+        purpose="retirement",
+        account_wrapper="IKE",
+    )
+    ikze_account = Account(
+        name="IKZE",
+        type="asset",
+        category="bond",
+        owner="Marcin",
+        currency="PLN",
+        purpose="retirement",
+        account_wrapper="IKZE",
+    )
+    ppk_account = Account(
+        name="PPK",
+        type="asset",
+        category="ppk",
+        owner="Marcin",
+        currency="PLN",
+        purpose="retirement",
+        account_wrapper="PPK",
+    )
+    test_db_session.add_all([ike_account, ikze_account, ppk_account])
+    test_db_session.commit()
+
+    # Create snapshots
+    snapshot1 = Snapshot(date=date(2024, 1, 31))
+    snapshot2 = Snapshot(date=date(2024, 2, 29))
+    test_db_session.add_all([snapshot1, snapshot2])
+    test_db_session.commit()
+
+    # Add snapshot values
+    test_db_session.add_all(
+        [
+            # Jan
+            SnapshotValue(snapshot_id=snapshot1.id, account_id=ike_account.id, value=Decimal("10500")),
+            SnapshotValue(
+                snapshot_id=snapshot1.id, account_id=ikze_account.id, value=Decimal("5200")
+            ),
+            SnapshotValue(snapshot_id=snapshot1.id, account_id=ppk_account.id, value=Decimal("3100")),
+            # Feb
+            SnapshotValue(
+                snapshot_id=snapshot2.id, account_id=ike_account.id, value=Decimal("21200")
+            ),
+            SnapshotValue(
+                snapshot_id=snapshot2.id, account_id=ikze_account.id, value=Decimal("10500")
+            ),
+            SnapshotValue(snapshot_id=snapshot2.id, account_id=ppk_account.id, value=Decimal("6300")),
+        ]
+    )
+    test_db_session.commit()
+
+    # Add transactions
+    test_db_session.add_all(
+        [
+            Transaction(
+                account_id=ike_account.id,
+                amount=Decimal("10000"),
+                date=date(2024, 1, 15),
+                owner="Marcin",
+            ),
+            Transaction(
+                account_id=ike_account.id,
+                amount=Decimal("10000"),
+                date=date(2024, 2, 15),
+                owner="Marcin",
+            ),
+            Transaction(
+                account_id=ikze_account.id,
+                amount=Decimal("5000"),
+                date=date(2024, 1, 10),
+                owner="Marcin",
+            ),
+            Transaction(
+                account_id=ikze_account.id,
+                amount=Decimal("5000"),
+                date=date(2024, 2, 10),
+                owner="Marcin",
+            ),
+            Transaction(
+                account_id=ppk_account.id,
+                amount=Decimal("3000"),
+                date=date(2024, 1, 5),
+                owner="Marcin",
+            ),
+            Transaction(
+                account_id=ppk_account.id,
+                amount=Decimal("3000"),
+                date=date(2024, 2, 5),
+                owner="Marcin",
+            ),
+        ]
+    )
+    test_db_session.commit()
+
+    result = get_dashboard_data(test_db_session)
+
+    # Check IKE time series
+    assert len(result.wrapper_time_series.ike) == 2
+    assert result.wrapper_time_series.ike[0].value == 10500.0
+    assert result.wrapper_time_series.ike[0].contributions == 10000.0
+    assert result.wrapper_time_series.ike[0].returns == 500.0
+    assert result.wrapper_time_series.ike[1].value == 21200.0
+    assert result.wrapper_time_series.ike[1].contributions == 20000.0
+    assert result.wrapper_time_series.ike[1].returns == 1200.0
+
+    # Check IKZE time series
+    assert len(result.wrapper_time_series.ikze) == 2
+    assert result.wrapper_time_series.ikze[0].value == 5200.0
+    assert result.wrapper_time_series.ikze[0].contributions == 5000.0
+    assert result.wrapper_time_series.ikze[0].returns == 200.0
+
+    # Check PPK time series
+    assert len(result.wrapper_time_series.ppk) == 2
+    assert result.wrapper_time_series.ppk[0].value == 3100.0
+    assert result.wrapper_time_series.ppk[0].contributions == 3000.0
+    assert result.wrapper_time_series.ppk[0].returns == 100.0
+
+
+def test_category_time_series_with_grouping(test_db_session):
+    """Test category time series with fund/etf grouped as stock."""
+    from app.models.transaction import Transaction
+
+    # Create accounts with different categories
+    stock_account = Account(
+        name="Stocks",
+        type="asset",
+        category="stock",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+    )
+    fund_account = Account(
+        name="Fund",
+        type="asset",
+        category="fund",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+    )
+    etf_account = Account(
+        name="ETF",
+        type="asset",
+        category="etf",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+    )
+    bond_account = Account(
+        name="Bonds",
+        type="asset",
+        category="bond",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+    )
+    test_db_session.add_all([stock_account, fund_account, etf_account, bond_account])
+    test_db_session.commit()
+
+    # Create snapshots
+    snapshot1 = Snapshot(date=date(2024, 1, 31))
+    snapshot2 = Snapshot(date=date(2024, 2, 29))
+    test_db_session.add_all([snapshot1, snapshot2])
+    test_db_session.commit()
+
+    # Add snapshot values
+    test_db_session.add_all(
+        [
+            # Jan
+            SnapshotValue(
+                snapshot_id=snapshot1.id, account_id=stock_account.id, value=Decimal("10000")
+            ),
+            SnapshotValue(snapshot_id=snapshot1.id, account_id=fund_account.id, value=Decimal("5000")),
+            SnapshotValue(snapshot_id=snapshot1.id, account_id=etf_account.id, value=Decimal("3000")),
+            SnapshotValue(
+                snapshot_id=snapshot1.id, account_id=bond_account.id, value=Decimal("8000")
+            ),
+            # Feb
+            SnapshotValue(
+                snapshot_id=snapshot2.id, account_id=stock_account.id, value=Decimal("20500")
+            ),
+            SnapshotValue(
+                snapshot_id=snapshot2.id, account_id=fund_account.id, value=Decimal("10300")
+            ),
+            SnapshotValue(snapshot_id=snapshot2.id, account_id=etf_account.id, value=Decimal("6200")),
+            SnapshotValue(
+                snapshot_id=snapshot2.id, account_id=bond_account.id, value=Decimal("16500")
+            ),
+        ]
+    )
+    test_db_session.commit()
+
+    # Add transactions
+    test_db_session.add_all(
+        [
+            Transaction(
+                account_id=stock_account.id,
+                amount=Decimal("10000"),
+                date=date(2024, 1, 15),
+                owner="Marcin",
+            ),
+            Transaction(
+                account_id=stock_account.id,
+                amount=Decimal("10000"),
+                date=date(2024, 2, 15),
+                owner="Marcin",
+            ),
+            Transaction(
+                account_id=fund_account.id,
+                amount=Decimal("5000"),
+                date=date(2024, 1, 10),
+                owner="Marcin",
+            ),
+            Transaction(
+                account_id=fund_account.id,
+                amount=Decimal("5000"),
+                date=date(2024, 2, 10),
+                owner="Marcin",
+            ),
+            Transaction(
+                account_id=etf_account.id,
+                amount=Decimal("3000"),
+                date=date(2024, 1, 5),
+                owner="Marcin",
+            ),
+            Transaction(
+                account_id=etf_account.id,
+                amount=Decimal("3000"),
+                date=date(2024, 2, 5),
+                owner="Marcin",
+            ),
+            Transaction(
+                account_id=bond_account.id,
+                amount=Decimal("8000"),
+                date=date(2024, 1, 20),
+                owner="Marcin",
+            ),
+            Transaction(
+                account_id=bond_account.id,
+                amount=Decimal("8000"),
+                date=date(2024, 2, 20),
+                owner="Marcin",
+            ),
+        ]
+    )
+    test_db_session.commit()
+
+    result = get_dashboard_data(test_db_session)
+
+    # Check stock time series (includes stock + fund + etf)
+    assert len(result.category_time_series.stock) == 2
+    # Jan: 10000 + 5000 + 3000 = 18000
+    assert result.category_time_series.stock[0].value == 18000.0
+    assert result.category_time_series.stock[0].contributions == 18000.0  # 10000 + 5000 + 3000
+    assert result.category_time_series.stock[0].returns == 0.0
+    # Feb: 20500 + 10300 + 6200 = 37000
+    assert result.category_time_series.stock[1].value == 37000.0
+    assert result.category_time_series.stock[1].contributions == 36000.0  # 10000*2 + 5000*2 + 3000*2
+    assert result.category_time_series.stock[1].returns == 1000.0  # 37000 - 36000
+
+    # Check bond time series
+    assert len(result.category_time_series.bond) == 2
+    assert result.category_time_series.bond[0].value == 8000.0
+    assert result.category_time_series.bond[0].contributions == 8000.0
+    assert result.category_time_series.bond[0].returns == 0.0
+    assert result.category_time_series.bond[1].value == 16500.0
+    assert result.category_time_series.bond[1].contributions == 16000.0
+    assert result.category_time_series.bond[1].returns == 500.0
