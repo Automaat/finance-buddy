@@ -371,9 +371,10 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
         # Calculate rebalancing suggestions
         # Formula: amount_to_add = (target_value - current_value) / (1 - target_pct/100)
         # This calculates how much new money to add to reach target allocation
+        # Only show "buy" suggestions for under-allocated categories
         rebalancing_suggestions = []
         for breakdown in allocation_breakdown:
-            if abs(breakdown.difference) > 1:  # Only suggest if more than 1% off target
+            if breakdown.difference < -1:  # Only if under-allocated by more than 1%
                 target_value = total_investment_value * breakdown.target_percentage / 100
                 current_value = breakdown.current_value
                 target_pct = breakdown.target_percentage / 100
@@ -381,18 +382,16 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
                 # Calculate how much new money to add (Excel formula)
                 if target_pct < 1:  # Avoid division by zero
                     amount_to_add = (target_value - current_value) / (1 - target_pct)
-                else:
-                    amount_to_add = 0
 
-                # Only include if amount is significant
-                if abs(amount_to_add) > 100:
-                    rebalancing_suggestions.append(
-                        RebalancingSuggestion(
-                            category=breakdown.category,
-                            action="buy" if amount_to_add > 0 else "sell",
-                            amount=float(abs(amount_to_add)),
+                    # Only include if amount is significant and positive
+                    if amount_to_add > 100:
+                        rebalancing_suggestions.append(
+                            RebalancingSuggestion(
+                                category=breakdown.category,
+                                action="buy",
+                                amount=float(amount_to_add),
+                            )
                         )
-                    )
 
         allocation_analysis = AllocationAnalysis(
             by_category=allocation_breakdown,

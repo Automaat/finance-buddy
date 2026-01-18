@@ -609,14 +609,8 @@
 
 			<div class="rebalancing-list">
 				{#each allocationAnalysis.rebalancing as suggestion}
-					<div class="rebalancing-item {suggestion.action}">
-						<span class="action-label">
-							{#if suggestion.action === 'buy'}
-								📈 KUP
-							{:else}
-								📉 SPRZEDAJ
-							{/if}
-						</span>
+					<div class="rebalancing-item buy">
+						<span class="action-label"> 📈 DODAJ </span>
 						<span class="category-name">{suggestion.category}</span>
 						<span class="amount">
 							{suggestion.amount.toLocaleString('pl-PL', {
