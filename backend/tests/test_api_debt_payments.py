@@ -7,7 +7,12 @@ def test_get_account_payments_success(test_client, test_db_session):
     """Test GET /api/accounts/{account_id}/payments"""
     # Create liability account
     account = Account(
-        name="Mortgage", type="liability", category="mortgage", owner="Marcin", currency="PLN"
+        name="Mortgage",
+        type="liability",
+        category="mortgage",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -34,7 +39,12 @@ def test_get_account_payments_success(test_client, test_db_session):
 def test_get_account_payments_non_liability_account(test_client, test_db_session):
     """Test GET payments for non-liability account fails"""
     account = Account(
-        name="Bank Account", type="asset", category="bank", owner="Marcin", currency="PLN"
+        name="Bank Account",
+        type="asset",
+        category="bank",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -55,7 +65,12 @@ def test_get_account_payments_not_found(test_client):
 def test_create_payment_success(test_client, test_db_session):
     """Test POST /api/accounts/{account_id}/payments"""
     account = Account(
-        name="Mortgage", type="liability", category="mortgage", owner="Marcin", currency="PLN"
+        name="Mortgage",
+        type="liability",
+        category="mortgage",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -75,7 +90,12 @@ def test_create_payment_success(test_client, test_db_session):
 def test_create_payment_non_liability_account(test_client, test_db_session):
     """Test POST payment for non-liability account fails"""
     account = Account(
-        name="Bank Account", type="asset", category="bank", owner="Marcin", currency="PLN"
+        name="Bank Account",
+        type="asset",
+        category="bank",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -90,7 +110,12 @@ def test_create_payment_non_liability_account(test_client, test_db_session):
 def test_create_payment_invalid_amount(test_client, test_db_session):
     """Test POST payment with invalid amount fails"""
     account = Account(
-        name="Mortgage", type="liability", category="mortgage", owner="Marcin", currency="PLN"
+        name="Mortgage",
+        type="liability",
+        category="mortgage",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -105,7 +130,12 @@ def test_create_payment_invalid_amount(test_client, test_db_session):
 def test_create_payment_future_date(test_client, test_db_session):
     """Test POST payment with future date fails"""
     account = Account(
-        name="Mortgage", type="liability", category="mortgage", owner="Marcin", currency="PLN"
+        name="Mortgage",
+        type="liability",
+        category="mortgage",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -120,7 +150,12 @@ def test_create_payment_future_date(test_client, test_db_session):
 def test_create_payment_invalid_owner(test_client, test_db_session):
     """Test POST payment with invalid owner fails"""
     account = Account(
-        name="Mortgage", type="liability", category="mortgage", owner="Marcin", currency="PLN"
+        name="Mortgage",
+        type="liability",
+        category="mortgage",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -135,7 +170,12 @@ def test_create_payment_invalid_owner(test_client, test_db_session):
 def test_delete_payment_success(test_client, test_db_session):
     """Test DELETE /api/accounts/{account_id}/payments/{payment_id}"""
     account = Account(
-        name="Mortgage", type="liability", category="mortgage", owner="Marcin", currency="PLN"
+        name="Mortgage",
+        type="liability",
+        category="mortgage",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -160,7 +200,12 @@ def test_delete_payment_success(test_client, test_db_session):
 def test_delete_payment_not_found(test_client, test_db_session):
     """Test DELETE non-existent payment fails"""
     account = Account(
-        name="Mortgage", type="liability", category="mortgage", owner="Marcin", currency="PLN"
+        name="Mortgage",
+        type="liability",
+        category="mortgage",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -174,10 +219,20 @@ def test_get_all_payments_no_filters(test_client, test_db_session):
     """Test GET /api/payments without filters"""
     # Create accounts
     account1 = Account(
-        name="Mortgage", type="liability", category="mortgage", owner="Marcin", currency="PLN"
+        name="Mortgage",
+        type="liability",
+        category="mortgage",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     account2 = Account(
-        name="Installment", type="liability", category="installment", owner="Ewa", currency="PLN"
+        name="Installment",
+        type="liability",
+        category="installment",
+        owner="Ewa",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add_all([account1, account2])
     test_db_session.commit()
@@ -207,10 +262,20 @@ def test_get_all_payments_no_filters(test_client, test_db_session):
 def test_get_all_payments_filter_by_account(test_client, test_db_session):
     """Test GET /api/payments with account_id filter"""
     account1 = Account(
-        name="Mortgage", type="liability", category="mortgage", owner="Marcin", currency="PLN"
+        name="Mortgage",
+        type="liability",
+        category="mortgage",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     account2 = Account(
-        name="Installment", type="liability", category="installment", owner="Ewa", currency="PLN"
+        name="Installment",
+        type="liability",
+        category="installment",
+        owner="Ewa",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add_all([account1, account2])
     test_db_session.commit()
@@ -244,6 +309,7 @@ def test_get_all_payments_filter_by_owner(test_client, test_db_session):
         category="mortgage",
         owner="Shared",
         currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -268,7 +334,12 @@ def test_get_all_payments_filter_by_owner(test_client, test_db_session):
 def test_get_all_payments_filter_by_date_range(test_client, test_db_session):
     """Test GET /api/payments with date range filters"""
     account = Account(
-        name="Mortgage", type="liability", category="mortgage", owner="Marcin", currency="PLN"
+        name="Mortgage",
+        type="liability",
+        category="mortgage",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -296,10 +367,20 @@ def test_get_all_payments_filter_by_date_range(test_client, test_db_session):
 def test_get_payment_counts(test_client, test_db_session):
     """Test GET /api/payments/counts"""
     account1 = Account(
-        name="Mortgage", type="liability", category="mortgage", owner="Marcin", currency="PLN"
+        name="Mortgage",
+        type="liability",
+        category="mortgage",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     account2 = Account(
-        name="Installment", type="liability", category="installment", owner="Ewa", currency="PLN"
+        name="Installment",
+        type="liability",
+        category="installment",
+        owner="Ewa",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add_all([account1, account2])
     test_db_session.commit()
@@ -335,10 +416,20 @@ def test_get_payment_counts(test_client, test_db_session):
 def test_delete_payment_wrong_account(test_client, test_db_session):
     """Test DELETE payment with wrong account_id fails"""
     account1 = Account(
-        name="Mortgage 1", type="liability", category="mortgage", owner="Marcin", currency="PLN"
+        name="Mortgage 1",
+        type="liability",
+        category="mortgage",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     account2 = Account(
-        name="Mortgage 2", type="liability", category="mortgage", owner="Marcin", currency="PLN"
+        name="Mortgage 2",
+        type="liability",
+        category="mortgage",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add_all([account1, account2])
     test_db_session.commit()

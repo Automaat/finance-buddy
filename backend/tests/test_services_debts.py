@@ -16,6 +16,7 @@ def test_create_debt_success(test_db_session):
         category="mortgage",
         owner="Shared",
         currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -67,7 +68,12 @@ def test_create_debt_invalid_account(test_db_session):
 def test_create_debt_not_liability(test_db_session):
     """Test creating debt for asset account fails"""
     account = Account(
-        name="Bank Account", type="asset", category="bank", owner="Marcin", currency="PLN"
+        name="Bank Account",
+        type="asset",
+        category="bank",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -91,7 +97,12 @@ def test_create_debt_not_liability(test_db_session):
 def test_create_debt_duplicate(test_db_session):
     """Test creating duplicate debt for same account fails"""
     account = Account(
-        name="Hipoteka", type="liability", category="mortgage", owner="Shared", currency="PLN"
+        name="Hipoteka",
+        type="liability",
+        category="mortgage",
+        owner="Shared",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -125,10 +136,20 @@ def test_create_debt_duplicate(test_db_session):
 def test_get_all_debts_no_filters(test_db_session):
     """Test getting all debts without filters"""
     account1 = Account(
-        name="Hipoteka", type="liability", category="mortgage", owner="Shared", currency="PLN"
+        name="Hipoteka",
+        type="liability",
+        category="mortgage",
+        owner="Shared",
+        currency="PLN",
+        purpose="general",
     )
     account2 = Account(
-        name="Raty 0%", type="liability", category="installment", owner="Marcin", currency="PLN"
+        name="Raty 0%",
+        type="liability",
+        category="installment",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add_all([account1, account2])
     test_db_session.commit()
@@ -165,10 +186,20 @@ def test_get_all_debts_no_filters(test_db_session):
 def test_get_all_debts_filter_by_account(test_db_session):
     """Test filtering debts by account"""
     account1 = Account(
-        name="Hipoteka", type="liability", category="mortgage", owner="Shared", currency="PLN"
+        name="Hipoteka",
+        type="liability",
+        category="mortgage",
+        owner="Shared",
+        currency="PLN",
+        purpose="general",
     )
     account2 = Account(
-        name="Raty 0%", type="liability", category="installment", owner="Marcin", currency="PLN"
+        name="Raty 0%",
+        type="liability",
+        category="installment",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add_all([account1, account2])
     test_db_session.commit()
@@ -203,10 +234,20 @@ def test_get_all_debts_filter_by_account(test_db_session):
 def test_get_all_debts_filter_by_type(test_db_session):
     """Test filtering debts by debt_type"""
     account1 = Account(
-        name="Hipoteka", type="liability", category="mortgage", owner="Shared", currency="PLN"
+        name="Hipoteka",
+        type="liability",
+        category="mortgage",
+        owner="Shared",
+        currency="PLN",
+        purpose="general",
     )
     account2 = Account(
-        name="Raty 0%", type="liability", category="installment", owner="Marcin", currency="PLN"
+        name="Raty 0%",
+        type="liability",
+        category="installment",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add_all([account1, account2])
     test_db_session.commit()
@@ -241,7 +282,12 @@ def test_get_all_debts_filter_by_type(test_db_session):
 def test_get_debt_success(test_db_session):
     """Test getting a single debt by ID"""
     account = Account(
-        name="Hipoteka", type="liability", category="mortgage", owner="Shared", currency="PLN"
+        name="Hipoteka",
+        type="liability",
+        category="mortgage",
+        owner="Shared",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -277,7 +323,12 @@ def test_get_debt_not_found(test_db_session):
 def test_update_debt_success(test_db_session):
     """Test updating debt fields"""
     account = Account(
-        name="Hipoteka", type="liability", category="mortgage", owner="Shared", currency="PLN"
+        name="Hipoteka",
+        type="liability",
+        category="mortgage",
+        owner="Shared",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -316,7 +367,12 @@ def test_update_debt_not_found(test_db_session):
 def test_delete_debt_success(test_db_session):
     """Test soft deleting a debt"""
     account = Account(
-        name="Hipoteka", type="liability", category="mortgage", owner="Shared", currency="PLN"
+        name="Hipoteka",
+        type="liability",
+        category="mortgage",
+        owner="Shared",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -344,7 +400,12 @@ def test_delete_debt_success(test_db_session):
 def test_delete_debt_idempotent(test_db_session):
     """Test deleting already deleted debt is idempotent"""
     account = Account(
-        name="Hipoteka", type="liability", category="mortgage", owner="Shared", currency="PLN"
+        name="Hipoteka",
+        type="liability",
+        category="mortgage",
+        owner="Shared",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -380,7 +441,12 @@ def test_delete_debt_not_found(test_db_session):
 def test_get_all_debts_with_snapshots_and_payments(test_db_session):
     """Test getting debts with snapshot balances and payments for interest calculation"""
     account = Account(
-        name="Hipoteka", type="liability", category="mortgage", owner="Shared", currency="PLN"
+        name="Hipoteka",
+        type="liability",
+        category="mortgage",
+        owner="Shared",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -427,7 +493,12 @@ def test_get_all_debts_with_snapshots_and_payments(test_db_session):
 def test_create_debt_with_snapshots(test_db_session):
     """Test creating debt when snapshot data exists"""
     account = Account(
-        name="Hipoteka", type="liability", category="mortgage", owner="Shared", currency="PLN"
+        name="Hipoteka",
+        type="liability",
+        category="mortgage",
+        owner="Shared",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -466,7 +537,12 @@ def test_create_debt_with_snapshots(test_db_session):
 def test_get_debt_with_snapshots(test_db_session):
     """Test getting debt with snapshot balance"""
     account = Account(
-        name="Hipoteka", type="liability", category="mortgage", owner="Shared", currency="PLN"
+        name="Hipoteka",
+        type="liability",
+        category="mortgage",
+        owner="Shared",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -508,7 +584,12 @@ def test_get_debt_with_snapshots(test_db_session):
 def test_update_debt_all_fields(test_db_session):
     """Test updating all updatable debt fields"""
     account = Account(
-        name="Hipoteka", type="liability", category="mortgage", owner="Shared", currency="PLN"
+        name="Hipoteka",
+        type="liability",
+        category="mortgage",
+        owner="Shared",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -549,7 +630,12 @@ def test_update_debt_all_fields(test_db_session):
 def test_update_debt_with_snapshots(test_db_session):
     """Test updating debt when snapshot data exists"""
     account = Account(
-        name="Hipoteka", type="liability", category="mortgage", owner="Shared", currency="PLN"
+        name="Hipoteka",
+        type="liability",
+        category="mortgage",
+        owner="Shared",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()

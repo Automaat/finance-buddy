@@ -57,8 +57,8 @@
 	$: requiredCapital = retirementMonthlySalary * 12 * 25;
 
 	// Calculate monthly savings needed (simple linear calculation without investment returns)
-	// Subtract already saved money from required capital
-	$: remainingCapital = Math.max(0, requiredCapital - (data.currentNetWorth ?? 0));
+	// Subtract already saved money in retirement accounts from required capital
+	$: remainingCapital = Math.max(0, requiredCapital - (data.retirementAccountValue ?? 0));
 	$: monthlySavingsNeeded =
 		yearsUntilRetirement > 0 ? remainingCapital / (yearsUntilRetirement * 12) : 0;
 
@@ -154,10 +154,10 @@
 				<div class="info-label">Potrzebny kapitał (reguła 4%):</div>
 				<div class="info-value">{formatPLN(requiredCapital)}</div>
 			</div>
-			{#if data.currentNetWorth && data.currentNetWorth > 0}
+			{#if data.retirementAccountValue && data.retirementAccountValue > 0}
 				<div class="calculated-info">
-					<div class="info-label">Aktualna wartość netto:</div>
-					<div class="info-value">{formatPLN(data.currentNetWorth)}</div>
+					<div class="info-label">Wartość kont emerytalnych:</div>
+					<div class="info-value">{formatPLN(data.retirementAccountValue)}</div>
 				</div>
 				<div class="calculated-info">
 					<div class="info-label">Pozostało do zgromadzenia:</div>

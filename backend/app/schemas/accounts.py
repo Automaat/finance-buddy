@@ -10,6 +10,7 @@ class AccountCreate(BaseModel):
     owner: str
     currency: str = "PLN"
     account_wrapper: str | None = None
+    purpose: str
 
     @field_validator("name")
     @classmethod
@@ -54,6 +55,13 @@ class AccountCreate(BaseModel):
             raise ValueError("Account wrapper must be 'IKE', 'IKZE', or 'PPK'")
         return v
 
+    @field_validator("purpose")
+    @classmethod
+    def validate_purpose(cls, v: str) -> str:
+        if v not in {"retirement", "emergency_fund", "general"}:
+            raise ValueError("Purpose must be 'retirement', 'emergency_fund', or 'general'")
+        return v
+
     @field_validator("owner")
     @classmethod
     def validate_owner(cls, v: str) -> str:
@@ -70,6 +78,7 @@ class AccountResponse(BaseModel):
     owner: str
     currency: str
     account_wrapper: str | None
+    purpose: str
     is_active: bool
     created_at: datetime
     current_value: float
@@ -81,6 +90,7 @@ class AccountUpdate(BaseModel):
     owner: str | None = None
     currency: str | None = None
     account_wrapper: str | None = None
+    purpose: str | None = None
 
     @field_validator("name")
     @classmethod
@@ -119,6 +129,13 @@ class AccountUpdate(BaseModel):
     def validate_account_wrapper(cls, v: str | None) -> str | None:
         if v is not None and v not in {"IKE", "IKZE", "PPK"}:
             raise ValueError("Account wrapper must be 'IKE', 'IKZE', or 'PPK'")
+        return v
+
+    @field_validator("purpose")
+    @classmethod
+    def validate_purpose(cls, v: str | None) -> str | None:
+        if v is not None and v not in {"retirement", "emergency_fund", "general"}:
+            raise ValueError("Purpose must be 'retirement', 'emergency_fund', or 'general'")
         return v
 
     @field_validator("owner")

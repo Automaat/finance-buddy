@@ -17,7 +17,12 @@ def test_create_snapshot_success(test_db_session):
     """Test creating a snapshot with account values"""
     # Create test accounts
     account1 = Account(
-        name="Test Bank", type="asset", category="bank", owner="Test", currency="PLN"
+        name="Test Bank",
+        type="asset",
+        category="bank",
+        owner="Test",
+        currency="PLN",
+        purpose="general",
     )
     account2 = Account(
         name="Test IKE",
@@ -26,6 +31,7 @@ def test_create_snapshot_success(test_db_session):
         owner="Test",
         currency="PLN",
         account_wrapper="IKE",
+        purpose="retirement",
     )
     test_db_session.add_all([account1, account2])
     test_db_session.commit()
@@ -52,7 +58,14 @@ def test_create_snapshot_success(test_db_session):
 def test_create_snapshot_duplicate_date(test_db_session):
     """Test creating snapshot with duplicate date fails"""
     # Create account
-    account = Account(name="Test Bank", type="asset", category="bank", owner="Test", currency="PLN")
+    account = Account(
+        name="Test Bank",
+        type="asset",
+        category="bank",
+        owner="Test",
+        currency="PLN",
+        purpose="general",
+    )
     test_db_session.add(account)
     test_db_session.commit()
 
@@ -96,9 +109,16 @@ def test_create_snapshot_invalid_account(test_db_session):
 def test_get_all_snapshots(test_db_session):
     """Test getting all snapshots with net worth calculation"""
     # Create accounts
-    asset = Account(name="Bank", type="asset", category="bank", owner="Test", currency="PLN")
+    asset = Account(
+        name="Bank", type="asset", category="bank", owner="Test", currency="PLN", purpose="general"
+    )
     liability = Account(
-        name="Mortgage", type="liability", category="mortgage", owner="Test", currency="PLN"
+        name="Mortgage",
+        type="liability",
+        category="mortgage",
+        owner="Test",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add_all([asset, liability])
     test_db_session.commit()
@@ -134,7 +154,14 @@ def test_get_all_snapshots(test_db_session):
 def test_get_snapshot_by_id(test_db_session):
     """Test getting single snapshot by ID"""
     # Create account and snapshot
-    account = Account(name="Test Bank", type="asset", category="bank", owner="Test", currency="PLN")
+    account = Account(
+        name="Test Bank",
+        type="asset",
+        category="bank",
+        owner="Test",
+        currency="PLN",
+        purpose="general",
+    )
     test_db_session.add(account)
     test_db_session.commit()
 
@@ -169,7 +196,14 @@ def test_get_snapshot_by_id_not_found(test_db_session):
 def test_create_snapshot_duplicate_account_ids(test_db_session):
     """Test creating snapshot with duplicate account IDs fails"""
     # Create account
-    account = Account(name="Test Bank", type="asset", category="bank", owner="Test", currency="PLN")
+    account = Account(
+        name="Test Bank",
+        type="asset",
+        category="bank",
+        owner="Test",
+        currency="PLN",
+        purpose="general",
+    )
     test_db_session.add(account)
     test_db_session.commit()
 
@@ -210,6 +244,7 @@ def test_create_snapshot_inactive_account(test_db_session):
         owner="Test",
         currency="PLN",
         is_active=True,
+        purpose="general",
     )
     inactive_account = Account(
         name="Inactive Bank",
@@ -218,6 +253,7 @@ def test_create_snapshot_inactive_account(test_db_session):
         owner="Test",
         currency="PLN",
         is_active=False,
+        purpose="general",
     )
     test_db_session.add_all([active_account, inactive_account])
     test_db_session.commit()
@@ -342,7 +378,9 @@ def test_create_snapshot_mixed_assets_and_accounts(test_db_session):
     from app.models import Asset
 
     # Create account and asset
-    account = Account(name="Bank", type="asset", category="bank", owner="Test", currency="PLN")
+    account = Account(
+        name="Bank", type="asset", category="bank", owner="Test", currency="PLN", purpose="general"
+    )
     asset = Asset(name="Car", is_active=True)
     test_db_session.add_all([account, asset])
     test_db_session.commit()
@@ -376,7 +414,9 @@ def test_get_all_snapshots_with_assets(test_db_session):
 
     # Create assets
     asset = Asset(name="Car", is_active=True)
-    account = Account(name="Bank", type="asset", category="bank", owner="Test", currency="PLN")
+    account = Account(
+        name="Bank", type="asset", category="bank", owner="Test", currency="PLN", purpose="general"
+    )
     test_db_session.add_all([asset, account])
     test_db_session.commit()
 
@@ -408,7 +448,9 @@ def test_get_snapshot_by_id_with_assets(test_db_session):
 
     # Create asset and account
     asset = Asset(name="Car", is_active=True)
-    account = Account(name="Bank", type="asset", category="bank", owner="Test", currency="PLN")
+    account = Account(
+        name="Bank", type="asset", category="bank", owner="Test", currency="PLN", purpose="general"
+    )
     test_db_session.add_all([asset, account])
     test_db_session.commit()
 

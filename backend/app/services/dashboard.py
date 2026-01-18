@@ -55,6 +55,7 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
             total_assets=0,
             total_liabilities=0,
             allocation=[],
+            retirement_account_value=0,
         )
 
     # Calculate net worth per snapshot
@@ -140,10 +141,19 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
             AllocationItem(category=row["category"], owner=row["owner"], value=float(row["value"]))
             for _, row in allocation_df.iterrows()
         ]
+
+        # Calculate retirement account value (accounts with purpose='retirement')
+        retirement_accounts_df = latest_df[
+            (pd.notna(latest_df["account_id"]))
+            & (latest_df["type"] == "asset")
+            & (latest_df["purpose"] == "retirement")
+        ]
+        retirement_account_value = float(retirement_accounts_df["value"].sum())
     else:
         total_assets = 0
         total_liabilities = 0
         allocation = []
+        retirement_account_value = 0
 
     return DashboardResponse(
         net_worth_history=net_worth_history,
@@ -152,4 +162,5 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
         total_assets=total_assets,
         total_liabilities=total_liabilities,
         allocation=allocation,
+        retirement_account_value=retirement_account_value,
     )

@@ -4,7 +4,12 @@ from app.models.account import Account
 def test_account_creation_postgres(test_db_session_postgres):
     """Test creating an account with PostgreSQL backend."""
     account = Account(
-        name="Savings Account", type="savings", category="banking", owner="John Doe", currency="USD"
+        name="Savings Account",
+        type="savings",
+        category="banking",
+        owner="John Doe",
+        currency="USD",
+        purpose="general",
     )
     test_db_session_postgres.add(account)
     test_db_session_postgres.commit()

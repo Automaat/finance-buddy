@@ -4,7 +4,12 @@ from app.models.account import Account
 def test_account_creation(test_db_session):
     """Test creating an account with all required fields."""
     account = Account(
-        name="Savings Account", type="savings", category="banking", owner="John Doe", currency="USD"
+        name="Savings Account",
+        type="savings",
+        category="banking",
+        owner="John Doe",
+        currency="USD",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -27,6 +32,7 @@ def test_account_default_is_active(test_db_session):
         category="banking",
         owner="Jane Smith",
         currency="EUR",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -43,6 +49,7 @@ def test_account_explicit_is_active_false(test_db_session):
         owner="John Doe",
         currency="USD",
         is_active=False,
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -53,7 +60,12 @@ def test_account_explicit_is_active_false(test_db_session):
 def test_account_update(test_db_session):
     """Test updating account fields."""
     account = Account(
-        name="Original Name", type="savings", category="banking", owner="John Doe", currency="USD"
+        name="Original Name",
+        type="savings",
+        category="banking",
+        owner="John Doe",
+        currency="USD",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -70,10 +82,20 @@ def test_account_update(test_db_session):
 def test_account_multiple_accounts(test_db_session):
     """Test creating multiple accounts."""
     account1 = Account(
-        name="Savings", type="savings", category="banking", owner="John Doe", currency="USD"
+        name="Savings",
+        type="savings",
+        category="banking",
+        owner="John Doe",
+        currency="USD",
+        purpose="general",
     )
     account2 = Account(
-        name="Checking", type="checking", category="banking", owner="Jane Smith", currency="EUR"
+        name="Checking",
+        type="checking",
+        category="banking",
+        owner="Jane Smith",
+        currency="EUR",
+        purpose="general",
     )
     test_db_session.add_all([account1, account2])
     test_db_session.commit()
@@ -85,7 +107,12 @@ def test_account_multiple_accounts(test_db_session):
 def test_account_string_length_constraints(test_db_session):
     """Test account with maximum length strings."""
     account = Account(
-        name="A" * 255, type="B" * 50, category="C" * 100, owner="D" * 100, currency="E" * 10
+        name="A" * 255,
+        type="B" * 50,
+        category="C" * 100,
+        owner="D" * 100,
+        currency="E" * 10,
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -101,7 +128,12 @@ def test_account_string_length_constraints(test_db_session):
 def test_account_deletion(test_db_session):
     """Test deleting an account."""
     account = Account(
-        name="To Delete", type="savings", category="banking", owner="John Doe", currency="USD"
+        name="To Delete",
+        type="savings",
+        category="banking",
+        owner="John Doe",
+        currency="USD",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()

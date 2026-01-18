@@ -10,7 +10,12 @@ def test_get_all_accounts_with_values(test_db_session):
     """Test getting all accounts with their latest snapshot values"""
     # Create accounts
     asset1 = Account(
-        name="Bank Account", type="asset", category="bank", owner="Marcin", currency="PLN"
+        name="Bank Account",
+        type="asset",
+        category="bank",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     asset2 = Account(
         name="IKE",
@@ -19,6 +24,7 @@ def test_get_all_accounts_with_values(test_db_session):
         owner="Marcin",
         currency="PLN",
         account_wrapper="IKE",
+        purpose="retirement",
     )
     liability = Account(
         name="Mortgage",
@@ -26,6 +32,7 @@ def test_get_all_accounts_with_values(test_db_session):
         category="mortgage",
         owner="Shared",
         currency="PLN",
+        purpose="general",
     )
     inactive = Account(
         name="Old Account",
@@ -34,6 +41,7 @@ def test_get_all_accounts_with_values(test_db_session):
         owner="Marcin",
         currency="PLN",
         is_active=False,
+        purpose="general",
     )
     test_db_session.add_all([asset1, asset2, liability, inactive])
     test_db_session.commit()
@@ -81,10 +89,20 @@ def test_get_all_accounts_no_snapshots(test_db_session):
     """Test getting accounts when no snapshots exist"""
     # Create accounts without snapshots
     asset = Account(
-        name="Bank Account", type="asset", category="bank", owner="Test", currency="PLN"
+        name="Bank Account",
+        type="asset",
+        category="bank",
+        owner="Test",
+        currency="PLN",
+        purpose="general",
     )
     liability = Account(
-        name="Loan", type="liability", category="mortgage", owner="Test", currency="PLN"
+        name="Loan",
+        type="liability",
+        category="mortgage",
+        owner="Test",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add_all([asset, liability])
     test_db_session.commit()
@@ -103,10 +121,20 @@ def test_get_all_accounts_partial_values(test_db_session):
     """Test getting accounts when only some have values in latest snapshot"""
     # Create accounts
     account1 = Account(
-        name="Account 1", type="asset", category="bank", owner="Test", currency="PLN"
+        name="Account 1",
+        type="asset",
+        category="bank",
+        owner="Test",
+        currency="PLN",
+        purpose="general",
     )
     account2 = Account(
-        name="Account 2", type="asset", category="bank", owner="Test", currency="PLN"
+        name="Account 2",
+        type="asset",
+        category="bank",
+        owner="Test",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add_all([account1, account2])
     test_db_session.commit()
@@ -148,6 +176,7 @@ def test_create_account_asset(test_db_session):
         category="bank",
         owner="Marcin",
         currency="PLN",
+        purpose="general",
     )
 
     result = create_account(test_db_session, data)
@@ -170,7 +199,12 @@ def test_create_account_asset(test_db_session):
 def test_create_account_liability(test_db_session):
     """Test creating a new liability account"""
     data = AccountCreate(
-        name="Car Loan", type="liability", category="installment", owner="Ewa", currency="PLN"
+        name="Car Loan",
+        type="liability",
+        category="installment",
+        owner="Ewa",
+        currency="PLN",
+        purpose="general",
     )
 
     result = create_account(test_db_session, data)
@@ -194,6 +228,7 @@ def test_create_account_investment(test_db_session):
         owner="Shared",
         currency="PLN",
         account_wrapper="IKE",
+        purpose="retirement",
     )
 
     result = create_account(test_db_session, data)
@@ -210,7 +245,9 @@ def test_create_account_investment(test_db_session):
 
 def test_create_account_with_default_currency(test_db_session):
     """Test creating account uses PLN as default currency"""
-    data = AccountCreate(name="Test Account", type="asset", category="other", owner="Marcin")
+    data = AccountCreate(
+        name="Test Account", type="asset", category="other", owner="Marcin", purpose="general"
+    )
 
     result = create_account(test_db_session, data)
 
@@ -229,6 +266,7 @@ def test_create_account_duplicate_name(test_db_session):
         category="bank",
         owner="Marcin",
         currency="PLN",
+        purpose="general",
     )
     create_account(test_db_session, data1)
 
@@ -240,6 +278,7 @@ def test_create_account_duplicate_name(test_db_session):
         owner="Ewa",
         currency="PLN",
         account_wrapper="IKE",
+        purpose="retirement",
     )
 
     with pytest.raises(HTTPException) as exc_info:
@@ -253,7 +292,12 @@ def test_update_account_success(test_db_session):
     """Test updating an account successfully"""
     # Create account
     account = Account(
-        name="Original Name", type="asset", category="bank", owner="Marcin", currency="PLN"
+        name="Original Name",
+        type="asset",
+        category="bank",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -282,10 +326,20 @@ def test_update_account_duplicate_name(test_db_session):
 
     # Create two accounts
     account1 = Account(
-        name="Account 1", type="asset", category="bank", owner="Marcin", currency="PLN"
+        name="Account 1",
+        type="asset",
+        category="bank",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     account2 = Account(
-        name="Account 2", type="asset", category="bank", owner="Marcin", currency="PLN"
+        name="Account 2",
+        type="asset",
+        category="bank",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add_all([account1, account2])
     test_db_session.commit()
@@ -318,7 +372,12 @@ def test_update_account_partial(test_db_session):
     """Test partial update of account"""
     # Create account
     account = Account(
-        name="Original", type="asset", category="bank", owner="Marcin", currency="PLN"
+        name="Original",
+        type="asset",
+        category="bank",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -335,11 +394,43 @@ def test_update_account_partial(test_db_session):
     assert result.currency == "PLN"
 
 
+def test_update_account_purpose(test_db_session):
+    """Test updating account purpose"""
+    # Create account
+    account = Account(
+        name="Test Account",
+        type="asset",
+        category="bank",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+    )
+    test_db_session.add(account)
+    test_db_session.commit()
+    account_id = account.id
+
+    # Update purpose
+    data = AccountUpdate(purpose="retirement")
+    result = update_account(test_db_session, account_id, data)
+
+    assert result.purpose == "retirement"
+    assert result.name == "Test Account"
+
+    # Verify in database
+    saved_account = test_db_session.query(Account).filter_by(id=account_id).first()
+    assert saved_account.purpose == "retirement"
+
+
 def test_delete_account_success(test_db_session):
     """Test soft deleting an account"""
     # Create account
     account = Account(
-        name="To Delete", type="asset", category="bank", owner="Marcin", currency="PLN"
+        name="To Delete",
+        type="asset",
+        category="bank",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -370,7 +461,12 @@ def test_delete_account_idempotent(test_db_session):
     """Test deleting already deleted account is idempotent"""
     # Create account
     account = Account(
-        name="Already Deleted", type="asset", category="bank", owner="Marcin", currency="PLN"
+        name="Already Deleted",
+        type="asset",
+        category="bank",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()

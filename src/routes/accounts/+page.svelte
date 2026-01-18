@@ -73,7 +73,8 @@
 		category: 'bank',
 		owner: defaultOwner,
 		currency: 'PLN',
-		account_wrapper: null as string | null
+		account_wrapper: null as string | null,
+		purpose: 'general'
 	};
 
 	let error = '';
@@ -86,7 +87,8 @@
 			category: editingAccount.category,
 			owner: editingAccount.owner,
 			currency: editingAccount.currency,
-			account_wrapper: editingAccount.account_wrapper
+			account_wrapper: editingAccount.account_wrapper,
+			purpose: editingAccount.purpose
 		};
 	} else if (showForm) {
 		formData = {
@@ -95,7 +97,8 @@
 			category: 'bank',
 			owner: defaultOwner,
 			currency: 'PLN',
-			account_wrapper: null
+			account_wrapper: null,
+			purpose: 'general'
 		};
 	}
 
@@ -467,6 +470,15 @@
 					<option value="IKE">IKE</option>
 					<option value="IKZE">IKZE</option>
 					<option value="PPK">PPK</option>
+				</select>
+			</div>
+
+			<div class="form-group">
+				<label for="purpose">Cel konta</label>
+				<select id="purpose" bind:value={formData.purpose} required>
+					<option value="general">Ogólne</option>
+					<option value="retirement">Emerytura</option>
+					<option value="emergency_fund">Fundusz awaryjny</option>
 				</select>
 			</div>
 		</div>
