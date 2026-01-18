@@ -8,7 +8,8 @@
 		{ href: '/transactions', label: 'Transakcje', icon: '💸' },
 		{ href: '/assets', label: 'Majątek', icon: '🏠' },
 		{ href: '/debts', label: 'Zobowiązania', icon: '📋' },
-		{ href: '/snapshots', label: 'Snapshoty', icon: '📸' }
+		{ href: '/snapshots', label: 'Snapshoty', icon: '📸' },
+		{ href: '/salaries', label: 'Wynagrodzenia', icon: '💵' }
 	];
 </script>
 
