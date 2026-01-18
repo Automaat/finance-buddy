@@ -394,6 +394,33 @@ def test_update_account_partial(test_db_session):
     assert result.currency == "PLN"
 
 
+def test_update_account_purpose(test_db_session):
+    """Test updating account purpose"""
+    # Create account
+    account = Account(
+        name="Test Account",
+        type="asset",
+        category="bank",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+    )
+    test_db_session.add(account)
+    test_db_session.commit()
+    account_id = account.id
+
+    # Update purpose
+    data = AccountUpdate(purpose="retirement")
+    result = update_account(test_db_session, account_id, data)
+
+    assert result.purpose == "retirement"
+    assert result.name == "Test Account"
+
+    # Verify in database
+    saved_account = test_db_session.query(Account).filter_by(id=account_id).first()
+    assert saved_account.purpose == "retirement"
+
+
 def test_delete_account_success(test_db_session):
     """Test soft deleting an account"""
     # Create account

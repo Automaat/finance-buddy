@@ -50,3 +50,85 @@ def test_create_account_invalid_owner(test_client):
     response = test_client.post("/api/accounts", json=payload)
 
     assert response.status_code == 422
+
+
+def test_create_account_invalid_purpose(test_client):
+    """Test POST /api/accounts with invalid purpose"""
+    payload = {
+        "name": "Invalid Purpose Account",
+        "type": "asset",
+        "category": "bank",
+        "owner": "Marcin",
+        "purpose": "invalid_purpose",
+    }
+
+    response = test_client.post("/api/accounts", json=payload)
+
+    assert response.status_code == 422
+
+
+def test_create_account_invalid_wrapper(test_client):
+    """Test POST /api/accounts with invalid account wrapper"""
+    payload = {
+        "name": "Invalid Wrapper Account",
+        "type": "asset",
+        "category": "bank",
+        "owner": "Marcin",
+        "purpose": "general",
+        "account_wrapper": "INVALID",
+    }
+
+    response = test_client.post("/api/accounts", json=payload)
+
+    assert response.status_code == 422
+
+
+def test_update_account_invalid_purpose(test_client):
+    """Test updating account with invalid purpose fails"""
+    payload = {"purpose": "invalid_purpose"}
+
+    response = test_client.put("/api/accounts/1", json=payload)
+
+    assert response.status_code == 422
+
+
+def test_create_account_empty_name(test_client):
+    """Test creating account with empty name fails"""
+    payload = {
+        "name": "",
+        "type": "asset",
+        "category": "bank",
+        "owner": "Marcin",
+        "purpose": "general",
+    }
+
+    response = test_client.post("/api/accounts", json=payload)
+
+    assert response.status_code == 422
+
+
+def test_update_account_empty_name(test_client):
+    """Test updating account with empty name fails"""
+    payload = {"name": ""}
+
+    response = test_client.put("/api/accounts/1", json=payload)
+
+    assert response.status_code == 422
+
+
+def test_update_account_invalid_category(test_client):
+    """Test updating account with invalid category fails"""
+    payload = {"category": "invalid_category"}
+
+    response = test_client.put("/api/accounts/1", json=payload)
+
+    assert response.status_code == 422
+
+
+def test_update_account_invalid_owner(test_client):
+    """Test updating account with invalid owner fails"""
+    payload = {"owner": "InvalidOwner"}
+
+    response = test_client.put("/api/accounts/1", json=payload)
+
+    assert response.status_code == 422
