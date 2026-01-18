@@ -357,12 +357,15 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
             wrapper = row["account_wrapper"] if pd.notna(row["account_wrapper"]) else "Regular"
             wrapper_breakdown[wrapper] = wrapper_breakdown.get(wrapper, 0) + row["value"]
 
+        # Calculate total for percentage (includes PPK, unlike total_investment_value)
+        all_investment_total = sum(wrapper_breakdown.values())
+
         wrapper_list = [
             AccountWrapperBreakdown(
                 wrapper=wrapper,
                 value=float(value),
                 percentage=(
-                    float(value / total_investment_value * 100) if total_investment_value > 0 else 0
+                    float(value / all_investment_total * 100) if all_investment_total > 0 else 0
                 ),
             )
             for wrapper, value in wrapper_breakdown.items()
@@ -407,15 +410,22 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
             total_investment_value=0,
         )
 
+    # Fetch and prepare transactions for time series calculations
+    # Execute query once and merge with accounts to avoid repeated operations in loops
+    transactions_query = select(Transaction).where(Transaction.is_active.is_(True))
+    transactions_df = pd.read_sql(transactions_query, db.get_bind())
+    if not transactions_df.empty:
+        transactions_with_accounts_df = transactions_df.merge(
+            accounts_df, left_on="account_id", right_on="id", how="left"
+        )
+    else:
+        transactions_with_accounts_df = pd.DataFrame()
+
     # Calculate investment time series
     investment_time_series = []
     if not df.empty and not snapshots_df.empty:
         # Define investment categories
         investment_categories = {"stock", "bond", "fund", "etf", "gold", "ppk"}
-
-        # Get all transactions sorted by date
-        transactions_query = select(Transaction).where(Transaction.is_active.is_(True))
-        transactions_df = pd.read_sql(transactions_query, db.get_bind())
 
         # For each snapshot, calculate investment metrics
         for _, snapshot_row in snapshots_df.iterrows():
@@ -433,16 +443,11 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
 
             # Calculate cumulative contributions up to this snapshot date
             cumulative_contributions = 0
-            if not transactions_df.empty:
-                # Join transactions with accounts to filter investment accounts
-                trans_with_accounts = transactions_df.merge(
-                    accounts_df, left_on="account_id", right_on="id", how="left"
-                )
-
+            if not transactions_with_accounts_df.empty:
                 # Filter for investment transactions up to snapshot date
-                investment_trans = trans_with_accounts[
-                    (trans_with_accounts["category"].isin(investment_categories))
-                    & (trans_with_accounts["date"] <= snapshot_date)
+                investment_trans = transactions_with_accounts_df[
+                    (transactions_with_accounts_df["category"].isin(investment_categories))
+                    & (transactions_with_accounts_df["date"] <= snapshot_date)
                 ]
                 cumulative_contributions = float(investment_trans["amount"].sum())
 
@@ -465,8 +470,6 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
 
     if not df.empty and not snapshots_df.empty:
         investment_categories = {"stock", "bond", "fund", "etf", "gold", "ppk"}
-        transactions_query = select(Transaction).where(Transaction.is_active.is_(True))
-        transactions_df = pd.read_sql(transactions_query, db.get_bind())
 
         for _, snapshot_row in snapshots_df.iterrows():
             snapshot_date = snapshot_row["date"]
@@ -490,15 +493,11 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
 
                 # Calculate cumulative contributions for this wrapper up to snapshot date
                 cumulative_contributions = 0
-                if not transactions_df.empty:
-                    trans_with_accounts = transactions_df.merge(
-                        accounts_df, left_on="account_id", right_on="id", how="left"
-                    )
-
-                    wrapper_trans = trans_with_accounts[
-                        (trans_with_accounts["category"].isin(investment_categories))
-                        & (trans_with_accounts["account_wrapper"] == wrapper)
-                        & (trans_with_accounts["date"] <= snapshot_date)
+                if not transactions_with_accounts_df.empty:
+                    wrapper_trans = transactions_with_accounts_df[
+                        (transactions_with_accounts_df["category"].isin(investment_categories))
+                        & (transactions_with_accounts_df["account_wrapper"] == wrapper)
+                        & (transactions_with_accounts_df["date"] <= snapshot_date)
                     ]
                     cumulative_contributions = float(wrapper_trans["amount"].sum())
 
@@ -524,34 +523,41 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
     bond_series = []
 
     if not df.empty and not snapshots_df.empty:
-        transactions_query = select(Transaction).where(Transaction.is_active.is_(True))
-        transactions_df = pd.read_sql(transactions_query, db.get_bind())
+        # Define category grouping (matching allocation logic)
+        # Map individual categories to their group for consistent aggregation
+        category_to_group = {
+            "stock": "stock",
+            "fund": "stock",  # fund grouped as stock
+            "etf": "stock",  # etf grouped as stock
+            "bond": "bond",
+        }
 
         for _, snapshot_row in snapshots_df.iterrows():
             snapshot_date = snapshot_row["date"]
             snapshot_id = snapshot_row["id"]
 
-            # Calculate for each category
-            for category, series_list in [("stock", stock_series), ("bond", bond_series)]:
-                # Get investment values for this category in this snapshot
+            # Calculate for each category group
+            for target_group, series_list in [("stock", stock_series), ("bond", bond_series)]:
+                # Get all categories that map to this group
+                matching_categories = [
+                    cat for cat, group in category_to_group.items() if group == target_group
+                ]
+
+                # Get investment values for this category group in this snapshot
                 category_investments = df[
                     (df["snapshot_id"] == snapshot_id)
                     & (pd.notna(df["account_id"]))
                     & (df["type"] == "asset")
-                    & (df["category"] == category)
+                    & (df["category"].isin(matching_categories))
                 ]
                 category_value = float(category_investments["value"].sum())
 
-                # Calculate cumulative contributions for this category up to snapshot date
+                # Calculate cumulative contributions for this category group up to snapshot date
                 cumulative_contributions = 0
-                if not transactions_df.empty:
-                    trans_with_accounts = transactions_df.merge(
-                        accounts_df, left_on="account_id", right_on="id", how="left"
-                    )
-
-                    category_trans = trans_with_accounts[
-                        (trans_with_accounts["category"] == category)
-                        & (trans_with_accounts["date"] <= snapshot_date)
+                if not transactions_with_accounts_df.empty:
+                    category_trans = transactions_with_accounts_df[
+                        (transactions_with_accounts_df["category"].isin(matching_categories))
+                        & (transactions_with_accounts_df["date"] <= snapshot_date)
                     ]
                     cumulative_contributions = float(category_trans["amount"].sum())
 

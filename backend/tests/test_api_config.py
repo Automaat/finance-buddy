@@ -20,6 +20,8 @@ def test_create_config_success(test_client):
         "allocation_bonds": 30,
         "allocation_gold": 8,
         "allocation_commodities": 2,
+        "monthly_expenses": 5000,
+        "monthly_mortgage_payment": 3000,
     }
 
     response = test_client.put("/api/config", json=payload)
@@ -35,6 +37,8 @@ def test_create_config_success(test_client):
     assert data["allocation_bonds"] == 30
     assert data["allocation_gold"] == 8
     assert data["allocation_commodities"] == 2
+    assert data["monthly_expenses"] == "5000.00"
+    assert data["monthly_mortgage_payment"] == "3000.00"
 
 
 def test_get_config_success(test_client):
@@ -49,6 +53,8 @@ def test_get_config_success(test_client):
         "allocation_bonds": 30,
         "allocation_gold": 8,
         "allocation_commodities": 2,
+        "monthly_expenses": 5000,
+        "monthly_mortgage_payment": 3000,
     }
     test_client.put("/api/config", json=payload)
 
@@ -74,6 +80,8 @@ def test_update_config_success(test_client):
         "allocation_bonds": 30,
         "allocation_gold": 8,
         "allocation_commodities": 2,
+        "monthly_expenses": 5000,
+        "monthly_mortgage_payment": 3000,
     }
     test_client.put("/api/config", json=payload)
 
@@ -87,6 +95,8 @@ def test_update_config_success(test_client):
         "allocation_bonds": 35,
         "allocation_gold": 10,
         "allocation_commodities": 5,
+        "monthly_expenses": 6000,
+        "monthly_mortgage_payment": 4000,
     }
     response = test_client.put("/api/config", json=updated_payload)
 
@@ -111,6 +121,8 @@ def test_create_config_invalid_allocation_sum(test_client):
         "allocation_bonds": 30,
         "allocation_gold": 5,
         "allocation_commodities": 3,  # Market sum = 98%
+        "monthly_expenses": 5000,
+        "monthly_mortgage_payment": 3000,
     }
 
     response = test_client.put("/api/config", json=payload)
@@ -130,6 +142,8 @@ def test_create_config_invalid_retirement_age(test_client):
         "allocation_bonds": 24,
         "allocation_gold": 5,
         "allocation_commodities": 3,
+        "monthly_expenses": 5000,
+        "monthly_mortgage_payment": 3000,
     }
 
     response = test_client.put("/api/config", json=payload)
@@ -148,6 +162,8 @@ def test_create_config_invalid_allocation_range(test_client):
         "allocation_bonds": -10,  # Invalid
         "allocation_gold": 5,
         "allocation_commodities": 3,
+        "monthly_expenses": 5000,
+        "monthly_mortgage_payment": 3000,
     }
 
     response = test_client.put("/api/config", json=payload)
@@ -166,6 +182,8 @@ def test_create_config_negative_retirement_salary(test_client):
         "allocation_bonds": 24,
         "allocation_gold": 5,
         "allocation_commodities": 3,
+        "monthly_expenses": 5000,
+        "monthly_mortgage_payment": 3000,
     }
 
     response = test_client.put("/api/config", json=payload)
@@ -187,6 +205,8 @@ def test_create_config_future_birth_date(test_client):
         "allocation_bonds": 24,
         "allocation_gold": 5,
         "allocation_commodities": 3,
+        "monthly_expenses": 5000,
+        "monthly_mortgage_payment": 3000,
     }
 
     response = test_client.put("/api/config", json=payload)
