@@ -1,4 +1,5 @@
 from datetime import UTC, date, datetime
+from decimal import Decimal
 
 from fastapi import HTTPException
 from sqlalchemy import desc, select
@@ -136,7 +137,7 @@ def update_salary_record(
     if data.date is not None:
         record.date = data.date
     if data.gross_amount is not None:
-        record.gross_amount = data.gross_amount
+        record.gross_amount = Decimal(str(data.gross_amount))
     if data.contract_type is not None:
         record.contract_type = data.contract_type
     if data.company is not None:
