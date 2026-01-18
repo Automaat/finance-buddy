@@ -1,0 +1,23 @@
+from datetime import date
+from decimal import Decimal
+
+from sqlalchemy import CheckConstraint, Numeric
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.core.database import Base
+
+
+class AppConfig(Base):
+    __tablename__ = "app_config"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    birth_date: Mapped[date] = mapped_column(nullable=False)
+    retirement_age: Mapped[int] = mapped_column(nullable=False)
+    retirement_monthly_salary: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    allocation_real_estate: Mapped[int] = mapped_column(nullable=False)
+    allocation_stocks: Mapped[int] = mapped_column(nullable=False)
+    allocation_bonds: Mapped[int] = mapped_column(nullable=False)
+    allocation_gold: Mapped[int] = mapped_column(nullable=False)
+    allocation_commodities: Mapped[int] = mapped_column(nullable=False)
+
+    __table_args__ = (CheckConstraint("id = 1", name="single_row"),)

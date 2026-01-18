@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import (
     accounts,
     assets,
+    config,
     dashboard,
     debt_payments,
     debts,
@@ -41,6 +42,7 @@ app.add_middleware(
 app.include_router(dashboard.router)
 app.include_router(accounts.router)
 app.include_router(assets.router)
+app.include_router(config.router)
 app.include_router(debts.router)
 app.include_router(debt_payments.router)
 app.include_router(retirement.router)

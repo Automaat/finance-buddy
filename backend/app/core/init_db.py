@@ -2,10 +2,34 @@ from app.core.database import Base, SessionLocal, engine
 
 # Import models to register them with SQLAlchemy Base.metadata
 # These imports are required for Base.metadata.create_all() to work
-from app.models import Account, Asset, Goal, RetirementLimit, Snapshot, SnapshotValue, Transaction
+from app.models import (
+    Account,
+    AppConfig,
+    Asset,
+    Debt,
+    DebtPayment,
+    Goal,
+    RetirementLimit,
+    SalaryRecord,
+    Snapshot,
+    SnapshotValue,
+    Transaction,
+)
 
 # Reference imports to satisfy linter (models are registered via import side effect)
-_ = (Account, Asset, Goal, RetirementLimit, Snapshot, SnapshotValue, Transaction)
+_ = (
+    Account,
+    AppConfig,
+    Asset,
+    Debt,
+    DebtPayment,
+    Goal,
+    RetirementLimit,
+    SalaryRecord,
+    Snapshot,
+    SnapshotValue,
+    Transaction,
+)
 
 
 def init_db() -> None:
