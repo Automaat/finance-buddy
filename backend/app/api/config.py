@@ -19,7 +19,8 @@ def get_app_config(db: Session = Depends(get_db)) -> ConfigResponse:  # noqa: B0
 
 @router.put("", response_model=ConfigResponse)
 def update_app_config(
-    data: ConfigCreate, db: Session = Depends(get_db)  # noqa: B008
+    data: ConfigCreate,
+    db: Session = Depends(get_db),  # noqa: B008
 ) -> ConfigResponse:
     """Create or update app configuration"""
     return upsert_config(db, data)
