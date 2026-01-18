@@ -2,7 +2,6 @@ from datetime import UTC, date, datetime
 
 from fastapi import HTTPException
 from sqlalchemy import desc, select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import SalaryRecord
@@ -86,15 +85,9 @@ def create_salary_record(db: Session, data: SalaryRecordCreate) -> SalaryRecordR
         is_active=True,
     )
 
-    try:
-        db.add(record)
-        db.commit()
-        db.refresh(record)
-    except IntegrityError as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=409, detail=f"Salary record for {data.owner} on {data.date} already exists"
-        ) from e
+    db.add(record)
+    db.commit()
+    db.refresh(record)
 
     return SalaryRecordResponse(
         id=record.id,

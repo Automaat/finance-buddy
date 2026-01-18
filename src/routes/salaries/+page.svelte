@@ -153,15 +153,16 @@
 		const companyMap = new Map<string, Array<[string, number]>>();
 
 		data.salaries.salary_records.forEach((r) => {
-			if (!companyMap.has(r.company)) {
-				companyMap.set(r.company, []);
+			const companyName = (r.company ?? '').trim() || 'Nieokreślona firma';
+			if (!companyMap.has(companyName)) {
+				companyMap.set(companyName, []);
 			}
-			companyMap.get(r.company)!.push([r.date, r.gross_amount]);
+			companyMap.get(companyName)!.push([r.date, r.gross_amount]);
 		});
 
 		// Sort each company's data by date
-		companyMap.forEach((data) => {
-			data.sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime());
+		companyMap.forEach((salaryData) => {
+			salaryData.sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime());
 		});
 
 		// Color palette for different companies
@@ -184,10 +185,10 @@
 			lineStyle: { color: string; width: number };
 		}> = [];
 		let colorIndex = 0;
-		companyMap.forEach((data, company) => {
+		companyMap.forEach((salaryData, company) => {
 			series.push({
 				name: company,
-				data: data,
+				data: salaryData,
 				type: 'line' as const,
 				smooth: true,
 				lineStyle: { color: colors[colorIndex % colors.length], width: 2 }
@@ -203,6 +204,9 @@
 			tooltip: {
 				trigger: 'axis',
 				formatter: (params: any) => {
+					if (!params || !Array.isArray(params) || params.length === 0) {
+						return '';
+					}
 					let result = `${new Date(params[0].value[0]).toLocaleDateString('pl-PL')}<br/>`;
 					params.forEach((p: any) => {
 						result += `${p.seriesName}: ${formatPLN(p.value[1])}<br/>`;
