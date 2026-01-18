@@ -23,7 +23,7 @@ class ConfigCreate(BaseModel):
         today = datetime.now(tz=UTC).date()
         if v >= today:
             raise ValueError("Birth date must be in the past")
-        age = (today - v).days // 365
+        age = int((today - v).days / 365.25)
         if age < 18 or age > 100:
             raise ValueError("Age must be between 18 and 100")
         return v
@@ -65,6 +65,17 @@ class ConfigCreate(BaseModel):
         )
         if market_total != 100:
             raise ValueError(f"Market allocations must sum to 100%, got {market_total}%")
+        return self
+
+    @model_validator(mode="after")
+    def validate_retirement_age_realistic(self) -> Self:
+        today = datetime.now(tz=UTC).date()
+        current_age = int((today - self.birth_date).days / 365.25)
+        if self.retirement_age <= current_age:
+            raise ValueError(
+                f"Retirement age ({self.retirement_age}) must be greater "
+                f"than current age ({current_age})"
+            )
         return self
 
 

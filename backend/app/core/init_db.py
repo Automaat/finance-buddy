@@ -6,15 +6,30 @@ from app.models import (
     Account,
     AppConfig,
     Asset,
+    Debt,
+    DebtPayment,
     Goal,
     RetirementLimit,
+    SalaryRecord,
     Snapshot,
     SnapshotValue,
     Transaction,
 )
 
 # Reference imports to satisfy linter (models are registered via import side effect)
-_ = (Account, AppConfig, Asset, Goal, RetirementLimit, Snapshot, SnapshotValue, Transaction)
+_ = (
+    Account,
+    AppConfig,
+    Asset,
+    Debt,
+    DebtPayment,
+    Goal,
+    RetirementLimit,
+    SalaryRecord,
+    Snapshot,
+    SnapshotValue,
+    Transaction,
+)
 
 
 def init_db() -> None:

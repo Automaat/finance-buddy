@@ -44,8 +44,11 @@
 
 	// Calculate current age and years until retirement
 	$: currentAge = birthDate
-		? Math.floor(
-				(new Date().getTime() - new Date(birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
+		? Math.max(
+				0,
+				Math.floor(
+					(new Date().getTime() - new Date(birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
+				)
 			)
 		: 0;
 	$: yearsUntilRetirement = Math.max(0, retirementAge - currentAge);
@@ -54,8 +57,10 @@
 	$: requiredCapital = retirementMonthlySalary * 12 * 25;
 
 	// Calculate monthly savings needed (simple linear calculation without investment returns)
+	// Subtract already saved money from required capital
+	$: remainingCapital = Math.max(0, requiredCapital - (data.currentNetWorth ?? 0));
 	$: monthlySavingsNeeded =
-		yearsUntilRetirement > 0 ? requiredCapital / (yearsUntilRetirement * 12) : 0;
+		yearsUntilRetirement > 0 ? remainingCapital / (yearsUntilRetirement * 12) : 0;
 
 	async function saveConfig() {
 		if (!isValidAllocation) {
@@ -90,6 +95,8 @@
 		} catch (err) {
 			if (err instanceof Error) {
 				error = err.message;
+			} else {
+				error = String(err) || 'Unknown error';
 			}
 		} finally {
 			saving = false;
@@ -133,7 +140,7 @@
 				{/if}
 			</div>
 			<div class="form-group">
-				<label for="retirement-salary">Oczekiwana miesięczna pensja emerytalna (PLN)</label>
+				<label for="retirement-salary">Oczekiwany miesięczny dochód emerytalny (PLN)</label>
 				<input
 					id="retirement-salary"
 					type="number"
@@ -147,10 +154,24 @@
 				<div class="info-label">Potrzebny kapitał (reguła 4%):</div>
 				<div class="info-value">{formatPLN(requiredCapital)}</div>
 			</div>
+			{#if data.currentNetWorth && data.currentNetWorth > 0}
+				<div class="calculated-info">
+					<div class="info-label">Aktualna wartość netto:</div>
+					<div class="info-value">{formatPLN(data.currentNetWorth)}</div>
+				</div>
+				<div class="calculated-info">
+					<div class="info-label">Pozostało do zgromadzenia:</div>
+					<div class="info-value">{formatPLN(remainingCapital)}</div>
+				</div>
+			{/if}
 			{#if yearsUntilRetirement > 0}
 				<div class="calculated-info">
 					<div class="info-label">Miesięczne oszczędności potrzebne:</div>
 					<div class="info-value">{formatPLN(monthlySavingsNeeded)}</div>
+				</div>
+			{:else if currentAge > 0}
+				<div class="calculated-info">
+					<div class="info-label">Już w wieku emerytalnym</div>
 				</div>
 			{/if}
 		</CardContent>
