@@ -34,6 +34,8 @@
 	let allocationGold = data.config?.allocation_gold ?? defaults.allocation_gold;
 	let allocationCommodities =
 		data.config?.allocation_commodities ?? defaults.allocation_commodities;
+	let monthlyExpenses = data.config?.monthly_expenses ?? 0;
+	let monthlyMortgagePayment = data.config?.monthly_mortgage_payment ?? 0;
 
 	let error = '';
 	let saving = false;
@@ -82,7 +84,9 @@
 					allocation_stocks: allocationStocks,
 					allocation_bonds: allocationBonds,
 					allocation_gold: allocationGold,
-					allocation_commodities: allocationCommodities
+					allocation_commodities: allocationCommodities,
+					monthly_expenses: monthlyExpenses,
+					monthly_mortgage_payment: monthlyMortgagePayment
 				})
 			});
 
@@ -255,6 +259,38 @@
 						<span class="warning">⚠️</span>
 					{/if}
 				</div>
+			</div>
+		</CardContent>
+	</Card>
+
+	<Card>
+		<CardHeader>
+			<CardTitle>📈 Metryki</CardTitle>
+		</CardHeader>
+		<CardContent>
+			<div class="form-group">
+				<label for="monthly-expenses">Miesięczne wydatki (PLN)</label>
+				<input
+					id="monthly-expenses"
+					type="number"
+					min="0"
+					step="100"
+					bind:value={monthlyExpenses}
+					class="input"
+				/>
+				<div class="field-hint">Używane do obliczenia miesięcy funduszu awaryjnego</div>
+			</div>
+			<div class="form-group">
+				<label for="monthly-mortgage">Miesięczna rata hipoteki (PLN)</label>
+				<input
+					id="monthly-mortgage"
+					type="number"
+					min="0"
+					step="100"
+					bind:value={monthlyMortgagePayment}
+					class="input"
+				/>
+				<div class="field-hint">Używane do obliczenia czasu spłaty hipoteki</div>
 			</div>
 		</CardContent>
 	</Card>

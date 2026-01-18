@@ -8,4 +8,6 @@ export interface AppConfig {
 	allocation_bonds: number;
 	allocation_gold: number;
 	allocation_commodities: number;
+	monthly_expenses: number;
+	monthly_mortgage_payment: number;
 }

@@ -4,6 +4,7 @@
 
 	const navItems = [
 		{ href: '/', label: 'Dashboard', icon: '📊' },
+		{ href: '/metryki', label: 'Metryki', icon: '📈' },
 		{ href: '/accounts', label: 'Konta', icon: '💰' },
 		{ href: '/transactions', label: 'Transakcje', icon: '💸' },
 		{ href: '/assets', label: 'Majątek', icon: '🏠' },
