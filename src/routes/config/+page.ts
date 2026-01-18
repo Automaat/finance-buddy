@@ -18,7 +18,7 @@ export const load: PageLoad = async ({ fetch }) => {
 			return {
 				config: null,
 				isFirstTime: true,
-				currentNetWorth: 0
+				retirementAccountValue: 0
 			};
 		}
 
@@ -28,23 +28,23 @@ export const load: PageLoad = async ({ fetch }) => {
 
 		const data: AppConfig = await response.json();
 
-		// Fetch current net worth from dashboard
-		let currentNetWorth = 0;
+		// Fetch retirement account value from dashboard
+		let retirementAccountValue = 0;
 		try {
 			const dashboardResponse = await fetch(`${apiUrl}/api/dashboard`);
 			if (dashboardResponse.ok) {
 				const dashboardData = await dashboardResponse.json();
-				currentNetWorth = dashboardData.current_net_worth || 0;
+				retirementAccountValue = dashboardData.retirement_account_value || 0;
 			}
 		} catch {
 			// If dashboard fetch fails, default to 0
-			currentNetWorth = 0;
+			retirementAccountValue = 0;
 		}
 
 		return {
 			config: data,
 			isFirstTime: false,
-			currentNetWorth
+			retirementAccountValue
 		};
 	} catch (err) {
 		if (err instanceof Error && 'status' in err) {

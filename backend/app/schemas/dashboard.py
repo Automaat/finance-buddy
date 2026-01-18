@@ -21,3 +21,4 @@ class DashboardResponse(BaseModel):
     total_assets: float
     total_liabilities: float
     allocation: list[AllocationItem]
+    retirement_account_value: float

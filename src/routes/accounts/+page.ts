@@ -12,6 +12,7 @@ export interface Account {
 	owner: string;
 	currency: string;
 	account_wrapper: string | null;
+	purpose: string;
 	is_active: boolean;
 	created_at: string;
 	current_value: number;

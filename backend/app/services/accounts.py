@@ -37,6 +37,7 @@ def get_all_accounts(db: Session) -> AccountsListResponse:
             owner=account.owner,
             currency=account.currency,
             account_wrapper=account.account_wrapper,
+            purpose=account.purpose,
             is_active=account.is_active,
             created_at=account.created_at,
             current_value=latest_values.get(account.id, 0.0),
@@ -73,6 +74,7 @@ def create_account(db: Session, data: AccountCreate) -> AccountResponse:
         owner=data.owner,
         currency=data.currency,
         account_wrapper=data.account_wrapper,
+        purpose=data.purpose,
         is_active=True,
     )
     db.add(account)
@@ -87,6 +89,7 @@ def create_account(db: Session, data: AccountCreate) -> AccountResponse:
         owner=account.owner,
         currency=account.currency,
         account_wrapper=account.account_wrapper,
+        purpose=account.purpose,
         is_active=account.is_active,
         created_at=account.created_at,
         current_value=0.0,
@@ -127,6 +130,8 @@ def update_account(db: Session, account_id: int, data: AccountUpdate) -> Account
         account.owner = data.owner
     if data.currency is not None:
         account.currency = data.currency
+    if data.purpose is not None:
+        account.purpose = data.purpose
     # For account_wrapper, distinguish between "not provided" and "explicitly set to None"
     _field_set = getattr(data, "model_fields_set", set())
     if "account_wrapper" in _field_set:
@@ -159,6 +164,7 @@ def update_account(db: Session, account_id: int, data: AccountUpdate) -> Account
         owner=account.owner,
         currency=account.currency,
         account_wrapper=account.account_wrapper,
+        purpose=account.purpose,
         is_active=account.is_active,
         created_at=account.created_at,
         current_value=current_value,

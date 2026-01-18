@@ -29,6 +29,7 @@ def test_single_snapshot(test_db_session):
         owner="John",
         currency="PLN",
         is_active=True,
+        purpose="general",
     )
     liability_account = Account(
         name="Mortgage",
@@ -37,6 +38,7 @@ def test_single_snapshot(test_db_session):
         owner="John",
         currency="PLN",
         is_active=True,
+        purpose="general",
     )
     test_db_session.add_all([asset_account, liability_account])
     test_db_session.commit()
@@ -83,6 +85,7 @@ def test_multiple_snapshots(test_db_session):
         owner="John",
         currency="PLN",
         is_active=True,
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -126,6 +129,7 @@ def test_asset_liability_aggregation(test_db_session):
             owner="John",
             currency="PLN",
             is_active=True,
+            purpose="general",
         ),
         Account(
             name="Stocks",
@@ -134,6 +138,7 @@ def test_asset_liability_aggregation(test_db_session):
             owner="John",
             currency="PLN",
             is_active=True,
+            purpose="general",
         ),
         Account(
             name="Credit Card",
@@ -142,6 +147,7 @@ def test_asset_liability_aggregation(test_db_session):
             owner="John",
             currency="PLN",
             is_active=True,
+            purpose="general",
         ),
     ]
     test_db_session.add_all(accounts)
@@ -177,6 +183,7 @@ def test_allocation_by_category_and_owner(test_db_session):
             owner="John",
             currency="PLN",
             is_active=True,
+            purpose="general",
         ),
         Account(
             name="Jane Savings",
@@ -185,6 +192,7 @@ def test_allocation_by_category_and_owner(test_db_session):
             owner="Jane",
             currency="PLN",
             is_active=True,
+            purpose="general",
         ),
         Account(
             name="John Stocks",
@@ -193,6 +201,7 @@ def test_allocation_by_category_and_owner(test_db_session):
             owner="John",
             currency="PLN",
             is_active=True,
+            purpose="general",
         ),
     ]
     test_db_session.add_all(accounts)
@@ -257,6 +266,7 @@ def test_inactive_accounts_excluded(test_db_session):
         owner="John",
         currency="PLN",
         is_active=True,
+        purpose="general",
     )
     inactive_account = Account(
         name="Inactive",
@@ -265,6 +275,7 @@ def test_inactive_accounts_excluded(test_db_session):
         owner="John",
         currency="PLN",
         is_active=False,
+        purpose="general",
     )
     test_db_session.add_all([active_account, inactive_account])
     test_db_session.commit()
@@ -300,6 +311,7 @@ def test_only_assets_no_liabilities(test_db_session):
         owner="John",
         currency="PLN",
         is_active=True,
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -328,6 +340,7 @@ def test_only_liabilities_no_assets(test_db_session):
         owner="John",
         currency="PLN",
         is_active=True,
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -364,6 +377,7 @@ def test_assets_and_accounts_both_included(test_db_session):
         owner="John",
         currency="PLN",
         is_active=True,
+        purpose="general",
     )
     account_liability = Account(
         name="Mortgage",
@@ -372,6 +386,7 @@ def test_assets_and_accounts_both_included(test_db_session):
         owner="John",
         currency="PLN",
         is_active=True,
+        purpose="general",
     )
     test_db_session.add_all([account_asset, account_liability])
     test_db_session.commit()

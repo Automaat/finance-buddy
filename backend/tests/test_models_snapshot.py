@@ -45,7 +45,12 @@ def test_snapshot_optional_notes(test_db_session):
 def test_snapshot_value_creation(test_db_session):
     """Test creating a snapshot value with all required fields."""
     account = Account(
-        name="Savings", type="savings", category="banking", owner="John Doe", currency="USD"
+        name="Savings",
+        type="savings",
+        category="banking",
+        owner="John Doe",
+        currency="USD",
+        purpose="general",
     )
     snapshot = Snapshot(date=date(2024, 1, 1))
     test_db_session.add_all([account, snapshot])
@@ -66,7 +71,12 @@ def test_snapshot_value_creation(test_db_session):
 def test_snapshot_value_unique_constraint(test_db_session):
     """Test that snapshot-account combination must be unique."""
     account = Account(
-        name="Savings", type="savings", category="banking", owner="John Doe", currency="USD"
+        name="Savings",
+        type="savings",
+        category="banking",
+        owner="John Doe",
+        currency="USD",
+        purpose="general",
     )
     snapshot = Snapshot(date=date(2024, 1, 1))
     test_db_session.add_all([account, snapshot])
@@ -86,7 +96,12 @@ def test_snapshot_value_unique_constraint(test_db_session):
 def test_snapshot_cascade_delete(test_db_session):
     """Test that deleting a snapshot cascades to snapshot values."""
     account = Account(
-        name="Savings", type="savings", category="banking", owner="John Doe", currency="USD"
+        name="Savings",
+        type="savings",
+        category="banking",
+        owner="John Doe",
+        currency="USD",
+        purpose="general",
     )
     snapshot = Snapshot(date=date(2024, 1, 1))
     test_db_session.add_all([account, snapshot])
@@ -109,7 +124,12 @@ def test_snapshot_cascade_delete(test_db_session):
 def test_account_cascade_delete(test_db_session):
     """Test that deleting an account cascades to snapshot values."""
     account = Account(
-        name="Savings", type="savings", category="banking", owner="John Doe", currency="USD"
+        name="Savings",
+        type="savings",
+        category="banking",
+        owner="John Doe",
+        currency="USD",
+        purpose="general",
     )
     snapshot = Snapshot(date=date(2024, 1, 1))
     test_db_session.add_all([account, snapshot])
@@ -132,7 +152,12 @@ def test_account_cascade_delete(test_db_session):
 def test_snapshot_value_decimal_precision(test_db_session):
     """Test that snapshot values maintain decimal precision."""
     account = Account(
-        name="Savings", type="savings", category="banking", owner="John Doe", currency="USD"
+        name="Savings",
+        type="savings",
+        category="banking",
+        owner="John Doe",
+        currency="USD",
+        purpose="general",
     )
     snapshot = Snapshot(date=date(2024, 1, 1))
     test_db_session.add_all([account, snapshot])

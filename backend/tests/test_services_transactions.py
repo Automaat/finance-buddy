@@ -18,7 +18,12 @@ def test_get_account_transactions_success(test_db_session):
     """Test getting transactions for a specific investment account"""
     # Create investment account
     account = Account(
-        name="IKE Stocks", type="asset", category="stock", owner="Marcin", currency="PLN"
+        name="IKE Stocks",
+        type="asset",
+        category="stock",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -53,7 +58,12 @@ def test_get_account_transactions_non_investment_account(test_db_session):
     """Test getting transactions for non-investment account fails"""
     # Create bank account (not investment)
     account = Account(
-        name="Bank Account", type="asset", category="bank", owner="Marcin", currency="PLN"
+        name="Bank Account",
+        type="asset",
+        category="bank",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -83,6 +93,7 @@ def test_get_account_transactions_inactive_account(test_db_session):
         owner="Marcin",
         currency="PLN",
         is_active=False,
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -97,10 +108,20 @@ def test_get_all_transactions_no_filters(test_db_session):
     """Test getting all transactions without filters"""
     # Create accounts
     account1 = Account(
-        name="IKE Stocks", type="asset", category="stock", owner="Marcin", currency="PLN"
+        name="IKE Stocks",
+        type="asset",
+        category="stock",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     account2 = Account(
-        name="IKZE Bonds", type="asset", category="bond", owner="Ewa", currency="PLN"
+        name="IKZE Bonds",
+        type="asset",
+        category="bond",
+        owner="Ewa",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add_all([account1, account2])
     test_db_session.commit()
@@ -130,10 +151,20 @@ def test_get_all_transactions_filter_by_account(test_db_session):
     """Test filtering transactions by account"""
     # Create accounts
     account1 = Account(
-        name="IKE Stocks", type="asset", category="stock", owner="Marcin", currency="PLN"
+        name="IKE Stocks",
+        type="asset",
+        category="stock",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     account2 = Account(
-        name="IKZE Bonds", type="asset", category="bond", owner="Ewa", currency="PLN"
+        name="IKZE Bonds",
+        type="asset",
+        category="bond",
+        owner="Ewa",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add_all([account1, account2])
     test_db_session.commit()
@@ -162,7 +193,12 @@ def test_get_all_transactions_filter_by_account(test_db_session):
 def test_get_all_transactions_filter_by_owner(test_db_session):
     """Test filtering transactions by owner"""
     account = Account(
-        name="Shared Stocks", type="asset", category="stock", owner="Shared", currency="PLN"
+        name="Shared Stocks",
+        type="asset",
+        category="stock",
+        owner="Shared",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -187,7 +223,12 @@ def test_get_all_transactions_filter_by_owner(test_db_session):
 def test_get_all_transactions_filter_by_date_range(test_db_session):
     """Test filtering transactions by date range"""
     account = Account(
-        name="IKE Stocks", type="asset", category="stock", owner="Marcin", currency="PLN"
+        name="IKE Stocks",
+        type="asset",
+        category="stock",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -216,7 +257,12 @@ def test_get_all_transactions_filter_by_date_range(test_db_session):
 def test_create_transaction_success(test_db_session):
     """Test creating a transaction successfully"""
     account = Account(
-        name="IKE Stocks", type="asset", category="stock", owner="Marcin", currency="PLN"
+        name="IKE Stocks",
+        type="asset",
+        category="stock",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -236,7 +282,12 @@ def test_create_transaction_success(test_db_session):
 def test_create_transaction_non_investment_account(test_db_session):
     """Test creating transaction for non-investment account fails"""
     account = Account(
-        name="Bank Account", type="asset", category="bank", owner="Marcin", currency="PLN"
+        name="Bank Account",
+        type="asset",
+        category="bank",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -263,7 +314,12 @@ def test_create_transaction_account_not_found(test_db_session):
 def test_delete_transaction_success(test_db_session):
     """Test soft deleting a transaction"""
     account = Account(
-        name="IKE Stocks", type="asset", category="stock", owner="Marcin", currency="PLN"
+        name="IKE Stocks",
+        type="asset",
+        category="stock",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -293,7 +349,12 @@ def test_delete_transaction_not_found(test_db_session):
 def test_delete_transaction_idempotent(test_db_session):
     """Test deleting already deleted transaction is idempotent"""
     account = Account(
-        name="IKE Stocks", type="asset", category="stock", owner="Marcin", currency="PLN"
+        name="IKE Stocks",
+        type="asset",
+        category="stock",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add(account)
     test_db_session.commit()
@@ -315,10 +376,20 @@ def test_delete_transaction_idempotent(test_db_session):
 def test_delete_transaction_wrong_account(test_db_session):
     """Test deleting transaction with wrong account_id fails"""
     account1 = Account(
-        name="IKE Stocks", type="asset", category="stock", owner="Marcin", currency="PLN"
+        name="IKE Stocks",
+        type="asset",
+        category="stock",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     account2 = Account(
-        name="IKE Bonds", type="asset", category="bond", owner="Marcin", currency="PLN"
+        name="IKE Bonds",
+        type="asset",
+        category="bond",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add_all([account1, account2])
     test_db_session.commit()
@@ -344,10 +415,20 @@ def test_get_transaction_counts(test_db_session):
     """Test getting transaction counts per account"""
     # Create accounts
     account1 = Account(
-        name="IKE Stocks", type="asset", category="stock", owner="Marcin", currency="PLN"
+        name="IKE Stocks",
+        type="asset",
+        category="stock",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
     )
     account2 = Account(
-        name="IKZE Bonds", type="asset", category="bond", owner="Ewa", currency="PLN"
+        name="IKZE Bonds",
+        type="asset",
+        category="bond",
+        owner="Ewa",
+        currency="PLN",
+        purpose="general",
     )
     test_db_session.add_all([account1, account2])
     test_db_session.commit()
