@@ -131,6 +131,7 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
 
     # Latest snapshot data for current totals
     # Use merged df to determine latest snapshot (handles case where merge filters out snapshots)
+    latest_df = pd.DataFrame()  # Initialize to satisfy type checker
     if not df.empty and "snapshot_id" in df.columns:
         latest_snapshot_id = df["snapshot_id"].max()
         latest_snapshot = snapshots_df[snapshots_df["id"] == latest_snapshot_id].iloc[0]
