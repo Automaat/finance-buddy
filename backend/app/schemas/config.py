@@ -1,8 +1,8 @@
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
+from typing import Self
 
 from pydantic import BaseModel, field_validator, model_validator
-from typing_extensions import Self
 
 
 class ConfigCreate(BaseModel):
@@ -20,7 +20,7 @@ class ConfigCreate(BaseModel):
     @field_validator("birth_date")
     @classmethod
     def validate_birth_date(cls, v: date) -> date:
-        today = datetime.now().date()
+        today = datetime.now(tz=UTC).date()
         if v >= today:
             raise ValueError("Birth date must be in the past")
         age = (today - v).days // 365
@@ -57,7 +57,12 @@ class ConfigCreate(BaseModel):
 
     @model_validator(mode="after")
     def validate_allocation_sum(self) -> Self:
-        market_total = self.allocation_stocks + self.allocation_bonds + self.allocation_gold + self.allocation_commodities
+        market_total = (
+            self.allocation_stocks
+            + self.allocation_bonds
+            + self.allocation_gold
+            + self.allocation_commodities
+        )
         if market_total != 100:
             raise ValueError(f"Market allocations must sum to 100%, got {market_total}%")
         return self

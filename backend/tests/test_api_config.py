@@ -1,3 +1,6 @@
+from datetime import UTC
+
+
 def test_get_config_not_found(test_client):
     """Test GET /api/config returns 404 when config doesn't exist"""
     response = test_client.get("/api/config")
@@ -172,9 +175,9 @@ def test_create_config_negative_retirement_salary(test_client):
 
 def test_create_config_future_birth_date(test_client):
     """Test PUT /api/config fails with future birth date"""
-    from datetime import date, timedelta
+    from datetime import datetime, timedelta
 
-    future_date = (date.today() + timedelta(days=1)).isoformat()
+    future_date = (datetime.now(tz=UTC).date() + timedelta(days=1)).isoformat()
     payload = {
         "birth_date": future_date,
         "retirement_age": 67,

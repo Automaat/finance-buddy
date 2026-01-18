@@ -26,12 +26,14 @@
 	// Form state
 	let birthDate = data.config?.birth_date ?? defaults.birth_date;
 	let retirementAge = data.config?.retirement_age ?? defaults.retirement_age;
-	let retirementMonthlySalary = data.config?.retirement_monthly_salary ?? defaults.retirement_monthly_salary;
+	let retirementMonthlySalary =
+		data.config?.retirement_monthly_salary ?? defaults.retirement_monthly_salary;
 	let allocationRealEstate = data.config?.allocation_real_estate ?? defaults.allocation_real_estate;
 	let allocationStocks = data.config?.allocation_stocks ?? defaults.allocation_stocks;
 	let allocationBonds = data.config?.allocation_bonds ?? defaults.allocation_bonds;
 	let allocationGold = data.config?.allocation_gold ?? defaults.allocation_gold;
-	let allocationCommodities = data.config?.allocation_commodities ?? defaults.allocation_commodities;
+	let allocationCommodities =
+		data.config?.allocation_commodities ?? defaults.allocation_commodities;
 
 	let error = '';
 	let saving = false;
@@ -41,14 +43,19 @@
 	$: isValidAllocation = marketSum === 100;
 
 	// Calculate current age and years until retirement
-	$: currentAge = birthDate ? Math.floor((new Date().getTime() - new Date(birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 0;
+	$: currentAge = birthDate
+		? Math.floor(
+				(new Date().getTime() - new Date(birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
+			)
+		: 0;
 	$: yearsUntilRetirement = Math.max(0, retirementAge - currentAge);
 
 	// Calculate required capital using 4% safe withdrawal rate (25x annual expenses)
 	$: requiredCapital = retirementMonthlySalary * 12 * 25;
 
 	// Calculate monthly savings needed (simple linear calculation without investment returns)
-	$: monthlySavingsNeeded = yearsUntilRetirement > 0 ? requiredCapital / (yearsUntilRetirement * 12) : 0;
+	$: monthlySavingsNeeded =
+		yearsUntilRetirement > 0 ? requiredCapital / (yearsUntilRetirement * 12) : 0;
 
 	async function saveConfig() {
 		if (!isValidAllocation) {
@@ -106,12 +113,7 @@
 		<CardContent>
 			<div class="form-group">
 				<label for="birth-date">Data urodzenia</label>
-				<input
-					id="birth-date"
-					type="date"
-					bind:value={birthDate}
-					class="input"
-				/>
+				<input id="birth-date" type="date" bind:value={birthDate} class="input" />
 				{#if currentAge > 0}
 					<div class="field-hint">Obecny wiek: {currentAge} lat</div>
 				{/if}
@@ -220,7 +222,11 @@
 						class="input"
 					/>
 				</div>
-				<div class="allocation-sum" class:valid={isValidAllocation} class:invalid={!isValidAllocation}>
+				<div
+					class="allocation-sum"
+					class:valid={isValidAllocation}
+					class:invalid={!isValidAllocation}
+				>
 					Suma części rynkowej: {marketSum}%
 					{#if isValidAllocation}
 						<span class="check">✓</span>
@@ -236,11 +242,7 @@
 		<div class="error-message">{error}</div>
 	{/if}
 
-	<button
-		class="save-button"
-		on:click={saveConfig}
-		disabled={!isValidAllocation || saving}
-	>
+	<button class="save-button" on:click={saveConfig} disabled={!isValidAllocation || saving}>
 		{saving ? 'Zapisywanie...' : 'Zapisz konfigurację'}
 	</button>
 </div>
