@@ -569,7 +569,9 @@ def test_metric_cards_calculation(test_db_session):
                 snapshot_id=snapshot.id, account_id=real_estate_account.id, value=Decimal("500000")
             ),
             SnapshotValue(
-                snapshot_id=snapshot.id, account_id=emergency_fund_account.id, value=Decimal("15000")
+                snapshot_id=snapshot.id,
+                account_id=emergency_fund_account.id,
+                value=Decimal("15000"),
             ),
             SnapshotValue(
                 snapshot_id=snapshot.id, account_id=retirement_account.id, value=Decimal("100000")
@@ -698,9 +700,15 @@ def test_allocation_analysis(test_db_session):
             SnapshotValue(
                 snapshot_id=snapshot.id, account_id=bond_account.id, value=Decimal("20000")
             ),
-            SnapshotValue(snapshot_id=snapshot.id, account_id=gold_account.id, value=Decimal("10000")),
-            SnapshotValue(snapshot_id=snapshot.id, account_id=ppk_account.id, value=Decimal("5000")),
-            SnapshotValue(snapshot_id=snapshot.id, account_id=ike_account.id, value=Decimal("15000")),
+            SnapshotValue(
+                snapshot_id=snapshot.id, account_id=gold_account.id, value=Decimal("10000")
+            ),
+            SnapshotValue(
+                snapshot_id=snapshot.id, account_id=ppk_account.id, value=Decimal("5000")
+            ),
+            SnapshotValue(
+                snapshot_id=snapshot.id, account_id=ike_account.id, value=Decimal("15000")
+            ),
         ]
     )
     test_db_session.commit()
@@ -746,7 +754,9 @@ def test_allocation_analysis(test_db_session):
 
     # Rebalancing: Stocks under-allocated, should have buy suggestion
     assert len(result.allocation_analysis.rebalancing) > 0
-    stocks_rebal = next((r for r in result.allocation_analysis.rebalancing if r.category == "stocks"), None)
+    stocks_rebal = next(
+        (r for r in result.allocation_analysis.rebalancing if r.category == "stocks"), None
+    )
     assert stocks_rebal is not None
     assert stocks_rebal.action == "buy"
 
@@ -868,11 +878,15 @@ def test_wrapper_time_series(test_db_session):
     test_db_session.add_all(
         [
             # Jan
-            SnapshotValue(snapshot_id=snapshot1.id, account_id=ike_account.id, value=Decimal("10500")),
+            SnapshotValue(
+                snapshot_id=snapshot1.id, account_id=ike_account.id, value=Decimal("10500")
+            ),
             SnapshotValue(
                 snapshot_id=snapshot1.id, account_id=ikze_account.id, value=Decimal("5200")
             ),
-            SnapshotValue(snapshot_id=snapshot1.id, account_id=ppk_account.id, value=Decimal("3100")),
+            SnapshotValue(
+                snapshot_id=snapshot1.id, account_id=ppk_account.id, value=Decimal("3100")
+            ),
             # Feb
             SnapshotValue(
                 snapshot_id=snapshot2.id, account_id=ike_account.id, value=Decimal("21200")
@@ -880,7 +894,9 @@ def test_wrapper_time_series(test_db_session):
             SnapshotValue(
                 snapshot_id=snapshot2.id, account_id=ikze_account.id, value=Decimal("10500")
             ),
-            SnapshotValue(snapshot_id=snapshot2.id, account_id=ppk_account.id, value=Decimal("6300")),
+            SnapshotValue(
+                snapshot_id=snapshot2.id, account_id=ppk_account.id, value=Decimal("6300")
+            ),
         ]
     )
     test_db_session.commit()
@@ -1005,8 +1021,12 @@ def test_category_time_series_with_grouping(test_db_session):
             SnapshotValue(
                 snapshot_id=snapshot1.id, account_id=stock_account.id, value=Decimal("10000")
             ),
-            SnapshotValue(snapshot_id=snapshot1.id, account_id=fund_account.id, value=Decimal("5000")),
-            SnapshotValue(snapshot_id=snapshot1.id, account_id=etf_account.id, value=Decimal("3000")),
+            SnapshotValue(
+                snapshot_id=snapshot1.id, account_id=fund_account.id, value=Decimal("5000")
+            ),
+            SnapshotValue(
+                snapshot_id=snapshot1.id, account_id=etf_account.id, value=Decimal("3000")
+            ),
             SnapshotValue(
                 snapshot_id=snapshot1.id, account_id=bond_account.id, value=Decimal("8000")
             ),
@@ -1017,7 +1037,9 @@ def test_category_time_series_with_grouping(test_db_session):
             SnapshotValue(
                 snapshot_id=snapshot2.id, account_id=fund_account.id, value=Decimal("10300")
             ),
-            SnapshotValue(snapshot_id=snapshot2.id, account_id=etf_account.id, value=Decimal("6200")),
+            SnapshotValue(
+                snapshot_id=snapshot2.id, account_id=etf_account.id, value=Decimal("6200")
+            ),
             SnapshotValue(
                 snapshot_id=snapshot2.id, account_id=bond_account.id, value=Decimal("16500")
             ),
@@ -1090,7 +1112,9 @@ def test_category_time_series_with_grouping(test_db_session):
     assert result.category_time_series.stock[0].returns == 0.0
     # Feb: 20500 + 10300 + 6200 = 37000
     assert result.category_time_series.stock[1].value == 37000.0
-    assert result.category_time_series.stock[1].contributions == 36000.0  # 10000*2 + 5000*2 + 3000*2
+    assert (
+        result.category_time_series.stock[1].contributions == 36000.0
+    )  # 10000*2 + 5000*2 + 3000*2
     assert result.category_time_series.stock[1].returns == 1000.0  # 37000 - 36000
 
     # Check bond time series
