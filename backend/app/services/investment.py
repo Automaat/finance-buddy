@@ -7,8 +7,10 @@ from app.schemas.investment import CategoryStatsResponse
 
 def get_category_stats(db: Session, category: str) -> CategoryStatsResponse:
     """Calculate aggregate statistics for a given investment category (stock/bond)"""
-    # Get all accounts for this category
-    accounts = db.query(Account).filter(Account.category == category).all()
+    # Get all active accounts for this category
+    accounts = (
+        db.query(Account).filter(Account.category == category, Account.is_active.is_(True)).all()
+    )
 
     if not accounts:
         return CategoryStatsResponse(
@@ -21,21 +23,32 @@ def get_category_stats(db: Session, category: str) -> CategoryStatsResponse:
 
     account_ids = [acc.id for acc in accounts]
 
-    # Sum all active transactions for these accounts
-    total_contributed_query = (
-        db.query(func.coalesce(func.sum(Transaction.amount), 0))
-        .filter(Transaction.account_id.in_(account_ids), Transaction.is_active.is_(True))
-        .scalar()
-    )
-    total_contributed = float(total_contributed_query if total_contributed_query else 0)
-
-    # Get latest snapshot date (subquery)
+    # Get latest snapshot date (subquery) - needed for both transactions and snapshot value
     max_date_subquery = (
         db.query(func.max(Snapshot.date))
         .join(SnapshotValue, Snapshot.id == SnapshotValue.snapshot_id)
         .filter(SnapshotValue.account_id.in_(account_ids))
         .scalar_subquery()
     )
+
+    # Sum active transactions up to latest snapshot date (or all if no snapshots)
+    transaction_query = db.query(func.coalesce(func.sum(Transaction.amount), 0)).filter(
+        Transaction.account_id.in_(account_ids), Transaction.is_active.is_(True)
+    )
+
+    # Only filter by date if snapshots exist (max_date_subquery returns value, not NULL)
+    has_snapshots = (
+        db.query(Snapshot.id)
+        .join(SnapshotValue, Snapshot.id == SnapshotValue.snapshot_id)
+        .filter(SnapshotValue.account_id.in_(account_ids))
+        .limit(1)
+        .scalar()
+    )
+
+    if has_snapshots:
+        transaction_query = transaction_query.filter(Transaction.date <= max_date_subquery)
+
+    total_contributed = float(transaction_query.scalar() or 0)
 
     # Get sum of values for the latest snapshot
     latest_snapshot_value = (

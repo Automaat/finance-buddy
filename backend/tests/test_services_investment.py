@@ -252,3 +252,53 @@ class TestGetCategoryStats:
         assert result.total_contributed == 2000.0  # Only active transaction
         assert result.total_value == 2500.0
         assert result.returns == 500.0
+
+    def test_get_category_stats_transactions_after_snapshot(self, test_db_session):
+        """Test that transactions after latest snapshot date are excluded"""
+        # Create account
+        account = Account(
+            name="Stock Account",
+            type="asset",
+            category="stock",
+            account_wrapper=None,
+            owner="Marcin",
+            currency="PLN",
+            purpose="general",
+        )
+        test_db_session.add(account)
+        test_db_session.commit()
+
+        # Create transactions: one before snapshot, one after
+        t1 = Transaction(
+            account_id=account.id,
+            amount=Decimal("2000.0"),
+            date=date(2024, 6, 15),
+            owner="Marcin",
+            is_active=True,
+        )
+        t2 = Transaction(
+            account_id=account.id,
+            amount=Decimal("3000.0"),
+            date=date(2025, 1, 15),  # After snapshot date
+            owner="Marcin",
+            is_active=True,
+        )
+        test_db_session.add_all([t1, t2])
+        test_db_session.commit()
+
+        # Create snapshot on 2024-12-31
+        snapshot = Snapshot(date=date(2024, 12, 31), notes="Test snapshot")
+        test_db_session.add(snapshot)
+        test_db_session.commit()
+
+        sv = SnapshotValue(snapshot_id=snapshot.id, account_id=account.id, value=Decimal("2500.0"))
+        test_db_session.add(sv)
+        test_db_session.commit()
+
+        # Get stats - should only count t1 (2000), not t2 (3000)
+        result = get_category_stats(test_db_session, "stock")
+
+        assert result.total_contributed == 2000.0  # Should exclude t2
+        assert result.total_value == 2500.0
+        assert result.returns == 500.0
+        assert result.roi_percentage == 25.0  # (500/2000) * 100
