@@ -326,19 +326,22 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
 
         # 8. Investment contributions - sum of Transaction.amount for investment accounts
         # 9. Investment returns - Current value - total contributions
+        # Filter transactions up to latest snapshot date to match time series calculation
         transactions_query = select(Transaction).where(Transaction.is_active.is_(True))
         transactions_df = pd.read_sql(transactions_query, db.get_bind())
 
-        if not transactions_df.empty:
+        if not transactions_df.empty and latest_snapshot is not None:
             # Join transactions with accounts to filter investment accounts
             trans_with_accounts = transactions_df.merge(
                 accounts_df, left_on="account_id", right_on="id", how="left"
             )
 
             # Filter for investment accounts (by category: stock, bond, fund, etf, gold, ppk)
+            # Only include transactions up to latest snapshot date
             investment_categories = {"stock", "bond", "fund", "etf", "gold", "ppk"}
             investment_trans = trans_with_accounts[
-                trans_with_accounts["category"].isin(investment_categories)
+                (trans_with_accounts["category"].isin(investment_categories))
+                & (trans_with_accounts["date"] <= latest_snapshot["date"])
             ]
             investment_contributions = float(investment_trans["amount"].sum())
 

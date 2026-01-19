@@ -632,6 +632,82 @@
 		{/each}
 	{/if}
 
+	<!-- Stock Stats Section -->
+	{#if data.stockStats}
+		<h2>Podsumowanie Akcji</h2>
+		<div class="metrics-grid">
+			<MetricCard
+				label="Akcje - Wartość całkowita"
+				value={data.stockStats.total_value}
+				decimals={0}
+				suffix=" PLN"
+				color="green"
+			/>
+
+			<MetricCard
+				label="Akcje - Łącznie wpłacone"
+				value={data.stockStats.total_contributed}
+				decimals={0}
+				suffix=" PLN"
+				color="blue"
+			/>
+
+			<MetricCard
+				label="Akcje - Zyski z inwestycji"
+				value={data.stockStats.returns}
+				decimals={0}
+				suffix=" PLN"
+				color={data.stockStats.returns >= 0 ? 'green' : 'red'}
+			/>
+
+			<MetricCard
+				label="Akcje - ROI"
+				value={data.stockStats.roi_percentage}
+				decimals={2}
+				suffix="%"
+				color={data.stockStats.roi_percentage >= 0 ? 'green' : 'red'}
+			/>
+		</div>
+	{/if}
+
+	<!-- Bond Stats Section -->
+	{#if data.bondStats}
+		<h2>Podsumowanie Obligacji</h2>
+		<div class="metrics-grid">
+			<MetricCard
+				label="Obligacje - Wartość całkowita"
+				value={data.bondStats.total_value}
+				decimals={0}
+				suffix=" PLN"
+				color="green"
+			/>
+
+			<MetricCard
+				label="Obligacje - Łącznie wpłacone"
+				value={data.bondStats.total_contributed}
+				decimals={0}
+				suffix=" PLN"
+				color="blue"
+			/>
+
+			<MetricCard
+				label="Obligacje - Zyski z inwestycji"
+				value={data.bondStats.returns}
+				decimals={0}
+				suffix=" PLN"
+				color={data.bondStats.returns >= 0 ? 'green' : 'red'}
+			/>
+
+			<MetricCard
+				label="Obligacje - ROI"
+				value={data.bondStats.roi_percentage}
+				decimals={2}
+				suffix="%"
+				color={data.bondStats.roi_percentage >= 0 ? 'green' : 'red'}
+			/>
+		</div>
+	{/if}
+
 	<h2>Struktura portfela inwestycyjnego</h2>
 
 	<div class="charts-grid">
