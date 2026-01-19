@@ -13,6 +13,7 @@ from app.api import (
     debts,
     retirement,
     salary_records,
+    simulations,
     snapshots,
     transactions,
 )
@@ -47,6 +48,7 @@ app.include_router(debts.router)
 app.include_router(debt_payments.router)
 app.include_router(retirement.router)
 app.include_router(salary_records.router)
+app.include_router(simulations.router)
 app.include_router(snapshots.router)
 app.include_router(transactions.router)
 

@@ -58,11 +58,31 @@
 	// Calculate required capital using 4% safe withdrawal rate (25x annual expenses)
 	$: requiredCapital = retirementMonthlySalary * 12 * 25;
 
-	// Calculate monthly savings needed (simple linear calculation without investment returns)
+	// Calculate monthly savings needed with compound interest
 	// Subtract already saved money in retirement accounts from required capital
 	$: remainingCapital = Math.max(0, requiredCapital - (data.retirementAccountValue ?? 0));
-	$: monthlySavingsNeeded =
-		yearsUntilRetirement > 0 ? remainingCapital / (yearsUntilRetirement * 12) : 0;
+
+	// Calculate monthly payment needed to reach future value with investment returns
+	// Using Future Value of Annuity formula: PMT = FV × r / [(1 + r)^n - 1]
+	$: monthlySavingsNeeded = (() => {
+		if (yearsUntilRetirement <= 0) return 0;
+
+		const annualReturnRate = 0.07; // 7% annual return (conservative long-term assumption)
+		const monthlyRate = annualReturnRate / 12;
+		const months = yearsUntilRetirement * 12;
+
+		// Account for growth of already saved capital
+		const futureValueOfSavings =
+			(data.retirementAccountValue ?? 0) * Math.pow(1 + annualReturnRate, yearsUntilRetirement);
+		const adjustedTarget = Math.max(0, requiredCapital - futureValueOfSavings);
+
+		if (adjustedTarget === 0) return 0;
+
+		// Future Value of Annuity formula solved for PMT
+		const payment = (adjustedTarget * monthlyRate) / (Math.pow(1 + monthlyRate, months) - 1);
+
+		return payment;
+	})();
 
 	async function saveConfig() {
 		if (!isValidAllocation) {
@@ -170,7 +190,7 @@
 			{/if}
 			{#if yearsUntilRetirement > 0}
 				<div class="calculated-info">
-					<div class="info-label">Miesięczne oszczędności potrzebne:</div>
+					<div class="info-label">Miesięczne oszczędności potrzebne (przy 7% rocznie):</div>
 					<div class="info-value">{formatPLN(monthlySavingsNeeded)}</div>
 				</div>
 			{:else if currentAge > 0}
