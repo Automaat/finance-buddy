@@ -1,3 +1,5 @@
+import logging
+
 from app.core.database import Base, SessionLocal, engine
 
 # Import models to register them with SQLAlchemy Base.metadata
@@ -15,6 +17,8 @@ from app.models import (
     SnapshotValue,
     Transaction,
 )
+
+logger = logging.getLogger(__name__)
 
 # Reference imports to satisfy linter (models are registered via import side effect)
 _ = (
@@ -49,13 +53,16 @@ def init_db() -> None:
         import add_metric_fields  # type: ignore
         import add_ppk_rates  # type: ignore
         import add_receives_contributions  # type: ignore
+        import add_transaction_unique_constraint  # type: ignore
 
         add_account_purpose.migrate()  # type: ignore
         add_metric_fields.migrate()  # type: ignore
         add_ppk_rates.migrate()  # type: ignore
         add_receives_contributions.migrate()  # type: ignore
-    except Exception:
-        pass  # Migrations may have already run or columns may already exist
+        add_transaction_unique_constraint.migrate()  # type: ignore
+    except Exception as e:
+        # Migrations may have already run or columns may already exist
+        logger.warning("Migration warning (may be expected if already applied): %s", e)
 
     # Seed default retirement limits if none exist
     db = SessionLocal()

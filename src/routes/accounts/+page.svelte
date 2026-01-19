@@ -115,10 +115,19 @@
 				: `${apiUrl}/api/accounts`;
 			const method = editingAccount ? 'PUT' : 'POST';
 
+			// Conditionally include receives_contributions only for PPK accounts
+			const payload =
+				formData.account_wrapper === 'PPK'
+					? formData
+					: {
+							...formData,
+							receives_contributions: undefined
+						};
+
 			const response = await fetch(endpoint, {
 				method,
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(formData)
+				body: JSON.stringify(payload)
 			});
 
 			if (!response.ok) {
@@ -493,8 +502,8 @@
 					<span>Konto otrzymuje wpłaty (aktywne PPK)</span>
 				</label>
 				<p class="form-help-text">
-					Zaznacz jeśli to konto jest aktywnie używane do otrzymywania miesięcznych wpłat PPK.
-					Stare konta PPK powinny mieć to odznaczone - będą tylko śledzone przez snapshoty.
+					Zaznacz jeśli to konto jest aktywnie używane do otrzymywania miesięcznych wpłat PPK. Stare
+					konta PPK powinny mieć to odznaczone - będą tylko śledzone przez snapshoty.
 				</p>
 			</div>
 		{/if}

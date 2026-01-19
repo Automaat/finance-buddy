@@ -93,8 +93,8 @@ class PPKContributionGenerateRequest(BaseModel):
         from datetime import UTC, datetime
 
         current_year = datetime.now(UTC).year
-        if v < 2000 or v > current_year + 1:
-            raise ValueError(f"Year must be between 2000 and {current_year + 1}")
+        if v < 2019 or v > current_year + 1:
+            raise ValueError(f"Year must be between 2019 and {current_year + 1}")
         return v
 
 

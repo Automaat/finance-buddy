@@ -3,7 +3,7 @@ from datetime import date
 from decimal import Decimal
 
 from fastapi import HTTPException
-from sqlalchemy import case, desc, extract, func
+from sqlalchemy import case, extract, func
 from sqlalchemy.orm import Session
 
 from app.models import Account, AppConfig, RetirementLimit, Snapshot, SnapshotValue, Transaction
@@ -71,9 +71,11 @@ def get_yearly_stats(db: Session, year: int, owner: str | None = None) -> list[Y
             employee = float(contributions.employee if contributions else 0)
             employer = float(contributions.employer if contributions else 0)
 
-            # If no transaction_type specified, count as employee contribution
-            if total > 0 and employee == 0 and employer == 0:
-                employee = total
+            # If some transactions have no type, assign the untyped amount to employee
+            typed_sum = employee + employer
+            if total > typed_sum:
+                untyped_amount = total - typed_sum
+                employee += untyped_amount
 
             # Get limit for this wrapper and owner
             limit = (
@@ -224,21 +226,31 @@ def get_ppk_stats(db: Session, owner: str | None = None) -> list[PPKStatsRespons
         government_contrib = float(contributions.government if contributions else 0)
         total_contrib = float(contributions.total if contributions else 0)
 
-        # If no transaction_type specified, count as employee contribution
-        if total_contrib > 0 and employee_contrib == 0 and employer_contrib == 0:
-            employee_contrib = total_contrib
+        # If some transactions have no type, assign the untyped amount to employee
+        typed_sum = employee_contrib + employer_contrib + government_contrib
+        if total_contrib > typed_sum:
+            untyped_amount = total_contrib - typed_sum
+            employee_contrib += untyped_amount
 
-        # Get latest snapshot value for these accounts
-        latest_snapshot_values = (
-            db.query(func.sum(SnapshotValue.value))
-            .join(Snapshot, SnapshotValue.snapshot_id == Snapshot.id)
+        # Get latest snapshot date first (subquery for performance)
+        max_date_subquery = (
+            db.query(func.max(Snapshot.date))
+            .join(SnapshotValue, Snapshot.id == SnapshotValue.snapshot_id)
             .filter(SnapshotValue.account_id.in_(account_ids))
-            .order_by(desc(Snapshot.date))
-            .group_by(Snapshot.date)
-            .first()
+            .scalar_subquery()
         )
 
-        total_value = float(latest_snapshot_values[0] if latest_snapshot_values else 0)
+        # Get sum of values for the latest snapshot
+        latest_snapshot_value = (
+            db.query(func.sum(SnapshotValue.value))
+            .join(Snapshot, SnapshotValue.snapshot_id == Snapshot.id)
+            .filter(
+                SnapshotValue.account_id.in_(account_ids), Snapshot.date == max_date_subquery
+            )
+            .scalar()
+        )
+
+        total_value = float(latest_snapshot_value if latest_snapshot_value else 0)
 
         # Calculate returns and ROI
         returns = total_value - total_contrib
@@ -313,8 +325,9 @@ def generate_ppk_contributions(
         )
 
     # Check if contributions already exist for this month
+    # DB unique constraint provides ultimate safeguard against race conditions
     last_day = date(data.year, data.month, calendar.monthrange(data.year, data.month)[1])
-    existing_transactions = (
+    existing_count = (
         db.query(Transaction)
         .filter(
             Transaction.account_id == ppk_account.id,
@@ -322,10 +335,10 @@ def generate_ppk_contributions(
             Transaction.transaction_type.in_(["employee", "employer"]),
             Transaction.is_active.is_(True),
         )
-        .first()
+        .count()
     )
 
-    if existing_transactions:
+    if existing_count > 0:
         raise HTTPException(
             status_code=409,
             detail=f"Contributions already exist for {data.month}/{data.year}",
