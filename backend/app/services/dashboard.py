@@ -59,17 +59,21 @@ def _calculate_savings_rate(
         net_worth_values.append(net_worth)
 
     # Calculate deltas between consecutive months
-    deltas = [net_worth_values[i] - net_worth_values[i-1] for i in range(1, len(net_worth_values))]
+    deltas = [
+        net_worth_values[i] - net_worth_values[i - 1] for i in range(1, len(net_worth_values))
+    ]
 
     # Average the last 3 deltas
     avg_delta = sum(deltas) / len(deltas)
 
     # Get last 3 salary records
-    salaries = db.query(SalaryRecord)\
-        .filter(SalaryRecord.is_active.is_(True))\
-        .order_by(SalaryRecord.date.desc())\
-        .limit(3)\
+    salaries = (
+        db.query(SalaryRecord)
+        .filter(SalaryRecord.is_active.is_(True))
+        .order_by(SalaryRecord.date.desc())
+        .limit(3)
         .all()
+    )
 
     if not salaries or len(salaries) < 3:
         return None
@@ -93,10 +97,12 @@ def _calculate_debt_to_income(db: Session) -> float | None:
         return None
 
     # Get latest salary
-    latest_salary = db.query(SalaryRecord)\
-        .filter(SalaryRecord.is_active.is_(True))\
-        .order_by(SalaryRecord.date.desc())\
+    latest_salary = (
+        db.query(SalaryRecord)
+        .filter(SalaryRecord.is_active.is_(True))
+        .order_by(SalaryRecord.date.desc())
         .first()
+    )
 
     if not latest_salary or latest_salary.gross_amount == 0:
         return None
