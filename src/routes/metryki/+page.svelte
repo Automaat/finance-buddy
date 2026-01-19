@@ -508,6 +508,8 @@
 		</div>
 	{/if}
 
+	<h2>Przegląd finansowy</h2>
+
 	<div class="metrics-grid">
 		<MetricCard
 			label="Ile metrów mieszkania jest nasze"
