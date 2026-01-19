@@ -7,7 +7,7 @@ import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Account, AppConfig, Asset, Snapshot, SnapshotValue, Transaction
+from app.models import Account, AppConfig, Asset, SalaryRecord, Snapshot, SnapshotValue, Transaction
 from app.schemas.dashboard import (
     AccountWrapperBreakdown,
     AllocationAnalysis,
@@ -21,6 +21,85 @@ from app.schemas.dashboard import (
     RebalancingSuggestion,
     WrapperTimeSeries,
 )
+
+
+def _calculate_savings_rate(snapshots_df: pd.DataFrame, df: pd.DataFrame, db: Session) -> float | None:
+    """
+    Calculate average monthly savings rate over last 3 months.
+    Formula: (avg_monthly_net_worth_delta / avg_monthly_gross_salary) × 100
+
+    Requires: last 4 snapshots (to calculate 3 deltas) and 3+ salary records
+    """
+    # Need at least 4 snapshots to calculate 3 deltas
+    if len(snapshots_df) < 4:
+        return None
+
+    # Get last 4 snapshots
+    last_4_snapshots = snapshots_df.tail(4).copy()
+
+    # Calculate net worth for each snapshot
+    net_worth_values = []
+    for _, snapshot_row in last_4_snapshots.iterrows():
+        snapshot_id = snapshot_row["id"]
+        snapshot_df = df[df["snapshot_id"] == snapshot_id]
+
+        # Calculate signed value (same logic as main function)
+        def calculate_signed_value(row):
+            if pd.notna(row["asset_id"]) and pd.notna(row.get("name")):
+                return row["value"]
+            if pd.notna(row["account_id"]) and pd.notna(row.get("type")):
+                return row["value"] if row["type"] == "asset" else -row["value"]
+            return 0
+
+        snapshot_df = snapshot_df.copy()
+        snapshot_df["signed_value"] = snapshot_df.apply(calculate_signed_value, axis=1)
+        net_worth = snapshot_df["signed_value"].sum()
+        net_worth_values.append(net_worth)
+
+    # Calculate deltas between consecutive months
+    deltas = [net_worth_values[i] - net_worth_values[i-1] for i in range(1, len(net_worth_values))]
+
+    # Average the last 3 deltas
+    avg_delta = sum(deltas) / len(deltas)
+
+    # Get last 3 salary records
+    salaries = db.query(SalaryRecord)\
+        .filter(SalaryRecord.is_active.is_(True))\
+        .order_by(SalaryRecord.date.desc())\
+        .limit(3)\
+        .all()
+
+    if not salaries or len(salaries) < 3:
+        return None
+
+    avg_salary = sum(float(s.gross_amount) for s in salaries) / len(salaries)
+
+    if avg_salary == 0:
+        return None
+
+    return (avg_delta / avg_salary) * 100
+
+
+def _calculate_debt_to_income(db: Session) -> float | None:
+    """
+    Calculate debt-to-income ratio.
+    Formula: (monthly_mortgage_payment / latest_gross_salary) × 100
+    """
+    # Get app config
+    config = db.execute(select(AppConfig).where(AppConfig.id == 1)).scalar_one_or_none()
+    if not config or not config.monthly_mortgage_payment:
+        return None
+
+    # Get latest salary
+    latest_salary = db.query(SalaryRecord)\
+        .filter(SalaryRecord.is_active.is_(True))\
+        .order_by(SalaryRecord.date.desc())\
+        .first()
+
+    if not latest_salary or latest_salary.gross_amount == 0:
+        return None
+
+    return (float(config.monthly_mortgage_payment) / float(latest_salary.gross_amount)) * 100
 
 
 def get_dashboard_data(db: Session) -> DashboardResponse:
@@ -267,6 +346,10 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
             investment_contributions = 0
             investment_returns = 0
 
+        # Calculate new metrics
+        savings_rate = _calculate_savings_rate(snapshots_df, df, db)
+        debt_to_income_ratio = _calculate_debt_to_income(db)
+
         metric_cards = MetricCards(
             property_sqm=property_sqm,
             emergency_fund_months=emergency_fund_months,
@@ -277,6 +360,8 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
             retirement_total=retirement_total,
             investment_contributions=investment_contributions,
             investment_returns=investment_returns,
+            savings_rate=savings_rate,
+            debt_to_income_ratio=debt_to_income_ratio,
         )
     else:
         metric_cards = MetricCards(
@@ -289,6 +374,8 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
             retirement_total=0,
             investment_contributions=0,
             investment_returns=0,
+            savings_rate=None,
+            debt_to_income_ratio=None,
         )
 
     # Calculate allocation analysis

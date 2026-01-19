@@ -2,9 +2,15 @@ from datetime import date
 from decimal import Decimal
 
 from app.models.account import Account
+from app.models.app_config import AppConfig
 from app.models.asset import Asset
+from app.models.salary_record import SalaryRecord
 from app.models.snapshot import Snapshot, SnapshotValue
-from app.services.dashboard import get_dashboard_data
+from app.services.dashboard import (
+    _calculate_debt_to_income,
+    _calculate_savings_rate,
+    get_dashboard_data,
+)
 
 
 def test_empty_database(test_db_session):
@@ -1125,3 +1131,435 @@ def test_category_time_series_with_grouping(test_db_session):
     assert result.category_time_series.bond[1].value == 16500.0
     assert result.category_time_series.bond[1].contributions == 16000.0
     assert result.category_time_series.bond[1].returns == 500.0
+
+
+def test_calculate_savings_rate_happy_path(test_db_session):
+    """Test savings rate calculation with sufficient data."""
+    # Create account
+    account = Account(
+        name="Savings",
+        type="asset",
+        category="banking",
+        owner="John",
+        currency="PLN",
+        is_active=True,
+        purpose="general",
+    )
+    test_db_session.add(account)
+    test_db_session.commit()
+
+    # Create 4 snapshots (need 4 to calculate 3 deltas)
+    snapshots = [
+        Snapshot(date=date(2024, 1, 1), notes="January"),
+        Snapshot(date=date(2024, 2, 1), notes="February"),
+        Snapshot(date=date(2024, 3, 1), notes="March"),
+        Snapshot(date=date(2024, 4, 1), notes="April"),
+    ]
+    test_db_session.add_all(snapshots)
+    test_db_session.commit()
+
+    # Create values with increasing net worth (5000, 10000, 15000, 20000)
+    # Deltas: 5000, 5000, 5000 - avg delta = 5000
+    values = []
+    for i, snapshot in enumerate(snapshots):
+        values.append(
+            SnapshotValue(
+                snapshot_id=snapshot.id,
+                account_id=account.id,
+                value=Decimal((i + 1) * 5000),
+            )
+        )
+    test_db_session.add_all(values)
+    test_db_session.commit()
+
+    # Create 3 salary records with gross amount 10000 each
+    salaries = [
+        SalaryRecord(
+            date=date(2024, 1, 1),
+            gross_amount=Decimal("10000"),
+            contract_type="B2B",
+            company="Company A",
+            owner="John",
+            is_active=True,
+        ),
+        SalaryRecord(
+            date=date(2024, 2, 1),
+            gross_amount=Decimal("10000"),
+            contract_type="B2B",
+            company="Company A",
+            owner="John",
+            is_active=True,
+        ),
+        SalaryRecord(
+            date=date(2024, 3, 1),
+            gross_amount=Decimal("10000"),
+            contract_type="B2B",
+            company="Company A",
+            owner="John",
+            is_active=True,
+        ),
+    ]
+    test_db_session.add_all(salaries)
+    test_db_session.commit()
+
+    # Prepare data for function call
+    import pandas as pd
+
+    snapshots_query = test_db_session.query(Snapshot).order_by(Snapshot.date)
+    snapshots_df = pd.read_sql(snapshots_query.statement, test_db_session.get_bind())
+
+    values_query = test_db_session.query(SnapshotValue)
+    values_df = pd.read_sql(values_query.statement, test_db_session.get_bind())
+
+    accounts_query = test_db_session.query(Account)
+    accounts_df = pd.read_sql(accounts_query.statement, test_db_session.get_bind())
+
+    # Merge data
+    df = values_df.merge(
+        accounts_df, left_on="account_id", right_on="id", how="left", suffixes=("", "_account")
+    )
+    df = df.merge(snapshots_df, left_on="snapshot_id", right_on="id", suffixes=("", "_snapshot"))
+
+    result = _calculate_savings_rate(snapshots_df, df, test_db_session)
+
+    # avg delta = 5000, avg salary = 10000
+    # savings rate = (5000 / 10000) * 100 = 50%
+    assert result is not None
+    assert result == 50.0
+
+
+def test_calculate_savings_rate_insufficient_snapshots(test_db_session):
+    """Test savings rate returns None with < 4 snapshots."""
+    # Create account
+    account = Account(
+        name="Savings",
+        type="asset",
+        category="banking",
+        owner="John",
+        currency="PLN",
+        is_active=True,
+        purpose="general",
+    )
+    test_db_session.add(account)
+    test_db_session.commit()
+
+    # Create only 3 snapshots (not enough)
+    snapshots = [
+        Snapshot(date=date(2024, 1, 1), notes="January"),
+        Snapshot(date=date(2024, 2, 1), notes="February"),
+        Snapshot(date=date(2024, 3, 1), notes="March"),
+    ]
+    test_db_session.add_all(snapshots)
+    test_db_session.commit()
+
+    import pandas as pd
+
+    snapshots_query = test_db_session.query(Snapshot).order_by(Snapshot.date)
+    snapshots_df = pd.read_sql(snapshots_query.statement, test_db_session.get_bind())
+
+    df = pd.DataFrame()  # Empty df, doesn't matter for this test
+
+    result = _calculate_savings_rate(snapshots_df, df, test_db_session)
+
+    assert result is None
+
+
+def test_calculate_savings_rate_no_salaries(test_db_session):
+    """Test savings rate returns None with no salary records."""
+    # Create account and 4 snapshots
+    account = Account(
+        name="Savings",
+        type="asset",
+        category="banking",
+        owner="John",
+        currency="PLN",
+        is_active=True,
+        purpose="general",
+    )
+    test_db_session.add(account)
+    test_db_session.commit()
+
+    snapshots = [
+        Snapshot(date=date(2024, 1, 1), notes="January"),
+        Snapshot(date=date(2024, 2, 1), notes="February"),
+        Snapshot(date=date(2024, 3, 1), notes="March"),
+        Snapshot(date=date(2024, 4, 1), notes="April"),
+    ]
+    test_db_session.add_all(snapshots)
+    test_db_session.commit()
+
+    values = []
+    for i, snapshot in enumerate(snapshots):
+        values.append(
+            SnapshotValue(
+                snapshot_id=snapshot.id,
+                account_id=account.id,
+                value=Decimal((i + 1) * 5000),
+            )
+        )
+    test_db_session.add_all(values)
+    test_db_session.commit()
+
+    # No salaries created
+
+    import pandas as pd
+
+    snapshots_query = test_db_session.query(Snapshot).order_by(Snapshot.date)
+    snapshots_df = pd.read_sql(snapshots_query.statement, test_db_session.get_bind())
+
+    values_query = test_db_session.query(SnapshotValue)
+    values_df = pd.read_sql(values_query.statement, test_db_session.get_bind())
+
+    accounts_query = test_db_session.query(Account)
+    accounts_df = pd.read_sql(accounts_query.statement, test_db_session.get_bind())
+
+    df = values_df.merge(
+        accounts_df, left_on="account_id", right_on="id", how="left", suffixes=("", "_account")
+    )
+    df = df.merge(snapshots_df, left_on="snapshot_id", right_on="id", suffixes=("", "_snapshot"))
+
+    result = _calculate_savings_rate(snapshots_df, df, test_db_session)
+
+    assert result is None
+
+
+def test_calculate_savings_rate_zero_salary(test_db_session):
+    """Test savings rate returns None with zero salary."""
+    # Create account and 4 snapshots
+    account = Account(
+        name="Savings",
+        type="asset",
+        category="banking",
+        owner="John",
+        currency="PLN",
+        is_active=True,
+        purpose="general",
+    )
+    test_db_session.add(account)
+    test_db_session.commit()
+
+    snapshots = [
+        Snapshot(date=date(2024, 1, 1), notes="January"),
+        Snapshot(date=date(2024, 2, 1), notes="February"),
+        Snapshot(date=date(2024, 3, 1), notes="March"),
+        Snapshot(date=date(2024, 4, 1), notes="April"),
+    ]
+    test_db_session.add_all(snapshots)
+    test_db_session.commit()
+
+    values = []
+    for i, snapshot in enumerate(snapshots):
+        values.append(
+            SnapshotValue(
+                snapshot_id=snapshot.id,
+                account_id=account.id,
+                value=Decimal((i + 1) * 5000),
+            )
+        )
+    test_db_session.add_all(values)
+    test_db_session.commit()
+
+    # Create salaries with zero gross amount
+    salaries = [
+        SalaryRecord(
+            date=date(2024, 1, 1),
+            gross_amount=Decimal("0"),
+            contract_type="B2B",
+            company="Company A",
+            owner="John",
+            is_active=True,
+        ),
+        SalaryRecord(
+            date=date(2024, 2, 1),
+            gross_amount=Decimal("0"),
+            contract_type="B2B",
+            company="Company A",
+            owner="John",
+            is_active=True,
+        ),
+        SalaryRecord(
+            date=date(2024, 3, 1),
+            gross_amount=Decimal("0"),
+            contract_type="B2B",
+            company="Company A",
+            owner="John",
+            is_active=True,
+        ),
+    ]
+    test_db_session.add_all(salaries)
+    test_db_session.commit()
+
+    import pandas as pd
+
+    snapshots_query = test_db_session.query(Snapshot).order_by(Snapshot.date)
+    snapshots_df = pd.read_sql(snapshots_query.statement, test_db_session.get_bind())
+
+    values_query = test_db_session.query(SnapshotValue)
+    values_df = pd.read_sql(values_query.statement, test_db_session.get_bind())
+
+    accounts_query = test_db_session.query(Account)
+    accounts_df = pd.read_sql(accounts_query.statement, test_db_session.get_bind())
+
+    df = values_df.merge(
+        accounts_df, left_on="account_id", right_on="id", how="left", suffixes=("", "_account")
+    )
+    df = df.merge(snapshots_df, left_on="snapshot_id", right_on="id", suffixes=("", "_snapshot"))
+
+    result = _calculate_savings_rate(snapshots_df, df, test_db_session)
+
+    assert result is None
+
+
+def test_calculate_debt_to_income_happy_path(test_db_session):
+    """Test debt-to-income ratio calculation with valid data."""
+    # Create app config with mortgage payment
+    config = AppConfig(
+        id=1,
+        birth_date=date(1990, 1, 1),
+        retirement_age=65,
+        retirement_monthly_salary=Decimal("5000"),
+        monthly_expenses=Decimal("5000"),
+        monthly_mortgage_payment=Decimal("2850"),
+        allocation_real_estate=0,
+        allocation_stocks=70,
+        allocation_bonds=25,
+        allocation_gold=5,
+        allocation_commodities=0,
+    )
+    test_db_session.add(config)
+    test_db_session.commit()
+
+    # Create salary record
+    salary = SalaryRecord(
+        date=date(2024, 1, 1),
+        gross_amount=Decimal("10000"),
+        contract_type="B2B",
+        company="Company A",
+        owner="John",
+        is_active=True,
+    )
+    test_db_session.add(salary)
+    test_db_session.commit()
+
+    result = _calculate_debt_to_income(test_db_session)
+
+    # DTI = (2850 / 10000) * 100 = 28.5%
+    assert result is not None
+    assert round(result, 1) == 28.5
+
+
+def test_calculate_debt_to_income_no_config(test_db_session):
+    """Test debt-to-income returns None with no config."""
+    # Create salary but no config
+    salary = SalaryRecord(
+        date=date(2024, 1, 1),
+        gross_amount=Decimal("10000"),
+        contract_type="B2B",
+        company="Company A",
+        owner="John",
+        is_active=True,
+    )
+    test_db_session.add(salary)
+    test_db_session.commit()
+
+    result = _calculate_debt_to_income(test_db_session)
+
+    assert result is None
+
+
+def test_calculate_debt_to_income_no_mortgage_payment(test_db_session):
+    """Test debt-to-income returns None with zero mortgage payment."""
+    # Create config with zero mortgage payment
+    config = AppConfig(
+        id=1,
+        birth_date=date(1990, 1, 1),
+        retirement_age=65,
+        retirement_monthly_salary=Decimal("5000"),
+        monthly_expenses=Decimal("5000"),
+        monthly_mortgage_payment=Decimal("0"),
+        allocation_real_estate=0,
+        allocation_stocks=70,
+        allocation_bonds=25,
+        allocation_gold=5,
+        allocation_commodities=0,
+    )
+    test_db_session.add(config)
+    test_db_session.commit()
+
+    # Create salary
+    salary = SalaryRecord(
+        date=date(2024, 1, 1),
+        gross_amount=Decimal("10000"),
+        contract_type="B2B",
+        company="Company A",
+        owner="John",
+        is_active=True,
+    )
+    test_db_session.add(salary)
+    test_db_session.commit()
+
+    result = _calculate_debt_to_income(test_db_session)
+
+    assert result is None
+
+
+def test_calculate_debt_to_income_no_salary(test_db_session):
+    """Test debt-to-income returns None with no salary records."""
+    # Create config
+    config = AppConfig(
+        id=1,
+        birth_date=date(1990, 1, 1),
+        retirement_age=65,
+        retirement_monthly_salary=Decimal("5000"),
+        monthly_expenses=Decimal("5000"),
+        monthly_mortgage_payment=Decimal("2850"),
+        allocation_real_estate=0,
+        allocation_stocks=70,
+        allocation_bonds=25,
+        allocation_gold=5,
+        allocation_commodities=0,
+    )
+    test_db_session.add(config)
+    test_db_session.commit()
+
+    # No salary created
+
+    result = _calculate_debt_to_income(test_db_session)
+
+    assert result is None
+
+
+def test_calculate_debt_to_income_zero_salary(test_db_session):
+    """Test debt-to-income returns None with zero salary."""
+    # Create config
+    config = AppConfig(
+        id=1,
+        birth_date=date(1990, 1, 1),
+        retirement_age=65,
+        retirement_monthly_salary=Decimal("5000"),
+        monthly_expenses=Decimal("5000"),
+        monthly_mortgage_payment=Decimal("2850"),
+        allocation_real_estate=0,
+        allocation_stocks=70,
+        allocation_bonds=25,
+        allocation_gold=5,
+        allocation_commodities=0,
+    )
+    test_db_session.add(config)
+    test_db_session.commit()
+
+    # Create salary with zero gross amount
+    salary = SalaryRecord(
+        date=date(2024, 1, 1),
+        gross_amount=Decimal("0"),
+        contract_type="B2B",
+        company="Company A",
+        owner="John",
+        is_active=True,
+    )
+    test_db_session.add(salary)
+    test_db_session.commit()
+
+    result = _calculate_debt_to_income(test_db_session)
+
+    assert result is None
