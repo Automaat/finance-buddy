@@ -37,7 +37,7 @@ def get_limit_for_year(db: Session, year: int, wrapper: str, owner: str) -> floa
         # Fallback to defaults if limit not found in database
         if wrapper == "IKE":
             return DEFAULT_IKE_LIMIT
-        elif wrapper == "IKZE":
+        if wrapper == "IKZE":
             return DEFAULT_IKZE_LIMIT
         return 0
 
