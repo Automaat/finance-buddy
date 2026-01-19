@@ -244,9 +244,7 @@ def get_ppk_stats(db: Session, owner: str | None = None) -> list[PPKStatsRespons
         latest_snapshot_value = (
             db.query(func.sum(SnapshotValue.value))
             .join(Snapshot, SnapshotValue.snapshot_id == Snapshot.id)
-            .filter(
-                SnapshotValue.account_id.in_(account_ids), Snapshot.date == max_date_subquery
-            )
+            .filter(SnapshotValue.account_id.in_(account_ids), Snapshot.date == max_date_subquery)
             .scalar()
         )
 
