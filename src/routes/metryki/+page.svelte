@@ -324,7 +324,6 @@
 			const dates = data.map((item: any) => item.date);
 			const contributions = data.map((item: any) => item.contributions);
 			const values = data.map((item: any) => item.value);
-			const returns = data.map((item: any) => item.returns);
 
 			chartInstance.setOption({
 				backgroundColor: 'transparent',

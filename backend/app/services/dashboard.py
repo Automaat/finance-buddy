@@ -23,7 +23,9 @@ from app.schemas.dashboard import (
 )
 
 
-def _calculate_savings_rate(snapshots_df: pd.DataFrame, df: pd.DataFrame, db: Session) -> float | None:
+def _calculate_savings_rate(
+    snapshots_df: pd.DataFrame, df: pd.DataFrame, db: Session
+) -> float | None:
     """
     Calculate average monthly savings rate over last 3 months.
     Formula: (avg_monthly_net_worth_delta / avg_monthly_gross_salary) × 100
@@ -37,19 +39,19 @@ def _calculate_savings_rate(snapshots_df: pd.DataFrame, df: pd.DataFrame, db: Se
     # Get last 4 snapshots
     last_4_snapshots = snapshots_df.tail(4).copy()
 
+    # Calculate signed value (same logic as main function)
+    def calculate_signed_value(row):
+        if pd.notna(row["asset_id"]) and pd.notna(row.get("name")):
+            return row["value"]
+        if pd.notna(row["account_id"]) and pd.notna(row.get("type")):
+            return row["value"] if row["type"] == "asset" else -row["value"]
+        return 0
+
     # Calculate net worth for each snapshot
     net_worth_values = []
     for _, snapshot_row in last_4_snapshots.iterrows():
         snapshot_id = snapshot_row["id"]
         snapshot_df = df[df["snapshot_id"] == snapshot_id]
-
-        # Calculate signed value (same logic as main function)
-        def calculate_signed_value(row):
-            if pd.notna(row["asset_id"]) and pd.notna(row.get("name")):
-                return row["value"]
-            if pd.notna(row["account_id"]) and pd.notna(row.get("type")):
-                return row["value"] if row["type"] == "asset" else -row["value"]
-            return 0
 
         snapshot_df = snapshot_df.copy()
         snapshot_df["signed_value"] = snapshot_df.apply(calculate_signed_value, axis=1)
