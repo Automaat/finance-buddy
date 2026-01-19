@@ -472,6 +472,42 @@
 <div class="container">
 	<h1>Metryki</h1>
 
+	<h2>Jak inwestować nowe pieniądze</h2>
+
+	{#if allocationAnalysis.rebalancing.length > 0}
+		<div class="rebalancing-container">
+			<p class="rebalancing-intro">
+				Aby osiągnąć docelową alokację portfela, wpłać nowe środki w następujący sposób:
+			</p>
+
+			<div class="rebalancing-list">
+				{#each allocationAnalysis.rebalancing as suggestion}
+					<div class="rebalancing-item buy">
+						<span class="action-label"> 📈 KUP </span>
+						<span class="category-name">{suggestion.category}</span>
+						<span class="amount">
+							{suggestion.amount.toLocaleString('pl-PL', {
+								minimumFractionDigits: 0,
+								maximumFractionDigits: 0
+							})} PLN
+						</span>
+					</div>
+				{/each}
+			</div>
+
+			<p class="rebalancing-note">
+				💡 Całkowita wartość portfela inwestycyjnego: {allocationAnalysis.total_investment_value.toLocaleString(
+					'pl-PL',
+					{ minimumFractionDigits: 0, maximumFractionDigits: 0 }
+				)} PLN
+			</p>
+		</div>
+	{:else}
+		<div class="no-rebalancing">
+			✅ Portfel jest zgodny z docelową alokacją (różnice mniejsze niż 1%)
+		</div>
+	{/if}
+
 	<div class="metrics-grid">
 		<MetricCard
 			label="Ile metrów mieszkania jest nasze"
@@ -750,42 +786,6 @@
 			<div bind:this={bondChart} class="chart"></div>
 		</div>
 	</div>
-
-	<h2>Jak inwestować nowe pieniądze</h2>
-
-	{#if allocationAnalysis.rebalancing.length > 0}
-		<div class="rebalancing-container">
-			<p class="rebalancing-intro">
-				Aby osiągnąć docelową alokację portfela, wpłać nowe środki w następujący sposób:
-			</p>
-
-			<div class="rebalancing-list">
-				{#each allocationAnalysis.rebalancing as suggestion}
-					<div class="rebalancing-item buy">
-						<span class="action-label"> 📈 KUP </span>
-						<span class="category-name">{suggestion.category}</span>
-						<span class="amount">
-							{suggestion.amount.toLocaleString('pl-PL', {
-								minimumFractionDigits: 0,
-								maximumFractionDigits: 0
-							})} PLN
-						</span>
-					</div>
-				{/each}
-			</div>
-
-			<p class="rebalancing-note">
-				💡 Całkowita wartość portfela inwestycyjnego: {allocationAnalysis.total_investment_value.toLocaleString(
-					'pl-PL',
-					{ minimumFractionDigits: 0, maximumFractionDigits: 0 }
-				)} PLN
-			</p>
-		</div>
-	{:else}
-		<div class="no-rebalancing">
-			✅ Portfel jest zgodny z docelową alokacją (różnice mniejsze niż 1%)
-		</div>
-	{/if}
 </div>
 
 <style>
