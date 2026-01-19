@@ -220,7 +220,6 @@
 		const dates = investmentTimeSeries.map((item: any) => item.date);
 		const values = investmentTimeSeries.map((item: any) => item.value);
 		const contributions = investmentTimeSeries.map((item: any) => item.contributions);
-		const returns = investmentTimeSeries.map((item: any) => item.returns);
 
 		investmentTrendChartInstance.setOption({
 			backgroundColor: 'transparent',
@@ -238,20 +237,20 @@
 				formatter: function (params: any) {
 					const date = params[0].axisValue;
 					const contributions = params[0].value;
-					const returns = params[1].value;
-					const total = contributions + returns;
+					const value = params[1].value;
+					const returns = value - contributions;
 
 					const formatPLN = (val: number) =>
 						val.toLocaleString('pl-PL', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 					return `${date}<br/>
-						<span style="color:#5e81ac">●</span> Wartość portfela: <b>${formatPLN(total)} PLN</b><br/>
+						<span style="color:#5e81ac">●</span> Wartość portfela: <b>${formatPLN(value)} PLN</b><br/>
 						<span style="color:#88c0d0">■</span> Wpłaty: ${formatPLN(contributions)} PLN<br/>
 						<span style="color:#a3be8c">■</span> Zyski: ${formatPLN(returns)} PLN`;
 				}
 			},
 			legend: {
-				data: ['Wpłaty', 'Zyski'],
+				data: ['Wpłaty', 'Wartość portfela'],
 				bottom: 10,
 				textStyle: { color: '#2e3440', fontSize: 14 }
 			},
@@ -293,7 +292,6 @@
 				{
 					name: 'Wpłaty',
 					type: 'line',
-					stack: 'total',
 					data: contributions,
 					smooth: true,
 					lineStyle: { width: 0 },
@@ -307,17 +305,12 @@
 					}
 				},
 				{
-					name: 'Zyski',
+					name: 'Wartość portfela',
 					type: 'line',
-					stack: 'total',
-					data: returns,
+					data: values,
 					smooth: true,
 					lineStyle: { width: 3, color: '#5e81ac' },
 					showSymbol: false,
-					areaStyle: {
-						color: '#a3be8c',
-						opacity: 0.8
-					},
 					emphasis: {
 						focus: 'series'
 					}
@@ -330,7 +323,7 @@
 			const chartInstance = echarts.init(chartElement);
 			const dates = data.map((item: any) => item.date);
 			const contributions = data.map((item: any) => item.contributions);
-			const returns = data.map((item: any) => item.returns);
+			const values = data.map((item: any) => item.value);
 
 			chartInstance.setOption({
 				backgroundColor: 'transparent',
@@ -348,20 +341,20 @@
 					formatter: function (params: any) {
 						const date = params[0].axisValue;
 						const contributions = params[0].value;
-						const returns = params[1].value;
-						const total = contributions + returns;
+						const value = params[1].value;
+						const returns = value - contributions;
 
 						const formatPLN = (val: number) =>
 							val.toLocaleString('pl-PL', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 						return `${date}<br/>
-							<span style="color:#5e81ac">●</span> Wartość: <b>${formatPLN(total)} PLN</b><br/>
+							<span style="color:#5e81ac">●</span> Wartość: <b>${formatPLN(value)} PLN</b><br/>
 							<span style="color:#88c0d0">■</span> Wpłaty: ${formatPLN(contributions)} PLN<br/>
 							<span style="color:#a3be8c">■</span> Zyski: ${formatPLN(returns)} PLN`;
 					}
 				},
 				legend: {
-					data: ['Wpłaty', 'Zyski'],
+					data: ['Wpłaty', 'Wartość portfela'],
 					bottom: 10,
 					textStyle: { color: '#2e3440', fontSize: 14 }
 				},
@@ -403,7 +396,6 @@
 					{
 						name: 'Wpłaty',
 						type: 'line',
-						stack: 'total',
 						data: contributions,
 						smooth: true,
 						lineStyle: { width: 0 },
@@ -417,17 +409,12 @@
 						}
 					},
 					{
-						name: 'Zyski',
+						name: 'Wartość portfela',
 						type: 'line',
-						stack: 'total',
-						data: returns,
+						data: values,
 						smooth: true,
 						lineStyle: { width: 3, color: '#5e81ac' },
 						showSymbol: false,
-						areaStyle: {
-							color: '#a3be8c',
-							opacity: 0.8
-						},
 						emphasis: {
 							focus: 'series'
 						}
@@ -554,6 +541,30 @@
 			suffix=" PLN"
 			color="green"
 		/>
+
+		{#if metricCards.savings_rate !== null}
+			<MetricCard
+				label="Ile oszczędzamy miesięcznie"
+				value={metricCards.savings_rate}
+				decimals={1}
+				suffix="%"
+				color="green"
+			/>
+		{/if}
+
+		{#if metricCards.debt_to_income_ratio !== null}
+			<MetricCard
+				label="Stosunek długu do dochodu"
+				value={metricCards.debt_to_income_ratio}
+				decimals={1}
+				suffix="%"
+				color={metricCards.debt_to_income_ratio < 30
+					? 'green'
+					: metricCards.debt_to_income_ratio <= 36
+						? 'blue'
+						: 'red'}
+			/>
+		{/if}
 	</div>
 
 	<h2>Struktura portfela inwestycyjnego</h2>

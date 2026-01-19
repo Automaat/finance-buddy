@@ -24,6 +24,8 @@ class MetricCards(BaseModel):
     retirement_total: float
     investment_contributions: float
     investment_returns: float
+    savings_rate: float | None = None
+    debt_to_income_ratio: float | None = None
 
 
 class AllocationBreakdown(BaseModel):
