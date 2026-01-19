@@ -6,7 +6,15 @@ from decimal import Decimal
 import pytest
 from fastapi import HTTPException
 
-from app.models import Account, AppConfig, RetirementLimit, SalaryRecord, Snapshot, SnapshotValue, Transaction
+from app.models import (
+    Account,
+    AppConfig,
+    RetirementLimit,
+    SalaryRecord,
+    Snapshot,
+    SnapshotValue,
+    Transaction,
+)
 from app.schemas.retirement import PPKContributionGenerateRequest
 from app.services.retirement import (
     generate_ppk_contributions,
