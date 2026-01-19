@@ -31,9 +31,7 @@ def test_simulate_retirement_success(test_client: TestClient, test_db_session: S
     config = create_app_config()
     test_db_session.add(config)
 
-    limit = RetirementLimit(
-        year=2026, account_wrapper="IKE", owner="Marcin", limit_amount=28260.0
-    )
+    limit = RetirementLimit(year=2026, account_wrapper="IKE", owner="Marcin", limit_amount=28260.0)
     test_db_session.add(limit)
     test_db_session.commit()
 
@@ -194,12 +192,8 @@ def test_get_prefill_data_with_balances(test_client: TestClient, test_db_session
     test_db_session.commit()
 
     # Create snapshot values
-    value1 = SnapshotValue(
-        snapshot_id=snapshot.id, account_id=ike_marcin.id, value=50000.0
-    )
-    value2 = SnapshotValue(
-        snapshot_id=snapshot.id, account_id=ikze_ewa.id, value=30000.0
-    )
+    value1 = SnapshotValue(snapshot_id=snapshot.id, account_id=ike_marcin.id, value=50000.0)
+    value2 = SnapshotValue(snapshot_id=snapshot.id, account_id=ikze_ewa.id, value=30000.0)
     test_db_session.add_all([value1, value2])
     test_db_session.commit()
 
@@ -219,9 +213,7 @@ def test_simulate_retirement_fixed_monthly_contributions(
     config = create_app_config()
     test_db_session.add(config)
 
-    limit = RetirementLimit(
-        year=2026, account_wrapper="IKE", owner="Marcin", limit_amount=28260.0
-    )
+    limit = RetirementLimit(year=2026, account_wrapper="IKE", owner="Marcin", limit_amount=28260.0)
     test_db_session.add(limit)
     test_db_session.commit()
 
@@ -256,9 +248,7 @@ def test_simulate_retirement_yearly_projections_structure(
     config = create_app_config()
     test_db_session.add(config)
 
-    limit = RetirementLimit(
-        year=2026, account_wrapper="IKZE", owner="Marcin", limit_amount=11304.0
-    )
+    limit = RetirementLimit(year=2026, account_wrapper="IKZE", owner="Marcin", limit_amount=11304.0)
     test_db_session.add(limit)
     test_db_session.commit()
 

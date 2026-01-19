@@ -54,16 +54,22 @@ def fetch_current_balances(db: Session) -> dict:
         return {"ike_marcin": 0, "ike_ewa": 0, "ikze_marcin": 0, "ikze_ewa": 0}
 
     # Query accounts with account_wrapper
-    accounts = db.execute(
-        select(Account).where(
-            Account.is_active.is_(True), Account.account_wrapper.in_(["IKE", "IKZE"])
+    accounts = (
+        db.execute(
+            select(Account).where(
+                Account.is_active.is_(True), Account.account_wrapper.in_(["IKE", "IKZE"])
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     # Get values from latest snapshot
-    values = db.execute(
-        select(SnapshotValue).where(SnapshotValue.snapshot_id == latest_snapshot.id)
-    ).scalars().all()
+    values = (
+        db.execute(select(SnapshotValue).where(SnapshotValue.snapshot_id == latest_snapshot.id))
+        .scalars()
+        .all()
+    )
 
     balances = {"ike_marcin": 0, "ike_ewa": 0, "ikze_marcin": 0, "ikze_ewa": 0}
 

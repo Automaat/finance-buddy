@@ -18,9 +18,7 @@ from app.services.simulations import (
 
 def test_get_limit_for_year_from_db(test_db_session: Session):
     """Test fetching limit from database"""
-    limit = RetirementLimit(
-        year=2026, account_wrapper="IKE", owner="Marcin", limit_amount=28260.0
-    )
+    limit = RetirementLimit(year=2026, account_wrapper="IKE", owner="Marcin", limit_amount=28260.0)
     test_db_session.add(limit)
     test_db_session.commit()
 
@@ -80,12 +78,8 @@ def test_fetch_current_balances_with_snapshot(test_db_session: Session):
     test_db_session.commit()
 
     # Create snapshot values
-    value1 = SnapshotValue(
-        snapshot_id=snapshot.id, account_id=ike_marcin.id, value=50000.0
-    )
-    value2 = SnapshotValue(
-        snapshot_id=snapshot.id, account_id=ikze_ewa.id, value=30000.0
-    )
+    value1 = SnapshotValue(snapshot_id=snapshot.id, account_id=ike_marcin.id, value=50000.0)
+    value2 = SnapshotValue(snapshot_id=snapshot.id, account_id=ikze_ewa.id, value=30000.0)
     test_db_session.add_all([value1, value2])
     test_db_session.commit()
 
@@ -123,9 +117,7 @@ def test_get_age_from_config(test_db_session: Session):
 def test_simulate_account_auto_fill(test_db_session: Session):
     """Test simulation with auto-fill limit"""
     # Add limit
-    limit = RetirementLimit(
-        year=2026, account_wrapper="IKE", owner="Marcin", limit_amount=28260.0
-    )
+    limit = RetirementLimit(year=2026, account_wrapper="IKE", owner="Marcin", limit_amount=28260.0)
     test_db_session.add(limit)
     test_db_session.commit()
 
@@ -155,9 +147,7 @@ def test_simulate_account_auto_fill(test_db_session: Session):
 
 def test_simulate_account_fixed_monthly(test_db_session: Session):
     """Test simulation with fixed monthly contributions"""
-    limit = RetirementLimit(
-        year=2026, account_wrapper="IKE", owner="Marcin", limit_amount=28260.0
-    )
+    limit = RetirementLimit(year=2026, account_wrapper="IKE", owner="Marcin", limit_amount=28260.0)
     test_db_session.add(limit)
     test_db_session.commit()
 
@@ -182,9 +172,7 @@ def test_simulate_account_fixed_monthly(test_db_session: Session):
 
 def test_simulate_account_limit_capping(test_db_session: Session):
     """Test that contributions are capped at limit"""
-    limit = RetirementLimit(
-        year=2026, account_wrapper="IKE", owner="Marcin", limit_amount=28260.0
-    )
+    limit = RetirementLimit(year=2026, account_wrapper="IKE", owner="Marcin", limit_amount=28260.0)
     test_db_session.add(limit)
     test_db_session.commit()
 
@@ -208,9 +196,7 @@ def test_simulate_account_limit_capping(test_db_session: Session):
 
 def test_simulate_account_ikze_tax_savings(test_db_session: Session):
     """Test IKZE tax savings calculation"""
-    limit = RetirementLimit(
-        year=2026, account_wrapper="IKZE", owner="Marcin", limit_amount=11304.0
-    )
+    limit = RetirementLimit(year=2026, account_wrapper="IKZE", owner="Marcin", limit_amount=11304.0)
     test_db_session.add(limit)
     test_db_session.commit()
 
@@ -236,9 +222,7 @@ def test_simulate_account_ikze_tax_savings(test_db_session: Session):
 
 def test_simulate_account_compound_interest(test_db_session: Session):
     """Test compound interest calculation"""
-    limit = RetirementLimit(
-        year=2026, account_wrapper="IKE", owner="Marcin", limit_amount=28260.0
-    )
+    limit = RetirementLimit(year=2026, account_wrapper="IKE", owner="Marcin", limit_amount=28260.0)
     test_db_session.add(limit)
     test_db_session.commit()
 
@@ -345,9 +329,7 @@ def test_run_simulation_selective_accounts(test_db_session: Session):
     )
     test_db_session.add(config)
 
-    limit = RetirementLimit(
-        year=2026, account_wrapper="IKE", owner="Marcin", limit_amount=28260.0
-    )
+    limit = RetirementLimit(year=2026, account_wrapper="IKE", owner="Marcin", limit_amount=28260.0)
     test_db_session.add(limit)
     test_db_session.commit()
 
