@@ -51,7 +51,7 @@ def fetch_current_balances(db: Session) -> dict:
     ).scalar_one_or_none()
 
     if not latest_snapshot:
-        return {"ike_marcin": 0, "ike_ewa": 0, "ikze_marcin": 0, "ikze_ewa": 0}
+        return {"ike_marcin": 0.0, "ike_ewa": 0.0, "ikze_marcin": 0.0, "ikze_ewa": 0.0}
 
     # Query accounts with account_wrapper
     accounts = (
@@ -71,13 +71,13 @@ def fetch_current_balances(db: Session) -> dict:
         .all()
     )
 
-    balances = {"ike_marcin": 0, "ike_ewa": 0, "ikze_marcin": 0, "ikze_ewa": 0}
+    balances = {"ike_marcin": 0.0, "ike_ewa": 0.0, "ikze_marcin": 0.0, "ikze_ewa": 0.0}
 
     # Create dict lookup for O(1) access by account_id
     values_by_account_id = {value.account_id: value.value for value in values}
 
     for account in accounts:
-        if account.id in values_by_account_id:
+        if account.id in values_by_account_id and account.account_wrapper:
             key = f"{account.account_wrapper.lower()}_{account.owner.lower()}"
             balances[key] = float(values_by_account_id[account.id])
 
@@ -123,8 +123,9 @@ def simulate_account(
 
     projections = []
     balance = starting_balance
-    cumulative_contributions = 0
-    cumulative_tax_savings = 0
+    cumulative_contributions = 0.0
+    cumulative_tax_savings = 0.0
+    cumulative_returns = 0.0
 
     for year_offset in range(years_to_retirement):
         year = current_year + year_offset + 1
