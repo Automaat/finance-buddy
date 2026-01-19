@@ -24,13 +24,29 @@ export async function load({ fetch }) {
 			ppkStats = await ppkStatsRes.json();
 		}
 
+		// Fetch stock stats
+		const stockStatsRes = await fetch(`${apiUrl}/api/investment/stock-stats`);
+		let stockStats = null;
+		if (stockStatsRes.ok) {
+			stockStats = await stockStatsRes.json();
+		}
+
+		// Fetch bond stats
+		const bondStatsRes = await fetch(`${apiUrl}/api/investment/bond-stats`);
+		let bondStats = null;
+		if (bondStatsRes.ok) {
+			bondStats = await bondStatsRes.json();
+		}
+
 		return {
 			metricCards: dashboard.metric_cards,
 			allocationAnalysis: dashboard.allocation_analysis,
 			investmentTimeSeries: dashboard.investment_time_series,
 			wrapperTimeSeries: dashboard.wrapper_time_series,
 			categoryTimeSeries: dashboard.category_time_series,
-			ppkStats
+			ppkStats,
+			stockStats,
+			bondStats
 		};
 	} catch (err) {
 		if (err instanceof Error && 'status' in err) {

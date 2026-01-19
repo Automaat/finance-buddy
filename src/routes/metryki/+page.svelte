@@ -472,6 +472,44 @@
 <div class="container">
 	<h1>Metryki</h1>
 
+	<h2>Jak inwestować nowe pieniądze</h2>
+
+	{#if allocationAnalysis.rebalancing.length > 0}
+		<div class="rebalancing-container">
+			<p class="rebalancing-intro">
+				Aby osiągnąć docelową alokację portfela, wpłać nowe środki w następujący sposób:
+			</p>
+
+			<div class="rebalancing-list">
+				{#each allocationAnalysis.rebalancing as suggestion}
+					<div class="rebalancing-item buy">
+						<span class="action-label"> 📈 KUP </span>
+						<span class="category-name">{suggestion.category}</span>
+						<span class="amount">
+							{suggestion.amount.toLocaleString('pl-PL', {
+								minimumFractionDigits: 0,
+								maximumFractionDigits: 0
+							})} PLN
+						</span>
+					</div>
+				{/each}
+			</div>
+
+			<p class="rebalancing-note">
+				💡 Całkowita wartość portfela inwestycyjnego: {allocationAnalysis.total_investment_value.toLocaleString(
+					'pl-PL',
+					{ minimumFractionDigits: 0, maximumFractionDigits: 0 }
+				)} PLN
+			</p>
+		</div>
+	{:else}
+		<div class="no-rebalancing">
+			✅ Portfel jest zgodny z docelową alokacją (różnice mniejsze niż 1%)
+		</div>
+	{/if}
+
+	<h2>Przegląd finansowy</h2>
+
 	<div class="metrics-grid">
 		<MetricCard
 			label="Ile metrów mieszkania jest nasze"
@@ -632,6 +670,82 @@
 		{/each}
 	{/if}
 
+	<!-- Stock Stats Section -->
+	{#if data.stockStats}
+		<h2>Podsumowanie Akcji</h2>
+		<div class="metrics-grid">
+			<MetricCard
+				label="Akcje - Wartość całkowita"
+				value={data.stockStats.total_value}
+				decimals={0}
+				suffix=" PLN"
+				color="green"
+			/>
+
+			<MetricCard
+				label="Akcje - Łącznie wpłacone"
+				value={data.stockStats.total_contributed}
+				decimals={0}
+				suffix=" PLN"
+				color="blue"
+			/>
+
+			<MetricCard
+				label="Akcje - Zyski z inwestycji"
+				value={data.stockStats.returns}
+				decimals={0}
+				suffix=" PLN"
+				color={data.stockStats.returns >= 0 ? 'green' : 'red'}
+			/>
+
+			<MetricCard
+				label="Akcje - ROI"
+				value={data.stockStats.roi_percentage}
+				decimals={2}
+				suffix="%"
+				color={data.stockStats.roi_percentage >= 0 ? 'green' : 'red'}
+			/>
+		</div>
+	{/if}
+
+	<!-- Bond Stats Section -->
+	{#if data.bondStats}
+		<h2>Podsumowanie Obligacji</h2>
+		<div class="metrics-grid">
+			<MetricCard
+				label="Obligacje - Wartość całkowita"
+				value={data.bondStats.total_value}
+				decimals={0}
+				suffix=" PLN"
+				color="green"
+			/>
+
+			<MetricCard
+				label="Obligacje - Łącznie wpłacone"
+				value={data.bondStats.total_contributed}
+				decimals={0}
+				suffix=" PLN"
+				color="blue"
+			/>
+
+			<MetricCard
+				label="Obligacje - Zyski z inwestycji"
+				value={data.bondStats.returns}
+				decimals={0}
+				suffix=" PLN"
+				color={data.bondStats.returns >= 0 ? 'green' : 'red'}
+			/>
+
+			<MetricCard
+				label="Obligacje - ROI"
+				value={data.bondStats.roi_percentage}
+				decimals={2}
+				suffix="%"
+				color={data.bondStats.roi_percentage >= 0 ? 'green' : 'red'}
+			/>
+		</div>
+	{/if}
+
 	<h2>Struktura portfela inwestycyjnego</h2>
 
 	<div class="charts-grid">
@@ -674,42 +788,6 @@
 			<div bind:this={bondChart} class="chart"></div>
 		</div>
 	</div>
-
-	<h2>Jak inwestować nowe pieniądze</h2>
-
-	{#if allocationAnalysis.rebalancing.length > 0}
-		<div class="rebalancing-container">
-			<p class="rebalancing-intro">
-				Aby osiągnąć docelową alokację portfela, wpłać nowe środki w następujący sposób:
-			</p>
-
-			<div class="rebalancing-list">
-				{#each allocationAnalysis.rebalancing as suggestion}
-					<div class="rebalancing-item buy">
-						<span class="action-label"> 📈 KUP </span>
-						<span class="category-name">{suggestion.category}</span>
-						<span class="amount">
-							{suggestion.amount.toLocaleString('pl-PL', {
-								minimumFractionDigits: 0,
-								maximumFractionDigits: 0
-							})} PLN
-						</span>
-					</div>
-				{/each}
-			</div>
-
-			<p class="rebalancing-note">
-				💡 Całkowita wartość portfela inwestycyjnego: {allocationAnalysis.total_investment_value.toLocaleString(
-					'pl-PL',
-					{ minimumFractionDigits: 0, maximumFractionDigits: 0 }
-				)} PLN
-			</p>
-		</div>
-	{:else}
-		<div class="no-rebalancing">
-			✅ Portfel jest zgodny z docelową alokacją (różnice mniejsze niż 1%)
-		</div>
-	{/if}
 </div>
 
 <style>
