@@ -14,6 +14,7 @@ export interface Account {
 	account_wrapper: string | null;
 	purpose: string;
 	is_active: boolean;
+	receives_contributions: boolean;
 	created_at: string;
 	current_value: number;
 }

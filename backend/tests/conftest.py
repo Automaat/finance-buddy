@@ -18,6 +18,7 @@ from app.models import (  # noqa: F401
     Debt,
     DebtPayment,
     Goal,
+    RetirementLimit,
     SalaryRecord,
     Snapshot,
     SnapshotValue,

@@ -23,5 +23,17 @@ class AppConfig(Base):
     monthly_mortgage_payment: Mapped[Decimal] = mapped_column(
         Numeric(15, 2), nullable=False, default=0
     )
+    ppk_employee_rate_marcin: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2), nullable=False, default=Decimal("2.0")
+    )
+    ppk_employer_rate_marcin: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2), nullable=False, default=Decimal("1.5")
+    )
+    ppk_employee_rate_ewa: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2), nullable=False, default=Decimal("2.0")
+    )
+    ppk_employer_rate_ewa: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2), nullable=False, default=Decimal("1.5")
+    )
 
     __table_args__ = (CheckConstraint("id = 1", name="single_row"),)

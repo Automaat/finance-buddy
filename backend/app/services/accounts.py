@@ -40,6 +40,7 @@ def get_all_accounts(db: Session) -> AccountsListResponse:
             purpose=account.purpose,
             square_meters=float(account.square_meters) if account.square_meters else None,
             is_active=account.is_active,
+            receives_contributions=account.receives_contributions,
             created_at=account.created_at,
             current_value=latest_values.get(account.id, 0.0),
         )
@@ -77,6 +78,7 @@ def create_account(db: Session, data: AccountCreate) -> AccountResponse:
         account_wrapper=data.account_wrapper,
         purpose=data.purpose,
         square_meters=data.square_meters,
+        receives_contributions=data.receives_contributions,
         is_active=True,
     )
     db.add(account)
@@ -94,6 +96,7 @@ def create_account(db: Session, data: AccountCreate) -> AccountResponse:
         purpose=account.purpose,
         square_meters=float(account.square_meters) if account.square_meters else None,
         is_active=account.is_active,
+        receives_contributions=account.receives_contributions,
         created_at=account.created_at,
         current_value=0.0,
     )
@@ -135,6 +138,8 @@ def update_account(db: Session, account_id: int, data: AccountUpdate) -> Account
         account.currency = data.currency
     if data.purpose is not None:
         account.purpose = data.purpose
+    if data.receives_contributions is not None:
+        account.receives_contributions = data.receives_contributions
     # For account_wrapper and square_meters, distinguish between
     # "not provided" and "explicitly set to None"
     _field_set = getattr(data, "model_fields_set", set())
@@ -173,6 +178,7 @@ def update_account(db: Session, account_id: int, data: AccountUpdate) -> Account
         purpose=account.purpose,
         square_meters=float(account.square_meters) if account.square_meters else None,
         is_active=account.is_active,
+        receives_contributions=account.receives_contributions,
         created_at=account.created_at,
         current_value=current_value,
     )

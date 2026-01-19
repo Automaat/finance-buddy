@@ -28,6 +28,15 @@
 	let transactionError = '';
 	let savingTransaction = false;
 
+	let showPPKGenerateModal = false;
+	let ppkGenerateData = {
+		owner: defaultOwner,
+		month: new Date().getMonth() + 1,
+		year: new Date().getFullYear()
+	};
+	let ppkGenerateError = '';
+	let ppkGenerating = false;
+
 	function applyFilters() {
 		const params = new URLSearchParams();
 		if (filterAccountId) params.set('account_id', filterAccountId);
@@ -86,6 +95,48 @@
 		transactionError = '';
 	}
 
+	function openPPKGenerateModal() {
+		ppkGenerateData = {
+			owner: defaultOwner,
+			month: new Date().getMonth() + 1,
+			year: new Date().getFullYear()
+		};
+		ppkGenerateError = '';
+		showPPKGenerateModal = true;
+	}
+
+	function closePPKGenerateModal() {
+		showPPKGenerateModal = false;
+		ppkGenerateError = '';
+	}
+
+	async function generatePPKContributions() {
+		ppkGenerateError = '';
+		ppkGenerating = true;
+
+		try {
+			const response = await fetch(`${apiUrl}/api/retirement/ppk-contributions/generate`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(ppkGenerateData)
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.detail || 'Nie udało się wygenerować wpłat PPK');
+			}
+
+			await invalidateAll();
+			closePPKGenerateModal();
+		} catch (err) {
+			if (err instanceof Error) {
+				ppkGenerateError = err.message;
+			}
+		} finally {
+			ppkGenerating = false;
+		}
+	}
+
 	async function createTransaction() {
 		if (!newTransactionData.account_id) {
 			transactionError = 'Wybierz konto';
@@ -135,7 +186,10 @@
 		<h1 class="page-title">Wszystkie transakcje</h1>
 		<p class="page-description">Historia transakcji inwestycyjnych</p>
 	</div>
-	<button class="btn btn-primary" on:click={openNewTransactionModal}>+ Nowa Transakcja</button>
+	<div class="header-buttons">
+		<button class="btn btn-secondary" on:click={openPPKGenerateModal}>🏦 Generuj wpłaty PPK</button>
+		<button class="btn btn-primary" on:click={openNewTransactionModal}>+ Nowa Transakcja</button>
+	</div>
 </div>
 
 <Card>
@@ -292,6 +346,60 @@
 				<option value="Ewa">Ewa</option>
 				<option value="Shared">Wspólne</option>
 			</select>
+		</div>
+	</form>
+</Modal>
+
+<Modal
+	open={showPPKGenerateModal}
+	title="Generuj wpłaty PPK"
+	onConfirm={generatePPKContributions}
+	onCancel={closePPKGenerateModal}
+	confirmText={ppkGenerating ? 'Generowanie...' : 'Generuj'}
+	confirmDisabled={ppkGenerating}
+	confirmVariant="primary"
+>
+	<form on:submit|preventDefault={generatePPKContributions} class="transaction-form">
+		{#if ppkGenerateError}
+			<div class="error-message">{ppkGenerateError}</div>
+		{/if}
+
+		<div class="form-group">
+			<label for="ppk-owner">Właściciel *</label>
+			<select id="ppk-owner" bind:value={ppkGenerateData.owner} required>
+				<option value="Marcin">Marcin</option>
+				<option value="Ewa">Ewa</option>
+			</select>
+		</div>
+
+		<div class="form-group">
+			<label for="ppk-month">Miesiąc *</label>
+			<select id="ppk-month" bind:value={ppkGenerateData.month} required>
+				<option value={1}>Styczeń</option>
+				<option value={2}>Luty</option>
+				<option value={3}>Marzec</option>
+				<option value={4}>Kwiecień</option>
+				<option value={5}>Maj</option>
+				<option value={6}>Czerwiec</option>
+				<option value={7}>Lipiec</option>
+				<option value={8}>Sierpień</option>
+				<option value={9}>Wrzesień</option>
+				<option value={10}>Październik</option>
+				<option value={11}>Listopad</option>
+				<option value={12}>Grudzień</option>
+			</select>
+		</div>
+
+		<div class="form-group">
+			<label for="ppk-year">Rok *</label>
+			<input
+				type="number"
+				id="ppk-year"
+				bind:value={ppkGenerateData.year}
+				required
+				min="2019"
+				max={new Date().getFullYear() + 1}
+			/>
 		</div>
 	</form>
 </Modal>
@@ -489,6 +597,11 @@
 		color: var(--nord6);
 		border-radius: var(--radius-2);
 		font-size: var(--font-size-2);
+	}
+
+	.header-buttons {
+		display: flex;
+		gap: var(--size-3);
 	}
 
 	@media (max-width: 1024px) {

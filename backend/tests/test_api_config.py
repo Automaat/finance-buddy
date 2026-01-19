@@ -22,6 +22,10 @@ def test_create_config_success(test_client):
         "allocation_commodities": 2,
         "monthly_expenses": 5000,
         "monthly_mortgage_payment": 3000,
+        "ppk_employee_rate_marcin": 2.0,
+        "ppk_employer_rate_marcin": 1.5,
+        "ppk_employee_rate_ewa": 2.0,
+        "ppk_employer_rate_ewa": 1.5,
     }
 
     response = test_client.put("/api/config", json=payload)
@@ -55,6 +59,10 @@ def test_get_config_success(test_client):
         "allocation_commodities": 2,
         "monthly_expenses": 5000,
         "monthly_mortgage_payment": 3000,
+        "ppk_employee_rate_marcin": 2.0,
+        "ppk_employer_rate_marcin": 1.5,
+        "ppk_employee_rate_ewa": 2.0,
+        "ppk_employer_rate_ewa": 1.5,
     }
     test_client.put("/api/config", json=payload)
 
@@ -82,6 +90,10 @@ def test_update_config_success(test_client):
         "allocation_commodities": 2,
         "monthly_expenses": 5000,
         "monthly_mortgage_payment": 3000,
+        "ppk_employee_rate_marcin": 2.0,
+        "ppk_employer_rate_marcin": 1.5,
+        "ppk_employee_rate_ewa": 2.0,
+        "ppk_employer_rate_ewa": 1.5,
     }
     test_client.put("/api/config", json=payload)
 
@@ -97,6 +109,10 @@ def test_update_config_success(test_client):
         "allocation_commodities": 5,
         "monthly_expenses": 6000,
         "monthly_mortgage_payment": 4000,
+        "ppk_employee_rate_marcin": 3.0,
+        "ppk_employer_rate_marcin": 2.5,
+        "ppk_employee_rate_ewa": 3.0,
+        "ppk_employer_rate_ewa": 2.5,
     }
     response = test_client.put("/api/config", json=updated_payload)
 
@@ -123,6 +139,10 @@ def test_create_config_invalid_allocation_sum(test_client):
         "allocation_commodities": 3,  # Market sum = 98%
         "monthly_expenses": 5000,
         "monthly_mortgage_payment": 3000,
+        "ppk_employee_rate_marcin": 2.0,
+        "ppk_employer_rate_marcin": 1.5,
+        "ppk_employee_rate_ewa": 2.0,
+        "ppk_employer_rate_ewa": 1.5,
     }
 
     response = test_client.put("/api/config", json=payload)
@@ -144,6 +164,10 @@ def test_create_config_invalid_retirement_age(test_client):
         "allocation_commodities": 3,
         "monthly_expenses": 5000,
         "monthly_mortgage_payment": 3000,
+        "ppk_employee_rate_marcin": 2.0,
+        "ppk_employer_rate_marcin": 1.5,
+        "ppk_employee_rate_ewa": 2.0,
+        "ppk_employer_rate_ewa": 1.5,
     }
 
     response = test_client.put("/api/config", json=payload)
@@ -164,6 +188,10 @@ def test_create_config_invalid_allocation_range(test_client):
         "allocation_commodities": 3,
         "monthly_expenses": 5000,
         "monthly_mortgage_payment": 3000,
+        "ppk_employee_rate_marcin": 2.0,
+        "ppk_employer_rate_marcin": 1.5,
+        "ppk_employee_rate_ewa": 2.0,
+        "ppk_employer_rate_ewa": 1.5,
     }
 
     response = test_client.put("/api/config", json=payload)
@@ -184,6 +212,10 @@ def test_create_config_negative_retirement_salary(test_client):
         "allocation_commodities": 3,
         "monthly_expenses": 5000,
         "monthly_mortgage_payment": 3000,
+        "ppk_employee_rate_marcin": 2.0,
+        "ppk_employer_rate_marcin": 1.5,
+        "ppk_employee_rate_ewa": 2.0,
+        "ppk_employer_rate_ewa": 1.5,
     }
 
     response = test_client.put("/api/config", json=payload)
@@ -207,6 +239,10 @@ def test_create_config_future_birth_date(test_client):
         "allocation_commodities": 3,
         "monthly_expenses": 5000,
         "monthly_mortgage_payment": 3000,
+        "ppk_employee_rate_marcin": 2.0,
+        "ppk_employer_rate_marcin": 1.5,
+        "ppk_employee_rate_ewa": 2.0,
+        "ppk_employer_rate_ewa": 1.5,
     }
 
     response = test_client.put("/api/config", json=payload)

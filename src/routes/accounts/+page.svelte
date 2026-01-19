@@ -74,7 +74,8 @@
 		owner: defaultOwner,
 		currency: 'PLN',
 		account_wrapper: null as string | null,
-		purpose: 'general'
+		purpose: 'general',
+		receives_contributions: true
 	};
 
 	let error = '';
@@ -88,7 +89,8 @@
 			owner: editingAccount.owner,
 			currency: editingAccount.currency,
 			account_wrapper: editingAccount.account_wrapper,
-			purpose: editingAccount.purpose
+			purpose: editingAccount.purpose,
+			receives_contributions: editingAccount.receives_contributions
 		};
 	} else if (showForm) {
 		formData = {
@@ -98,7 +100,8 @@
 			owner: defaultOwner,
 			currency: 'PLN',
 			account_wrapper: null,
-			purpose: 'general'
+			purpose: 'general',
+			receives_contributions: true
 		};
 	}
 
@@ -112,10 +115,19 @@
 				: `${apiUrl}/api/accounts`;
 			const method = editingAccount ? 'PUT' : 'POST';
 
+			// Conditionally include receives_contributions only for PPK accounts
+			const payload =
+				formData.account_wrapper === 'PPK'
+					? formData
+					: {
+							...formData,
+							receives_contributions: undefined
+						};
+
 			const response = await fetch(endpoint, {
 				method,
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(formData)
+				body: JSON.stringify(payload)
 			});
 
 			if (!response.ok) {
@@ -482,6 +494,19 @@
 				</select>
 			</div>
 		</div>
+
+		{#if formData.account_wrapper === 'PPK'}
+			<div class="form-group">
+				<label class="checkbox-label">
+					<input type="checkbox" bind:checked={formData.receives_contributions} />
+					<span>Konto otrzymuje wpłaty (aktywne PPK)</span>
+				</label>
+				<p class="form-help-text">
+					Zaznacz jeśli to konto jest aktywnie używane do otrzymywania miesięcznych wpłat PPK. Stare
+					konta PPK powinny mieć to odznaczone - będą tylko śledzone przez snapshoty.
+				</p>
+			</div>
+		{/if}
 	</form>
 </Modal>
 
@@ -769,6 +794,27 @@
 		color: var(--nord6);
 		border-radius: var(--radius-2);
 		font-size: var(--font-size-2);
+	}
+
+	.checkbox-label {
+		display: flex;
+		align-items: center;
+		gap: var(--size-2);
+		cursor: pointer;
+		font-weight: var(--font-weight-5);
+	}
+
+	.checkbox-label input[type='checkbox'] {
+		width: var(--size-4);
+		height: var(--size-4);
+		cursor: pointer;
+	}
+
+	.form-help-text {
+		margin: var(--size-2) 0 0 0;
+		font-size: var(--font-size-1);
+		color: var(--color-text-secondary);
+		line-height: 1.4;
 	}
 
 	.transactions-modal {

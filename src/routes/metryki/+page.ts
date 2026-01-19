@@ -17,12 +17,20 @@ export async function load({ fetch }) {
 
 		const dashboard = await dashboardRes.json();
 
+		// Fetch PPK stats
+		const ppkStatsRes = await fetch(`${apiUrl}/api/retirement/ppk-stats`);
+		let ppkStats = [];
+		if (ppkStatsRes.ok) {
+			ppkStats = await ppkStatsRes.json();
+		}
+
 		return {
 			metricCards: dashboard.metric_cards,
 			allocationAnalysis: dashboard.allocation_analysis,
 			investmentTimeSeries: dashboard.investment_time_series,
 			wrapperTimeSeries: dashboard.wrapper_time_series,
-			categoryTimeSeries: dashboard.category_time_series
+			categoryTimeSeries: dashboard.category_time_series,
+			ppkStats
 		};
 	} catch (err) {
 		if (err instanceof Error && 'status' in err) {
