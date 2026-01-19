@@ -35,6 +35,28 @@ _ = (
 def init_db() -> None:
     Base.metadata.create_all(bind=engine)
 
+    # Run migrations
+    try:
+        import sys
+        from pathlib import Path
+
+        # Add migrations directory to path
+        migrations_dir = Path(__file__).parent.parent.parent / "migrations"
+        sys.path.insert(0, str(migrations_dir))
+
+        # Import and run migrations
+        import add_account_purpose  # type: ignore
+        import add_metric_fields  # type: ignore
+        import add_ppk_rates  # type: ignore
+        import add_receives_contributions  # type: ignore
+
+        add_account_purpose.migrate()  # type: ignore
+        add_metric_fields.migrate()  # type: ignore
+        add_ppk_rates.migrate()  # type: ignore
+        add_receives_contributions.migrate()  # type: ignore
+    except Exception:
+        pass  # Migrations may have already run or columns may already exist
+
     # Seed default retirement limits if none exist
     db = SessionLocal()
     try:

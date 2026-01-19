@@ -567,6 +567,71 @@
 		{/if}
 	</div>
 
+	<!-- PPK Stats Section -->
+	{#if data.ppkStats && data.ppkStats.length > 0}
+		<h2>Podsumowanie PPK</h2>
+		{#each data.ppkStats as ppkStat}
+			<h3 class="ppk-owner-title">{ppkStat.owner}</h3>
+			<div class="metrics-grid">
+				<MetricCard
+					label="PPK - Wartość całkowita"
+					value={ppkStat.total_value}
+					decimals={0}
+					suffix=" PLN"
+					color="green"
+				/>
+
+				<MetricCard
+					label="PPK - Wpłaty pracownika"
+					value={ppkStat.employee_contributed}
+					decimals={0}
+					suffix=" PLN"
+					color="blue"
+				/>
+
+				<MetricCard
+					label="PPK - Wpłaty pracodawcy"
+					value={ppkStat.employer_contributed}
+					decimals={0}
+					suffix=" PLN"
+					color="blue"
+				/>
+
+				<MetricCard
+					label="PPK - Dopłaty państwa"
+					value={ppkStat.government_contributed}
+					decimals={0}
+					suffix=" PLN"
+					color="blue"
+				/>
+
+				<MetricCard
+					label="PPK - Łącznie wpłacone"
+					value={ppkStat.total_contributed}
+					decimals={0}
+					suffix=" PLN"
+					color="blue"
+				/>
+
+				<MetricCard
+					label="PPK - Zyski z inwestycji"
+					value={ppkStat.returns}
+					decimals={0}
+					suffix=" PLN"
+					color={ppkStat.returns >= 0 ? 'green' : 'red'}
+				/>
+
+				<MetricCard
+					label="PPK - ROI"
+					value={ppkStat.roi_percentage}
+					decimals={2}
+					suffix="%"
+					color={ppkStat.roi_percentage >= 0 ? 'green' : 'red'}
+				/>
+			</div>
+		{/each}
+	{/if}
+
 	<h2>Struktura portfela inwestycyjnego</h2>
 
 	<div class="charts-grid">
@@ -788,6 +853,14 @@
 		color: var(--green-6);
 		text-align: center;
 		font-weight: var(--font-weight-6);
+	}
+
+	.ppk-owner-title {
+		font-size: var(--font-size-3);
+		font-weight: var(--font-weight-6);
+		color: var(--text-1);
+		margin-top: var(--size-4);
+		margin-bottom: var(--size-3);
 	}
 
 	@media (max-width: 1024px) {

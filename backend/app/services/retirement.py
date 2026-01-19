@@ -1,10 +1,19 @@
+import calendar
+from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import case, extract, func
+from fastapi import HTTPException
+from sqlalchemy import case, desc, extract, func
 from sqlalchemy.orm import Session
 
-from app.models import Account, RetirementLimit, Transaction
-from app.schemas.retirement import YearlyStatsResponse
+from app.models import Account, AppConfig, RetirementLimit, Snapshot, SnapshotValue, Transaction
+from app.schemas.retirement import (
+    PPKContributionGenerateRequest,
+    PPKContributionGenerateResponse,
+    PPKStatsResponse,
+    YearlyStatsResponse,
+)
+from app.services.salary_records import _get_current_salary
 
 
 def get_yearly_stats(db: Session, year: int, owner: str | None = None) -> list[YearlyStatsResponse]:
@@ -154,3 +163,203 @@ def update_limit(
     db.commit()
     db.refresh(limit)
     return limit
+
+
+def get_ppk_stats(db: Session, owner: str | None = None) -> list[PPKStatsResponse]:
+    """Calculate PPK contribution breakdown and returns per owner"""
+    stats = []
+    owners = [owner] if owner else ["Marcin", "Ewa"]
+
+    for owner_name in owners:
+        # Get all PPK accounts for this owner
+        accounts = (
+            db.query(Account)
+            .filter(Account.account_wrapper == "PPK", Account.owner == owner_name)
+            .all()
+        )
+
+        if not accounts:
+            continue
+
+        account_ids = [acc.id for acc in accounts]
+
+        # Aggregate all-time contributions by type
+        contributions = (
+            db.query(
+                func.coalesce(func.sum(Transaction.amount), 0).label("total"),
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (Transaction.transaction_type == "employee", Transaction.amount),
+                            else_=0,
+                        )
+                    ),
+                    0,
+                ).label("employee"),
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (Transaction.transaction_type == "employer", Transaction.amount),
+                            else_=0,
+                        )
+                    ),
+                    0,
+                ).label("employer"),
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (Transaction.transaction_type == "government", Transaction.amount),
+                            else_=0,
+                        )
+                    ),
+                    0,
+                ).label("government"),
+            )
+            .filter(Transaction.account_id.in_(account_ids), Transaction.is_active.is_(True))
+            .first()
+        )
+
+        employee_contrib = float(contributions.employee if contributions else 0)
+        employer_contrib = float(contributions.employer if contributions else 0)
+        government_contrib = float(contributions.government if contributions else 0)
+        total_contrib = float(contributions.total if contributions else 0)
+
+        # If no transaction_type specified, count as employee contribution
+        if total_contrib > 0 and employee_contrib == 0 and employer_contrib == 0:
+            employee_contrib = total_contrib
+
+        # Get latest snapshot value for these accounts
+        latest_snapshot_values = (
+            db.query(func.sum(SnapshotValue.value))
+            .join(Snapshot, SnapshotValue.snapshot_id == Snapshot.id)
+            .filter(SnapshotValue.account_id.in_(account_ids))
+            .order_by(desc(Snapshot.date))
+            .group_by(Snapshot.date)
+            .first()
+        )
+
+        total_value = float(latest_snapshot_values[0] if latest_snapshot_values else 0)
+
+        # Calculate returns and ROI
+        returns = total_value - total_contrib
+        roi_percentage = (returns / total_contrib * 100) if total_contrib > 0 else 0.0
+
+        stats.append(
+            PPKStatsResponse(
+                owner=owner_name,
+                total_value=total_value,
+                employee_contributed=employee_contrib,
+                employer_contributed=employer_contrib,
+                government_contributed=government_contrib,
+                total_contributed=total_contrib,
+                returns=returns,
+                roi_percentage=round(roi_percentage, 2),
+            )
+        )
+
+    return stats
+
+
+def generate_ppk_contributions(
+    db: Session, data: PPKContributionGenerateRequest
+) -> PPKContributionGenerateResponse:
+    """Generate PPK contributions for a specific month based on salary and configured rates"""
+    # Get salary for first day of specified month
+    first_day = date(data.year, data.month, 1)
+    gross_salary = _get_current_salary(db, data.owner, first_day)
+
+    if gross_salary is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No salary record found for {data.owner} in {data.month}/{data.year}",
+        )
+
+    # Get PPK rates from AppConfig
+    config = db.query(AppConfig).filter(AppConfig.id == 1).first()
+    if not config:
+        raise HTTPException(status_code=500, detail="App configuration not found")
+
+    # Get appropriate rates based on owner
+    if data.owner == "Marcin":
+        employee_rate = float(config.ppk_employee_rate_marcin)
+        employer_rate = float(config.ppk_employer_rate_marcin)
+    elif data.owner == "Ewa":
+        employee_rate = float(config.ppk_employee_rate_ewa)
+        employer_rate = float(config.ppk_employer_rate_ewa)
+    else:
+        raise HTTPException(status_code=400, detail=f"Unknown owner: {data.owner}")
+
+    # Calculate contribution amounts
+    employee_amount = gross_salary * (employee_rate / 100)
+    employer_amount = gross_salary * (employer_rate / 100)
+
+    # Get active PPK account for this owner (receives contributions)
+    ppk_account = (
+        db.query(Account)
+        .filter(
+            Account.account_wrapper == "PPK",
+            Account.owner == data.owner,
+            Account.is_active.is_(True),
+            Account.receives_contributions.is_(True),
+        )
+        .first()
+    )
+
+    if not ppk_account:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No active PPK account found for {data.owner}. "
+            "Mark one PPK account as receiving contributions.",
+        )
+
+    # Check if contributions already exist for this month
+    last_day = date(data.year, data.month, calendar.monthrange(data.year, data.month)[1])
+    existing_transactions = (
+        db.query(Transaction)
+        .filter(
+            Transaction.account_id == ppk_account.id,
+            Transaction.date == last_day,
+            Transaction.transaction_type.in_(["employee", "employer"]),
+            Transaction.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if existing_transactions:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Contributions already exist for {data.month}/{data.year}",
+        )
+
+    # Create transactions
+    employee_transaction = Transaction(
+        account_id=ppk_account.id,
+        amount=Decimal(str(employee_amount)),
+        date=last_day,
+        owner=data.owner,
+        transaction_type="employee",
+    )
+    employer_transaction = Transaction(
+        account_id=ppk_account.id,
+        amount=Decimal(str(employer_amount)),
+        date=last_day,
+        owner=data.owner,
+        transaction_type="employer",
+    )
+
+    db.add(employee_transaction)
+    db.add(employer_transaction)
+    db.commit()
+    db.refresh(employee_transaction)
+    db.refresh(employer_transaction)
+
+    return PPKContributionGenerateResponse(
+        owner=data.owner,
+        month=data.month,
+        year=data.year,
+        gross_salary=gross_salary,
+        employee_amount=employee_amount,
+        employer_amount=employer_amount,
+        total_amount=employee_amount + employer_amount,
+        transactions_created=[employee_transaction.id, employer_transaction.id],
+    )

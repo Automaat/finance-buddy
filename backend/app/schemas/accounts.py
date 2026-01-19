@@ -13,6 +13,7 @@ class AccountCreate(BaseModel):
     account_wrapper: str | None = None
     purpose: str
     square_meters: Decimal | None = None
+    receives_contributions: bool = True
 
     @field_validator("name")
     @classmethod
@@ -83,6 +84,7 @@ class AccountResponse(BaseModel):
     purpose: str
     square_meters: float | None
     is_active: bool
+    receives_contributions: bool
     created_at: datetime
     current_value: float
 
@@ -95,6 +97,7 @@ class AccountUpdate(BaseModel):
     account_wrapper: str | None = None
     purpose: str | None = None
     square_meters: Decimal | None = None
+    receives_contributions: bool | None = None
 
     @field_validator("name")
     @classmethod

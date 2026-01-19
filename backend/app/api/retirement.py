@@ -7,6 +7,9 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models import RetirementLimit
 from app.schemas.retirement import (
+    PPKContributionGenerateRequest,
+    PPKContributionGenerateResponse,
+    PPKStatsResponse,
     RetirementLimitCreate,
     RetirementLimitResponse,
     YearlyStatsResponse,
@@ -26,6 +29,24 @@ def get_retirement_stats(
     if year is None:
         year = datetime.now(UTC).year
     return retirement.get_yearly_stats(db, year, owner)
+
+
+@router.get("/ppk-stats", response_model=list[PPKStatsResponse])
+def get_ppk_stats(
+    db: Annotated[Session, Depends(get_db)],
+    owner: str | None = None,
+) -> list[PPKStatsResponse]:
+    """Get PPK contribution breakdown and returns per owner"""
+    return retirement.get_ppk_stats(db, owner)
+
+
+@router.post("/ppk-contributions/generate", response_model=PPKContributionGenerateResponse)
+def generate_ppk_contributions(
+    db: Annotated[Session, Depends(get_db)],
+    data: PPKContributionGenerateRequest,
+) -> PPKContributionGenerateResponse:
+    """Generate monthly PPK contributions based on salary and configured rates"""
+    return retirement.generate_ppk_contributions(db, data)
 
 
 @router.get("/limits/{year}", response_model=list[RetirementLimitResponse])

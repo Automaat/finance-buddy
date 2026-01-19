@@ -18,6 +18,10 @@ class ConfigCreate(BaseModel):
     allocation_commodities: int
     monthly_expenses: Decimal
     monthly_mortgage_payment: Decimal
+    ppk_employee_rate_marcin: Decimal
+    ppk_employer_rate_marcin: Decimal
+    ppk_employee_rate_ewa: Decimal
+    ppk_employer_rate_ewa: Decimal
 
     @field_validator("birth_date")
     @classmethod
@@ -64,6 +68,18 @@ class ConfigCreate(BaseModel):
             raise ValueError("Allocation must be between 0 and 100")
         return v
 
+    @field_validator(
+        "ppk_employee_rate_marcin",
+        "ppk_employer_rate_marcin",
+        "ppk_employee_rate_ewa",
+        "ppk_employer_rate_ewa",
+    )
+    @classmethod
+    def validate_ppk_rate(cls, v: Decimal) -> Decimal:
+        if not Decimal("0.5") <= v <= Decimal("4.0"):
+            raise ValueError("PPK rate must be between 0.5 and 4.0")
+        return v
+
     @model_validator(mode="after")
     def validate_allocation_sum(self) -> Self:
         market_total = (
@@ -102,3 +118,7 @@ class ConfigResponse(BaseModel):
     allocation_commodities: int
     monthly_expenses: Decimal
     monthly_mortgage_payment: Decimal
+    ppk_employee_rate_marcin: Decimal
+    ppk_employer_rate_marcin: Decimal
+    ppk_employee_rate_ewa: Decimal
+    ppk_employer_rate_ewa: Decimal

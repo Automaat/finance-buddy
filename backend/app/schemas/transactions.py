@@ -36,8 +36,10 @@ class TransactionCreate(BaseModel):
     @field_validator("transaction_type")
     @classmethod
     def validate_transaction_type(cls, v: str | None) -> str | None:
-        if v and v not in {"employee", "employer", "withdrawal"}:
-            raise ValueError("Transaction type must be employee, employer, or withdrawal")
+        if v and v not in {"employee", "employer", "withdrawal", "government"}:
+            raise ValueError(
+                "Transaction type must be employee, employer, withdrawal, or government"
+            )
         return v
 
 

@@ -10,4 +10,8 @@ export interface AppConfig {
 	allocation_commodities: number;
 	monthly_expenses: number;
 	monthly_mortgage_payment: number;
+	ppk_employee_rate_marcin: number;
+	ppk_employer_rate_marcin: number;
+	ppk_employee_rate_ewa: number;
+	ppk_employer_rate_ewa: number;
 }

@@ -22,6 +22,10 @@ def get_config(db: Session) -> ConfigResponse | None:
         allocation_commodities=config.allocation_commodities,
         monthly_expenses=config.monthly_expenses,
         monthly_mortgage_payment=config.monthly_mortgage_payment,
+        ppk_employee_rate_marcin=config.ppk_employee_rate_marcin,
+        ppk_employer_rate_marcin=config.ppk_employer_rate_marcin,
+        ppk_employee_rate_ewa=config.ppk_employee_rate_ewa,
+        ppk_employer_rate_ewa=config.ppk_employer_rate_ewa,
     )
 
 
@@ -56,6 +60,10 @@ def upsert_config(db: Session, data: ConfigCreate) -> ConfigResponse:
         config.allocation_commodities = data.allocation_commodities
         config.monthly_expenses = data.monthly_expenses
         config.monthly_mortgage_payment = data.monthly_mortgage_payment
+        config.ppk_employee_rate_marcin = data.ppk_employee_rate_marcin
+        config.ppk_employer_rate_marcin = data.ppk_employer_rate_marcin
+        config.ppk_employee_rate_ewa = data.ppk_employee_rate_ewa
+        config.ppk_employer_rate_ewa = data.ppk_employer_rate_ewa
     else:
         # Create new config with id=1
         config = AppConfig(
@@ -70,6 +78,10 @@ def upsert_config(db: Session, data: ConfigCreate) -> ConfigResponse:
             allocation_commodities=data.allocation_commodities,
             monthly_expenses=data.monthly_expenses,
             monthly_mortgage_payment=data.monthly_mortgage_payment,
+            ppk_employee_rate_marcin=data.ppk_employee_rate_marcin,
+            ppk_employer_rate_marcin=data.ppk_employer_rate_marcin,
+            ppk_employee_rate_ewa=data.ppk_employee_rate_ewa,
+            ppk_employer_rate_ewa=data.ppk_employer_rate_ewa,
         )
         db.add(config)
 
@@ -88,4 +100,8 @@ def upsert_config(db: Session, data: ConfigCreate) -> ConfigResponse:
         allocation_commodities=config.allocation_commodities,
         monthly_expenses=config.monthly_expenses,
         monthly_mortgage_payment=config.monthly_mortgage_payment,
+        ppk_employee_rate_marcin=config.ppk_employee_rate_marcin,
+        ppk_employer_rate_marcin=config.ppk_employer_rate_marcin,
+        ppk_employee_rate_ewa=config.ppk_employee_rate_ewa,
+        ppk_employer_rate_ewa=config.ppk_employer_rate_ewa,
     )
