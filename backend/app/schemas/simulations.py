@@ -1,0 +1,166 @@
+from pydantic import BaseModel, field_validator, model_validator
+
+
+class PrefillBalances(BaseModel):
+    """Current balances for retirement accounts"""
+
+    ike_marcin: float
+    ike_ewa: float
+    ikze_marcin: float
+    ikze_ewa: float
+
+
+class PrefillResponse(BaseModel):
+    """Response for prefill endpoint with current config and balances"""
+
+    current_age: int
+    retirement_age: int
+    balances: PrefillBalances
+
+
+class SimulationInputs(BaseModel):
+    """Input parameters for retirement simulation"""
+
+    # Personal (fetch from AppConfig, allow override)
+    current_age: int
+    retirement_age: int
+
+    # Account selection
+    simulate_ike_marcin: bool = True
+    simulate_ike_ewa: bool = True
+    simulate_ikze_marcin: bool = True
+    simulate_ikze_ewa: bool = True
+
+    # Current balances (fetch from latest snapshot, editable)
+    ike_marcin_balance: float = 0
+    ike_ewa_balance: float = 0
+    ikze_marcin_balance: float = 0
+    ikze_ewa_balance: float = 0
+
+    # Contribution strategy (per account)
+    # If auto_fill_limit=True, ignore monthly_contribution
+    ike_marcin_auto_fill: bool = False
+    ike_marcin_monthly: float = 0
+    ike_ewa_auto_fill: bool = False
+    ike_ewa_monthly: float = 0
+    ikze_marcin_auto_fill: bool = False
+    ikze_marcin_monthly: float = 0
+    ikze_ewa_auto_fill: bool = False
+    ikze_ewa_monthly: float = 0
+
+    # Tax (for IKZE deduction calculation)
+    marcin_tax_rate: float = 17.0
+    ewa_tax_rate: float = 17.0
+
+    # Assumptions
+    annual_return_rate: float = 7.0
+    limit_growth_rate: float = 5.0
+
+    @field_validator("annual_return_rate")
+    @classmethod
+    def validate_return(cls, v: float) -> float:
+        if v < -50 or v > 50:
+            raise ValueError("Return rate must be -50% to 50%")
+        return v
+
+    @field_validator("current_age", "retirement_age")
+    @classmethod
+    def validate_age_range(cls, v: int) -> int:
+        if v < 18 or v > 120:
+            raise ValueError("Age must be between 18 and 120")
+        return v
+
+    @field_validator(
+        "ike_marcin_balance", "ike_ewa_balance", "ikze_marcin_balance", "ikze_ewa_balance"
+    )
+    @classmethod
+    def validate_balances(cls, v: float) -> float:
+        if v < 0:
+            raise ValueError("Account balances cannot be negative")
+        return v
+
+    @field_validator(
+        "ike_marcin_monthly", "ike_ewa_monthly", "ikze_marcin_monthly", "ikze_ewa_monthly"
+    )
+    @classmethod
+    def validate_monthly_contributions(cls, v: float) -> float:
+        if v < 0:
+            raise ValueError("Monthly contributions cannot be negative")
+        return v
+
+    @field_validator("marcin_tax_rate", "ewa_tax_rate")
+    @classmethod
+    def validate_tax_rate(cls, v: float) -> float:
+        if v < 0 or v > 100:
+            raise ValueError("Tax rate must be between 0 and 100")
+        return v
+
+    @field_validator("limit_growth_rate")
+    @classmethod
+    def validate_limit_growth(cls, v: float) -> float:
+        if v < 0 or v > 20:
+            raise ValueError("Limit growth rate must be between 0% and 20%")
+        return v
+
+    @model_validator(mode="after")
+    def validate_retirement_age(self):
+        if self.retirement_age <= self.current_age:
+            raise ValueError("Retirement age must be greater than current age")
+        return self
+
+    @model_validator(mode="after")
+    def validate_at_least_one_account(self):
+        if not (
+            self.simulate_ike_marcin
+            or self.simulate_ike_ewa
+            or self.simulate_ikze_marcin
+            or self.simulate_ikze_ewa
+        ):
+            raise ValueError("At least one account must be selected for simulation")
+        return self
+
+
+class YearlyProjection(BaseModel):
+    """Projection for a single year"""
+
+    year: int
+    age: int
+    annual_contribution: float
+    balance_end_of_year: float
+    cumulative_contributions: float
+    cumulative_returns: float
+    annual_limit: float
+    limit_utilized_pct: float
+    tax_savings: float
+
+
+class AccountSimulation(BaseModel):
+    """Simulation results for a single account"""
+
+    account_name: str
+    starting_balance: float
+    total_contributions: float
+    total_returns: float
+    total_tax_savings: float
+    final_balance: float
+    yearly_projections: list[YearlyProjection]
+
+
+class SimulationSummary(BaseModel):
+    """Overall summary of all simulations"""
+
+    total_final_balance: float
+    total_contributions: float
+    total_returns: float
+    total_tax_savings: float
+    estimated_monthly_income: float
+    estimated_monthly_income_today: float
+    years_until_retirement: int
+
+
+class SimulationResponse(BaseModel):
+    """Complete simulation response"""
+
+    inputs: SimulationInputs
+    simulations: list[AccountSimulation]
+    summary: SimulationSummary
