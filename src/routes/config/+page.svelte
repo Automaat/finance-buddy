@@ -58,12 +58,11 @@
 	// Calculate required capital using 4% safe withdrawal rate (25x annual expenses)
 	$: requiredCapital = retirementMonthlySalary * 12 * 25;
 
-	// Calculate monthly savings needed with compound interest
-	// Subtract already saved money in retirement accounts from required capital
+	// Simple remaining capital for display (before accounting for growth)
 	$: remainingCapital = Math.max(0, requiredCapital - (data.retirementAccountValue ?? 0));
 
 	// Calculate monthly payment needed to reach future value with investment returns
-	// Using Future Value of Annuity formula: PMT = FV × r / [(1 + r)^n - 1]
+	// Using sinking fund formula (FV annuity solved for PMT): PMT = FV × r / [(1 + r)^n - 1]
 	$: monthlySavingsNeeded = (() => {
 		if (yearsUntilRetirement <= 0) return 0;
 

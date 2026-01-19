@@ -150,7 +150,13 @@
 			chart = echarts.init(chartContainer);
 		}
 
-		const years = results.simulations[0]?.yearly_projections.map((p) => p.year) || [];
+		// Handle empty simulations (all accounts unchecked)
+		if (results.simulations.length === 0) {
+			chart.clear();
+			return;
+		}
+
+		const years = results.simulations[0].yearly_projections.map((p) => p.year);
 		const series = results.simulations.map((sim, idx) => {
 			const colors = ['#5E81AC', '#81A1C1', '#88C0D0', '#8FBCBB'];
 			return {
@@ -194,11 +200,16 @@
 	}
 
 	onMount(() => {
+		const handleResize = () => chart?.resize();
+
 		if (browser) {
-			window.addEventListener('resize', () => chart?.resize());
+			window.addEventListener('resize', handleResize);
 		}
 
 		return () => {
+			if (browser) {
+				window.removeEventListener('resize', handleResize);
+			}
 			chart?.dispose();
 		};
 	});

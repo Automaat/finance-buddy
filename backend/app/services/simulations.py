@@ -15,6 +15,13 @@ from app.schemas.simulations import (
     YearlyProjection,
 )
 
+# Fallback contribution limits (2026 values, used when RetirementLimit table is empty)
+DEFAULT_IKE_LIMIT = 28260  # Annual IKE contribution limit (PLN)
+DEFAULT_IKZE_LIMIT = 11304  # Annual IKZE contribution limit (PLN)
+
+# Safe withdrawal rate for retirement income calculation (4% rule)
+SAFE_WITHDRAWAL_RATE = 0.04  # Annual safe withdrawal rate (Trinity Study)
+
 
 def get_limit_for_year(db: Session, year: int, wrapper: str, owner: str) -> float:
     """Fetch contribution limit from RetirementLimit table"""
@@ -27,14 +34,12 @@ def get_limit_for_year(db: Session, year: int, wrapper: str, owner: str) -> floa
     ).scalar_one_or_none()
 
     if not limit:
-        # Fallback defaults (2026 limits)
-        defaults = {
-            ("IKE", "Marcin"): 28260,
-            ("IKE", "Ewa"): 28260,
-            ("IKZE", "Marcin"): 11304,
-            ("IKZE", "Ewa"): 11304,
-        }
-        return defaults.get((wrapper, owner), 0)
+        # Fallback to defaults if limit not found in database
+        if wrapper == "IKE":
+            return DEFAULT_IKE_LIMIT
+        elif wrapper == "IKZE":
+            return DEFAULT_IKZE_LIMIT
+        return 0
 
     return float(limit.limit_amount)
 
@@ -62,18 +67,22 @@ def fetch_current_balances(db: Session) -> dict:
 
     balances = {"ike_marcin": 0, "ike_ewa": 0, "ikze_marcin": 0, "ikze_ewa": 0}
 
+    # Create dict lookup for O(1) access by account_id
+    values_by_account_id = {value.account_id: value.value for value in values}
+
     for account in accounts:
-        for value in values:
-            if value.account_id == account.id:
-                key = f"{account.account_wrapper.lower()}_{account.owner.lower()}"
-                balances[key] = float(value.value)
+        if account.id in values_by_account_id:
+            key = f"{account.account_wrapper.lower()}_{account.owner.lower()}"
+            balances[key] = float(values_by_account_id[account.id])
 
     return balances
 
 
 def get_age_from_config(db: Session) -> int:
     """Calculate current age from AppConfig.birth_date"""
-    config = db.execute(select(AppConfig)).scalar_one()
+    config = db.execute(select(AppConfig)).scalar_one_or_none()
+    if not config or not config.birth_date:
+        return 30  # Fallback default if config not initialized
     today = datetime.now(UTC).date()
     age = today.year - config.birth_date.year
     if today.month < config.birth_date.month or (
@@ -166,80 +175,69 @@ def run_simulation(db: Session, inputs: SimulationInputs) -> SimulationResponse:
     years_to_retirement = inputs.retirement_age - inputs.current_age
     simulations = []
 
-    # IKE Marcin
-    if inputs.simulate_ike_marcin:
-        sim = simulate_account(
-            "IKE",
-            "Marcin",
-            inputs.ike_marcin_balance,
-            inputs.ike_marcin_auto_fill,
-            inputs.ike_marcin_monthly,
-            years_to_retirement,
-            inputs.current_age,
-            inputs.annual_return_rate,
-            inputs.limit_growth_rate,
-            0,
-            db,
-        )
-        simulations.append(sim)
+    # Configuration-driven account simulation
+    account_configs = [
+        {
+            "enabled": inputs.simulate_ike_marcin,
+            "wrapper": "IKE",
+            "owner": "Marcin",
+            "balance": inputs.ike_marcin_balance,
+            "auto_fill": inputs.ike_marcin_auto_fill,
+            "monthly": inputs.ike_marcin_monthly,
+            "tax_rate": 0,
+        },
+        {
+            "enabled": inputs.simulate_ike_ewa,
+            "wrapper": "IKE",
+            "owner": "Ewa",
+            "balance": inputs.ike_ewa_balance,
+            "auto_fill": inputs.ike_ewa_auto_fill,
+            "monthly": inputs.ike_ewa_monthly,
+            "tax_rate": 0,
+        },
+        {
+            "enabled": inputs.simulate_ikze_marcin,
+            "wrapper": "IKZE",
+            "owner": "Marcin",
+            "balance": inputs.ikze_marcin_balance,
+            "auto_fill": inputs.ikze_marcin_auto_fill,
+            "monthly": inputs.ikze_marcin_monthly,
+            "tax_rate": inputs.marcin_tax_rate,
+        },
+        {
+            "enabled": inputs.simulate_ikze_ewa,
+            "wrapper": "IKZE",
+            "owner": "Ewa",
+            "balance": inputs.ikze_ewa_balance,
+            "auto_fill": inputs.ikze_ewa_auto_fill,
+            "monthly": inputs.ikze_ewa_monthly,
+            "tax_rate": inputs.ewa_tax_rate,
+        },
+    ]
 
-    # IKE Ewa
-    if inputs.simulate_ike_ewa:
-        sim = simulate_account(
-            "IKE",
-            "Ewa",
-            inputs.ike_ewa_balance,
-            inputs.ike_ewa_auto_fill,
-            inputs.ike_ewa_monthly,
-            years_to_retirement,
-            inputs.current_age,
-            inputs.annual_return_rate,
-            inputs.limit_growth_rate,
-            0,
-            db,
-        )
-        simulations.append(sim)
-
-    # IKZE Marcin
-    if inputs.simulate_ikze_marcin:
-        sim = simulate_account(
-            "IKZE",
-            "Marcin",
-            inputs.ikze_marcin_balance,
-            inputs.ikze_marcin_auto_fill,
-            inputs.ikze_marcin_monthly,
-            years_to_retirement,
-            inputs.current_age,
-            inputs.annual_return_rate,
-            inputs.limit_growth_rate,
-            inputs.marcin_tax_rate,
-            db,
-        )
-        simulations.append(sim)
-
-    # IKZE Ewa
-    if inputs.simulate_ikze_ewa:
-        sim = simulate_account(
-            "IKZE",
-            "Ewa",
-            inputs.ikze_ewa_balance,
-            inputs.ikze_ewa_auto_fill,
-            inputs.ikze_ewa_monthly,
-            years_to_retirement,
-            inputs.current_age,
-            inputs.annual_return_rate,
-            inputs.limit_growth_rate,
-            inputs.ewa_tax_rate,
-            db,
-        )
-        simulations.append(sim)
+    for config in account_configs:
+        if config["enabled"]:
+            sim = simulate_account(
+                config["wrapper"],
+                config["owner"],
+                config["balance"],
+                config["auto_fill"],
+                config["monthly"],
+                years_to_retirement,
+                inputs.current_age,
+                inputs.annual_return_rate,
+                inputs.limit_growth_rate,
+                config["tax_rate"],
+                db,
+            )
+            simulations.append(sim)
 
     # Calculate summary
     total_final = sum(s.final_balance for s in simulations)
     total_contrib = sum(s.total_contributions for s in simulations)
     total_returns = sum(s.total_returns for s in simulations)
     total_tax_savings = sum(s.total_tax_savings for s in simulations)
-    monthly_income = (total_final * 0.04) / 12
+    monthly_income = (total_final * SAFE_WITHDRAWAL_RATE) / 12
 
     # Adjust for inflation to show purchasing power in today's money
     inflation_rate = 0.03  # 3% annual inflation assumption

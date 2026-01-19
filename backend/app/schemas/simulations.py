@@ -1,4 +1,21 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
+
+
+class PrefillBalances(BaseModel):
+    """Current balances for retirement accounts"""
+
+    ike_marcin: float
+    ike_ewa: float
+    ikze_marcin: float
+    ikze_ewa: float
+
+
+class PrefillResponse(BaseModel):
+    """Response for prefill endpoint with current config and balances"""
+
+    current_age: int
+    retirement_age: int
+    balances: PrefillBalances
 
 
 class SimulationInputs(BaseModel):
@@ -45,6 +62,62 @@ class SimulationInputs(BaseModel):
         if v < -50 or v > 50:
             raise ValueError("Return rate must be -50% to 50%")
         return v
+
+    @field_validator("current_age", "retirement_age")
+    @classmethod
+    def validate_age_range(cls, v: int) -> int:
+        if v < 18 or v > 120:
+            raise ValueError("Age must be between 18 and 120")
+        return v
+
+    @field_validator(
+        "ike_marcin_balance", "ike_ewa_balance", "ikze_marcin_balance", "ikze_ewa_balance"
+    )
+    @classmethod
+    def validate_balances(cls, v: float) -> float:
+        if v < 0:
+            raise ValueError("Account balances cannot be negative")
+        return v
+
+    @field_validator(
+        "ike_marcin_monthly", "ike_ewa_monthly", "ikze_marcin_monthly", "ikze_ewa_monthly"
+    )
+    @classmethod
+    def validate_monthly_contributions(cls, v: float) -> float:
+        if v < 0:
+            raise ValueError("Monthly contributions cannot be negative")
+        return v
+
+    @field_validator("marcin_tax_rate", "ewa_tax_rate")
+    @classmethod
+    def validate_tax_rate(cls, v: float) -> float:
+        if v < 0 or v > 100:
+            raise ValueError("Tax rate must be between 0 and 100")
+        return v
+
+    @field_validator("limit_growth_rate")
+    @classmethod
+    def validate_limit_growth(cls, v: float) -> float:
+        if v < 0 or v > 20:
+            raise ValueError("Limit growth rate must be between 0% and 20%")
+        return v
+
+    @model_validator(mode="after")
+    def validate_retirement_age(self):
+        if self.retirement_age <= self.current_age:
+            raise ValueError("Retirement age must be greater than current age")
+        return self
+
+    @model_validator(mode="after")
+    def validate_at_least_one_account(self):
+        if not (
+            self.simulate_ike_marcin
+            or self.simulate_ike_ewa
+            or self.simulate_ikze_marcin
+            or self.simulate_ikze_ewa
+        ):
+            raise ValueError("At least one account must be selected for simulation")
+        return self
 
 
 class YearlyProjection(BaseModel):
