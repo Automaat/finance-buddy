@@ -1,6 +1,6 @@
 from datetime import date
 from decimal import Decimal
-import pytest
+
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -212,7 +212,9 @@ def test_get_prefill_data_with_balances(test_client: TestClient, test_db_session
     assert data["balances"]["ikze_ewa"] == 30000.0
 
 
-def test_simulate_retirement_fixed_monthly_contributions(test_client: TestClient, test_db_session: Session):
+def test_simulate_retirement_fixed_monthly_contributions(
+    test_client: TestClient, test_db_session: Session
+):
     """Test simulation with fixed monthly contributions"""
     config = create_app_config()
     test_db_session.add(config)
@@ -247,7 +249,9 @@ def test_simulate_retirement_fixed_monthly_contributions(test_client: TestClient
     assert projections[0]["annual_contribution"] == 12000.0  # 12 * 1000
 
 
-def test_simulate_retirement_yearly_projections_structure(test_client: TestClient, test_db_session: Session):
+def test_simulate_retirement_yearly_projections_structure(
+    test_client: TestClient, test_db_session: Session
+):
     """Test structure of yearly projections"""
     config = create_app_config()
     test_db_session.add(config)

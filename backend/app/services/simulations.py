@@ -1,4 +1,5 @@
-from datetime import date, datetime
+from datetime import UTC, datetime
+
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
@@ -73,7 +74,7 @@ def fetch_current_balances(db: Session) -> dict:
 def get_age_from_config(db: Session) -> int:
     """Calculate current age from AppConfig.birth_date"""
     config = db.execute(select(AppConfig)).scalar_one()
-    today = date.today()
+    today = datetime.now(UTC).date()
     age = today.year - config.birth_date.year
     if today.month < config.birth_date.month or (
         today.month == config.birth_date.month and today.day < config.birth_date.day
@@ -102,7 +103,7 @@ def simulate_account(
     - Growing contribution limits
     - IKZE tax savings
     """
-    current_year = datetime.now().year
+    current_year = datetime.now(UTC).year
     base_limit = get_limit_for_year(db, current_year, account_wrapper, owner)
 
     projections = []
@@ -115,14 +116,11 @@ def simulate_account(
         age = current_age + year_offset + 1
 
         # Forecast limit: base * (1 + growth_rate)^years
-        # year_offset + 1 because base_limit is for current_year, first projection is current_year + 1
+        # year_offset + 1: base_limit is for current_year, first projection is current_year + 1
         limit = base_limit * ((1 + limit_growth_rate / 100) ** (year_offset + 1))
 
         # Determine contribution
-        if auto_fill_limit:
-            contribution = limit
-        else:
-            contribution = min(monthly_contribution * 12, limit)
+        contribution = limit if auto_fill_limit else min(monthly_contribution * 12, limit)
 
         # Calculate tax savings (IKZE only)
         tax_savings = 0

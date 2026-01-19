@@ -12,14 +12,14 @@ router = APIRouter(prefix="/api/simulations", tags=["simulations"])
 
 @router.post("/retirement", response_model=SimulationResponse)
 def simulate_retirement(
-    inputs: SimulationInputs, db: Session = Depends(get_db)
+    inputs: SimulationInputs, db: Session = Depends(get_db)  # noqa: B008
 ) -> SimulationResponse:
     """Calculate retirement account projections"""
     return sim_service.run_simulation(db, inputs)
 
 
 @router.get("/prefill")
-def get_prefill_data(db: Session = Depends(get_db)):
+def get_prefill_data(db: Session = Depends(get_db)):  # noqa: B008
     """Get current balances and config for form prefill"""
     balances = sim_service.fetch_current_balances(db)
     config = db.execute(select(AppConfig)).scalar_one()
