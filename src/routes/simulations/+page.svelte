@@ -34,6 +34,7 @@
 		total_returns: number;
 		total_tax_savings: number;
 		estimated_monthly_income: number;
+		estimated_monthly_income_today: number;
 		years_until_retirement: number;
 	}
 
@@ -365,6 +366,13 @@
 						</div>
 					</div>
 					<div class="summary-card">
+						<div class="card-label">Miesięczny dochód (w dzisiejszych pieniądzach)</div>
+						<div class="card-value">
+							{formatCurrency(results.summary.estimated_monthly_income_today)} PLN
+						</div>
+						<div class="card-note">przy 3% inflacji rocznie</div>
+					</div>
+					<div class="summary-card">
 						<div class="card-label">Suma wpłat</div>
 						<div class="card-value">{formatCurrency(results.summary.total_contributions)} PLN</div>
 					</div>
@@ -578,6 +586,12 @@
 		font-size: var(--font-size-4);
 		font-weight: 700;
 		color: var(--color-text-1);
+	}
+
+	.card-note {
+		font-size: var(--font-size-0);
+		color: var(--color-text-3);
+		margin-top: var(--size-1);
 	}
 
 	.chart-container {

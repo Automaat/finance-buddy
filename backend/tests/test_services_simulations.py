@@ -323,6 +323,9 @@ def test_run_simulation_all_accounts(test_db_session: Session):
     assert result.summary.total_returns > 0
     assert result.summary.total_tax_savings > 0  # IKZE accounts
     assert result.summary.estimated_monthly_income > 0
+    assert result.summary.estimated_monthly_income_today > 0
+    # Inflation-adjusted should be less than nominal
+    assert result.summary.estimated_monthly_income_today < result.summary.estimated_monthly_income
 
 
 def test_run_simulation_selective_accounts(test_db_session: Session):

@@ -81,6 +81,7 @@ class SimulationSummary(BaseModel):
     total_returns: float
     total_tax_savings: float
     estimated_monthly_income: float
+    estimated_monthly_income_today: float
     years_until_retirement: int
 
 

@@ -241,12 +241,17 @@ def run_simulation(db: Session, inputs: SimulationInputs) -> SimulationResponse:
     total_tax_savings = sum(s.total_tax_savings for s in simulations)
     monthly_income = (total_final * 0.04) / 12
 
+    # Adjust for inflation to show purchasing power in today's money
+    inflation_rate = 0.03  # 3% annual inflation assumption
+    monthly_income_today = monthly_income / ((1 + inflation_rate) ** years_to_retirement)
+
     summary = SimulationSummary(
         total_final_balance=total_final,
         total_contributions=total_contrib,
         total_returns=total_returns,
         total_tax_savings=total_tax_savings,
         estimated_monthly_income=monthly_income,
+        estimated_monthly_income_today=monthly_income_today,
         years_until_retirement=years_to_retirement,
     )
 
