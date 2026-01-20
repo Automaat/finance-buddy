@@ -68,8 +68,7 @@ class PPKSimulationConfig(BaseModel):
         threshold = 5767.0
         if self.salary_below_threshold and self.monthly_gross_salary > threshold:
             raise ValueError(
-                "salary_below_threshold cannot be True when monthly_gross_salary "
-                "exceeds 5767 PLN."
+                "salary_below_threshold cannot be True when monthly_gross_salary exceeds 5767 PLN."
             )
         return self
 
