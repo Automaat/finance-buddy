@@ -2,7 +2,16 @@
 	import { onMount } from 'svelte';
 	import * as echarts from 'echarts';
 	import type { EChartsOption } from 'echarts';
-	import { Card, CardHeader, CardTitle, CardContent, Modal, formatPLN, formatPercent, calculateChange } from '@mskalski/home-ui';
+	import {
+		Card,
+		CardHeader,
+		CardTitle,
+		CardContent,
+		Modal,
+		formatPLN,
+		formatPercent,
+		calculateChange
+	} from '@mskalski/home-ui';
 	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
 

@@ -1,5 +1,13 @@
 <script lang="ts">
-	import { Card, CardHeader, CardTitle, CardContent, Modal, formatPLN, formatDate } from '@mskalski/home-ui';
+	import {
+		Card,
+		CardHeader,
+		CardTitle,
+		CardContent,
+		Modal,
+		formatPLN,
+		formatDate
+	} from '@mskalski/home-ui';
 	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
