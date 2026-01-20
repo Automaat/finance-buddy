@@ -286,7 +286,7 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
             (accounts_df["category"] == "real_estate")
             & (accounts_df["owner"].isin(["Marcin", "Shared"]))
         ]
-        total_property_sqm = float(real_estate_accounts["square_meters"].sum())
+        total_property_sqm = float(real_estate_accounts["square_meters"].fillna(0).sum())
 
         # Get real estate value from latest snapshot
         real_estate_values = latest_df[
@@ -298,7 +298,9 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
 
         # Get mortgage remaining
         mortgage_df = latest_df[
-            (pd.notna(latest_df["account_id"])) & (latest_df["type"] == "liability")
+            (pd.notna(latest_df["account_id"]))
+            & (latest_df["type"] == "liability")
+            & (latest_df["category"].isin(["housing", "mortgage"]))
         ]
         mortgage_remaining = float(mortgage_df["value"].sum())
 

@@ -626,6 +626,290 @@ def test_metric_cards_calculation(test_db_session):
     assert result.metric_cards.investment_returns == 120000.0  # (50000 + 100000) - 30000
 
 
+def test_metric_cards_null_square_meters(test_db_session):
+    """Test metric cards with null square_meters in real estate account."""
+    from app.models.app_config import AppConfig
+
+    # Create AppConfig
+    config = AppConfig(
+        id=1,
+        birth_date=date(1990, 1, 1),
+        retirement_age=67,
+        retirement_monthly_salary=Decimal("8000"),
+        allocation_real_estate=20,
+        allocation_stocks=60,
+        allocation_bonds=30,
+        allocation_gold=8,
+        allocation_commodities=2,
+        monthly_expenses=Decimal("5000"),
+        monthly_mortgage_payment=Decimal("3000"),
+    )
+    test_db_session.add(config)
+    test_db_session.commit()
+
+    # Create real estate account with null square_meters
+    real_estate_account = Account(
+        name="Apartment",
+        type="asset",
+        category="real_estate",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+        square_meters=None,  # Null square meters
+    )
+    mortgage_account = Account(
+        name="Mortgage",
+        type="liability",
+        category="housing",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+    )
+    test_db_session.add_all([real_estate_account, mortgage_account])
+    test_db_session.commit()
+
+    # Create snapshot
+    snapshot = Snapshot(date=date(2024, 1, 31))
+    test_db_session.add(snapshot)
+    test_db_session.commit()
+
+    # Add snapshot values
+    test_db_session.add_all(
+        [
+            SnapshotValue(
+                snapshot_id=snapshot.id, account_id=real_estate_account.id, value=Decimal("500000")
+            ),
+            SnapshotValue(
+                snapshot_id=snapshot.id, account_id=mortgage_account.id, value=Decimal("300000")
+            ),
+        ]
+    )
+    test_db_session.commit()
+
+    result = get_dashboard_data(test_db_session)
+
+    # Property sqm should be 0.0 when square_meters is null
+    assert result.metric_cards.property_sqm == 0.0
+    assert result.metric_cards.mortgage_remaining == 300000.0
+
+
+def test_metric_cards_mixed_liabilities(test_db_session):
+    """Test metric cards with mixed liability types - only housing affects property equity."""
+    from app.models.app_config import AppConfig
+
+    # Create AppConfig
+    config = AppConfig(
+        id=1,
+        birth_date=date(1990, 1, 1),
+        retirement_age=67,
+        retirement_monthly_salary=Decimal("8000"),
+        allocation_real_estate=20,
+        allocation_stocks=60,
+        allocation_bonds=30,
+        allocation_gold=8,
+        allocation_commodities=2,
+        monthly_expenses=Decimal("5000"),
+        monthly_mortgage_payment=Decimal("3000"),
+    )
+    test_db_session.add(config)
+    test_db_session.commit()
+
+    # Create accounts with multiple liability types
+    real_estate_account = Account(
+        name="Apartment",
+        type="asset",
+        category="real_estate",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+        square_meters=Decimal("80.0"),
+    )
+    mortgage_account = Account(
+        name="Mortgage",
+        type="liability",
+        category="housing",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+    )
+    car_loan_account = Account(
+        name="Car Loan",
+        type="liability",
+        category="raty",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+    )
+    credit_card_account = Account(
+        name="Credit Card",
+        type="liability",
+        category="credit",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+    )
+    test_db_session.add_all(
+        [real_estate_account, mortgage_account, car_loan_account, credit_card_account]
+    )
+    test_db_session.commit()
+
+    # Create snapshot
+    snapshot = Snapshot(date=date(2024, 1, 31))
+    test_db_session.add(snapshot)
+    test_db_session.commit()
+
+    # Add snapshot values
+    test_db_session.add_all(
+        [
+            SnapshotValue(
+                snapshot_id=snapshot.id, account_id=real_estate_account.id, value=Decimal("500000")
+            ),
+            SnapshotValue(
+                snapshot_id=snapshot.id, account_id=mortgage_account.id, value=Decimal("300000")
+            ),
+            SnapshotValue(
+                snapshot_id=snapshot.id, account_id=car_loan_account.id, value=Decimal("50000")
+            ),
+            SnapshotValue(
+                snapshot_id=snapshot.id, account_id=credit_card_account.id, value=Decimal("10000")
+            ),
+        ]
+    )
+    test_db_session.commit()
+
+    result = get_dashboard_data(test_db_session)
+
+    # Property sqm should only be affected by housing mortgage, not car loan or credit card
+    # Equity: (500000 - 300000) / 500000 = 0.4
+    # Owned sqm: 80.0 * 0.4 = 32.0
+    assert result.metric_cards.property_sqm == 32.0
+    assert result.metric_cards.mortgage_remaining == 300000.0
+
+
+def test_metric_cards_underwater_mortgage(test_db_session):
+    """Test metric cards with underwater mortgage - liability exceeds property value."""
+    from app.models.app_config import AppConfig
+
+    # Create AppConfig
+    config = AppConfig(
+        id=1,
+        birth_date=date(1990, 1, 1),
+        retirement_age=67,
+        retirement_monthly_salary=Decimal("8000"),
+        allocation_real_estate=20,
+        allocation_stocks=60,
+        allocation_bonds=30,
+        allocation_gold=8,
+        allocation_commodities=2,
+        monthly_expenses=Decimal("5000"),
+        monthly_mortgage_payment=Decimal("3000"),
+    )
+    test_db_session.add(config)
+    test_db_session.commit()
+
+    # Create real estate account with underwater mortgage
+    real_estate_account = Account(
+        name="Apartment",
+        type="asset",
+        category="real_estate",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+        square_meters=Decimal("60.0"),
+    )
+    mortgage_account = Account(
+        name="Mortgage",
+        type="liability",
+        category="housing",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+    )
+    test_db_session.add_all([real_estate_account, mortgage_account])
+    test_db_session.commit()
+
+    # Create snapshot with underwater mortgage (liability > asset)
+    snapshot = Snapshot(date=date(2024, 1, 31))
+    test_db_session.add(snapshot)
+    test_db_session.commit()
+
+    # Add snapshot values - mortgage exceeds property value
+    test_db_session.add_all(
+        [
+            SnapshotValue(
+                snapshot_id=snapshot.id, account_id=real_estate_account.id, value=Decimal("300000")
+            ),
+            SnapshotValue(
+                snapshot_id=snapshot.id, account_id=mortgage_account.id, value=Decimal("400000")
+            ),
+        ]
+    )
+    test_db_session.commit()
+
+    result = get_dashboard_data(test_db_session)
+
+    # Property sqm should be 0.0 (not negative) when underwater
+    # Equity: (300000 - 400000) / 300000 = -0.33, clamped to 0
+    assert result.metric_cards.property_sqm == 0.0
+    assert result.metric_cards.mortgage_remaining == 400000.0
+
+
+def test_metric_cards_no_mortgage(test_db_session):
+    """Test metric cards with no mortgage - 100% ownership."""
+    from app.models.app_config import AppConfig
+
+    # Create AppConfig
+    config = AppConfig(
+        id=1,
+        birth_date=date(1990, 1, 1),
+        retirement_age=67,
+        retirement_monthly_salary=Decimal("8000"),
+        allocation_real_estate=20,
+        allocation_stocks=60,
+        allocation_bonds=30,
+        allocation_gold=8,
+        allocation_commodities=2,
+        monthly_expenses=Decimal("5000"),
+        monthly_mortgage_payment=Decimal("3000"),
+    )
+    test_db_session.add(config)
+    test_db_session.commit()
+
+    # Create real estate account with no mortgage
+    real_estate_account = Account(
+        name="Apartment",
+        type="asset",
+        category="real_estate",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+        square_meters=Decimal("75.5"),
+    )
+    test_db_session.add(real_estate_account)
+    test_db_session.commit()
+
+    # Create snapshot with no mortgage
+    snapshot = Snapshot(date=date(2024, 1, 31))
+    test_db_session.add(snapshot)
+    test_db_session.commit()
+
+    # Add snapshot values - no mortgage
+    test_db_session.add(
+        SnapshotValue(
+            snapshot_id=snapshot.id, account_id=real_estate_account.id, value=Decimal("600000")
+        )
+    )
+    test_db_session.commit()
+
+    result = get_dashboard_data(test_db_session)
+
+    # Property sqm should be 100% owned (full square meters)
+    # Equity: (600000 - 0) / 600000 = 1.0
+    # Owned sqm: 75.5 * 1.0 = 75.5
+    assert result.metric_cards.property_sqm == 75.5
+    assert result.metric_cards.mortgage_remaining == 0.0
+
+
 def test_allocation_analysis(test_db_session):
     """Test allocation analysis with investment accounts."""
     from app.models.app_config import AppConfig
