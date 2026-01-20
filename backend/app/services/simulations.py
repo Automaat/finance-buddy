@@ -23,6 +23,9 @@ DEFAULT_IKZE_LIMIT = 11304  # Annual IKZE contribution limit (PLN)
 # Safe withdrawal rate for retirement income calculation (4% rule)
 SAFE_WITHDRAWAL_RATE = 0.04  # Annual safe withdrawal rate (Trinity Study)
 
+# PPK thresholds (2026 values)
+MIN_ANNUAL_CONTRIBUTION_2026 = 1009.26  # Minimum for annual subsidy eligibility
+
 
 def get_limit_for_year(db: Session, year: int, wrapper: str, owner: str) -> float:
     """Fetch contribution limit from RetirementLimit table"""
@@ -280,19 +283,15 @@ def simulate_ppk_account(
             welcome_bonus_added = True
 
         # Annual subsidy (smart eligibility check)
-        # Check minimum contribution threshold (1009.26 PLN for 2026)
         if (
             config.include_annual_subsidy
             and config.salary_below_threshold
-            and annual_contrib >= 1009.26
+            and annual_contrib >= MIN_ANNUAL_CONTRIBUTION_2026
         ):
             balance += 240
             year_subsidies += 240
 
         total_subsidies += year_subsidies
-
-        # Grow salary for next year
-        monthly_salary *= 1 + salary_growth / 100
 
         projections.append(
             YearlyProjection(
@@ -311,8 +310,11 @@ def simulate_ppk_account(
             )
         )
 
+        # Grow salary for next year
+        monthly_salary *= 1 + salary_growth / 100
+
     return AccountSimulation(
-        account_name=f"PPK - {config.owner}",
+        account_name=f"PPK ({config.owner})",
         starting_balance=config.starting_balance,
         total_contributions=total_contributions,
         total_returns=balance - total_contributions - total_subsidies,

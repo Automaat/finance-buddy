@@ -377,14 +377,14 @@ def test_simulate_ppk_account_basic():
         monthly_gross_salary=10000,
         employee_rate=2.0,
         employer_rate=1.5,
-        salary_below_threshold=True,
+        salary_below_threshold=False,
         include_welcome_bonus=True,
         include_annual_subsidy=True,
     )
 
     result = simulate_ppk_account(config, current_age=30, retirement_age=35, salary_growth=3.0)
 
-    assert result.account_name == "PPK - Marcin"
+    assert result.account_name == "PPK (Marcin)"
     assert result.starting_balance == 0
     assert len(result.yearly_projections) == 5
     assert result.final_balance > 0
@@ -458,6 +458,29 @@ def test_simulate_ppk_account_annual_subsidy_threshold():
     assert result_above.total_subsidies == 0
 
 
+def test_simulate_ppk_account_low_salary_no_annual_subsidy():
+    """Test annual subsidy withheld when contributions below 1009.26 PLN threshold"""
+    config = PPKSimulationConfig(
+        owner="Marcin",
+        enabled=True,
+        starting_balance=0,
+        monthly_gross_salary=2000,  # Low salary
+        employee_rate=0.5,  # Minimum rate
+        employer_rate=1.5,  # Minimum rate
+        salary_below_threshold=True,  # Eligible for subsidy
+        include_welcome_bonus=True,
+        include_annual_subsidy=True,
+    )
+
+    result = simulate_ppk_account(
+        config, current_age=30, retirement_age=33, salary_growth=0
+    )
+
+    # Annual contribution: 2000 * (0.5 + 1.5) / 100 * 12 = 480 PLN < 1009.26
+    # Should get welcome bonus (250) but NO annual subsidies
+    assert result.total_subsidies == 250  # Only welcome bonus
+
+
 def test_simulate_ppk_account_salary_growth():
     """Test salary growth over years"""
     config = PPKSimulationConfig(
@@ -467,7 +490,7 @@ def test_simulate_ppk_account_salary_growth():
         monthly_gross_salary=10000,
         employee_rate=2.0,
         employer_rate=1.5,
-        salary_below_threshold=True,
+        salary_below_threshold=False,
         include_welcome_bonus=False,
         include_annual_subsidy=False,
     )
@@ -627,7 +650,7 @@ def test_run_simulation_with_ppk(test_db_session: Session):
             monthly_gross_salary=10000,
             employee_rate=2.0,
             employer_rate=1.5,
-            salary_below_threshold=True,
+            salary_below_threshold=False,
             include_welcome_bonus=True,
             include_annual_subsidy=True,
         ),
@@ -638,7 +661,7 @@ def test_run_simulation_with_ppk(test_db_session: Session):
             monthly_gross_salary=8000,
             employee_rate=2.0,
             employer_rate=1.5,
-            salary_below_threshold=True,
+            salary_below_threshold=False,
             include_welcome_bonus=True,
             include_annual_subsidy=True,
         ),

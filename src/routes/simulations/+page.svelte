@@ -48,6 +48,9 @@
 		summary: SimulationSummary;
 	}
 
+	// PPK threshold (2026 value)
+	const SALARY_THRESHOLD_2026 = 5767;
+
 	export let data: PageData;
 
 	// Form state
@@ -119,9 +122,8 @@
 		try {
 			// Validate PPK inputs
 			if (ppkMarcinEnabled) {
-				if (ppkMarcinSalary > 5767 && ppkMarcinBelowThreshold) {
-					error =
-						'PPK Marcin: Wynagrodzenie przekracza próg (5767 PLN) - nie będziesz uprawniony do dopłaty rocznej';
+				if (ppkMarcinSalary > SALARY_THRESHOLD_2026 && ppkMarcinBelowThreshold) {
+					error = `PPK Marcin: Wynagrodzenie przekracza próg (${SALARY_THRESHOLD_2026} PLN) - nie będziesz uprawniony do dopłaty rocznej`;
 					loading = false;
 					return;
 				}
@@ -138,9 +140,8 @@
 			}
 
 			if (ppkEwaEnabled) {
-				if (ppkEwaSalary > 5767 && ppkEwaBelowThreshold) {
-					error =
-						'PPK Ewa: Wynagrodzenie przekracza próg (5767 PLN) - nie będziesz uprawniony do dopłaty rocznej';
+				if (ppkEwaSalary > SALARY_THRESHOLD_2026 && ppkEwaBelowThreshold) {
+					error = `PPK Ewa: Wynagrodzenie przekracza próg (${SALARY_THRESHOLD_2026} PLN) - nie będziesz uprawniony do dopłaty rocznej`;
 					loading = false;
 					return;
 				}
@@ -491,7 +492,7 @@
 						</div>
 						<label class="checkbox-label">
 							<input type="checkbox" bind:checked={ppkMarcinBelowThreshold} />
-							Wynagrodzenie poniżej progu (5767 PLN)
+							Wynagrodzenie poniżej progu ({SALARY_THRESHOLD_2026} PLN)
 							<small>Dotyczy dopłaty rocznej 240 PLN</small>
 						</label>
 						<label class="checkbox-label">
@@ -540,7 +541,7 @@
 						</div>
 						<label class="checkbox-label">
 							<input type="checkbox" bind:checked={ppkEwaBelowThreshold} />
-							Wynagrodzenie poniżej progu (5767 PLN)
+							Wynagrodzenie poniżej progu ({SALARY_THRESHOLD_2026} PLN)
 							<small>Dotyczy dopłaty rocznej 240 PLN</small>
 						</label>
 						<label class="checkbox-label">

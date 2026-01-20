@@ -48,6 +48,31 @@ class PPKSimulationConfig(BaseModel):
             raise ValueError("Employer rate must be 1.5-4.0%")
         return v
 
+    @field_validator("starting_balance")
+    @classmethod
+    def validate_starting_balance(cls, v: float) -> float:
+        if v < 0.0:
+            raise ValueError("Starting balance must be non-negative")
+        return v
+
+    @field_validator("monthly_gross_salary")
+    @classmethod
+    def validate_monthly_gross_salary(cls, v: float) -> float:
+        if v < 0.0:
+            raise ValueError("Monthly gross salary must be non-negative")
+        return v
+
+    @model_validator(mode="after")
+    def validate_salary_threshold(self) -> PPKSimulationConfig:
+        """Ensure salary_below_threshold is consistent with monthly_gross_salary."""
+        threshold = 5767.0
+        if self.salary_below_threshold and self.monthly_gross_salary > threshold:
+            raise ValueError(
+                "salary_below_threshold cannot be True when monthly_gross_salary "
+                "exceeds 5767 PLN."
+            )
+        return self
+
 
 class SimulationInputs(BaseModel):
     """Input parameters for retirement simulation"""
@@ -97,6 +122,13 @@ class SimulationInputs(BaseModel):
     def validate_return(cls, v: float) -> float:
         if v < -50 or v > 50:
             raise ValueError("Return rate must be -50% to 50%")
+        return v
+
+    @field_validator("expected_salary_growth")
+    @classmethod
+    def validate_salary_growth(cls, v: float) -> float:
+        if v < -10 or v > 20:
+            raise ValueError("Salary growth must be -10% to 20%")
         return v
 
     @field_validator("current_age", "retirement_age")
