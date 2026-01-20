@@ -1,10 +1,5 @@
 <script lang="ts">
-	import Card from '$lib/components/Card.svelte';
-	import CardHeader from '$lib/components/CardHeader.svelte';
-	import CardTitle from '$lib/components/CardTitle.svelte';
-	import CardContent from '$lib/components/CardContent.svelte';
-	import Modal from '$lib/components/Modal.svelte';
-	import { formatPLN } from '$lib/utils/format';
+	import { Card, CardHeader, CardTitle, CardContent, Modal, formatPLN } from '@mskalski/home-ui';
 	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';

@@ -35,6 +35,7 @@
 	"type": "module",
 	"dependencies": {
 		"@internationalized/date": "^3.10.1",
+		"@mskalski/home-ui": "^0.4.0",
 		"bits-ui": "^2.15.4",
 		"echarts": "^6.0.0",
 		"formsnap": "^2.0.1",

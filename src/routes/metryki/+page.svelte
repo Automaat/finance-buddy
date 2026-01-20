@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import * as echarts from 'echarts';
-	import MetricCard from '$lib/components/MetricCard.svelte';
+	import { MetricCard } from '@mskalski/home-ui';
 
 	export let data;
 
