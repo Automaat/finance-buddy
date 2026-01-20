@@ -2,13 +2,7 @@
 	import { onMount } from 'svelte';
 	import * as echarts from 'echarts';
 	import type { EChartsOption } from 'echarts';
-	import Card from '$lib/components/Card.svelte';
-	import CardHeader from '$lib/components/CardHeader.svelte';
-	import CardTitle from '$lib/components/CardTitle.svelte';
-	import CardContent from '$lib/components/CardContent.svelte';
-	import Modal from '$lib/components/Modal.svelte';
-	import { formatPLN, formatPercent } from '$lib/utils/format';
-	import { calculateChange } from '$lib/utils/calculations';
+	import { Card, CardHeader, CardTitle, CardContent, Modal, formatPLN, formatPercent, calculateChange } from '@mskalski/home-ui';
 	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
 

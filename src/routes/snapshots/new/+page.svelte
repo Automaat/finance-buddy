@@ -1,10 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { env } from '$env/dynamic/public';
-	import Card from '$lib/components/Card.svelte';
-	import CardHeader from '$lib/components/CardHeader.svelte';
-	import CardTitle from '$lib/components/CardTitle.svelte';
-	import CardContent from '$lib/components/CardContent.svelte';
+	import { Card, CardHeader, CardTitle, CardContent } from '@mskalski/home-ui';
 
 	export let data;
 

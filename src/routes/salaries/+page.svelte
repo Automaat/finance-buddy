@@ -2,12 +2,7 @@
 	import { onMount } from 'svelte';
 	import * as echarts from 'echarts';
 	import type { EChartsOption } from 'echarts';
-	import Card from '$lib/components/Card.svelte';
-	import CardHeader from '$lib/components/CardHeader.svelte';
-	import CardTitle from '$lib/components/CardTitle.svelte';
-	import CardContent from '$lib/components/CardContent.svelte';
-	import Modal from '$lib/components/Modal.svelte';
-	import { formatPLN } from '$lib/utils/format';
+	import { Card, CardHeader, CardTitle, CardContent, Modal, formatPLN } from '@mskalski/home-ui';
 	import { env } from '$env/dynamic/public';
 	import { goto, invalidateAll } from '$app/navigation';
 	import type { SalaryRecord } from '$lib/types/salaries';
