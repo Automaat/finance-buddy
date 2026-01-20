@@ -17,6 +17,7 @@ export interface Account {
 	receives_contributions: boolean;
 	created_at: string;
 	current_value: number;
+	square_meters: number | null;
 }
 
 export interface AccountsData {

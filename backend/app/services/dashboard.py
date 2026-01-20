@@ -280,14 +280,36 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
     app_config = db.execute(select(AppConfig).where(AppConfig.id == 1)).scalar_one_or_none()
 
     if app_config and latest_snapshot is not None:
-        # 1. Property square meters - sum square_meters where category='real_estate'
-        # and owner in ['Marcin', 'Shared']
-        property_sqm = float(
-            accounts_df[
-                (accounts_df["category"] == "real_estate")
-                & (accounts_df["owner"].isin(["Marcin", "Shared"]))
-            ]["square_meters"].sum()
-        )
+        # 1. Property square meters - adjusted for mortgage equity
+        # Get real estate accounts for Marcin/Shared
+        real_estate_accounts = accounts_df[
+            (accounts_df["category"] == "real_estate")
+            & (accounts_df["owner"].isin(["Marcin", "Shared"]))
+        ]
+        total_property_sqm = float(real_estate_accounts["square_meters"].fillna(0).sum())
+
+        # Get real estate value from latest snapshot
+        real_estate_values = latest_df[
+            (pd.notna(latest_df["account_id"]))
+            & (latest_df["type"] == "asset")
+            & (latest_df["account_id"].isin(real_estate_accounts["id"]))
+        ]
+        property_value = float(real_estate_values["value"].sum())
+
+        # Get mortgage remaining
+        mortgage_df = latest_df[
+            (pd.notna(latest_df["account_id"]))
+            & (latest_df["type"] == "liability")
+            & (latest_df["category"].isin(["housing", "mortgage"]))
+        ]
+        mortgage_remaining = float(mortgage_df["value"].sum())
+
+        # Calculate equity percentage and owned square meters
+        if property_value > 0:
+            equity_percentage = (property_value - mortgage_remaining) / property_value
+            property_sqm = total_property_sqm * max(0.0, equity_percentage)
+        else:
+            property_sqm = 0.0
 
         # 2. Emergency fund months - sum accounts where purpose='emergency_fund' / monthly_expenses
         emergency_fund_df = latest_df[
@@ -305,11 +327,7 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
         # 3. Retirement income (4% rule) - (retirement_account_value * 0.04) / 12
         retirement_income_monthly = (retirement_account_value * 0.04) / 12
 
-        # 4. Mortgage remaining - latest snapshot value for mortgage accounts (type='liability')
-        mortgage_df = latest_df[
-            (pd.notna(latest_df["account_id"])) & (latest_df["type"] == "liability")
-        ]
-        mortgage_remaining = float(mortgage_df["value"].sum())
+        # 4. Mortgage remaining - already calculated above for property_sqm equity calculation
 
         # 5. Months to mortgage payoff - mortgage_remaining / monthly_mortgage_payment
         mortgage_months_left = int(

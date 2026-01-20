@@ -75,7 +75,8 @@
 		currency: 'PLN',
 		account_wrapper: null as string | null,
 		purpose: 'general',
-		receives_contributions: true
+		receives_contributions: true,
+		square_meters: null as number | null
 	};
 
 	let error = '';
@@ -90,7 +91,8 @@
 			currency: editingAccount.currency,
 			account_wrapper: editingAccount.account_wrapper,
 			purpose: editingAccount.purpose,
-			receives_contributions: editingAccount.receives_contributions
+			receives_contributions: editingAccount.receives_contributions,
+			square_meters: editingAccount.square_meters
 		};
 	} else if (showForm) {
 		formData = {
@@ -101,7 +103,8 @@
 			currency: 'PLN',
 			account_wrapper: null,
 			purpose: 'general',
-			receives_contributions: true
+			receives_contributions: true,
+			square_meters: null
 		};
 	}
 
@@ -504,6 +507,24 @@
 				<p class="form-help-text">
 					Zaznacz jeśli to konto jest aktywnie używane do otrzymywania miesięcznych wpłat PPK. Stare
 					konta PPK powinny mieć to odznaczone - będą tylko śledzone przez snapshoty.
+				</p>
+			</div>
+		{/if}
+
+		{#if formData.category === 'real_estate'}
+			<div class="form-group">
+				<label for="square_meters">Powierzchnia (m²)</label>
+				<input
+					type="number"
+					id="square_meters"
+					bind:value={formData.square_meters}
+					min="0"
+					step="0.01"
+					placeholder="np. 65.50"
+				/>
+				<p class="form-help-text">
+					Powierzchnia nieruchomości w metrach kwadratowych. Używana do obliczania metryki "Ile
+					metrów mieszkania jest nasze".
 				</p>
 			</div>
 		{/if}
