@@ -472,9 +472,7 @@ def test_simulate_ppk_account_low_salary_no_annual_subsidy():
         include_annual_subsidy=True,
     )
 
-    result = simulate_ppk_account(
-        config, current_age=30, retirement_age=33, salary_growth=0
-    )
+    result = simulate_ppk_account(config, current_age=30, retirement_age=33, salary_growth=0)
 
     # Annual contribution: 2000 * (0.5 + 1.5) / 100 * 12 = 480 PLN < 1009.26
     # Should get welcome bonus (250) but NO annual subsidies
