@@ -16,6 +16,61 @@ class PrefillResponse(BaseModel):
     current_age: int
     retirement_age: int
     balances: PrefillBalances
+    ppk_rates: dict[str, dict[str, float]] = {}
+    monthly_salaries: dict[str, float | None] = {}
+    ppk_balances: dict[str, float] = {}
+
+
+class PPKSimulationConfig(BaseModel):
+    """Configuration for PPK (Employee Capital Plan) simulation"""
+
+    owner: str
+    enabled: bool = False
+    starting_balance: float = 0.0
+    monthly_gross_salary: float
+    employee_rate: float
+    employer_rate: float
+    salary_below_threshold: bool = False
+    include_welcome_bonus: bool = True
+    include_annual_subsidy: bool = True
+
+    @field_validator("employee_rate")
+    @classmethod
+    def validate_employee_rate(cls, v: float) -> float:
+        if not (0.5 <= v <= 4.0):
+            raise ValueError("Employee rate must be 0.5-4.0%")
+        return v
+
+    @field_validator("employer_rate")
+    @classmethod
+    def validate_employer_rate(cls, v: float) -> float:
+        if not (1.5 <= v <= 4.0):
+            raise ValueError("Employer rate must be 1.5-4.0%")
+        return v
+
+    @field_validator("starting_balance")
+    @classmethod
+    def validate_starting_balance(cls, v: float) -> float:
+        if v < 0.0:
+            raise ValueError("Starting balance must be non-negative")
+        return v
+
+    @field_validator("monthly_gross_salary")
+    @classmethod
+    def validate_monthly_gross_salary(cls, v: float) -> float:
+        if v < 0.0:
+            raise ValueError("Monthly gross salary must be non-negative")
+        return v
+
+    @model_validator(mode="after")
+    def validate_salary_threshold(self) -> PPKSimulationConfig:
+        """Ensure salary_below_threshold is consistent with monthly_gross_salary."""
+        threshold = 5767.0
+        if self.salary_below_threshold and self.monthly_gross_salary > threshold:
+            raise ValueError(
+                "salary_below_threshold cannot be True when monthly_gross_salary exceeds 5767 PLN."
+            )
+        return self
 
 
 class SimulationInputs(BaseModel):
@@ -55,12 +110,24 @@ class SimulationInputs(BaseModel):
     # Assumptions
     annual_return_rate: float = 7.0
     limit_growth_rate: float = 5.0
+    expected_salary_growth: float = 3.0
+
+    # PPK configuration
+    ppk_marcin: PPKSimulationConfig | None = None
+    ppk_ewa: PPKSimulationConfig | None = None
 
     @field_validator("annual_return_rate")
     @classmethod
     def validate_return(cls, v: float) -> float:
         if v < -50 or v > 50:
             raise ValueError("Return rate must be -50% to 50%")
+        return v
+
+    @field_validator("expected_salary_growth")
+    @classmethod
+    def validate_salary_growth(cls, v: float) -> float:
+        if v < -10 or v > 20:
+            raise ValueError("Salary growth must be -10% to 20%")
         return v
 
     @field_validator("current_age", "retirement_age")
@@ -110,11 +177,16 @@ class SimulationInputs(BaseModel):
 
     @model_validator(mode="after")
     def validate_at_least_one_account(self):
+        ppk_marcin_enabled = self.ppk_marcin is not None and self.ppk_marcin.enabled
+        ppk_ewa_enabled = self.ppk_ewa is not None and self.ppk_ewa.enabled
+
         if not (
             self.simulate_ike_marcin
             or self.simulate_ike_ewa
             or self.simulate_ikze_marcin
             or self.simulate_ikze_ewa
+            or ppk_marcin_enabled
+            or ppk_ewa_enabled
         ):
             raise ValueError("At least one account must be selected for simulation")
         return self
@@ -132,6 +204,9 @@ class YearlyProjection(BaseModel):
     annual_limit: float
     limit_utilized_pct: float
     tax_savings: float
+    government_subsidies: float = 0.0
+    monthly_salary: float | None = None
+    return_rate: float | None = None
 
 
 class AccountSimulation(BaseModel):
@@ -142,6 +217,7 @@ class AccountSimulation(BaseModel):
     total_contributions: float
     total_returns: float
     total_tax_savings: float
+    total_subsidies: float = 0.0
     final_balance: float
     yearly_projections: list[YearlyProjection]
 
@@ -153,6 +229,7 @@ class SimulationSummary(BaseModel):
     total_contributions: float
     total_returns: float
     total_tax_savings: float
+    total_subsidies: float = 0.0
     estimated_monthly_income: float
     estimated_monthly_income_today: float
     years_until_retirement: int

@@ -16,6 +16,9 @@
 		annual_limit: number;
 		limit_utilized_pct: number;
 		tax_savings: number;
+		government_subsidies?: number;
+		monthly_salary?: number;
+		return_rate?: number;
 	}
 
 	interface AccountSimulation {
@@ -24,6 +27,7 @@
 		total_contributions: number;
 		total_returns: number;
 		total_tax_savings: number;
+		total_subsidies?: number;
 		final_balance: number;
 		yearly_projections: YearlyProjection[];
 	}
@@ -33,6 +37,7 @@
 		total_contributions: number;
 		total_returns: number;
 		total_tax_savings: number;
+		total_subsidies?: number;
 		estimated_monthly_income: number;
 		estimated_monthly_income_today: number;
 		years_until_retirement: number;
@@ -42,6 +47,9 @@
 		simulations: AccountSimulation[];
 		summary: SimulationSummary;
 	}
+
+	// PPK threshold (2026 value)
+	const SALARY_THRESHOLD_2026 = 5767;
 
 	export let data: PageData;
 
@@ -78,6 +86,24 @@
 	// Assumptions
 	let annualReturnRate = 7.0;
 	let limitGrowthRate = 5.0;
+	let expectedSalaryGrowth = 3.0;
+
+	// PPK configuration
+	let ppkMarcinEnabled = false;
+	let ppkMarcinBalance = 0;
+	let ppkMarcinSalary = 10000;
+	let ppkMarcinEmployeeRate = 2.0;
+	let ppkMarcinEmployerRate = 1.5;
+	let ppkMarcinBelowThreshold = false;
+	let ppkMarcinIncludeSubsidies = true;
+
+	let ppkEwaEnabled = false;
+	let ppkEwaBalance = 0;
+	let ppkEwaSalary = 10000;
+	let ppkEwaEmployeeRate = 2.0;
+	let ppkEwaEmployerRate = 1.5;
+	let ppkEwaBelowThreshold = false;
+	let ppkEwaIncludeSubsidies = true;
 
 	// Results
 	let results: SimulationResponse | null = null;
@@ -94,36 +120,105 @@
 		results = null;
 
 		try {
+			// Validate PPK inputs
+			if (ppkMarcinEnabled) {
+				if (ppkMarcinSalary > SALARY_THRESHOLD_2026 && ppkMarcinBelowThreshold) {
+					error = `PPK Marcin: Wynagrodzenie przekracza próg (${SALARY_THRESHOLD_2026} PLN) - nie będziesz uprawniony do dopłaty rocznej`;
+					loading = false;
+					return;
+				}
+				if (ppkMarcinEmployeeRate < 0.5 || ppkMarcinEmployeeRate > 4.0) {
+					error = 'PPK Marcin: Składka pracownika musi być w zakresie 0.5-4%';
+					loading = false;
+					return;
+				}
+				if (ppkMarcinEmployerRate < 1.5 || ppkMarcinEmployerRate > 4.0) {
+					error = 'PPK Marcin: Składka pracodawcy musi być w zakresie 1.5-4%';
+					loading = false;
+					return;
+				}
+			}
+
+			if (ppkEwaEnabled) {
+				if (ppkEwaSalary > SALARY_THRESHOLD_2026 && ppkEwaBelowThreshold) {
+					error = `PPK Ewa: Wynagrodzenie przekracza próg (${SALARY_THRESHOLD_2026} PLN) - nie będziesz uprawniony do dopłaty rocznej`;
+					loading = false;
+					return;
+				}
+				if (ppkEwaEmployeeRate < 0.5 || ppkEwaEmployeeRate > 4.0) {
+					error = 'PPK Ewa: Składka pracownika musi być w zakresie 0.5-4%';
+					loading = false;
+					return;
+				}
+				if (ppkEwaEmployerRate < 1.5 || ppkEwaEmployerRate > 4.0) {
+					error = 'PPK Ewa: Składka pracodawcy musi być w zakresie 1.5-4%';
+					loading = false;
+					return;
+				}
+			}
+
 			const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
 			if (!apiUrl) throw new Error('API URL not configured');
+
+			const requestBody: any = {
+				current_age: currentAge,
+				retirement_age: retirementAge,
+				simulate_ike_marcin: simulateIkeMarcin,
+				simulate_ike_ewa: simulateIkeEwa,
+				simulate_ikze_marcin: simulateIkzeMarcin,
+				simulate_ikze_ewa: simulateIkzeEwa,
+				ike_marcin_balance: ikeMarcinBalance,
+				ike_ewa_balance: ikeEwaBalance,
+				ikze_marcin_balance: ikzeMarcinBalance,
+				ikze_ewa_balance: ikzeEwaBalance,
+				ike_marcin_auto_fill: ikeMarcinAutoFill,
+				ike_marcin_monthly: ikeMarcinMonthly,
+				ike_ewa_auto_fill: ikeEwaAutoFill,
+				ike_ewa_monthly: ikeEwaMonthly,
+				ikze_marcin_auto_fill: ikzeMarcinAutoFill,
+				ikze_marcin_monthly: ikzeMarcinMonthly,
+				ikze_ewa_auto_fill: ikzeEwaAutoFill,
+				ikze_ewa_monthly: ikzeEwaMonthly,
+				marcin_tax_rate: marcinTaxRate,
+				ewa_tax_rate: ewaTaxRate,
+				annual_return_rate: annualReturnRate,
+				limit_growth_rate: limitGrowthRate,
+				expected_salary_growth: expectedSalaryGrowth
+			};
+
+			// Add PPK configurations if enabled
+			if (ppkMarcinEnabled) {
+				requestBody.ppk_marcin = {
+					owner: 'Marcin',
+					enabled: true,
+					starting_balance: ppkMarcinBalance,
+					monthly_gross_salary: ppkMarcinSalary,
+					employee_rate: ppkMarcinEmployeeRate,
+					employer_rate: ppkMarcinEmployerRate,
+					salary_below_threshold: ppkMarcinBelowThreshold,
+					include_welcome_bonus: ppkMarcinIncludeSubsidies,
+					include_annual_subsidy: ppkMarcinIncludeSubsidies
+				};
+			}
+
+			if (ppkEwaEnabled) {
+				requestBody.ppk_ewa = {
+					owner: 'Ewa',
+					enabled: true,
+					starting_balance: ppkEwaBalance,
+					monthly_gross_salary: ppkEwaSalary,
+					employee_rate: ppkEwaEmployeeRate,
+					employer_rate: ppkEwaEmployerRate,
+					salary_below_threshold: ppkEwaBelowThreshold,
+					include_welcome_bonus: ppkEwaIncludeSubsidies,
+					include_annual_subsidy: ppkEwaIncludeSubsidies
+				};
+			}
 
 			const response = await fetch(`${apiUrl}/api/simulations/retirement`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					current_age: currentAge,
-					retirement_age: retirementAge,
-					simulate_ike_marcin: simulateIkeMarcin,
-					simulate_ike_ewa: simulateIkeEwa,
-					simulate_ikze_marcin: simulateIkzeMarcin,
-					simulate_ikze_ewa: simulateIkzeEwa,
-					ike_marcin_balance: ikeMarcinBalance,
-					ike_ewa_balance: ikeEwaBalance,
-					ikze_marcin_balance: ikzeMarcinBalance,
-					ikze_ewa_balance: ikzeEwaBalance,
-					ike_marcin_auto_fill: ikeMarcinAutoFill,
-					ike_marcin_monthly: ikeMarcinMonthly,
-					ike_ewa_auto_fill: ikeEwaAutoFill,
-					ike_ewa_monthly: ikeEwaMonthly,
-					ikze_marcin_auto_fill: ikzeMarcinAutoFill,
-					ikze_marcin_monthly: ikzeMarcinMonthly,
-					ikze_ewa_auto_fill: ikzeEwaAutoFill,
-					ikze_ewa_monthly: ikzeEwaMonthly,
-					marcin_tax_rate: marcinTaxRate,
-					ewa_tax_rate: ewaTaxRate,
-					annual_return_rate: annualReturnRate,
-					limit_growth_rate: limitGrowthRate
-				})
+				body: JSON.stringify(requestBody)
 			});
 
 			if (!response.ok) {
@@ -158,7 +253,7 @@
 
 		const years = results.simulations[0].yearly_projections.map((p) => p.year);
 		const series = results.simulations.map((sim, idx) => {
-			const colors = ['#5E81AC', '#81A1C1', '#88C0D0', '#8FBCBB'];
+			const colors = ['#5E81AC', '#81A1C1', '#88C0D0', '#8FBCBB', '#B48EAD', '#A3BE8C'];
 			return {
 				name: sim.account_name,
 				type: 'line' as const,
@@ -200,6 +295,24 @@
 	}
 
 	onMount(() => {
+		// Prefill PPK data
+		if (data.ppk_rates) {
+			ppkMarcinEmployeeRate = data.ppk_rates.marcin?.employee ?? 2.0;
+			ppkMarcinEmployerRate = data.ppk_rates.marcin?.employer ?? 1.5;
+			ppkEwaEmployeeRate = data.ppk_rates.ewa?.employee ?? 2.0;
+			ppkEwaEmployerRate = data.ppk_rates.ewa?.employer ?? 1.5;
+		}
+
+		if (data.monthly_salaries) {
+			ppkMarcinSalary = data.monthly_salaries.marcin ?? 10000;
+			ppkEwaSalary = data.monthly_salaries.ewa ?? 10000;
+		}
+
+		if (data.ppk_balances) {
+			ppkMarcinBalance = data.ppk_balances.marcin ?? 0;
+			ppkEwaBalance = data.ppk_balances.ewa ?? 0;
+		}
+
 		const handleResize = () => chart?.resize();
 
 		if (browser) {
@@ -338,6 +451,113 @@
 						</label>
 					{/if}
 				</div>
+
+				<div class="account-card">
+					<label class="checkbox-label">
+						<input type="checkbox" bind:checked={ppkMarcinEnabled} />
+						PPK (Marcin)
+					</label>
+					{#if ppkMarcinEnabled}
+						<label>
+							Obecna wartość (PLN)
+							<input type="number" bind:value={ppkMarcinBalance} min="0" step="1000" />
+						</label>
+						<label>
+							Miesięczne wynagrodzenie brutto (PLN)
+							<input type="number" bind:value={ppkMarcinSalary} min="1000" step="500" />
+						</label>
+						<div class="contribution-rates">
+							<label>
+								Składka pracownika (%)
+								<input
+									type="number"
+									bind:value={ppkMarcinEmployeeRate}
+									min="0.5"
+									max="4"
+									step="0.5"
+								/>
+								<small>Zakres: 0.5-4% (podstawa: 2%)</small>
+							</label>
+							<label>
+								Składka pracodawcy (%)
+								<input
+									type="number"
+									bind:value={ppkMarcinEmployerRate}
+									min="1.5"
+									max="4"
+									step="0.5"
+								/>
+								<small>Zakres: 1.5-4% (podstawa: 1.5%)</small>
+							</label>
+						</div>
+						<label class="checkbox-label">
+							<input type="checkbox" bind:checked={ppkMarcinBelowThreshold} />
+							Wynagrodzenie poniżej progu ({SALARY_THRESHOLD_2026} PLN)
+							<small>Dotyczy dopłaty rocznej 240 PLN</small>
+						</label>
+						<label class="checkbox-label">
+							<input type="checkbox" bind:checked={ppkMarcinIncludeSubsidies} />
+							Uwzględnij dopłaty państwa (250 PLN + 240 PLN/rok)
+						</label>
+						<div class="contribution-estimate">
+							<small>
+								Szacowana miesięczna składka:
+								{formatCurrency(
+									(ppkMarcinSalary * (ppkMarcinEmployeeRate + ppkMarcinEmployerRate)) / 100
+								)}
+								PLN (pracownik: {formatCurrency((ppkMarcinSalary * ppkMarcinEmployeeRate) / 100)} PLN,
+								pracodawca:
+								{formatCurrency((ppkMarcinSalary * ppkMarcinEmployerRate) / 100)} PLN)
+							</small>
+						</div>
+					{/if}
+				</div>
+
+				<div class="account-card">
+					<label class="checkbox-label">
+						<input type="checkbox" bind:checked={ppkEwaEnabled} />
+						PPK (Ewa)
+					</label>
+					{#if ppkEwaEnabled}
+						<label>
+							Obecna wartość (PLN)
+							<input type="number" bind:value={ppkEwaBalance} min="0" step="1000" />
+						</label>
+						<label>
+							Miesięczne wynagrodzenie brutto (PLN)
+							<input type="number" bind:value={ppkEwaSalary} min="1000" step="500" />
+						</label>
+						<div class="contribution-rates">
+							<label>
+								Składka pracownika (%)
+								<input type="number" bind:value={ppkEwaEmployeeRate} min="0.5" max="4" step="0.5" />
+								<small>Zakres: 0.5-4% (podstawa: 2%)</small>
+							</label>
+							<label>
+								Składka pracodawcy (%)
+								<input type="number" bind:value={ppkEwaEmployerRate} min="1.5" max="4" step="0.5" />
+								<small>Zakres: 1.5-4% (podstawa: 1.5%)</small>
+							</label>
+						</div>
+						<label class="checkbox-label">
+							<input type="checkbox" bind:checked={ppkEwaBelowThreshold} />
+							Wynagrodzenie poniżej progu ({SALARY_THRESHOLD_2026} PLN)
+							<small>Dotyczy dopłaty rocznej 240 PLN</small>
+						</label>
+						<label class="checkbox-label">
+							<input type="checkbox" bind:checked={ppkEwaIncludeSubsidies} />
+							Uwzględnij dopłaty państwa (250 PLN + 240 PLN/rok)
+						</label>
+						<div class="contribution-estimate">
+							<small>
+								Szacowana miesięczna składka:
+								{formatCurrency((ppkEwaSalary * (ppkEwaEmployeeRate + ppkEwaEmployerRate)) / 100)}
+								PLN (pracownik: {formatCurrency((ppkEwaSalary * ppkEwaEmployeeRate) / 100)} PLN, pracodawca:
+								{formatCurrency((ppkEwaSalary * ppkEwaEmployerRate) / 100)} PLN)
+							</small>
+						</div>
+					{/if}
+				</div>
 			</div>
 
 			<h3>Założenia</h3>
@@ -349,6 +569,11 @@
 				<label>
 					Wzrost limitów wpłat (%)
 					<input type="number" bind:value={limitGrowthRate} min="0" max="20" step="0.1" />
+				</label>
+				<label>
+					Przewidywany wzrost wynagrodzeń (%)
+					<input type="number" bind:value={expectedSalaryGrowth} min="0" max="10" step="0.5" />
+					<small>Roczny wzrost płacy brutto (typowo 3-5%)</small>
 				</label>
 			</div>
 
@@ -399,6 +624,12 @@
 							</div>
 						</div>
 					{/if}
+					{#if results.summary.total_subsidies && results.summary.total_subsidies > 0}
+						<div class="summary-card">
+							<div class="card-label">Dopłaty państwa (PPK)</div>
+							<div class="card-value">{formatCurrency(results.summary.total_subsidies)} PLN</div>
+						</div>
+					{/if}
 				</div>
 
 				<div class="chart-container" bind:this={chartContainer}></div>
@@ -418,12 +649,19 @@
 										<th>Rok</th>
 										<th>Wiek</th>
 										<th>Roczna wpłata</th>
-										<th>Wykorzystanie limitu</th>
+										{#if !simulation.account_name.startsWith('PPK')}
+											<th>Wykorzystanie limitu</th>
+										{/if}
 										<th>Saldo</th>
 										<th>Suma wpłat</th>
 										<th>Zyski</th>
 										{#if simulation.account_name.includes('IKZE')}
 											<th>Ulga podatkowa</th>
+										{/if}
+										{#if simulation.account_name.startsWith('PPK')}
+											<th>Dopłaty państwa</th>
+											<th>Roczne wynagrodzenie</th>
+											<th>Stopa zwrotu</th>
 										{/if}
 									</tr>
 								</thead>
@@ -433,12 +671,21 @@
 											<td>{projection.year}</td>
 											<td>{projection.age}</td>
 											<td>{formatCurrency(projection.annual_contribution)}</td>
-											<td>{projection.limit_utilized_pct.toFixed(1)}%</td>
+											{#if !simulation.account_name.startsWith('PPK')}
+												<td>{projection.limit_utilized_pct.toFixed(1)}%</td>
+											{/if}
 											<td>{formatCurrency(projection.balance_end_of_year)}</td>
 											<td>{formatCurrency(projection.cumulative_contributions)}</td>
 											<td>{formatCurrency(projection.cumulative_returns)}</td>
 											{#if simulation.account_name.includes('IKZE')}
 												<td>{formatCurrency(projection.tax_savings)}</td>
+											{/if}
+											{#if simulation.account_name.startsWith('PPK')}
+												<td>{formatCurrency(projection.government_subsidies || 0)}</td>
+												<td>
+													{formatCurrency((projection.monthly_salary || 0) * 12)}
+												</td>
+												<td>{(projection.return_rate || 0).toFixed(1)}%</td>
 											{/if}
 										</tr>
 									{/each}
