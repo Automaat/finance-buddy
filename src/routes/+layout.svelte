@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import { page } from '$app/stores';
+	import { onMount } from 'svelte';
 
 	const navItems = [
 		{ href: '/', label: 'Dashboard', icon: '📊' },
@@ -17,8 +18,16 @@
 
 	let collapsed = false;
 
+	onMount(() => {
+		const saved = localStorage.getItem('navbarCollapsed');
+		if (saved !== null) {
+			collapsed = saved === 'true';
+		}
+	});
+
 	function toggleCollapse() {
 		collapsed = !collapsed;
+		localStorage.setItem('navbarCollapsed', String(collapsed));
 	}
 </script>
 
@@ -45,7 +54,12 @@
 				{/each}
 			</div>
 
-			<button class="toggle-btn" on:click={toggleCollapse} aria-label="Toggle navigation">
+			<button
+				class="toggle-btn"
+				on:click={toggleCollapse}
+				aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+				aria-expanded={!collapsed}
+			>
 				{collapsed ? '→' : '←'}
 			</button>
 		</div>
@@ -75,6 +89,21 @@
 
 	.navbar.collapsed {
 		width: 80px;
+	}
+
+	@media (max-width: 768px) {
+		.navbar {
+			width: 80px;
+		}
+
+		.brand,
+		.label {
+			display: none;
+		}
+
+		.navbar.collapsed {
+			width: 80px;
+		}
 	}
 
 	.nav-container {
@@ -107,6 +136,17 @@
 		color: var(--color-primary);
 		margin: 0;
 		text-align: center;
+		opacity: 1;
+		transform: translateX(0);
+		transition:
+			opacity 0.2s ease,
+			transform 0.2s ease;
+	}
+
+	.navbar.collapsed .brand {
+		opacity: 0;
+		transform: translateX(-8px);
+		pointer-events: none;
 	}
 
 	.nav-links {
@@ -150,10 +190,19 @@
 	.label {
 		overflow: hidden;
 		text-overflow: ellipsis;
+		opacity: 1;
+		transition: opacity 0.3s ease;
+	}
+
+	.navbar.collapsed .label {
+		opacity: 0;
 	}
 
 	.main {
 		flex: 1;
 		padding: var(--size-6);
+		max-width: 1200px;
+		margin: 0 auto;
+		width: 100%;
 	}
 </style>
