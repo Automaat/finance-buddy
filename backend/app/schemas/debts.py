@@ -2,10 +2,12 @@ from datetime import UTC, date, datetime
 
 from pydantic import BaseModel, field_validator
 
+from app.core.enums import DebtType
+
 
 class DebtCreate(BaseModel):
     name: str
-    debt_type: str
+    debt_type: DebtType
     start_date: date
     initial_amount: float
     interest_rate: float
@@ -18,13 +20,6 @@ class DebtCreate(BaseModel):
         if not v or not v.strip():
             raise ValueError("Name cannot be empty")
         return v.strip()
-
-    @field_validator("debt_type")
-    @classmethod
-    def validate_debt_type(cls, v: str) -> str:
-        if v not in {"mortgage", "installment_0percent"}:
-            raise ValueError("Debt type must be 'mortgage' or 'installment_0percent'")
-        return v
 
     @field_validator("start_date")
     @classmethod
@@ -61,7 +56,7 @@ class DebtResponse(BaseModel):
     account_name: str
     account_owner: str
     name: str
-    debt_type: str
+    debt_type: DebtType
     start_date: date
     initial_amount: float
     interest_rate: float
@@ -77,7 +72,7 @@ class DebtResponse(BaseModel):
 
 class DebtUpdate(BaseModel):
     name: str | None = None
-    debt_type: str | None = None
+    debt_type: DebtType | None = None
     start_date: date | None = None
     initial_amount: float | None = None
     interest_rate: float | None = None
@@ -91,13 +86,6 @@ class DebtUpdate(BaseModel):
             if not v or not v.strip():
                 raise ValueError("Name cannot be empty")
             return v.strip()
-        return v
-
-    @field_validator("debt_type")
-    @classmethod
-    def validate_debt_type(cls, v: str | None) -> str | None:
-        if v is not None and v not in {"mortgage", "installment_0percent"}:
-            raise ValueError("Debt type must be 'mortgage' or 'installment_0percent'")
         return v
 
     @field_validator("start_date")

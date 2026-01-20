@@ -20,7 +20,7 @@ def test_create_snapshot_success(test_db_session):
         name="Test Bank",
         type="asset",
         category="bank",
-        owner="Test",
+        owner="Marcin",
         currency="PLN",
         purpose="general",
     )
@@ -28,7 +28,7 @@ def test_create_snapshot_success(test_db_session):
         name="Test IKE",
         type="asset",
         category="fund",
-        owner="Test",
+        owner="Marcin",
         currency="PLN",
         account_wrapper="IKE",
         purpose="retirement",
@@ -62,7 +62,7 @@ def test_create_snapshot_duplicate_date(test_db_session):
         name="Test Bank",
         type="asset",
         category="bank",
-        owner="Test",
+        owner="Marcin",
         currency="PLN",
         purpose="general",
     )
@@ -110,13 +110,13 @@ def test_get_all_snapshots(test_db_session):
     """Test getting all snapshots with net worth calculation"""
     # Create accounts
     asset = Account(
-        name="Bank", type="asset", category="bank", owner="Test", currency="PLN", purpose="general"
+        name="Bank", type="asset", category="bank", owner="Marcin", currency="PLN", purpose="general"
     )
     liability = Account(
         name="Mortgage",
         type="liability",
         category="mortgage",
-        owner="Test",
+        owner="Marcin",
         currency="PLN",
         purpose="general",
     )
@@ -158,7 +158,7 @@ def test_get_snapshot_by_id(test_db_session):
         name="Test Bank",
         type="asset",
         category="bank",
-        owner="Test",
+        owner="Marcin",
         currency="PLN",
         purpose="general",
     )
@@ -200,7 +200,7 @@ def test_create_snapshot_duplicate_account_ids(test_db_session):
         name="Test Bank",
         type="asset",
         category="bank",
-        owner="Test",
+        owner="Marcin",
         currency="PLN",
         purpose="general",
     )
@@ -241,7 +241,7 @@ def test_create_snapshot_inactive_account(test_db_session):
         name="Active Bank",
         type="asset",
         category="bank",
-        owner="Test",
+        owner="Marcin",
         currency="PLN",
         is_active=True,
         purpose="general",
@@ -250,7 +250,7 @@ def test_create_snapshot_inactive_account(test_db_session):
         name="Inactive Bank",
         type="asset",
         category="bank",
-        owner="Test",
+        owner="Marcin",
         currency="PLN",
         is_active=False,
         purpose="general",
@@ -379,7 +379,7 @@ def test_create_snapshot_mixed_assets_and_accounts(test_db_session):
 
     # Create account and asset
     account = Account(
-        name="Bank", type="asset", category="bank", owner="Test", currency="PLN", purpose="general"
+        name="Bank", type="asset", category="bank", owner="Marcin", currency="PLN", purpose="general"
     )
     asset = Asset(name="Car", is_active=True)
     test_db_session.add_all([account, asset])
@@ -415,7 +415,7 @@ def test_get_all_snapshots_with_assets(test_db_session):
     # Create assets
     asset = Asset(name="Car", is_active=True)
     account = Account(
-        name="Bank", type="asset", category="bank", owner="Test", currency="PLN", purpose="general"
+        name="Bank", type="asset", category="bank", owner="Marcin", currency="PLN", purpose="general"
     )
     test_db_session.add_all([asset, account])
     test_db_session.commit()
@@ -449,7 +449,7 @@ def test_get_snapshot_by_id_with_assets(test_db_session):
     # Create asset and account
     asset = Asset(name="Car", is_active=True)
     account = Account(
-        name="Bank", type="asset", category="bank", owner="Test", currency="PLN", purpose="general"
+        name="Bank", type="asset", category="bank", owner="Marcin", currency="PLN", purpose="general"
     )
     test_db_session.add_all([asset, account])
     test_db_session.commit()

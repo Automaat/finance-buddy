@@ -149,7 +149,7 @@ def test_asset_liability_aggregation(test_db_session):
         Account(
             name="Credit Card",
             type="liability",
-            category="credit",
+            category="other",
             owner="John",
             currency="PLN",
             is_active=True,
@@ -735,7 +735,7 @@ def test_metric_cards_mixed_liabilities(test_db_session):
     car_loan_account = Account(
         name="Car Loan",
         type="liability",
-        category="raty",
+        category="installment",
         owner="Marcin",
         currency="PLN",
         purpose="general",
@@ -743,7 +743,7 @@ def test_metric_cards_mixed_liabilities(test_db_session):
     credit_card_account = Account(
         name="Credit Card",
         type="liability",
-        category="credit",
+        category="other",
         owner="Marcin",
         currency="PLN",
         purpose="general",

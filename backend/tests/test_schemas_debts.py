@@ -50,7 +50,7 @@ class TestDebtCreateValidation:
     def test_invalid_debt_type_fails(self):
         """Test that invalid debt type raises validation error"""
         with pytest.raises(
-            ValidationError, match="Debt type must be 'mortgage' or 'installment_0percent'"
+            ValidationError, match="Input should be 'mortgage' or 'installment_0percent'"
         ):
             DebtCreate(
                 name="Test",
@@ -163,7 +163,7 @@ class TestDebtUpdateValidation:
     def test_invalid_debt_type_fails(self):
         """Test that invalid debt type raises validation error"""
         with pytest.raises(
-            ValidationError, match="Debt type must be 'mortgage' or 'installment_0percent'"
+            ValidationError, match="Input should be 'mortgage' or 'installment_0percent'"
         ):
             DebtUpdate(debt_type="invalid_type")
 

@@ -28,7 +28,7 @@ def test_get_all_debts_success(test_client, test_db_session):
     account2 = Account(
         name="Car Loan",
         type="liability",
-        category="raty",
+        category="installment",
         owner="Ewa",
         currency="PLN",
         purpose="general",
@@ -50,7 +50,7 @@ def test_get_all_debts_success(test_client, test_db_session):
     debt2 = Debt(
         account_id=account2.id,
         name="Car Financing",
-        debt_type="installment",
+        debt_type="installment_0percent",
         start_date=date(2023, 6, 1),
         initial_amount=80000.0,
         interest_rate=5.0,
@@ -83,7 +83,7 @@ def test_get_all_debts_filter_by_account(test_client, test_db_session):
     account2 = Account(
         name="Car Loan",
         type="liability",
-        category="raty",
+        category="installment",
         owner="Ewa",
         currency="PLN",
         purpose="general",
@@ -104,7 +104,7 @@ def test_get_all_debts_filter_by_account(test_client, test_db_session):
     debt2 = Debt(
         account_id=account2.id,
         name="Car Financing",
-        debt_type="installment",
+        debt_type="installment_0percent",
         start_date=date(2023, 6, 1),
         initial_amount=80000.0,
         interest_rate=5.0,
@@ -136,7 +136,7 @@ def test_get_all_debts_filter_by_type(test_client, test_db_session):
     account2 = Account(
         name="Car Loan",
         type="liability",
-        category="raty",
+        category="installment",
         owner="Ewa",
         currency="PLN",
         purpose="general",
@@ -157,7 +157,7 @@ def test_get_all_debts_filter_by_type(test_client, test_db_session):
     debt2 = Debt(
         account_id=account2.id,
         name="Car Financing",
-        debt_type="installment",
+        debt_type="installment_0percent",
         start_date=date(2023, 6, 1),
         initial_amount=80000.0,
         interest_rate=5.0,

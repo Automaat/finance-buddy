@@ -1,8 +1,10 @@
 from pydantic import BaseModel
 
+from app.core.enums import Category
+
 
 class CategoryStatsResponse(BaseModel):
-    category: str
+    category: Category
     total_value: float
     total_contributed: float
     returns: float

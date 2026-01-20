@@ -3,15 +3,15 @@ from datetime import date as date_type
 
 from pydantic import BaseModel, field_validator
 
-from app.core.config import settings
+from app.core.enums import ContractType, Owner
 
 
 class SalaryRecordCreate(BaseModel):
     date: date_type
     gross_amount: float
-    contract_type: str
+    contract_type: ContractType
     company: str
-    owner: str
+    owner: Owner
 
     @field_validator("gross_amount")
     @classmethod
@@ -34,29 +34,13 @@ class SalaryRecordCreate(BaseModel):
             raise ValueError("Company cannot be empty")
         return v.strip()
 
-    @field_validator("owner")
-    @classmethod
-    def validate_owner(cls, v: str) -> str:
-        allowed_owners = settings.owner_names_list
-        if v not in allowed_owners:
-            raise ValueError(f"Owner must be one of: {', '.join(allowed_owners)}")
-        return v
-
-    @field_validator("contract_type")
-    @classmethod
-    def validate_contract_type(cls, v: str) -> str:
-        allowed_types = {"UOP", "UZ", "UoD", "B2B"}
-        if v not in allowed_types:
-            raise ValueError(f"Contract type must be one of: {', '.join(allowed_types)}")
-        return v
-
 
 class SalaryRecordUpdate(BaseModel):
     date: date_type | None = None
     gross_amount: float | None = None
-    contract_type: str | None = None
+    contract_type: ContractType | None = None
     company: str | None = None
-    owner: str | None = None
+    owner: Owner | None = None
 
     @field_validator("gross_amount")
     @classmethod
@@ -81,32 +65,14 @@ class SalaryRecordUpdate(BaseModel):
             return v.strip()
         return v
 
-    @field_validator("owner")
-    @classmethod
-    def validate_owner(cls, v: str | None) -> str | None:
-        if v is not None:
-            allowed_owners = settings.owner_names_list
-            if v not in allowed_owners:
-                raise ValueError(f"Owner must be one of: {', '.join(allowed_owners)}")
-        return v
-
-    @field_validator("contract_type")
-    @classmethod
-    def validate_contract_type(cls, v: str | None) -> str | None:
-        if v is not None:
-            allowed_types = {"UOP", "UZ", "UoD", "B2B"}
-            if v not in allowed_types:
-                raise ValueError(f"Contract type must be one of: {', '.join(allowed_types)}")
-        return v
-
 
 class SalaryRecordResponse(BaseModel):
     id: int
     date: date_type
     gross_amount: float
-    contract_type: str
+    contract_type: ContractType
     company: str
-    owner: str
+    owner: Owner
     is_active: bool
     created_at: datetime
 
