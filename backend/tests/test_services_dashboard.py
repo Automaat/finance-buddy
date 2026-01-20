@@ -614,7 +614,8 @@ def test_metric_cards_calculation(test_db_session):
     result = get_dashboard_data(test_db_session)
 
     # Check metric cards
-    assert result.metric_cards.property_sqm == 65.50
+    # Property sqm adjusted for mortgage equity: 65.50 * ((500000 - 300000) / 500000) = 26.2
+    assert round(result.metric_cards.property_sqm, 2) == 26.2
     assert result.metric_cards.emergency_fund_months == 3.0  # 15000 / 5000
     assert result.metric_cards.retirement_income_monthly == (100000 * 0.04) / 12
     assert result.metric_cards.mortgage_remaining == 300000.0
