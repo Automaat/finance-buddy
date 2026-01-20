@@ -34,8 +34,56 @@ def get_prefill_data(db: Session = Depends(get_db)) -> PrefillResponse:  # noqa:
     # Provide defaults if config not initialized
     retirement_age = config.retirement_age if config else 67
 
+    # Fetch PPK rates from AppConfig
+    ppk_rates = {}
+    if config:
+        ppk_rates = {
+            "marcin": {
+                "employee": float(config.ppk_employee_rate_marcin),
+                "employer": float(config.ppk_employer_rate_marcin),
+            },
+            "ewa": {
+                "employee": float(config.ppk_employee_rate_ewa),
+                "employer": float(config.ppk_employer_rate_ewa),
+            },
+        }
+
+    # Fetch latest salary records
+    from app.models.salary_record import SalaryRecord
+
+    salary_marcin = (
+        db.execute(
+            select(SalaryRecord)
+            .where(SalaryRecord.owner == "Marcin", SalaryRecord.is_active.is_(True))
+            .order_by(SalaryRecord.date.desc())
+        )
+        .scalars()
+        .first()
+    )
+
+    salary_ewa = (
+        db.execute(
+            select(SalaryRecord)
+            .where(SalaryRecord.owner == "Ewa", SalaryRecord.is_active.is_(True))
+            .order_by(SalaryRecord.date.desc())
+        )
+        .scalars()
+        .first()
+    )
+
+    monthly_salaries = {
+        "marcin": float(salary_marcin.gross_amount) if salary_marcin else None,
+        "ewa": float(salary_ewa.gross_amount) if salary_ewa else None,
+    }
+
+    # Fetch PPK balances
+    ppk_balances = sim_service.fetch_ppk_balances(db)
+
     return PrefillResponse(
         current_age=current_age,
         retirement_age=retirement_age,
         balances=PrefillBalances(**balances_dict),
+        ppk_rates=ppk_rates,
+        monthly_salaries=monthly_salaries,
+        ppk_balances=ppk_balances,
     )
