@@ -1,5 +1,7 @@
 from pydantic import BaseModel, field_validator, model_validator
 
+from app.utils.validators import validate_non_negative_amount
+
 
 class PrefillBalances(BaseModel):
     """Current balances for retirement accounts"""
@@ -51,16 +53,12 @@ class PPKSimulationConfig(BaseModel):
     @field_validator("starting_balance")
     @classmethod
     def validate_starting_balance(cls, v: float) -> float:
-        if v < 0.0:
-            raise ValueError("Starting balance must be non-negative")
-        return v
+        return validate_non_negative_amount(v, "Starting balance")
 
     @field_validator("monthly_gross_salary")
     @classmethod
     def validate_monthly_gross_salary(cls, v: float) -> float:
-        if v < 0.0:
-            raise ValueError("Monthly gross salary must be non-negative")
-        return v
+        return validate_non_negative_amount(v, "Monthly gross salary")
 
     @model_validator(mode="after")
     def validate_salary_threshold(self) -> PPKSimulationConfig:

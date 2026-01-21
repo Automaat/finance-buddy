@@ -10,6 +10,7 @@ from app.schemas.debt_payments import (
     DebtPaymentResponse,
     DebtPaymentsListResponse,
 )
+from app.utils.db_helpers import get_or_404, soft_delete
 
 LIABILITY_CATEGORIES = {"mortgage", "installment"}
 
@@ -17,11 +18,8 @@ LIABILITY_CATEGORIES = {"mortgage", "installment"}
 def get_account_payments(db: Session, account_id: int) -> DebtPaymentsListResponse:
     """Get all active payments for a specific liability account"""
     # Validate account exists and is active
-    account = db.execute(
-        select(Account).where(Account.id == account_id, Account.is_active.is_(True))
-    ).scalar_one_or_none()
-
-    if not account:
+    account = get_or_404(db, Account, account_id)
+    if not account.is_active:
         raise HTTPException(status_code=404, detail=f"Account with id {account_id} not found")
 
     # Validate account is liability type
@@ -123,11 +121,8 @@ def get_all_payments(
 def create_payment(db: Session, account_id: int, data: DebtPaymentCreate) -> DebtPaymentResponse:
     """Create new payment for a liability account"""
     # Validate account exists and is active
-    account = db.execute(
-        select(Account).where(Account.id == account_id, Account.is_active.is_(True))
-    ).scalar_one_or_none()
-
-    if not account:
+    account = get_or_404(db, Account, account_id)
+    if not account.is_active:
         raise HTTPException(status_code=404, detail=f"Account with id {account_id} not found")
 
     # Validate account is liability type
@@ -163,12 +158,7 @@ def create_payment(db: Session, account_id: int, data: DebtPaymentCreate) -> Deb
 
 def delete_payment(db: Session, account_id: int, payment_id: int) -> None:
     """Soft delete payment by setting is_active=False"""
-    payment = db.execute(
-        select(DebtPayment).where(DebtPayment.id == payment_id)
-    ).scalar_one_or_none()
-
-    if not payment:
-        raise HTTPException(status_code=404, detail=f"Payment with id {payment_id} not found")
+    payment = get_or_404(db, DebtPayment, payment_id)
 
     # Validate payment belongs to the specified account
     if payment.account_id != account_id:
@@ -177,12 +167,7 @@ def delete_payment(db: Session, account_id: int, payment_id: int) -> None:
             detail=f"Payment {payment_id} does not belong to account {account_id}",
         )
 
-    # Idempotent: if already deleted, return early
-    if not payment.is_active:
-        return
-
-    payment.is_active = False
-    db.commit()
+    soft_delete(db, DebtPayment, payment_id)
 
 
 def get_payment_counts(db: Session) -> dict[int, int]:

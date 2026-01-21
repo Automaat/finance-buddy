@@ -4,6 +4,7 @@ from decimal import Decimal
 from pydantic import BaseModel, field_validator
 
 from app.core.enums import AccountType, Category, Owner, Purpose, Wrapper
+from app.utils.validators import validate_not_empty_string
 
 
 class AccountCreate(BaseModel):
@@ -20,9 +21,7 @@ class AccountCreate(BaseModel):
     @field_validator("name")
     @classmethod
     def validate_name(cls, v: str) -> str:
-        if not v or not v.strip():
-            raise ValueError("Name cannot be empty")
-        return v.strip()
+        return validate_not_empty_string(v)  # type: ignore[return-value]
 
 
 class AccountResponse(BaseModel):
@@ -54,11 +53,7 @@ class AccountUpdate(BaseModel):
     @field_validator("name")
     @classmethod
     def validate_name(cls, v: str | None) -> str | None:
-        if v is not None:
-            if not v or not v.strip():
-                raise ValueError("Name cannot be empty")
-            return v.strip()
-        return v
+        return validate_not_empty_string(v)
 
 
 class AccountsListResponse(BaseModel):

@@ -10,6 +10,7 @@ from app.schemas.transactions import (
     TransactionResponse,
     TransactionsListResponse,
 )
+from app.utils.db_helpers import get_or_404, soft_delete
 
 INVESTMENT_CATEGORIES = {"stock", "bond", "fund", "etf"}
 
@@ -17,11 +18,8 @@ INVESTMENT_CATEGORIES = {"stock", "bond", "fund", "etf"}
 def get_account_transactions(db: Session, account_id: int) -> TransactionsListResponse:
     """Get all active transactions for a specific account"""
     # Validate account exists and is active
-    account = db.execute(
-        select(Account).where(Account.id == account_id, Account.is_active.is_(True))
-    ).scalar_one_or_none()
-
-    if not account:
+    account = get_or_404(db, Account, account_id)
+    if not account.is_active:
         raise HTTPException(status_code=404, detail=f"Account with id {account_id} not found")
 
     # Validate account is investment type or retirement account
@@ -129,11 +127,8 @@ def create_transaction(
 ) -> TransactionResponse:
     """Create new transaction for an investment account"""
     # Validate account exists and is active
-    account = db.execute(
-        select(Account).where(Account.id == account_id, Account.is_active.is_(True))
-    ).scalar_one_or_none()
-
-    if not account:
+    account = get_or_404(db, Account, account_id)
+    if not account.is_active:
         raise HTTPException(status_code=404, detail=f"Account with id {account_id} not found")
 
     # Validate account is investment type or retirement account
@@ -173,14 +168,7 @@ def create_transaction(
 
 def delete_transaction(db: Session, account_id: int, transaction_id: int) -> None:
     """Soft delete transaction by setting is_active=False"""
-    transaction = db.execute(
-        select(Transaction).where(Transaction.id == transaction_id)
-    ).scalar_one_or_none()
-
-    if not transaction:
-        raise HTTPException(
-            status_code=404, detail=f"Transaction with id {transaction_id} not found"
-        )
+    transaction = get_or_404(db, Transaction, transaction_id)
 
     # Validate transaction belongs to the specified account
     if transaction.account_id != account_id:
@@ -189,12 +177,7 @@ def delete_transaction(db: Session, account_id: int, transaction_id: int) -> Non
             detail=f"Transaction {transaction_id} does not belong to account {account_id}",
         )
 
-    # Idempotent: if already deleted, return early
-    if not transaction.is_active:
-        return
-
-    transaction.is_active = False
-    db.commit()
+    soft_delete(db, Transaction, transaction_id)
 
 
 def get_transaction_counts(db: Session) -> dict[int, int]:

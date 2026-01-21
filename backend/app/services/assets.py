@@ -1,9 +1,9 @@
-from fastapi import HTTPException
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
 from app.models import Asset, Snapshot, SnapshotValue
 from app.schemas.assets import AssetCreate, AssetResponse, AssetsListResponse, AssetUpdate
+from app.utils.db_helpers import check_duplicate_name, get_or_404, soft_delete
 
 
 def get_all_assets(db: Session) -> AssetsListResponse:
@@ -45,18 +45,7 @@ def get_all_assets(db: Session) -> AssetsListResponse:
 def create_asset(db: Session, data: AssetCreate) -> AssetResponse:
     """Create new asset"""
     # Check for duplicate active asset name
-    existing = (
-        db.execute(
-            select(Asset).where(
-                Asset.name == data.name,
-                Asset.is_active.is_(True),
-            )
-        )
-        .scalars()
-        .first()
-    )
-    if existing:
-        raise HTTPException(status_code=400, detail=f"Active asset '{data.name}' already exists")
+    check_duplicate_name(db, Asset, data.name)
 
     asset = Asset(
         name=data.name,
@@ -77,28 +66,11 @@ def create_asset(db: Session, data: AssetCreate) -> AssetResponse:
 
 def update_asset(db: Session, asset_id: int, data: AssetUpdate) -> AssetResponse:
     """Update existing asset"""
-    asset = db.execute(select(Asset).where(Asset.id == asset_id)).scalar_one_or_none()
-
-    if not asset:
-        raise HTTPException(status_code=404, detail=f"Asset with id {asset_id} not found")
+    asset = get_or_404(db, Asset, asset_id)
 
     # Check for duplicate name if changing name
     if data.name and data.name != asset.name:
-        existing = (
-            db.execute(
-                select(Asset).where(
-                    Asset.name == data.name,
-                    Asset.is_active.is_(True),
-                    Asset.id != asset_id,
-                )
-            )
-            .scalars()
-            .first()
-        )
-        if existing:
-            raise HTTPException(
-                status_code=400, detail=f"Active asset '{data.name}' already exists"
-            )
+        check_duplicate_name(db, Asset, data.name, exclude_id=asset_id)
 
     # Update fields
     if data.name is not None:
@@ -134,14 +106,4 @@ def update_asset(db: Session, asset_id: int, data: AssetUpdate) -> AssetResponse
 
 def delete_asset(db: Session, asset_id: int) -> None:
     """Soft delete asset by setting is_active=False"""
-    asset = db.execute(select(Asset).where(Asset.id == asset_id)).scalar_one_or_none()
-
-    if not asset:
-        raise HTTPException(status_code=404, detail=f"Asset with id {asset_id} not found")
-
-    # Idempotent: if already deleted, return early
-    if not asset.is_active:
-        return
-
-    asset.is_active = False
-    db.commit()
+    soft_delete(db, Asset, asset_id)

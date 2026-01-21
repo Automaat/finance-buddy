@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Account, Debt, DebtPayment, Snapshot, SnapshotValue
 from app.schemas.debts import DebtCreate, DebtResponse, DebtsListResponse, DebtUpdate
+from app.utils.db_helpers import get_or_404, soft_delete
 
 
 def _get_latest_balance(db: Session, account_id: int) -> tuple[float | None, date | None]:
@@ -133,12 +134,10 @@ def get_all_debts(
 
 def create_debt(db: Session, account_id: int, data: DebtCreate) -> DebtResponse:
     """Create new debt for a liability account"""
-    account = db.execute(
-        select(Account).where(Account.id == account_id, Account.is_active.is_(True))
-    ).scalar_one_or_none()
+    account = get_or_404(db, Account, account_id)
 
-    if not account:
-        raise HTTPException(status_code=404, detail=f"Account with id {account_id} not found")
+    if not account.is_active:
+        raise HTTPException(status_code=404, detail="Account not found")
 
     if account.type != "liability":
         raise HTTPException(
@@ -307,13 +306,4 @@ def update_debt(db: Session, debt_id: int, data: DebtUpdate) -> DebtResponse:
 
 def delete_debt(db: Session, debt_id: int) -> None:
     """Soft delete debt by setting is_active=False"""
-    debt = db.execute(select(Debt).where(Debt.id == debt_id)).scalar_one_or_none()
-
-    if not debt:
-        raise HTTPException(status_code=404, detail=f"Debt with id {debt_id} not found")
-
-    if not debt.is_active:
-        return
-
-    debt.is_active = False
-    db.commit()
+    soft_delete(db, Debt, debt_id)

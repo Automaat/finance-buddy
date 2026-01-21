@@ -1,9 +1,14 @@
-from fastapi import HTTPException
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
 from app.models import Account, Snapshot, SnapshotValue
 from app.schemas.accounts import AccountCreate, AccountResponse, AccountsListResponse, AccountUpdate
+from app.utils.db_helpers import (
+    check_duplicate_name,
+    get_latest_snapshot_value,
+    get_or_404,
+    soft_delete,
+)
 
 
 def get_all_accounts(db: Session) -> AccountsListResponse:
@@ -56,18 +61,7 @@ def get_all_accounts(db: Session) -> AccountsListResponse:
 def create_account(db: Session, data: AccountCreate) -> AccountResponse:
     """Create new account"""
     # Check for duplicate active account name
-    existing = (
-        db.execute(
-            select(Account).where(
-                Account.name == data.name,
-                Account.is_active.is_(True),
-            )
-        )
-        .scalars()
-        .first()
-    )
-    if existing:
-        raise HTTPException(status_code=400, detail=f"Active account '{data.name}' already exists")
+    check_duplicate_name(db, Account, data.name)
 
     account = Account(
         name=data.name,
@@ -104,28 +98,11 @@ def create_account(db: Session, data: AccountCreate) -> AccountResponse:
 
 def update_account(db: Session, account_id: int, data: AccountUpdate) -> AccountResponse:
     """Update existing account"""
-    account = db.execute(select(Account).where(Account.id == account_id)).scalar_one_or_none()
-
-    if not account:
-        raise HTTPException(status_code=404, detail=f"Account with id {account_id} not found")
+    account = get_or_404(db, Account, account_id)
 
     # Check for duplicate name if changing name
     if data.name and data.name != account.name:
-        existing = (
-            db.execute(
-                select(Account).where(
-                    Account.name == data.name,
-                    Account.is_active.is_(True),
-                    Account.id != account_id,
-                )
-            )
-            .scalars()
-            .first()
-        )
-        if existing:
-            raise HTTPException(
-                status_code=400, detail=f"Active account '{data.name}' already exists"
-            )
+        check_duplicate_name(db, Account, data.name, exclude_id=account_id)
 
     # Update fields
     if data.name is not None:
@@ -152,20 +129,7 @@ def update_account(db: Session, account_id: int, data: AccountUpdate) -> Account
     db.refresh(account)
 
     # Get current value
-    latest_snapshot = db.execute(
-        select(Snapshot).order_by(desc(Snapshot.date)).limit(1)
-    ).scalar_one_or_none()
-
-    current_value = 0.0
-    if latest_snapshot:
-        snapshot_value = db.execute(
-            select(SnapshotValue).where(
-                SnapshotValue.snapshot_id == latest_snapshot.id,
-                SnapshotValue.account_id == account.id,
-            )
-        ).scalar_one_or_none()
-        if snapshot_value:
-            current_value = float(snapshot_value.value)
+    current_value = get_latest_snapshot_value(db, account.id)
 
     return AccountResponse(
         id=account.id,
@@ -186,14 +150,4 @@ def update_account(db: Session, account_id: int, data: AccountUpdate) -> Account
 
 def delete_account(db: Session, account_id: int) -> None:
     """Soft delete account by setting is_active=False"""
-    account = db.execute(select(Account).where(Account.id == account_id)).scalar_one_or_none()
-
-    if not account:
-        raise HTTPException(status_code=404, detail=f"Account with id {account_id} not found")
-
-    # Idempotent: if already deleted, return early
-    if not account.is_active:
-        return
-
-    account.is_active = False
-    db.commit()
+    soft_delete(db, Account, account_id)

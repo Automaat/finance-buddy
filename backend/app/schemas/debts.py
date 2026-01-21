@@ -1,8 +1,13 @@
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, field_validator
 
 from app.core.enums import DebtType
+from app.utils.validators import (
+    validate_not_empty_string,
+    validate_not_future_date,
+    validate_positive_amount,
+)
 
 
 class DebtCreate(BaseModel):
@@ -17,23 +22,17 @@ class DebtCreate(BaseModel):
     @field_validator("name")
     @classmethod
     def validate_name(cls, v: str) -> str:
-        if not v or not v.strip():
-            raise ValueError("Name cannot be empty")
-        return v.strip()
+        return validate_not_empty_string(v)  # type: ignore[return-value]
 
     @field_validator("start_date")
     @classmethod
     def validate_start_date(cls, v: date) -> date:
-        if v > datetime.now(UTC).date():
-            raise ValueError("Start date cannot be in the future")
-        return v
+        return validate_not_future_date(v, "Start date")
 
     @field_validator("initial_amount")
     @classmethod
     def validate_initial_amount(cls, v: float) -> float:
-        if v <= 0:
-            raise ValueError("Initial amount must be greater than 0")
-        return v
+        return validate_positive_amount(v, "Initial amount")
 
     @field_validator("interest_rate")
     @classmethod
@@ -82,24 +81,20 @@ class DebtUpdate(BaseModel):
     @field_validator("name")
     @classmethod
     def validate_name(cls, v: str | None) -> str | None:
-        if v is not None:
-            if not v or not v.strip():
-                raise ValueError("Name cannot be empty")
-            return v.strip()
-        return v
+        return validate_not_empty_string(v)
 
     @field_validator("start_date")
     @classmethod
     def validate_start_date(cls, v: date | None) -> date | None:
-        if v is not None and v > datetime.now(UTC).date():
-            raise ValueError("Start date cannot be in the future")
+        if v is not None:
+            return validate_not_future_date(v, "Start date")
         return v
 
     @field_validator("initial_amount")
     @classmethod
     def validate_initial_amount(cls, v: float | None) -> float | None:
-        if v is not None and v <= 0:
-            raise ValueError("Initial amount must be greater than 0")
+        if v is not None:
+            return validate_positive_amount(v, "Initial amount")
         return v
 
     @field_validator("interest_rate")
