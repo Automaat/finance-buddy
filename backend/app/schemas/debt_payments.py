@@ -1,8 +1,9 @@
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, field_validator
 
 from app.core.config import settings
+from app.utils.validators import validate_not_future_date, validate_positive_amount
 
 
 class DebtPaymentCreate(BaseModel):
@@ -13,16 +14,12 @@ class DebtPaymentCreate(BaseModel):
     @field_validator("amount")
     @classmethod
     def validate_amount(cls, v: float) -> float:
-        if v <= 0:
-            raise ValueError("Amount must be greater than 0")
-        return v
+        return validate_positive_amount(v)
 
     @field_validator("date")
     @classmethod
     def validate_date(cls, v: date) -> date:
-        if v > datetime.now(UTC).date():
-            raise ValueError("Date cannot be in the future")
-        return v
+        return validate_not_future_date(v)
 
     @field_validator("owner")
     @classmethod

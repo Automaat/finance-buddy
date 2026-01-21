@@ -1,6 +1,7 @@
 from pydantic import BaseModel, field_validator
 
 from app.core.enums import Owner, Wrapper
+from app.utils.validators import validate_owner_marcin_or_ewa, validate_positive_amount
 
 
 class RetirementLimitCreate(BaseModel):
@@ -23,16 +24,12 @@ class RetirementLimitCreate(BaseModel):
     @field_validator("owner")
     @classmethod
     def validate_owner(cls, v: Owner) -> Owner:
-        if v not in {Owner.MARCIN, Owner.EWA}:
-            raise ValueError("Owner must be 'Marcin' or 'Ewa'")
-        return v
+        return validate_owner_marcin_or_ewa(v)
 
     @field_validator("limit_amount")
     @classmethod
     def validate_limit_amount(cls, v: float) -> float:
-        if v <= 0:
-            raise ValueError("Limit amount must be greater than 0")
-        return v
+        return validate_positive_amount(v, "Limit amount")
 
 
 class RetirementLimitResponse(RetirementLimitCreate):
@@ -71,9 +68,7 @@ class PPKContributionGenerateRequest(BaseModel):
     @field_validator("owner")
     @classmethod
     def validate_owner(cls, v: Owner) -> Owner:
-        if v not in {Owner.MARCIN, Owner.EWA}:
-            raise ValueError("Owner must be 'Marcin' or 'Ewa'")
-        return v
+        return validate_owner_marcin_or_ewa(v)
 
     @field_validator("month")
     @classmethod

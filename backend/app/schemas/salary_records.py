@@ -1,9 +1,14 @@
-from datetime import UTC, datetime
 from datetime import date as date_type
+from datetime import datetime
 
 from pydantic import BaseModel, field_validator
 
 from app.core.enums import ContractType, Owner
+from app.utils.validators import (
+    validate_not_empty_string,
+    validate_not_future_date,
+    validate_positive_amount,
+)
 
 
 class SalaryRecordCreate(BaseModel):
@@ -16,23 +21,17 @@ class SalaryRecordCreate(BaseModel):
     @field_validator("gross_amount")
     @classmethod
     def validate_gross_amount(cls, v: float) -> float:
-        if v <= 0:
-            raise ValueError("Gross amount must be greater than 0")
-        return v
+        return validate_positive_amount(v, "Gross amount")
 
     @field_validator("date")
     @classmethod
     def validate_date(cls, v: date_type) -> date_type:
-        if v > datetime.now(UTC).date():
-            raise ValueError("Date cannot be in the future")
-        return v
+        return validate_not_future_date(v)
 
     @field_validator("company")
     @classmethod
     def validate_company(cls, v: str) -> str:
-        if not v or not v.strip():
-            raise ValueError("Company cannot be empty")
-        return v.strip()
+        return validate_not_empty_string(v, "Company")  # type: ignore[return-value]
 
 
 class SalaryRecordUpdate(BaseModel):
@@ -45,25 +44,21 @@ class SalaryRecordUpdate(BaseModel):
     @field_validator("gross_amount")
     @classmethod
     def validate_gross_amount(cls, v: float | None) -> float | None:
-        if v is not None and v <= 0:
-            raise ValueError("Gross amount must be greater than 0")
+        if v is not None:
+            return validate_positive_amount(v, "Gross amount")
         return v
 
     @field_validator("date")
     @classmethod
     def validate_date(cls, v: date_type | None) -> date_type | None:
-        if v is not None and v > datetime.now(UTC).date():
-            raise ValueError("Date cannot be in the future")
+        if v is not None:
+            return validate_not_future_date(v)
         return v
 
     @field_validator("company")
     @classmethod
     def validate_company(cls, v: str | None) -> str | None:
-        if v is not None:
-            if not v or not v.strip():
-                raise ValueError("Company cannot be empty")
-            return v.strip()
-        return v
+        return validate_not_empty_string(v, "Company")
 
 
 class SalaryRecordResponse(BaseModel):

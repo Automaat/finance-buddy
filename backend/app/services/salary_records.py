@@ -1,7 +1,6 @@
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
-from fastapi import HTTPException
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
@@ -12,6 +11,7 @@ from app.schemas.salary_records import (
     SalaryRecordsListResponse,
     SalaryRecordUpdate,
 )
+from app.utils.db_helpers import get_or_404, soft_delete
 
 
 def get_all_salary_records(
@@ -104,12 +104,7 @@ def create_salary_record(db: Session, data: SalaryRecordCreate) -> SalaryRecordR
 
 def get_salary_record(db: Session, salary_id: int) -> SalaryRecordResponse:
     """Get a single salary record by ID"""
-    record = db.execute(
-        select(SalaryRecord).where(SalaryRecord.id == salary_id, SalaryRecord.is_active.is_(True))
-    ).scalar_one_or_none()
-
-    if not record:
-        raise HTTPException(status_code=404, detail=f"Salary record with id {salary_id} not found")
+    record = get_or_404(db, SalaryRecord, salary_id)
 
     return SalaryRecordResponse(
         id=record.id,
@@ -127,12 +122,7 @@ def update_salary_record(
     db: Session, salary_id: int, data: SalaryRecordUpdate
 ) -> SalaryRecordResponse:
     """Update salary record fields"""
-    record = db.execute(
-        select(SalaryRecord).where(SalaryRecord.id == salary_id, SalaryRecord.is_active.is_(True))
-    ).scalar_one_or_none()
-
-    if not record:
-        raise HTTPException(status_code=404, detail=f"Salary record with id {salary_id} not found")
+    record = get_or_404(db, SalaryRecord, salary_id)
 
     if data.date is not None:
         record.date = data.date
@@ -162,18 +152,7 @@ def update_salary_record(
 
 def delete_salary_record(db: Session, salary_id: int) -> None:
     """Soft delete salary record by setting is_active=False"""
-    record = db.execute(
-        select(SalaryRecord).where(SalaryRecord.id == salary_id)
-    ).scalar_one_or_none()
-
-    if not record:
-        raise HTTPException(status_code=404, detail=f"Salary record with id {salary_id} not found")
-
-    if not record.is_active:
-        return
-
-    record.is_active = False
-    db.commit()
+    soft_delete(db, SalaryRecord, salary_id)
 
 
 def get_current_salary(db: Session, owner: str) -> float | None:
