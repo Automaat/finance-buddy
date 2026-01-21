@@ -142,6 +142,21 @@ def create_transaction(
             ),
         )
 
+    # Check for duplicate transaction (account_id, date)
+    conflicting = db.execute(
+        select(Transaction).where(
+            Transaction.account_id == account_id,
+            Transaction.date == data.date,
+            Transaction.is_active.is_(True),
+        )
+    ).scalar_one_or_none()
+
+    if conflicting:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Transaction for account '{account.name}' on {data.date} already exists",
+        )
+
     # Create transaction
     transaction = Transaction(
         account_id=account_id,
@@ -159,8 +174,8 @@ def create_transaction(
     except IntegrityError as e:
         db.rollback()
         raise HTTPException(
-            status_code=409,
-            detail=f"Transaction for account '{account.name}' on {data.date} already exists",
+            status_code=500,
+            detail="Failed to create transaction due to database integrity error",
         ) from e
 
     return TransactionResponse(

@@ -77,7 +77,8 @@ def create_account(db: Session, data: AccountCreate) -> AccountResponse:
     except IntegrityError as e:
         db.rollback()
         raise HTTPException(
-            status_code=409, detail=f"Account '{data.name}' already exists"
+            status_code=500,
+            detail="Failed to create account due to database integrity error",
         ) from e
 
     return AccountResponse(
@@ -132,8 +133,8 @@ def update_account(db: Session, account_id: int, data: AccountUpdate) -> Account
     except IntegrityError as e:
         db.rollback()
         raise HTTPException(
-            status_code=409,
-            detail=f"Account '{data.name or account.name}' conflicts with existing account",
+            status_code=500,
+            detail="Failed to update account due to database integrity error",
         ) from e
 
     # Get current value

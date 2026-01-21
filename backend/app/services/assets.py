@@ -53,7 +53,10 @@ def create_asset(db: Session, data: AssetCreate) -> AssetResponse:
         db.refresh(asset)
     except IntegrityError as e:
         db.rollback()
-        raise HTTPException(status_code=409, detail=f"Asset '{data.name}' already exists") from e
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to create asset due to database integrity error",
+        ) from e
 
     return AssetResponse(
         id=asset.id,
@@ -82,8 +85,8 @@ def update_asset(db: Session, asset_id: int, data: AssetUpdate) -> AssetResponse
     except IntegrityError as e:
         db.rollback()
         raise HTTPException(
-            status_code=409,
-            detail=f"Asset '{data.name or asset.name}' conflicts with existing asset",
+            status_code=500,
+            detail="Failed to update asset due to database integrity error",
         ) from e
 
     # Get current value
