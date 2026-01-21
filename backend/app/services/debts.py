@@ -136,6 +136,9 @@ def create_debt(db: Session, account_id: int, data: DebtCreate) -> DebtResponse:
     """Create new debt for a liability account"""
     account = get_or_404(db, Account, account_id)
 
+    if not account.is_active:
+        raise HTTPException(status_code=404, detail="Account not found")
+
     if account.type != "liability":
         raise HTTPException(
             status_code=400,

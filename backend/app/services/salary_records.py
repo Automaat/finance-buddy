@@ -1,6 +1,7 @@
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
+from fastapi import HTTPException
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
@@ -106,6 +107,11 @@ def get_salary_record(db: Session, salary_id: int) -> SalaryRecordResponse:
     """Get a single salary record by ID"""
     record = get_or_404(db, SalaryRecord, salary_id)
 
+    if not record.is_active:
+        raise HTTPException(
+            status_code=404, detail=f"Salary record with id {salary_id} not found"
+        )
+
     return SalaryRecordResponse(
         id=record.id,
         date=record.date,
@@ -123,6 +129,11 @@ def update_salary_record(
 ) -> SalaryRecordResponse:
     """Update salary record fields"""
     record = get_or_404(db, SalaryRecord, salary_id)
+
+    if not record.is_active:
+        raise HTTPException(
+            status_code=404, detail=f"Salary record with id {salary_id} not found"
+        )
 
     if data.date is not None:
         record.date = data.date

@@ -53,12 +53,12 @@ class PPKSimulationConfig(BaseModel):
     @field_validator("starting_balance")
     @classmethod
     def validate_starting_balance(cls, v: float) -> float:
-        return validate_non_negative_amount(v)
+        return validate_non_negative_amount(v, "Starting balance")
 
     @field_validator("monthly_gross_salary")
     @classmethod
     def validate_monthly_gross_salary(cls, v: float) -> float:
-        return validate_non_negative_amount(v)
+        return validate_non_negative_amount(v, "Monthly gross salary")
 
     @model_validator(mode="after")
     def validate_salary_threshold(self) -> PPKSimulationConfig:
