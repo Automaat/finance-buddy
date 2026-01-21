@@ -167,6 +167,56 @@ def test_get_latest_snapshot_values_batch_empty_list(test_db_session):
     assert result == {}
 
 
+def test_get_latest_snapshot_values_batch_for_assets_success(test_db_session):
+    """Test batch fetching latest snapshot values for assets"""
+    from app.models import Asset
+    from app.utils.db_helpers import get_latest_snapshot_values_batch_for_assets
+
+    # Create assets
+    asset1 = Asset(name="Asset 1", is_active=True)
+    asset2 = Asset(name="Asset 2", is_active=True)
+    test_db_session.add_all([asset1, asset2])
+    test_db_session.commit()
+
+    # Create snapshot
+    snapshot = Snapshot(date=date(2024, 1, 31), notes="Test")
+    test_db_session.add(snapshot)
+    test_db_session.commit()
+
+    # Create snapshot values
+    value1 = SnapshotValue(snapshot_id=snapshot.id, asset_id=asset1.id, value=5000.0)
+    value2 = SnapshotValue(snapshot_id=snapshot.id, asset_id=asset2.id, value=10000.0)
+    test_db_session.add_all([value1, value2])
+    test_db_session.commit()
+
+    result = get_latest_snapshot_values_batch_for_assets(test_db_session, [asset1.id, asset2.id])
+
+    assert result == {asset1.id: 5000.0, asset2.id: 10000.0}
+
+
+def test_get_latest_snapshot_values_batch_for_assets_missing_assets(test_db_session):
+    """Test batch fetch for assets fills missing with 0.0"""
+    from app.models import Asset
+    from app.utils.db_helpers import get_latest_snapshot_values_batch_for_assets
+
+    asset = Asset(name="Test Asset", is_active=True)
+    test_db_session.add(asset)
+    test_db_session.commit()
+
+    # No snapshots created
+    result = get_latest_snapshot_values_batch_for_assets(test_db_session, [asset.id, 999])
+
+    assert result == {asset.id: 0.0, 999: 0.0}
+
+
+def test_get_latest_snapshot_values_batch_for_assets_empty_list(test_db_session):
+    """Test batch fetch for assets with empty list returns empty dict"""
+    from app.utils.db_helpers import get_latest_snapshot_values_batch_for_assets
+
+    result = get_latest_snapshot_values_batch_for_assets(test_db_session, [])
+    assert result == {}
+
+
 def test_soft_delete_success(test_db_session):
     """Test soft deleting entity sets is_active=False"""
     account = Account(

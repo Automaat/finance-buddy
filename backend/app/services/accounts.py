@@ -1,11 +1,12 @@
-from sqlalchemy import desc, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Account, Snapshot, SnapshotValue
+from app.models import Account
 from app.schemas.accounts import AccountCreate, AccountResponse, AccountsListResponse, AccountUpdate
 from app.utils.db_helpers import (
     check_duplicate_name,
     get_latest_snapshot_value,
+    get_latest_snapshot_values_batch,
     get_or_404,
     soft_delete,
 )
@@ -16,18 +17,9 @@ def get_all_accounts(db: Session) -> AccountsListResponse:
     # Get all active accounts
     accounts = db.execute(select(Account).where(Account.is_active.is_(True))).scalars().all()
 
-    # Get latest snapshot
-    latest_snapshot = db.execute(
-        select(Snapshot).order_by(desc(Snapshot.date)).limit(1)
-    ).scalar_one_or_none()
-
-    # Get latest values if snapshot exists
-    latest_values = {}
-    if latest_snapshot:
-        values = db.execute(
-            select(SnapshotValue).where(SnapshotValue.snapshot_id == latest_snapshot.id)
-        ).scalars()
-        latest_values = {sv.account_id: float(sv.value) for sv in values}
+    # Batch fetch latest snapshot values for all accounts
+    account_ids = [account.id for account in accounts]
+    latest_values = get_latest_snapshot_values_batch(db, account_ids)
 
     # Build response with accounts grouped by type
     assets = []

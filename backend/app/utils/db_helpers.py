@@ -90,6 +90,49 @@ def get_latest_snapshot_values_batch(db: Session, account_ids: list[int]) -> dic
     return values_map
 
 
+def get_latest_snapshot_values_batch_for_assets(
+    db: Session, asset_ids: list[int]
+) -> dict[int, float]:
+    """
+    Batch fetch latest snapshot values for multiple assets.
+
+    Args:
+        db: Database session
+        asset_ids: List of asset IDs
+
+    Returns:
+        Dict mapping asset_id -> latest_value (0.0 if no snapshots)
+    """
+    if not asset_ids:
+        return {}
+
+    # Subquery to get latest snapshot_id per asset
+    latest_snapshots = (
+        select(
+            SnapshotValue.asset_id,
+            SnapshotValue.snapshot_id,
+            SnapshotValue.value,
+        )
+        .where(SnapshotValue.asset_id.in_(asset_ids))
+        .order_by(SnapshotValue.asset_id, SnapshotValue.snapshot_id.desc())
+    )
+
+    results = db.execute(latest_snapshots).all()
+
+    # Group by asset_id, take first (latest) value
+    values_map: dict[int, float] = {}
+    for asset_id, _, value in results:
+        if asset_id not in values_map:
+            values_map[asset_id] = value
+
+    # Fill missing assets with 0.0
+    for asset_id in asset_ids:
+        if asset_id not in values_map:
+            values_map[asset_id] = 0.0
+
+    return values_map
+
+
 def soft_delete[ModelT](db: Session, model: type[ModelT], entity_id: int) -> None:
     """
     Soft delete entity by setting is_active=False (idempotent).
