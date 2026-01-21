@@ -138,9 +138,7 @@ def test_get_latest_snapshot_values_batch_success(test_db_session):
     test_db_session.add_all([value1, value2])
     test_db_session.commit()
 
-    result = get_latest_snapshot_values_batch(
-        test_db_session, [account1.id, account2.id]
-    )
+    result = get_latest_snapshot_values_batch(test_db_session, [account1.id, account2.id])
 
     assert result == {account1.id: 1000.0, account2.id: 2000.0}
 
@@ -158,9 +156,7 @@ def test_get_latest_snapshot_values_batch_missing_accounts(test_db_session):
     test_db_session.add(account)
     test_db_session.commit()
 
-    result = get_latest_snapshot_values_batch(
-        test_db_session, [account.id, 999]
-    )
+    result = get_latest_snapshot_values_batch(test_db_session, [account.id, 999])
 
     assert result == {account.id: 0.0, 999: 0.0}
 
