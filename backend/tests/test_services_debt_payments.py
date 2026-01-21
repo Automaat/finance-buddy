@@ -279,6 +279,40 @@ def test_create_payment_success(test_db_session):
     assert result.owner == "Marcin"
 
 
+def test_create_payment_duplicate(test_db_session):
+    """Test creating duplicate payment fails"""
+    account = Account(
+        name="Mortgage",
+        type="liability",
+        category="mortgage",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+    )
+    test_db_session.add(account)
+    test_db_session.commit()
+
+    # Create first payment
+    payment = DebtPayment(
+        account_id=account.id,
+        amount=5000.0,
+        date=date(2024, 1, 15),
+        owner="Marcin",
+        is_active=True,
+    )
+    test_db_session.add(payment)
+    test_db_session.commit()
+
+    # Try to create duplicate (same account_id, date)
+    data = DebtPaymentCreate(amount=3000.0, date=date(2024, 1, 15), owner="Ewa")
+
+    with pytest.raises(HTTPException) as exc_info:
+        create_payment(test_db_session, account.id, data)
+
+    assert exc_info.value.status_code == 409
+    assert "already exists" in exc_info.value.detail
+
+
 def test_create_payment_non_liability_account(test_db_session):
     """Test creating payment for non-liability account fails"""
     account = Account(

@@ -1,5 +1,10 @@
 from datetime import date
 from decimal import Decimal
+from unittest.mock import patch
+
+import pytest
+from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
 
 from app.models import Account, Snapshot, SnapshotValue
 from app.schemas.accounts import AccountCreate, AccountUpdate
@@ -481,3 +486,47 @@ def test_delete_account_idempotent(test_db_session):
     # Verify still deleted
     deleted = test_db_session.query(Account).filter_by(id=account_id).first()
     assert deleted.is_active is False
+
+
+def test_create_account_integrity_error(test_db_session):
+    """Test creating account with IntegrityError returns 500"""
+    data = AccountCreate(
+        name="Test Account",
+        type="asset",
+        category="bank",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+    )
+
+    # Mock db.commit to raise IntegrityError
+    with patch.object(test_db_session, "commit", side_effect=IntegrityError("", "", "")):
+        with pytest.raises(HTTPException) as exc_info:
+            create_account(test_db_session, data)
+
+        assert exc_info.value.status_code == 500
+        assert "integrity error" in exc_info.value.detail.lower()
+
+
+def test_update_account_integrity_error(test_db_session):
+    """Test updating account with IntegrityError returns 500"""
+    account = Account(
+        name="Test Account",
+        type="asset",
+        category="bank",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+    )
+    test_db_session.add(account)
+    test_db_session.commit()
+
+    data = AccountUpdate(name="Updated Name")
+
+    # Mock db.commit to raise IntegrityError
+    with patch.object(test_db_session, "commit", side_effect=IntegrityError("", "", "")):
+        with pytest.raises(HTTPException) as exc_info:
+            update_account(test_db_session, account.id, data)
+
+        assert exc_info.value.status_code == 500
+        assert "integrity error" in exc_info.value.detail.lower()

@@ -279,6 +279,40 @@ def test_create_transaction_success(test_db_session):
     assert result.owner == "Marcin"
 
 
+def test_create_transaction_duplicate(test_db_session):
+    """Test creating duplicate transaction fails"""
+    account = Account(
+        name="IKE Stocks",
+        type="asset",
+        category="stock",
+        owner="Marcin",
+        currency="PLN",
+        purpose="general",
+    )
+    test_db_session.add(account)
+    test_db_session.commit()
+
+    # Create first transaction
+    transaction = Transaction(
+        account_id=account.id,
+        amount=5000.0,
+        date=date(2024, 1, 15),
+        owner="Marcin",
+        is_active=True,
+    )
+    test_db_session.add(transaction)
+    test_db_session.commit()
+
+    # Try to create duplicate (same account_id, date)
+    data = TransactionCreate(amount=3000.0, date=date(2024, 1, 15), owner="Ewa")
+
+    with pytest.raises(HTTPException) as exc_info:
+        create_transaction(test_db_session, account.id, data)
+
+    assert exc_info.value.status_code == 409
+    assert "already exists" in exc_info.value.detail
+
+
 def test_create_transaction_non_investment_account(test_db_session):
     """Test creating transaction for non-investment account fails"""
     account = Account(
