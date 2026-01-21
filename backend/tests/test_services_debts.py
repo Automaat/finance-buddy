@@ -3,23 +3,27 @@ from datetime import date
 import pytest
 from fastapi import HTTPException
 
-from app.models import Account, Debt, DebtPayment, Snapshot, SnapshotValue
+from app.models import Debt
 from app.schemas.debts import DebtCreate, DebtUpdate
 from app.services.debts import create_debt, delete_debt, get_all_debts, get_debt, update_debt
+from tests.factories import (
+    create_test_account,
+    create_test_debt,
+    create_test_debt_payment,
+    create_test_snapshot,
+    create_test_snapshot_value,
+)
 
 
 def test_create_debt_success(test_db_session):
     """Test creating a debt successfully"""
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Hipoteka Mieszkanie",
-        type="liability",
+        account_type="liability",
         category="mortgage",
         owner="Shared",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
     data = DebtCreate(
         name="Mieszkanie Kraków",
@@ -67,16 +71,13 @@ def test_create_debt_invalid_account(test_db_session):
 
 def test_create_debt_not_liability(test_db_session):
     """Test creating debt for asset account fails"""
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Bank Account",
-        type="asset",
+        account_type="asset",
         category="bank",
         owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
     data = DebtCreate(
         name="Test Debt",
@@ -96,16 +97,13 @@ def test_create_debt_not_liability(test_db_session):
 
 def test_create_debt_duplicate(test_db_session):
     """Test creating duplicate debt for same account fails"""
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Hipoteka",
-        type="liability",
+        account_type="liability",
         category="mortgage",
         owner="Shared",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
     data1 = DebtCreate(
         name="First Debt",
@@ -135,45 +133,38 @@ def test_create_debt_duplicate(test_db_session):
 
 def test_get_all_debts_no_filters(test_db_session):
     """Test getting all debts without filters"""
-    account1 = Account(
+    account1 = create_test_account(
+        test_db_session,
         name="Hipoteka",
-        type="liability",
+        account_type="liability",
         category="mortgage",
         owner="Shared",
-        currency="PLN",
-        purpose="general",
     )
-    account2 = Account(
+    account2 = create_test_account(
+        test_db_session,
         name="Raty 0%",
-        type="liability",
+        account_type="liability",
         category="installment",
         owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add_all([account1, account2])
-    test_db_session.commit()
 
-    debt1 = Debt(
+    create_test_debt(
+        test_db_session,
         account_id=account1.id,
         name="Mieszkanie",
         debt_type="mortgage",
-        start_date=date(2020, 1, 15),
         initial_amount=500000.0,
         interest_rate=3.5,
-        currency="PLN",
     )
-    debt2 = Debt(
+    create_test_debt(
+        test_db_session,
         account_id=account2.id,
         name="Laptop",
         debt_type="installment_0percent",
         start_date=date(2024, 1, 1),
         initial_amount=5000.0,
         interest_rate=0.0,
-        currency="PLN",
     )
-    test_db_session.add_all([debt1, debt2])
-    test_db_session.commit()
 
     result = get_all_debts(test_db_session)
 
@@ -185,45 +176,38 @@ def test_get_all_debts_no_filters(test_db_session):
 
 def test_get_all_debts_filter_by_account(test_db_session):
     """Test filtering debts by account"""
-    account1 = Account(
+    account1 = create_test_account(
+        test_db_session,
         name="Hipoteka",
-        type="liability",
+        account_type="liability",
         category="mortgage",
         owner="Shared",
-        currency="PLN",
-        purpose="general",
     )
-    account2 = Account(
+    account2 = create_test_account(
+        test_db_session,
         name="Raty 0%",
-        type="liability",
+        account_type="liability",
         category="installment",
         owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add_all([account1, account2])
-    test_db_session.commit()
 
-    debt1 = Debt(
+    create_test_debt(
+        test_db_session,
         account_id=account1.id,
         name="Mieszkanie",
         debt_type="mortgage",
-        start_date=date(2020, 1, 15),
         initial_amount=500000.0,
         interest_rate=3.5,
-        currency="PLN",
     )
-    debt2 = Debt(
+    create_test_debt(
+        test_db_session,
         account_id=account2.id,
         name="Laptop",
         debt_type="installment_0percent",
         start_date=date(2024, 1, 1),
         initial_amount=5000.0,
         interest_rate=0.0,
-        currency="PLN",
     )
-    test_db_session.add_all([debt1, debt2])
-    test_db_session.commit()
 
     result = get_all_debts(test_db_session, account_id=account1.id)
 
@@ -233,45 +217,38 @@ def test_get_all_debts_filter_by_account(test_db_session):
 
 def test_get_all_debts_filter_by_type(test_db_session):
     """Test filtering debts by debt_type"""
-    account1 = Account(
+    account1 = create_test_account(
+        test_db_session,
         name="Hipoteka",
-        type="liability",
+        account_type="liability",
         category="mortgage",
         owner="Shared",
-        currency="PLN",
-        purpose="general",
     )
-    account2 = Account(
+    account2 = create_test_account(
+        test_db_session,
         name="Raty 0%",
-        type="liability",
+        account_type="liability",
         category="installment",
         owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add_all([account1, account2])
-    test_db_session.commit()
 
-    debt1 = Debt(
+    create_test_debt(
+        test_db_session,
         account_id=account1.id,
         name="Mieszkanie",
         debt_type="mortgage",
-        start_date=date(2020, 1, 15),
         initial_amount=500000.0,
         interest_rate=3.5,
-        currency="PLN",
     )
-    debt2 = Debt(
+    create_test_debt(
+        test_db_session,
         account_id=account2.id,
         name="Laptop",
         debt_type="installment_0percent",
         start_date=date(2024, 1, 1),
         initial_amount=5000.0,
         interest_rate=0.0,
-        currency="PLN",
     )
-    test_db_session.add_all([debt1, debt2])
-    test_db_session.commit()
 
     result = get_all_debts(test_db_session, debt_type="mortgage")
 
@@ -281,28 +258,22 @@ def test_get_all_debts_filter_by_type(test_db_session):
 
 def test_get_debt_success(test_db_session):
     """Test getting a single debt by ID"""
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Hipoteka",
-        type="liability",
+        account_type="liability",
         category="mortgage",
         owner="Shared",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
-    debt = Debt(
+    debt = create_test_debt(
+        test_db_session,
         account_id=account.id,
         name="Mieszkanie",
         debt_type="mortgage",
-        start_date=date(2020, 1, 15),
         initial_amount=500000.0,
         interest_rate=3.5,
-        currency="PLN",
     )
-    test_db_session.add(debt)
-    test_db_session.commit()
 
     result = get_debt(test_db_session, debt.id)
 
@@ -322,28 +293,22 @@ def test_get_debt_not_found(test_db_session):
 
 def test_update_debt_success(test_db_session):
     """Test updating debt fields"""
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Hipoteka",
-        type="liability",
+        account_type="liability",
         category="mortgage",
         owner="Shared",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
-    debt = Debt(
+    debt = create_test_debt(
+        test_db_session,
         account_id=account.id,
         name="Mieszkanie",
         debt_type="mortgage",
-        start_date=date(2020, 1, 15),
         initial_amount=500000.0,
         interest_rate=3.5,
-        currency="PLN",
     )
-    test_db_session.add(debt)
-    test_db_session.commit()
 
     update_data = DebtUpdate(interest_rate=4.0, notes="Rate increased")
 
@@ -366,28 +331,22 @@ def test_update_debt_not_found(test_db_session):
 
 def test_delete_debt_success(test_db_session):
     """Test soft deleting a debt"""
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Hipoteka",
-        type="liability",
+        account_type="liability",
         category="mortgage",
         owner="Shared",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
-    debt = Debt(
+    debt = create_test_debt(
+        test_db_session,
         account_id=account.id,
         name="Mieszkanie",
         debt_type="mortgage",
-        start_date=date(2020, 1, 15),
         initial_amount=500000.0,
         interest_rate=3.5,
-        currency="PLN",
     )
-    test_db_session.add(debt)
-    test_db_session.commit()
     debt_id = debt.id
 
     delete_debt(test_db_session, debt_id)
@@ -399,28 +358,22 @@ def test_delete_debt_success(test_db_session):
 
 def test_delete_debt_idempotent(test_db_session):
     """Test deleting already deleted debt is idempotent"""
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Hipoteka",
-        type="liability",
+        account_type="liability",
         category="mortgage",
         owner="Shared",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
-    debt = Debt(
+    debt = create_test_debt(
+        test_db_session,
         account_id=account.id,
         name="Mieszkanie",
         debt_type="mortgage",
-        start_date=date(2020, 1, 15),
         initial_amount=500000.0,
         interest_rate=3.5,
-        currency="PLN",
     )
-    test_db_session.add(debt)
-    test_db_session.commit()
     debt_id = debt.id
 
     delete_debt(test_db_session, debt_id)
@@ -440,45 +393,50 @@ def test_delete_debt_not_found(test_db_session):
 
 def test_get_all_debts_with_snapshots_and_payments(test_db_session):
     """Test getting debts with snapshot balances and payments for interest calculation"""
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Hipoteka",
-        type="liability",
+        account_type="liability",
         category="mortgage",
         owner="Shared",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
-    debt = Debt(
+    create_test_debt(
+        test_db_session,
         account_id=account.id,
         name="Mieszkanie",
         debt_type="mortgage",
-        start_date=date(2020, 1, 15),
         initial_amount=500000.0,
         interest_rate=3.5,
-        currency="PLN",
     )
-    test_db_session.add(debt)
-    test_db_session.commit()
 
-    snapshot = Snapshot(date=date(2024, 12, 31), notes="Year-end 2024")
-    test_db_session.add(snapshot)
-    test_db_session.commit()
-
-    snapshot_value = SnapshotValue(snapshot_id=snapshot.id, account_id=account.id, value=400000.0)
-    test_db_session.add(snapshot_value)
-    test_db_session.commit()
-
-    payment1 = DebtPayment(
-        account_id=account.id, amount=50000.0, date=date(2024, 6, 1), owner="Shared"
+    snapshot = create_test_snapshot(
+        test_db_session,
+        snapshot_date=date(2024, 12, 31),
+        notes="Year-end 2024",
     )
-    payment2 = DebtPayment(
-        account_id=account.id, amount=60000.0, date=date(2024, 12, 1), owner="Shared"
+
+    create_test_snapshot_value(
+        test_db_session,
+        snapshot_id=snapshot.id,
+        account_id=account.id,
+        value=400000.0,
     )
-    test_db_session.add_all([payment1, payment2])
-    test_db_session.commit()
+
+    create_test_debt_payment(
+        test_db_session,
+        account_id=account.id,
+        amount=50000.0,
+        payment_date=date(2024, 6, 1),
+        owner="Shared",
+    )
+    create_test_debt_payment(
+        test_db_session,
+        account_id=account.id,
+        amount=60000.0,
+        payment_date=date(2024, 12, 1),
+        owner="Shared",
+    )
 
     result = get_all_debts(test_db_session)
 
@@ -492,30 +450,34 @@ def test_get_all_debts_with_snapshots_and_payments(test_db_session):
 
 def test_create_debt_with_snapshots(test_db_session):
     """Test creating debt when snapshot data exists"""
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Hipoteka",
-        type="liability",
+        account_type="liability",
         category="mortgage",
         owner="Shared",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
-    snapshot = Snapshot(date=date(2024, 1, 31), notes="January snapshot")
-    test_db_session.add(snapshot)
-    test_db_session.commit()
-
-    snapshot_value = SnapshotValue(snapshot_id=snapshot.id, account_id=account.id, value=450000.0)
-    test_db_session.add(snapshot_value)
-    test_db_session.commit()
-
-    payment = DebtPayment(
-        account_id=account.id, amount=55000.0, date=date(2024, 1, 15), owner="Shared"
+    snapshot = create_test_snapshot(
+        test_db_session,
+        snapshot_date=date(2024, 1, 31),
+        notes="January snapshot",
     )
-    test_db_session.add(payment)
-    test_db_session.commit()
+
+    create_test_snapshot_value(
+        test_db_session,
+        snapshot_id=snapshot.id,
+        account_id=account.id,
+        value=450000.0,
+    )
+
+    create_test_debt_payment(
+        test_db_session,
+        account_id=account.id,
+        amount=55000.0,
+        payment_date=date(2024, 1, 15),
+        owner="Shared",
+    )
 
     data = DebtCreate(
         name="Mieszkanie",
@@ -536,42 +498,43 @@ def test_create_debt_with_snapshots(test_db_session):
 
 def test_get_debt_with_snapshots(test_db_session):
     """Test getting debt with snapshot balance"""
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Hipoteka",
-        type="liability",
+        account_type="liability",
         category="mortgage",
         owner="Shared",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
-    debt = Debt(
+    debt = create_test_debt(
+        test_db_session,
         account_id=account.id,
         name="Mieszkanie",
         debt_type="mortgage",
-        start_date=date(2020, 1, 15),
         initial_amount=500000.0,
         interest_rate=3.5,
-        currency="PLN",
     )
-    test_db_session.add(debt)
-    test_db_session.commit()
 
-    snapshot = Snapshot(date=date(2024, 6, 30), notes="Mid-year snapshot")
-    test_db_session.add(snapshot)
-    test_db_session.commit()
-
-    snapshot_value = SnapshotValue(snapshot_id=snapshot.id, account_id=account.id, value=425000.0)
-    test_db_session.add(snapshot_value)
-    test_db_session.commit()
-
-    payment = DebtPayment(
-        account_id=account.id, amount=80000.0, date=date(2024, 6, 15), owner="Shared"
+    snapshot = create_test_snapshot(
+        test_db_session,
+        snapshot_date=date(2024, 6, 30),
+        notes="Mid-year snapshot",
     )
-    test_db_session.add(payment)
-    test_db_session.commit()
+
+    create_test_snapshot_value(
+        test_db_session,
+        snapshot_id=snapshot.id,
+        account_id=account.id,
+        value=425000.0,
+    )
+
+    create_test_debt_payment(
+        test_db_session,
+        account_id=account.id,
+        amount=80000.0,
+        payment_date=date(2024, 6, 15),
+        owner="Shared",
+    )
 
     result = get_debt(test_db_session, debt.id)
 
@@ -583,28 +546,22 @@ def test_get_debt_with_snapshots(test_db_session):
 
 def test_update_debt_all_fields(test_db_session):
     """Test updating all updatable debt fields"""
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Hipoteka",
-        type="liability",
+        account_type="liability",
         category="mortgage",
         owner="Shared",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
-    debt = Debt(
+    debt = create_test_debt(
+        test_db_session,
         account_id=account.id,
         name="Mieszkanie",
         debt_type="mortgage",
-        start_date=date(2020, 1, 15),
         initial_amount=500000.0,
         interest_rate=3.5,
-        currency="PLN",
     )
-    test_db_session.add(debt)
-    test_db_session.commit()
 
     update_data = DebtUpdate(
         name="Updated Mieszkanie",
@@ -629,42 +586,43 @@ def test_update_debt_all_fields(test_db_session):
 
 def test_update_debt_with_snapshots(test_db_session):
     """Test updating debt when snapshot data exists"""
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Hipoteka",
-        type="liability",
+        account_type="liability",
         category="mortgage",
         owner="Shared",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
-    debt = Debt(
+    debt = create_test_debt(
+        test_db_session,
         account_id=account.id,
         name="Mieszkanie",
         debt_type="mortgage",
-        start_date=date(2020, 1, 15),
         initial_amount=500000.0,
         interest_rate=3.5,
-        currency="PLN",
     )
-    test_db_session.add(debt)
-    test_db_session.commit()
 
-    snapshot = Snapshot(date=date(2024, 12, 31), notes="Year-end")
-    test_db_session.add(snapshot)
-    test_db_session.commit()
-
-    snapshot_value = SnapshotValue(snapshot_id=snapshot.id, account_id=account.id, value=400000.0)
-    test_db_session.add(snapshot_value)
-    test_db_session.commit()
-
-    payment = DebtPayment(
-        account_id=account.id, amount=110000.0, date=date(2024, 12, 1), owner="Shared"
+    snapshot = create_test_snapshot(
+        test_db_session,
+        snapshot_date=date(2024, 12, 31),
+        notes="Year-end",
     )
-    test_db_session.add(payment)
-    test_db_session.commit()
+
+    create_test_snapshot_value(
+        test_db_session,
+        snapshot_id=snapshot.id,
+        account_id=account.id,
+        value=400000.0,
+    )
+
+    create_test_debt_payment(
+        test_db_session,
+        account_id=account.id,
+        amount=110000.0,
+        payment_date=date(2024, 12, 1),
+        owner="Shared",
+    )
 
     update_data = DebtUpdate(interest_rate=4.0)
 

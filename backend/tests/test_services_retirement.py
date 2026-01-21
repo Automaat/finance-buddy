@@ -7,12 +7,8 @@ import pytest
 from fastapi import HTTPException
 
 from app.models import (
-    Account,
     AppConfig,
     RetirementLimit,
-    SalaryRecord,
-    Snapshot,
-    SnapshotValue,
     Transaction,
 )
 from app.schemas.retirement import PPKContributionGenerateRequest
@@ -23,6 +19,13 @@ from app.services.retirement import (
     get_yearly_stats,
     update_limit,
 )
+from tests.factories import (
+    create_test_account,
+    create_test_salary_record,
+    create_test_snapshot,
+    create_test_snapshot_value,
+    create_test_transaction,
+)
 
 
 class TestGetYearlyStats:
@@ -31,17 +34,12 @@ class TestGetYearlyStats:
     def test_get_yearly_stats_ike_success(self, test_db_session):
         """Test calculating IKE yearly stats with contributions"""
         # Create IKE account for Marcin
-        account = Account(
+        account = create_test_account(
+            test_db_session,
             name="IKE Stocks",
-            type="asset",
             category="stock",
             account_wrapper="IKE",
-            owner="Marcin",
-            currency="PLN",
-            purpose="general",
         )
-        test_db_session.add(account)
-        test_db_session.commit()
 
         # Create retirement limit
         limit = RetirementLimit(
@@ -54,24 +52,19 @@ class TestGetYearlyStats:
         test_db_session.commit()
 
         # Create transactions
-        t1 = Transaction(
+        create_test_transaction(
+            test_db_session,
             account_id=account.id,
-            amount=Decimal("3000.0"),
-            date=date(2024, 1, 15),
-            owner="Marcin",
+            amount=3000.0,
             transaction_type="employee",
-            is_active=True,
         )
-        t2 = Transaction(
+        create_test_transaction(
+            test_db_session,
             account_id=account.id,
-            amount=Decimal("2000.0"),
-            date=date(2024, 2, 10),
-            owner="Marcin",
+            amount=2000.0,
+            transaction_date=date(2024, 2, 10),
             transaction_type="employee",
-            is_active=True,
         )
-        test_db_session.add_all([t1, t2])
-        test_db_session.commit()
 
         # Get stats
         result = get_yearly_stats(test_db_session, 2024)
@@ -91,17 +84,13 @@ class TestGetYearlyStats:
     def test_get_yearly_stats_ikze_with_employer_contributions(self, test_db_session):
         """Test IKZE stats with both employee and employer contributions"""
         # Create IKZE account for Ewa
-        account = Account(
+        account = create_test_account(
+            test_db_session,
             name="IKZE Bonds",
-            type="asset",
             category="bond",
             account_wrapper="IKZE",
             owner="Ewa",
-            currency="PLN",
-            purpose="general",
         )
-        test_db_session.add(account)
-        test_db_session.commit()
 
         # Create retirement limit
         limit = RetirementLimit(
@@ -114,24 +103,20 @@ class TestGetYearlyStats:
         test_db_session.commit()
 
         # Create transactions
-        t1 = Transaction(
+        create_test_transaction(
+            test_db_session,
             account_id=account.id,
-            amount=Decimal("5000.0"),
-            date=date(2024, 1, 15),
+            amount=5000.0,
             owner="Ewa",
             transaction_type="employee",
-            is_active=True,
         )
-        t2 = Transaction(
+        create_test_transaction(
+            test_db_session,
             account_id=account.id,
-            amount=Decimal("3000.0"),
-            date=date(2024, 1, 15),
+            amount=3000.0,
             owner="Ewa",
             transaction_type="employer",
-            is_active=True,
         )
-        test_db_session.add_all([t1, t2])
-        test_db_session.commit()
 
         # Get stats
         result = get_yearly_stats(test_db_session, 2024, owner="Ewa")
@@ -147,17 +132,12 @@ class TestGetYearlyStats:
 
     def test_get_yearly_stats_untyped_transactions_assigned_to_employee(self, test_db_session):
         """Test that untyped transactions are assigned to employee contributions"""
-        account = Account(
+        account = create_test_account(
+            test_db_session,
             name="IKE Stocks",
-            type="asset",
             category="stock",
             account_wrapper="IKE",
-            owner="Marcin",
-            currency="PLN",
-            purpose="general",
         )
-        test_db_session.add(account)
-        test_db_session.commit()
 
         limit = RetirementLimit(
             year=2024,
@@ -169,24 +149,19 @@ class TestGetYearlyStats:
         test_db_session.commit()
 
         # Create transactions - one typed, one untyped
-        t1 = Transaction(
+        create_test_transaction(
+            test_db_session,
             account_id=account.id,
-            amount=Decimal("3000.0"),
-            date=date(2024, 1, 15),
-            owner="Marcin",
+            amount=3000.0,
             transaction_type="employee",
-            is_active=True,
         )
-        t2 = Transaction(
+        create_test_transaction(
+            test_db_session,
             account_id=account.id,
-            amount=Decimal("2000.0"),
-            date=date(2024, 2, 10),
-            owner="Marcin",
+            amount=2000.0,
+            transaction_date=date(2024, 2, 10),
             transaction_type=None,  # Untyped
-            is_active=True,
         )
-        test_db_session.add_all([t1, t2])
-        test_db_session.commit()
 
         result = get_yearly_stats(test_db_session, 2024)
 
@@ -197,17 +172,12 @@ class TestGetYearlyStats:
 
     def test_get_yearly_stats_warning_threshold(self, test_db_session):
         """Test that is_warning is True when >= 90% of limit used"""
-        account = Account(
+        account = create_test_account(
+            test_db_session,
             name="IKE Stocks",
-            type="asset",
             category="stock",
             account_wrapper="IKE",
-            owner="Marcin",
-            currency="PLN",
-            purpose="general",
         )
-        test_db_session.add(account)
-        test_db_session.commit()
 
         limit = RetirementLimit(
             year=2024,
@@ -219,16 +189,12 @@ class TestGetYearlyStats:
         test_db_session.commit()
 
         # Create transaction for 90% of limit
-        transaction = Transaction(
+        create_test_transaction(
+            test_db_session,
             account_id=account.id,
-            amount=Decimal("9000.0"),
-            date=date(2024, 1, 15),
-            owner="Marcin",
+            amount=9000.0,
             transaction_type="employee",
-            is_active=True,
         )
-        test_db_session.add(transaction)
-        test_db_session.commit()
 
         result = get_yearly_stats(test_db_session, 2024)
 
@@ -243,17 +209,12 @@ class TestGetYearlyStats:
 
     def test_get_yearly_stats_no_limits_returns_empty(self, test_db_session):
         """Test that accounts without limits are not included"""
-        account = Account(
+        create_test_account(
+            test_db_session,
             name="IKE Stocks",
-            type="asset",
             category="stock",
             account_wrapper="IKE",
-            owner="Marcin",
-            currency="PLN",
-            purpose="general",
         )
-        test_db_session.add(account)
-        test_db_session.commit()
 
         result = get_yearly_stats(test_db_session, 2024)
         assert result == []
@@ -261,26 +222,19 @@ class TestGetYearlyStats:
     def test_get_yearly_stats_filters_by_owner(self, test_db_session):
         """Test filtering stats by owner"""
         # Create accounts for both owners
-        account_marcin = Account(
+        create_test_account(
+            test_db_session,
             name="IKE Marcin",
-            type="asset",
             category="stock",
             account_wrapper="IKE",
-            owner="Marcin",
-            currency="PLN",
-            purpose="general",
         )
-        account_ewa = Account(
+        create_test_account(
+            test_db_session,
             name="IKE Ewa",
-            type="asset",
             category="stock",
             account_wrapper="IKE",
             owner="Ewa",
-            currency="PLN",
-            purpose="general",
         )
-        test_db_session.add_all([account_marcin, account_ewa])
-        test_db_session.commit()
 
         # Create limits for both
         limit_marcin = RetirementLimit(
@@ -300,17 +254,12 @@ class TestGetYearlyStats:
 
     def test_get_yearly_stats_inactive_transactions_excluded(self, test_db_session):
         """Test that inactive transactions are excluded from calculations"""
-        account = Account(
+        account = create_test_account(
+            test_db_session,
             name="IKE Stocks",
-            type="asset",
             category="stock",
             account_wrapper="IKE",
-            owner="Marcin",
-            currency="PLN",
-            purpose="general",
         )
-        test_db_session.add(account)
-        test_db_session.commit()
 
         limit = RetirementLimit(
             year=2024,
@@ -322,24 +271,20 @@ class TestGetYearlyStats:
         test_db_session.commit()
 
         # Create active and inactive transactions
-        t1 = Transaction(
+        create_test_transaction(
+            test_db_session,
             account_id=account.id,
-            amount=Decimal("3000.0"),
-            date=date(2024, 1, 15),
-            owner="Marcin",
+            amount=3000.0,
             transaction_type="employee",
-            is_active=True,
         )
-        t2 = Transaction(
+        create_test_transaction(
+            test_db_session,
             account_id=account.id,
-            amount=Decimal("5000.0"),
-            date=date(2024, 2, 10),
-            owner="Marcin",
+            amount=5000.0,
+            transaction_date=date(2024, 2, 10),
             transaction_type="employee",
             is_active=False,  # Inactive
         )
-        test_db_session.add_all([t1, t2])
-        test_db_session.commit()
 
         result = get_yearly_stats(test_db_session, 2024)
 
@@ -443,56 +388,43 @@ class TestGetPPKStats:
     def test_get_ppk_stats_success(self, test_db_session):
         """Test calculating PPK stats with contributions and returns"""
         # Create PPK account for Marcin
-        account = Account(
+        account = create_test_account(
+            test_db_session,
             name="PPK Account",
-            type="asset",
             category="stock",
             account_wrapper="PPK",
-            owner="Marcin",
-            currency="PLN",
-            purpose="general",
         )
-        test_db_session.add(account)
-        test_db_session.commit()
 
         # Create transactions
-        t1 = Transaction(
+        create_test_transaction(
+            test_db_session,
             account_id=account.id,
-            amount=Decimal("1000.0"),
-            date=date(2024, 1, 31),
-            owner="Marcin",
+            amount=1000.0,
+            transaction_date=date(2024, 1, 31),
             transaction_type="employee",
-            is_active=True,
         )
-        t2 = Transaction(
+        create_test_transaction(
+            test_db_session,
             account_id=account.id,
-            amount=Decimal("1500.0"),
-            date=date(2024, 1, 31),
-            owner="Marcin",
+            amount=1500.0,
+            transaction_date=date(2024, 1, 31),
             transaction_type="employer",
-            is_active=True,
         )
-        t3 = Transaction(
+        create_test_transaction(
+            test_db_session,
             account_id=account.id,
-            amount=Decimal("250.0"),
-            date=date(2024, 1, 31),
-            owner="Marcin",
+            amount=250.0,
+            transaction_date=date(2024, 1, 31),
             transaction_type="government",
-            is_active=True,
         )
-        test_db_session.add_all([t1, t2, t3])
-        test_db_session.commit()
 
         # Create snapshot with current value
-        snapshot = Snapshot(date=date(2024, 12, 31), notes="Test snapshot")
-        test_db_session.add(snapshot)
-        test_db_session.commit()
-
-        snapshot_value = SnapshotValue(
-            snapshot_id=snapshot.id, account_id=account.id, value=Decimal("3500.0")
+        snapshot = create_test_snapshot(
+            test_db_session, snapshot_date=date(2024, 12, 31), notes="Test snapshot"
         )
-        test_db_session.add(snapshot_value)
-        test_db_session.commit()
+        create_test_snapshot_value(
+            test_db_session, snapshot_id=snapshot.id, account_id=account.id, value=3500.0
+        )
 
         # Get stats
         result = get_ppk_stats(test_db_session, owner="Marcin")
@@ -509,47 +441,34 @@ class TestGetPPKStats:
 
     def test_get_ppk_stats_untyped_transactions_assigned_to_employee(self, test_db_session):
         """Test that untyped transactions are assigned to employee contributions"""
-        account = Account(
+        account = create_test_account(
+            test_db_session,
             name="PPK Account",
-            type="asset",
             category="stock",
             account_wrapper="PPK",
-            owner="Marcin",
-            currency="PLN",
-            purpose="general",
         )
-        test_db_session.add(account)
-        test_db_session.commit()
 
         # Create transactions - some typed, some untyped
-        t1 = Transaction(
+        create_test_transaction(
+            test_db_session,
             account_id=account.id,
-            amount=Decimal("1000.0"),
-            date=date(2024, 1, 31),
-            owner="Marcin",
+            amount=1000.0,
+            transaction_date=date(2024, 1, 31),
             transaction_type="employee",
-            is_active=True,
         )
-        t2 = Transaction(
+        create_test_transaction(
+            test_db_session,
             account_id=account.id,
-            amount=Decimal("500.0"),
-            date=date(2024, 2, 28),
-            owner="Marcin",
+            amount=500.0,
+            transaction_date=date(2024, 2, 28),
             transaction_type=None,  # Untyped
-            is_active=True,
         )
-        test_db_session.add_all([t1, t2])
-        test_db_session.commit()
 
         # Create snapshot
-        snapshot = Snapshot(date=date(2024, 12, 31), notes="Test")
-        test_db_session.add(snapshot)
-        test_db_session.commit()
-        snapshot_value = SnapshotValue(
-            snapshot_id=snapshot.id, account_id=account.id, value=Decimal("1500.0")
+        snapshot = create_test_snapshot(test_db_session, snapshot_date=date(2024, 12, 31))
+        create_test_snapshot_value(
+            test_db_session, snapshot_id=snapshot.id, account_id=account.id, value=1500.0
         )
-        test_db_session.add(snapshot_value)
-        test_db_session.commit()
 
         result = get_ppk_stats(test_db_session)
 
@@ -566,29 +485,21 @@ class TestGetPPKStats:
 
     def test_get_ppk_stats_no_snapshots_returns_zero_value(self, test_db_session):
         """Test that accounts without snapshots show zero total value"""
-        account = Account(
+        account = create_test_account(
+            test_db_session,
             name="PPK Account",
-            type="asset",
             category="stock",
             account_wrapper="PPK",
-            owner="Marcin",
-            currency="PLN",
-            purpose="general",
         )
-        test_db_session.add(account)
-        test_db_session.commit()
 
         # Create transaction
-        transaction = Transaction(
+        create_test_transaction(
+            test_db_session,
             account_id=account.id,
-            amount=Decimal("1000.0"),
-            date=date(2024, 1, 31),
-            owner="Marcin",
+            amount=1000.0,
+            transaction_date=date(2024, 1, 31),
             transaction_type="employee",
-            is_active=True,
         )
-        test_db_session.add(transaction)
-        test_db_session.commit()
 
         result = get_ppk_stats(test_db_session)
 
@@ -601,59 +512,45 @@ class TestGetPPKStats:
     def test_get_ppk_stats_filters_by_owner(self, test_db_session):
         """Test filtering PPK stats by owner"""
         # Create PPK accounts for both owners
-        account_marcin = Account(
+        account_marcin = create_test_account(
+            test_db_session,
             name="PPK Marcin",
-            type="asset",
             category="stock",
             account_wrapper="PPK",
-            owner="Marcin",
-            currency="PLN",
-            purpose="general",
         )
-        account_ewa = Account(
+        account_ewa = create_test_account(
+            test_db_session,
             name="PPK Ewa",
-            type="asset",
             category="stock",
             account_wrapper="PPK",
             owner="Ewa",
-            currency="PLN",
-            purpose="general",
         )
-        test_db_session.add_all([account_marcin, account_ewa])
-        test_db_session.commit()
 
         # Create transactions
-        t1 = Transaction(
+        create_test_transaction(
+            test_db_session,
             account_id=account_marcin.id,
-            amount=Decimal("1000.0"),
-            date=date(2024, 1, 31),
-            owner="Marcin",
+            amount=1000.0,
+            transaction_date=date(2024, 1, 31),
             transaction_type="employee",
-            is_active=True,
         )
-        t2 = Transaction(
+        create_test_transaction(
+            test_db_session,
             account_id=account_ewa.id,
-            amount=Decimal("2000.0"),
-            date=date(2024, 1, 31),
+            amount=2000.0,
+            transaction_date=date(2024, 1, 31),
             owner="Ewa",
             transaction_type="employee",
-            is_active=True,
         )
-        test_db_session.add_all([t1, t2])
-        test_db_session.commit()
 
         # Create snapshots
-        snapshot = Snapshot(date=date(2024, 12, 31), notes="Test")
-        test_db_session.add(snapshot)
-        test_db_session.commit()
-        sv1 = SnapshotValue(
-            snapshot_id=snapshot.id, account_id=account_marcin.id, value=Decimal("1100.0")
+        snapshot = create_test_snapshot(test_db_session, snapshot_date=date(2024, 12, 31))
+        create_test_snapshot_value(
+            test_db_session, snapshot_id=snapshot.id, account_id=account_marcin.id, value=1100.0
         )
-        sv2 = SnapshotValue(
-            snapshot_id=snapshot.id, account_id=account_ewa.id, value=Decimal("2200.0")
+        create_test_snapshot_value(
+            test_db_session, snapshot_id=snapshot.id, account_id=account_ewa.id, value=2200.0
         )
-        test_db_session.add_all([sv1, sv2])
-        test_db_session.commit()
 
         # Filter by Marcin
         result = get_ppk_stats(test_db_session, owner="Marcin")
@@ -689,30 +586,16 @@ class TestGeneratePPKContributions:
         test_db_session.commit()
 
         # Create salary record
-        salary = SalaryRecord(
-            date=date(2024, 1, 1),
-            gross_amount=Decimal("10000.0"),
-            contract_type="UOP",
-            company="Test Company",
-            owner="Marcin",
-        )
-        test_db_session.add(salary)
-        test_db_session.commit()
+        create_test_salary_record(test_db_session, company="Test Company")
 
         # Create PPK account
-        account = Account(
+        account = create_test_account(
+            test_db_session,
             name="PPK Account",
-            type="asset",
             category="stock",
             account_wrapper="PPK",
-            owner="Marcin",
-            currency="PLN",
-            purpose="general",
-            is_active=True,
             receives_contributions=True,
         )
-        test_db_session.add(account)
-        test_db_session.commit()
 
         # Generate contributions
         request = PPKContributionGenerateRequest(owner="Marcin", month=1, year=2024)
@@ -763,19 +646,13 @@ class TestGeneratePPKContributions:
         test_db_session.add(config)
         test_db_session.commit()
 
-        account = Account(
+        create_test_account(
+            test_db_session,
             name="PPK Account",
-            type="asset",
             category="stock",
             account_wrapper="PPK",
-            owner="Marcin",
-            currency="PLN",
-            purpose="general",
-            is_active=True,
             receives_contributions=True,
         )
-        test_db_session.add(account)
-        test_db_session.commit()
 
         request = PPKContributionGenerateRequest(owner="Marcin", month=1, year=2024)
 
@@ -788,29 +665,15 @@ class TestGeneratePPKContributions:
     def test_generate_ppk_contributions_no_app_config_fails(self, test_db_session):
         """Test that missing app config raises error"""
         # Create salary and account without app config
-        salary = SalaryRecord(
-            date=date(2024, 1, 1),
-            gross_amount=Decimal("10000.0"),
-            contract_type="UOP",
-            company="Test Company",
-            owner="Marcin",
-        )
-        test_db_session.add(salary)
-        test_db_session.commit()
+        create_test_salary_record(test_db_session)
 
-        account = Account(
+        create_test_account(
+            test_db_session,
             name="PPK Account",
-            type="asset",
             category="stock",
             account_wrapper="PPK",
-            owner="Marcin",
-            currency="PLN",
-            purpose="general",
-            is_active=True,
             receives_contributions=True,
         )
-        test_db_session.add(account)
-        test_db_session.commit()
 
         request = PPKContributionGenerateRequest(owner="Marcin", month=1, year=2024)
 
@@ -840,15 +703,7 @@ class TestGeneratePPKContributions:
         test_db_session.add(config)
         test_db_session.commit()
 
-        salary = SalaryRecord(
-            date=date(2024, 1, 1),
-            gross_amount=Decimal("10000.0"),
-            contract_type="UOP",
-            company="Test Company",
-            owner="Unknown",
-        )
-        test_db_session.add(salary)
-        test_db_session.commit()
+        create_test_salary_record(test_db_session, owner="Unknown")
 
         request = PPKContributionGenerateRequest(owner="Marcin", month=1, year=2024)
 
@@ -878,15 +733,7 @@ class TestGeneratePPKContributions:
         test_db_session.add(config)
         test_db_session.commit()
 
-        salary = SalaryRecord(
-            date=date(2024, 1, 1),
-            gross_amount=Decimal("10000.0"),
-            contract_type="UOP",
-            company="Test Company",
-            owner="Marcin",
-        )
-        test_db_session.add(salary)
-        test_db_session.commit()
+        create_test_salary_record(test_db_session)
 
         request = PPKContributionGenerateRequest(owner="Marcin", month=1, year=2024)
 
@@ -917,29 +764,15 @@ class TestGeneratePPKContributions:
         test_db_session.add(config)
         test_db_session.commit()
 
-        salary = SalaryRecord(
-            date=date(2024, 1, 1),
-            gross_amount=Decimal("10000.0"),
-            contract_type="UOP",
-            company="Test Company",
-            owner="Marcin",
-        )
-        test_db_session.add(salary)
-        test_db_session.commit()
+        create_test_salary_record(test_db_session)
 
-        account = Account(
+        create_test_account(
+            test_db_session,
             name="PPK Account",
-            type="asset",
             category="stock",
             account_wrapper="PPK",
-            owner="Marcin",
-            currency="PLN",
-            purpose="general",
-            is_active=True,
             receives_contributions=True,
         )
-        test_db_session.add(account)
-        test_db_session.commit()
 
         # Create first contribution
         request = PPKContributionGenerateRequest(owner="Marcin", month=1, year=2024)
@@ -973,29 +806,16 @@ class TestGeneratePPKContributions:
         test_db_session.add(config)
         test_db_session.commit()
 
-        salary = SalaryRecord(
-            date=date(2024, 1, 1),
-            gross_amount=Decimal("8000.0"),
-            contract_type="UOP",
-            company="Test Company",
-            owner="Ewa",
-        )
-        test_db_session.add(salary)
-        test_db_session.commit()
+        create_test_salary_record(test_db_session, gross_amount=8000.0, owner="Ewa")
 
-        account = Account(
+        create_test_account(
+            test_db_session,
             name="PPK Account",
-            type="asset",
             category="stock",
             account_wrapper="PPK",
             owner="Ewa",
-            currency="PLN",
-            purpose="general",
-            is_active=True,
             receives_contributions=True,
         )
-        test_db_session.add(account)
-        test_db_session.commit()
 
         request = PPKContributionGenerateRequest(owner="Ewa", month=1, year=2024)
         result = generate_ppk_contributions(test_db_session, request)

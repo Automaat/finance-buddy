@@ -1,4 +1,3 @@
-from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -6,33 +5,30 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 
-from app.models import Asset, Snapshot, SnapshotValue
+from app.models import Asset
 from app.schemas.assets import AssetCreate, AssetUpdate
 from app.services.assets import create_asset, delete_asset, get_all_assets, update_asset
+from tests.factories import create_test_asset, create_test_snapshot, create_test_snapshot_value
 
 
 def test_get_all_assets_with_values(test_db_session):
     """Test getting all assets with their latest snapshot values"""
     # Create assets
-    asset1 = Asset(name="Car", is_active=True)
-    asset2 = Asset(name="Electronics", is_active=True)
-    inactive = Asset(name="Old Phone", is_active=False)
-    test_db_session.add_all([asset1, asset2, inactive])
-    test_db_session.commit()
+    asset1 = create_test_asset(test_db_session, name="Car")
+    asset2 = create_test_asset(test_db_session, name="Electronics")
+    inactive = create_test_asset(test_db_session, name="Old Phone", is_active=False)
 
     # Create snapshot with values
-    snapshot = Snapshot(date=date(2024, 1, 31))
-    test_db_session.add(snapshot)
-    test_db_session.commit()
-
-    test_db_session.add_all(
-        [
-            SnapshotValue(snapshot_id=snapshot.id, asset_id=asset1.id, value=Decimal("50000")),
-            SnapshotValue(snapshot_id=snapshot.id, asset_id=asset2.id, value=Decimal("3000")),
-            SnapshotValue(snapshot_id=snapshot.id, asset_id=inactive.id, value=Decimal("100")),
-        ]
+    snapshot = create_test_snapshot(test_db_session)
+    create_test_snapshot_value(
+        test_db_session, snapshot.id, asset_id=asset1.id, value=Decimal("50000")
     )
-    test_db_session.commit()
+    create_test_snapshot_value(
+        test_db_session, snapshot.id, asset_id=asset2.id, value=Decimal("3000")
+    )
+    create_test_snapshot_value(
+        test_db_session, snapshot.id, asset_id=inactive.id, value=Decimal("100")
+    )
 
     # Get all assets
     result = get_all_assets(test_db_session)
@@ -52,9 +48,7 @@ def test_get_all_assets_with_values(test_db_session):
 def test_get_all_assets_no_snapshots(test_db_session):
     """Test getting assets when no snapshots exist"""
     # Create assets without snapshots
-    asset = Asset(name="Car", is_active=True)
-    test_db_session.add(asset)
-    test_db_session.commit()
+    create_test_asset(test_db_session, name="Car")
 
     # Get all assets
     result = get_all_assets(test_db_session)
@@ -92,9 +86,7 @@ def test_create_asset_success(test_db_session):
 def test_create_asset_duplicate_name(test_db_session):
     """Test creating asset with duplicate name fails"""
     # Create first asset
-    asset = Asset(name="Car", is_active=True)
-    test_db_session.add(asset)
-    test_db_session.commit()
+    create_test_asset(test_db_session, name="Car")
 
     # Try to create duplicate
     data = AssetCreate(name="Car")
@@ -109,9 +101,7 @@ def test_create_asset_duplicate_name(test_db_session):
 def test_create_asset_allows_duplicate_inactive(test_db_session):
     """Test creating asset with same name as inactive asset is allowed"""
     # Create inactive asset
-    inactive = Asset(name="Car", is_active=False)
-    test_db_session.add(inactive)
-    test_db_session.commit()
+    create_test_asset(test_db_session, name="Car", is_active=False)
 
     # Create new active asset with same name (allowed)
     data = AssetCreate(name="Car")
@@ -123,9 +113,7 @@ def test_create_asset_allows_duplicate_inactive(test_db_session):
 
 def test_update_asset_success(test_db_session):
     """Test updating an asset"""
-    asset = Asset(name="Car", is_active=True)
-    test_db_session.add(asset)
-    test_db_session.commit()
+    asset = create_test_asset(test_db_session, name="Car")
 
     data = AssetUpdate(name="Tesla")
 
@@ -152,10 +140,8 @@ def test_update_asset_not_found(test_db_session):
 
 def test_update_asset_duplicate_name(test_db_session):
     """Test updating asset to duplicate name fails"""
-    asset1 = Asset(name="Car", is_active=True)
-    asset2 = Asset(name="Electronics", is_active=True)
-    test_db_session.add_all([asset1, asset2])
-    test_db_session.commit()
+    create_test_asset(test_db_session, name="Car")
+    asset2 = create_test_asset(test_db_session, name="Electronics")
 
     # Try to rename asset2 to asset1's name
     data = AssetUpdate(name="Car")
@@ -169,9 +155,7 @@ def test_update_asset_duplicate_name(test_db_session):
 
 def test_update_asset_same_name(test_db_session):
     """Test updating asset keeping the same name works"""
-    asset = Asset(name="Car", is_active=True)
-    test_db_session.add(asset)
-    test_db_session.commit()
+    asset = create_test_asset(test_db_session, name="Car")
 
     # Update with same name
     data = AssetUpdate(name="Car")
@@ -182,20 +166,13 @@ def test_update_asset_same_name(test_db_session):
 
 def test_update_asset_with_snapshot_value(test_db_session):
     """Test updating asset returns current value from latest snapshot"""
-    asset = Asset(name="Car", is_active=True)
-    test_db_session.add(asset)
-    test_db_session.commit()
+    asset = create_test_asset(test_db_session, name="Car")
 
     # Create snapshot with value
-    snapshot = Snapshot(date=date(2024, 1, 31))
-    test_db_session.add(snapshot)
-    test_db_session.commit()
-
-    snapshot_value = SnapshotValue(
-        snapshot_id=snapshot.id, asset_id=asset.id, value=Decimal("50000")
+    snapshot = create_test_snapshot(test_db_session)
+    create_test_snapshot_value(
+        test_db_session, snapshot.id, asset_id=asset.id, value=Decimal("50000")
     )
-    test_db_session.add(snapshot_value)
-    test_db_session.commit()
 
     # Update asset
     data = AssetUpdate(name="Tesla")
@@ -207,9 +184,7 @@ def test_update_asset_with_snapshot_value(test_db_session):
 
 def test_update_asset_no_snapshot(test_db_session):
     """Test updating asset without snapshot returns 0 value"""
-    asset = Asset(name="Car", is_active=True)
-    test_db_session.add(asset)
-    test_db_session.commit()
+    asset = create_test_asset(test_db_session, name="Car")
 
     data = AssetUpdate(name="Tesla")
     result = update_asset(test_db_session, asset.id, data)
@@ -219,9 +194,7 @@ def test_update_asset_no_snapshot(test_db_session):
 
 def test_delete_asset_success(test_db_session):
     """Test soft deleting an asset"""
-    asset = Asset(name="Car", is_active=True)
-    test_db_session.add(asset)
-    test_db_session.commit()
+    asset = create_test_asset(test_db_session, name="Car")
 
     delete_asset(test_db_session, asset.id)
 
@@ -242,9 +215,7 @@ def test_delete_asset_not_found(test_db_session):
 
 def test_delete_asset_idempotent(test_db_session):
     """Test deleting already deleted asset is idempotent"""
-    asset = Asset(name="Car", is_active=False)
-    test_db_session.add(asset)
-    test_db_session.commit()
+    asset = create_test_asset(test_db_session, name="Car", is_active=False)
 
     # Delete already inactive asset (should succeed without error)
     delete_asset(test_db_session, asset.id)
@@ -269,9 +240,7 @@ def test_create_asset_integrity_error(test_db_session):
 
 def test_update_asset_integrity_error(test_db_session):
     """Test updating asset with IntegrityError returns 500"""
-    asset = Asset(name="Test Asset", is_active=True)
-    test_db_session.add(asset)
-    test_db_session.commit()
+    asset = create_test_asset(test_db_session, name="Test Asset")
 
     data = AssetUpdate(name="Updated Name")
 

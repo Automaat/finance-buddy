@@ -3,7 +3,7 @@ from datetime import date
 import pytest
 from fastapi import HTTPException
 
-from app.models import Account, DebtPayment
+from app.models import DebtPayment
 from app.schemas.debt_payments import DebtPaymentCreate
 from app.services.debt_payments import (
     create_payment,
@@ -12,34 +12,42 @@ from app.services.debt_payments import (
     get_all_payments,
     get_payment_counts,
 )
+from tests.factories import create_test_account, create_test_debt_payment
 
 
 def test_get_account_payments_success(test_db_session):
     """Test getting payments for a specific liability account"""
     # Create liability account
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Mortgage",
-        type="liability",
+        account_type="liability",
         category="mortgage",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
     # Create payments
-    p1 = DebtPayment(
-        account_id=account.id, amount=5000.0, date=date(2024, 1, 15), owner="Marcin", is_active=True
+    create_test_debt_payment(
+        test_db_session,
+        account_id=account.id,
+        amount=5000.0,
+        payment_date=date(2024, 1, 15),
+        owner="Marcin",
     )
-    p2 = DebtPayment(
-        account_id=account.id, amount=3000.0, date=date(2024, 2, 10), owner="Marcin", is_active=True
+    create_test_debt_payment(
+        test_db_session,
+        account_id=account.id,
+        amount=3000.0,
+        payment_date=date(2024, 2, 10),
+        owner="Marcin",
     )
-    p3 = DebtPayment(
-        account_id=account.id, amount=2000.0, date=date(2024, 3, 5), owner="Marcin", is_active=False
+    create_test_debt_payment(
+        test_db_session,
+        account_id=account.id,
+        amount=2000.0,
+        payment_date=date(2024, 3, 5),
+        owner="Marcin",
+        is_active=False,
     )
-    test_db_session.add_all([p1, p2, p3])
-    test_db_session.commit()
 
     # Get payments
     result = get_account_payments(test_db_session, account.id)
@@ -57,16 +65,7 @@ def test_get_account_payments_success(test_db_session):
 def test_get_account_payments_non_liability_account(test_db_session):
     """Test getting payments for non-liability account fails"""
     # Create asset account (not liability)
-    account = Account(
-        name="Bank Account",
-        type="asset",
-        category="bank",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
-    )
-    test_db_session.add(account)
-    test_db_session.commit()
+    account = create_test_account(test_db_session, name="Bank Account")
 
     with pytest.raises(HTTPException) as exc_info:
         get_account_payments(test_db_session, account.id)
@@ -86,17 +85,13 @@ def test_get_account_payments_not_found(test_db_session):
 
 def test_get_account_payments_inactive_account(test_db_session):
     """Test getting payments for inactive account fails"""
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Old Mortgage",
-        type="liability",
+        account_type="liability",
         category="mortgage",
-        owner="Marcin",
-        currency="PLN",
         is_active=False,
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
     with pytest.raises(HTTPException) as exc_info:
         get_account_payments(test_db_session, account.id)
@@ -106,39 +101,34 @@ def test_get_account_payments_inactive_account(test_db_session):
 
 def test_get_all_payments_no_filters(test_db_session):
     """Test getting all payments without filters"""
-    # Create accounts
-    account1 = Account(
+    account1 = create_test_account(
+        test_db_session,
         name="Mortgage",
-        type="liability",
+        account_type="liability",
         category="mortgage",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    account2 = Account(
+    account2 = create_test_account(
+        test_db_session,
         name="Installment",
-        type="liability",
+        account_type="liability",
         category="installment",
         owner="Ewa",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add_all([account1, account2])
-    test_db_session.commit()
 
-    # Create payments
-    p1 = DebtPayment(
+    create_test_debt_payment(
+        test_db_session,
         account_id=account1.id,
         amount=5000.0,
-        date=date(2024, 1, 15),
+        payment_date=date(2024, 1, 15),
         owner="Marcin",
-        is_active=True,
     )
-    p2 = DebtPayment(
-        account_id=account2.id, amount=3000.0, date=date(2024, 2, 10), owner="Ewa", is_active=True
+    create_test_debt_payment(
+        test_db_session,
+        account_id=account2.id,
+        amount=3000.0,
+        payment_date=date(2024, 2, 10),
+        owner="Ewa",
     )
-    test_db_session.add_all([p1, p2])
-    test_db_session.commit()
 
     result = get_all_payments(test_db_session)
 
@@ -149,39 +139,34 @@ def test_get_all_payments_no_filters(test_db_session):
 
 def test_get_all_payments_filter_by_account(test_db_session):
     """Test filtering payments by account"""
-    # Create accounts
-    account1 = Account(
+    account1 = create_test_account(
+        test_db_session,
         name="Mortgage",
-        type="liability",
+        account_type="liability",
         category="mortgage",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    account2 = Account(
+    account2 = create_test_account(
+        test_db_session,
         name="Installment",
-        type="liability",
+        account_type="liability",
         category="installment",
         owner="Ewa",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add_all([account1, account2])
-    test_db_session.commit()
 
-    # Create payments
-    p1 = DebtPayment(
+    create_test_debt_payment(
+        test_db_session,
         account_id=account1.id,
         amount=5000.0,
-        date=date(2024, 1, 15),
+        payment_date=date(2024, 1, 15),
         owner="Marcin",
-        is_active=True,
     )
-    p2 = DebtPayment(
-        account_id=account2.id, amount=3000.0, date=date(2024, 2, 10), owner="Ewa", is_active=True
+    create_test_debt_payment(
+        test_db_session,
+        account_id=account2.id,
+        amount=3000.0,
+        payment_date=date(2024, 2, 10),
+        owner="Ewa",
     )
-    test_db_session.add_all([p1, p2])
-    test_db_session.commit()
 
     result = get_all_payments(test_db_session, account_id=account1.id)
 
@@ -192,26 +177,28 @@ def test_get_all_payments_filter_by_account(test_db_session):
 
 def test_get_all_payments_filter_by_owner(test_db_session):
     """Test filtering payments by owner"""
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Shared Mortgage",
-        type="liability",
+        account_type="liability",
         category="mortgage",
         owner="Shared",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
-    # Create payments with different owners
-    p1 = DebtPayment(
-        account_id=account.id, amount=5000.0, date=date(2024, 1, 15), owner="Marcin", is_active=True
+    create_test_debt_payment(
+        test_db_session,
+        account_id=account.id,
+        amount=5000.0,
+        payment_date=date(2024, 1, 15),
+        owner="Marcin",
     )
-    p2 = DebtPayment(
-        account_id=account.id, amount=3000.0, date=date(2024, 2, 10), owner="Ewa", is_active=True
+    create_test_debt_payment(
+        test_db_session,
+        account_id=account.id,
+        amount=3000.0,
+        payment_date=date(2024, 2, 10),
+        owner="Ewa",
     )
-    test_db_session.add_all([p1, p2])
-    test_db_session.commit()
 
     result = get_all_payments(test_db_session, owner="Marcin")
 
@@ -222,29 +209,34 @@ def test_get_all_payments_filter_by_owner(test_db_session):
 
 def test_get_all_payments_filter_by_date_range(test_db_session):
     """Test filtering payments by date range"""
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Mortgage",
-        type="liability",
+        account_type="liability",
         category="mortgage",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
-    # Create payments
-    p1 = DebtPayment(
-        account_id=account.id, amount=5000.0, date=date(2024, 1, 15), owner="Marcin", is_active=True
+    create_test_debt_payment(
+        test_db_session,
+        account_id=account.id,
+        amount=5000.0,
+        payment_date=date(2024, 1, 15),
+        owner="Marcin",
     )
-    p2 = DebtPayment(
-        account_id=account.id, amount=3000.0, date=date(2024, 2, 10), owner="Marcin", is_active=True
+    create_test_debt_payment(
+        test_db_session,
+        account_id=account.id,
+        amount=3000.0,
+        payment_date=date(2024, 2, 10),
+        owner="Marcin",
     )
-    p3 = DebtPayment(
-        account_id=account.id, amount=2000.0, date=date(2024, 3, 5), owner="Marcin", is_active=True
+    create_test_debt_payment(
+        test_db_session,
+        account_id=account.id,
+        amount=2000.0,
+        payment_date=date(2024, 3, 5),
+        owner="Marcin",
     )
-    test_db_session.add_all([p1, p2, p3])
-    test_db_session.commit()
 
     result = get_all_payments(
         test_db_session, date_from=date(2024, 2, 1), date_to=date(2024, 2, 28)
@@ -256,16 +248,12 @@ def test_get_all_payments_filter_by_date_range(test_db_session):
 
 def test_create_payment_success(test_db_session):
     """Test creating a payment successfully"""
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Mortgage",
-        type="liability",
+        account_type="liability",
         category="mortgage",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
     data = DebtPaymentCreate(amount=5000.0, date=date(2024, 1, 15), owner="Marcin")
 
@@ -281,27 +269,20 @@ def test_create_payment_success(test_db_session):
 
 def test_create_payment_duplicate(test_db_session):
     """Test creating duplicate payment fails"""
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Mortgage",
-        type="liability",
+        account_type="liability",
         category="mortgage",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
-    # Create first payment
-    payment = DebtPayment(
+    create_test_debt_payment(
+        test_db_session,
         account_id=account.id,
         amount=5000.0,
-        date=date(2024, 1, 15),
+        payment_date=date(2024, 1, 15),
         owner="Marcin",
-        is_active=True,
     )
-    test_db_session.add(payment)
-    test_db_session.commit()
 
     # Try to create duplicate (same account_id, date)
     data = DebtPaymentCreate(amount=3000.0, date=date(2024, 1, 15), owner="Ewa")
@@ -315,16 +296,7 @@ def test_create_payment_duplicate(test_db_session):
 
 def test_create_payment_non_liability_account(test_db_session):
     """Test creating payment for non-liability account fails"""
-    account = Account(
-        name="Bank Account",
-        type="asset",
-        category="bank",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
-    )
-    test_db_session.add(account)
-    test_db_session.commit()
+    account = create_test_account(test_db_session, name="Bank Account")
 
     data = DebtPaymentCreate(amount=5000.0, date=date(2024, 1, 15), owner="Marcin")
 
@@ -347,22 +319,20 @@ def test_create_payment_account_not_found(test_db_session):
 
 def test_delete_payment_success(test_db_session):
     """Test soft deleting a payment"""
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Mortgage",
-        type="liability",
+        account_type="liability",
         category="mortgage",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
-    payment = DebtPayment(
-        account_id=account.id, amount=5000.0, date=date(2024, 1, 15), owner="Marcin", is_active=True
+    payment = create_test_debt_payment(
+        test_db_session,
+        account_id=account.id,
+        amount=5000.0,
+        payment_date=date(2024, 1, 15),
+        owner="Marcin",
     )
-    test_db_session.add(payment)
-    test_db_session.commit()
     payment_id = payment.id
 
     delete_payment(test_db_session, account.id, payment_id)
@@ -382,22 +352,20 @@ def test_delete_payment_not_found(test_db_session):
 
 def test_delete_payment_idempotent(test_db_session):
     """Test deleting already deleted payment is idempotent"""
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Mortgage",
-        type="liability",
+        account_type="liability",
         category="mortgage",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
-    payment = DebtPayment(
-        account_id=account.id, amount=5000.0, date=date(2024, 1, 15), owner="Marcin", is_active=True
+    payment = create_test_debt_payment(
+        test_db_session,
+        account_id=account.id,
+        amount=5000.0,
+        payment_date=date(2024, 1, 15),
+        owner="Marcin",
     )
-    test_db_session.add(payment)
-    test_db_session.commit()
     payment_id = payment.id
 
     delete_payment(test_db_session, account.id, payment_id)
@@ -409,34 +377,26 @@ def test_delete_payment_idempotent(test_db_session):
 
 def test_delete_payment_wrong_account(test_db_session):
     """Test deleting payment with wrong account_id fails"""
-    account1 = Account(
+    account1 = create_test_account(
+        test_db_session,
         name="Mortgage 1",
-        type="liability",
+        account_type="liability",
         category="mortgage",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    account2 = Account(
+    account2 = create_test_account(
+        test_db_session,
         name="Mortgage 2",
-        type="liability",
+        account_type="liability",
         category="mortgage",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add_all([account1, account2])
-    test_db_session.commit()
 
-    payment = DebtPayment(
+    payment = create_test_debt_payment(
+        test_db_session,
         account_id=account1.id,
         amount=5000.0,
-        date=date(2024, 1, 15),
+        payment_date=date(2024, 1, 15),
         owner="Marcin",
-        is_active=True,
     )
-    test_db_session.add(payment)
-    test_db_session.commit()
 
     with pytest.raises(HTTPException) as exc_info:
         delete_payment(test_db_session, account2.id, payment.id)
@@ -447,53 +407,49 @@ def test_delete_payment_wrong_account(test_db_session):
 
 def test_get_payment_counts(test_db_session):
     """Test getting payment counts per account"""
-    # Create accounts
-    account1 = Account(
+    account1 = create_test_account(
+        test_db_session,
         name="Mortgage",
-        type="liability",
+        account_type="liability",
         category="mortgage",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    account2 = Account(
+    account2 = create_test_account(
+        test_db_session,
         name="Installment",
-        type="liability",
+        account_type="liability",
         category="installment",
         owner="Ewa",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add_all([account1, account2])
-    test_db_session.commit()
 
-    # Create payments
-    p1 = DebtPayment(
+    create_test_debt_payment(
+        test_db_session,
         account_id=account1.id,
         amount=5000.0,
-        date=date(2024, 1, 15),
+        payment_date=date(2024, 1, 15),
         owner="Marcin",
-        is_active=True,
     )
-    p2 = DebtPayment(
+    create_test_debt_payment(
+        test_db_session,
         account_id=account1.id,
         amount=3000.0,
-        date=date(2024, 2, 10),
+        payment_date=date(2024, 2, 10),
         owner="Marcin",
-        is_active=True,
     )
-    p3 = DebtPayment(
-        account_id=account2.id, amount=2000.0, date=date(2024, 3, 5), owner="Ewa", is_active=True
+    create_test_debt_payment(
+        test_db_session,
+        account_id=account2.id,
+        amount=2000.0,
+        payment_date=date(2024, 3, 5),
+        owner="Ewa",
     )
-    p4 = DebtPayment(
+    create_test_debt_payment(
+        test_db_session,
         account_id=account1.id,
         amount=1000.0,
-        date=date(2024, 4, 1),
+        payment_date=date(2024, 4, 1),
         owner="Marcin",
         is_active=False,
     )
-    test_db_session.add_all([p1, p2, p3, p4])
-    test_db_session.commit()
 
     result = get_payment_counts(test_db_session)
 

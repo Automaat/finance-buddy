@@ -3,13 +3,18 @@ from decimal import Decimal
 
 from app.models.account import Account
 from app.models.app_config import AppConfig
-from app.models.asset import Asset
 from app.models.salary_record import SalaryRecord
 from app.models.snapshot import Snapshot, SnapshotValue
 from app.services.dashboard import (
     _calculate_debt_to_income,
     _calculate_savings_rate,
     get_dashboard_data,
+)
+from tests.factories import (
+    create_test_account,
+    create_test_asset,
+    create_test_snapshot,
+    create_test_snapshot_value,
 )
 
 
@@ -27,44 +32,21 @@ def test_empty_database(test_db_session):
 
 def test_single_snapshot(test_db_session):
     """Test dashboard with single snapshot returns correct totals."""
-    # Create accounts
-    asset_account = Account(
-        name="Savings",
-        type="asset",
-        category="banking",
-        owner="John",
-        currency="PLN",
-        is_active=True,
-        purpose="general",
+    asset_account = create_test_account(
+        test_db_session, name="Savings", category="banking", owner="John"
     )
-    liability_account = Account(
-        name="Mortgage",
-        type="liability",
-        category="housing",
-        owner="John",
-        currency="PLN",
-        is_active=True,
-        purpose="general",
+    liability_account = create_test_account(
+        test_db_session, name="Mortgage", account_type="liability", category="housing", owner="John"
     )
-    test_db_session.add_all([asset_account, liability_account])
-    test_db_session.commit()
 
-    # Create snapshot
-    snapshot = Snapshot(date=date(2024, 1, 1), notes="January")
-    test_db_session.add(snapshot)
-    test_db_session.commit()
+    snapshot = create_test_snapshot(
+        test_db_session, snapshot_date=date(2024, 1, 1), notes="January"
+    )
 
-    # Create values
-    values = [
-        SnapshotValue(
-            snapshot_id=snapshot.id, account_id=asset_account.id, value=Decimal("10000.00")
-        ),
-        SnapshotValue(
-            snapshot_id=snapshot.id, account_id=liability_account.id, value=Decimal("5000.00")
-        ),
-    ]
-    test_db_session.add_all(values)
-    test_db_session.commit()
+    create_test_snapshot_value(test_db_session, snapshot.id, asset_account.id, Decimal("10000.00"))
+    create_test_snapshot_value(
+        test_db_session, snapshot.id, liability_account.id, Decimal("5000.00")
+    )
 
     result = get_dashboard_data(test_db_session)
 
@@ -83,36 +65,19 @@ def test_single_snapshot(test_db_session):
 
 def test_multiple_snapshots(test_db_session):
     """Test dashboard with multiple snapshots shows net worth history."""
-    # Create account
-    account = Account(
-        name="Savings",
-        type="asset",
-        category="banking",
-        owner="John",
-        currency="PLN",
-        is_active=True,
-        purpose="general",
+    account = create_test_account(test_db_session, name="Savings", category="banking", owner="John")
+
+    snapshot1 = create_test_snapshot(
+        test_db_session, snapshot_date=date(2024, 1, 1), notes="January"
     )
-    test_db_session.add(account)
-    test_db_session.commit()
+    snapshot2 = create_test_snapshot(
+        test_db_session, snapshot_date=date(2024, 2, 1), notes="February"
+    )
+    snapshot3 = create_test_snapshot(test_db_session, snapshot_date=date(2024, 3, 1), notes="March")
 
-    # Create snapshots
-    snapshots = [
-        Snapshot(date=date(2024, 1, 1), notes="January"),
-        Snapshot(date=date(2024, 2, 1), notes="February"),
-        Snapshot(date=date(2024, 3, 1), notes="March"),
-    ]
-    test_db_session.add_all(snapshots)
-    test_db_session.commit()
-
-    # Create values with increasing amounts
-    values = [
-        SnapshotValue(snapshot_id=snapshots[0].id, account_id=account.id, value=Decimal("1000.00")),
-        SnapshotValue(snapshot_id=snapshots[1].id, account_id=account.id, value=Decimal("1500.00")),
-        SnapshotValue(snapshot_id=snapshots[2].id, account_id=account.id, value=Decimal("2000.00")),
-    ]
-    test_db_session.add_all(values)
-    test_db_session.commit()
+    create_test_snapshot_value(test_db_session, snapshot1.id, account.id, Decimal("1000.00"))
+    create_test_snapshot_value(test_db_session, snapshot2.id, account.id, Decimal("1500.00"))
+    create_test_snapshot_value(test_db_session, snapshot3.id, account.id, Decimal("2000.00"))
 
     result = get_dashboard_data(test_db_session)
 
@@ -126,50 +91,23 @@ def test_multiple_snapshots(test_db_session):
 
 def test_asset_liability_aggregation(test_db_session):
     """Test aggregation of assets and liabilities by type."""
-    # Create multiple asset accounts
-    accounts = [
-        Account(
-            name="Savings",
-            type="asset",
-            category="banking",
-            owner="John",
-            currency="PLN",
-            is_active=True,
-            purpose="general",
-        ),
-        Account(
-            name="Stocks",
-            type="asset",
-            category="investments",
-            owner="John",
-            currency="PLN",
-            is_active=True,
-            purpose="general",
-        ),
-        Account(
-            name="Credit Card",
-            type="liability",
-            category="other",
-            owner="John",
-            currency="PLN",
-            is_active=True,
-            purpose="general",
-        ),
-    ]
-    test_db_session.add_all(accounts)
-    test_db_session.commit()
+    savings = create_test_account(test_db_session, name="Savings", category="banking", owner="John")
+    stocks = create_test_account(
+        test_db_session, name="Stocks", category="investments", owner="John"
+    )
+    credit_card = create_test_account(
+        test_db_session,
+        name="Credit Card",
+        account_type="liability",
+        category="other",
+        owner="John",
+    )
 
-    snapshot = Snapshot(date=date(2024, 1, 1))
-    test_db_session.add(snapshot)
-    test_db_session.commit()
+    snapshot = create_test_snapshot(test_db_session, snapshot_date=date(2024, 1, 1))
 
-    values = [
-        SnapshotValue(snapshot_id=snapshot.id, account_id=accounts[0].id, value=Decimal("5000.00")),
-        SnapshotValue(snapshot_id=snapshot.id, account_id=accounts[1].id, value=Decimal("3000.00")),
-        SnapshotValue(snapshot_id=snapshot.id, account_id=accounts[2].id, value=Decimal("1000.00")),
-    ]
-    test_db_session.add_all(values)
-    test_db_session.commit()
+    create_test_snapshot_value(test_db_session, snapshot.id, savings.id, Decimal("5000.00"))
+    create_test_snapshot_value(test_db_session, snapshot.id, stocks.id, Decimal("3000.00"))
+    create_test_snapshot_value(test_db_session, snapshot.id, credit_card.id, Decimal("1000.00"))
 
     result = get_dashboard_data(test_db_session)
 
@@ -180,50 +118,21 @@ def test_asset_liability_aggregation(test_db_session):
 
 def test_allocation_by_category_and_owner(test_db_session):
     """Test asset allocation aggregated by category and owner."""
-    # Create accounts with different categories and owners
-    accounts = [
-        Account(
-            name="John Savings",
-            type="asset",
-            category="banking",
-            owner="John",
-            currency="PLN",
-            is_active=True,
-            purpose="general",
-        ),
-        Account(
-            name="Jane Savings",
-            type="asset",
-            category="banking",
-            owner="Jane",
-            currency="PLN",
-            is_active=True,
-            purpose="general",
-        ),
-        Account(
-            name="John Stocks",
-            type="asset",
-            category="investments",
-            owner="John",
-            currency="PLN",
-            is_active=True,
-            purpose="general",
-        ),
-    ]
-    test_db_session.add_all(accounts)
-    test_db_session.commit()
+    john_savings = create_test_account(
+        test_db_session, name="John Savings", category="banking", owner="John"
+    )
+    jane_savings = create_test_account(
+        test_db_session, name="Jane Savings", category="banking", owner="Jane"
+    )
+    john_stocks = create_test_account(
+        test_db_session, name="John Stocks", category="investments", owner="John"
+    )
 
-    snapshot = Snapshot(date=date(2024, 1, 1))
-    test_db_session.add(snapshot)
-    test_db_session.commit()
+    snapshot = create_test_snapshot(test_db_session, snapshot_date=date(2024, 1, 1))
 
-    values = [
-        SnapshotValue(snapshot_id=snapshot.id, account_id=accounts[0].id, value=Decimal("2000.00")),
-        SnapshotValue(snapshot_id=snapshot.id, account_id=accounts[1].id, value=Decimal("3000.00")),
-        SnapshotValue(snapshot_id=snapshot.id, account_id=accounts[2].id, value=Decimal("5000.00")),
-    ]
-    test_db_session.add_all(values)
-    test_db_session.commit()
+    create_test_snapshot_value(test_db_session, snapshot.id, john_savings.id, Decimal("2000.00"))
+    create_test_snapshot_value(test_db_session, snapshot.id, jane_savings.id, Decimal("3000.00"))
+    create_test_snapshot_value(test_db_session, snapshot.id, john_stocks.id, Decimal("5000.00"))
 
     result = get_dashboard_data(test_db_session)
 
@@ -246,10 +155,7 @@ def test_allocation_by_category_and_owner(test_db_session):
 
 def test_snapshots_exist_but_no_values(test_db_session):
     """Test edge case: snapshots exist but merge filters out all (no accounts/values)."""
-    # Create snapshot with no values
-    snapshot = Snapshot(date=date(2024, 1, 1), notes="Empty snapshot")
-    test_db_session.add(snapshot)
-    test_db_session.commit()
+    create_test_snapshot(test_db_session, snapshot_date=date(2024, 1, 1), notes="Empty snapshot")
 
     result = get_dashboard_data(test_db_session)
 
@@ -264,42 +170,19 @@ def test_snapshots_exist_but_no_values(test_db_session):
 
 def test_inactive_accounts_excluded(test_db_session):
     """Test that inactive accounts are excluded from dashboard."""
-    # Create active and inactive accounts
-    active_account = Account(
-        name="Active",
-        type="asset",
-        category="banking",
-        owner="John",
-        currency="PLN",
-        is_active=True,
-        purpose="general",
+    active_account = create_test_account(
+        test_db_session, name="Active", category="banking", owner="John", is_active=True
     )
-    inactive_account = Account(
-        name="Inactive",
-        type="asset",
-        category="banking",
-        owner="John",
-        currency="PLN",
-        is_active=False,
-        purpose="general",
+    inactive_account = create_test_account(
+        test_db_session, name="Inactive", category="banking", owner="John", is_active=False
     )
-    test_db_session.add_all([active_account, inactive_account])
-    test_db_session.commit()
 
-    snapshot = Snapshot(date=date(2024, 1, 1))
-    test_db_session.add(snapshot)
-    test_db_session.commit()
+    snapshot = create_test_snapshot(test_db_session, snapshot_date=date(2024, 1, 1))
 
-    values = [
-        SnapshotValue(
-            snapshot_id=snapshot.id, account_id=active_account.id, value=Decimal("1000.00")
-        ),
-        SnapshotValue(
-            snapshot_id=snapshot.id, account_id=inactive_account.id, value=Decimal("5000.00")
-        ),
-    ]
-    test_db_session.add_all(values)
-    test_db_session.commit()
+    create_test_snapshot_value(test_db_session, snapshot.id, active_account.id, Decimal("1000.00"))
+    create_test_snapshot_value(
+        test_db_session, snapshot.id, inactive_account.id, Decimal("5000.00")
+    )
 
     result = get_dashboard_data(test_db_session)
 
@@ -310,25 +193,11 @@ def test_inactive_accounts_excluded(test_db_session):
 
 def test_only_assets_no_liabilities(test_db_session):
     """Test dashboard with only assets (no liabilities)."""
-    account = Account(
-        name="Savings",
-        type="asset",
-        category="banking",
-        owner="John",
-        currency="PLN",
-        is_active=True,
-        purpose="general",
-    )
-    test_db_session.add(account)
-    test_db_session.commit()
+    account = create_test_account(test_db_session, name="Savings", category="banking", owner="John")
 
-    snapshot = Snapshot(date=date(2024, 1, 1))
-    test_db_session.add(snapshot)
-    test_db_session.commit()
+    snapshot = create_test_snapshot(test_db_session, snapshot_date=date(2024, 1, 1))
 
-    value = SnapshotValue(snapshot_id=snapshot.id, account_id=account.id, value=Decimal("1000.00"))
-    test_db_session.add(value)
-    test_db_session.commit()
+    create_test_snapshot_value(test_db_session, snapshot.id, account.id, Decimal("1000.00"))
 
     result = get_dashboard_data(test_db_session)
 
@@ -339,25 +208,13 @@ def test_only_assets_no_liabilities(test_db_session):
 
 def test_only_liabilities_no_assets(test_db_session):
     """Test dashboard with only liabilities (no assets)."""
-    account = Account(
-        name="Loan",
-        type="liability",
-        category="debt",
-        owner="John",
-        currency="PLN",
-        is_active=True,
-        purpose="general",
+    account = create_test_account(
+        test_db_session, name="Loan", account_type="liability", category="debt", owner="John"
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
-    snapshot = Snapshot(date=date(2024, 1, 1))
-    test_db_session.add(snapshot)
-    test_db_session.commit()
+    snapshot = create_test_snapshot(test_db_session, snapshot_date=date(2024, 1, 1))
 
-    value = SnapshotValue(snapshot_id=snapshot.id, account_id=account.id, value=Decimal("1000.00"))
-    test_db_session.add(value)
-    test_db_session.commit()
+    create_test_snapshot_value(test_db_session, snapshot.id, account.id, Decimal("1000.00"))
 
     result = get_dashboard_data(test_db_session)
 
@@ -369,51 +226,33 @@ def test_only_liabilities_no_assets(test_db_session):
 
 def test_assets_and_accounts_both_included(test_db_session):
     """Test that both Asset table and Account table values are included in net worth."""
-    # Create Asset table entries
-    asset1 = Asset(name="Car", is_active=True)
-    asset2 = Asset(name="Electronics", is_active=True)
-    test_db_session.add_all([asset1, asset2])
-    test_db_session.commit()
+    asset1 = create_test_asset(test_db_session, name="Car")
+    asset2 = create_test_asset(test_db_session, name="Electronics")
 
-    # Create Account table entries
-    account_asset = Account(
-        name="Bank Account",
-        type="asset",
-        category="banking",
-        owner="John",
-        currency="PLN",
-        is_active=True,
-        purpose="general",
+    account_asset = create_test_account(
+        test_db_session, name="Bank Account", category="banking", owner="John"
     )
-    account_liability = Account(
+    account_liability = create_test_account(
+        test_db_session,
         name="Mortgage",
-        type="liability",
+        account_type="liability",
         category="housing",
         owner="John",
-        currency="PLN",
-        is_active=True,
-        purpose="general",
     )
-    test_db_session.add_all([account_asset, account_liability])
-    test_db_session.commit()
 
-    # Create snapshot
-    snapshot = Snapshot(date=date(2024, 1, 1), notes="Test")
-    test_db_session.add(snapshot)
-    test_db_session.commit()
+    snapshot = create_test_snapshot(test_db_session, snapshot_date=date(2024, 1, 1), notes="Test")
 
     # Create values for both Assets and Accounts
-    values = [
-        SnapshotValue(snapshot_id=snapshot.id, asset_id=asset1.id, value=Decimal("15000.00")),
-        SnapshotValue(snapshot_id=snapshot.id, asset_id=asset2.id, value=Decimal("5000.00")),
-        SnapshotValue(
-            snapshot_id=snapshot.id, account_id=account_asset.id, value=Decimal("50000.00")
-        ),
-        SnapshotValue(
-            snapshot_id=snapshot.id, account_id=account_liability.id, value=Decimal("30000.00")
-        ),
-    ]
-    test_db_session.add_all(values)
+    create_test_snapshot_value(test_db_session, snapshot.id, account_asset.id, Decimal("50000.00"))
+    create_test_snapshot_value(
+        test_db_session, snapshot.id, account_liability.id, Decimal("30000.00")
+    )
+    # Asset-only snapshot values (no account_id)
+    asset_sv1 = SnapshotValue(
+        snapshot_id=snapshot.id, asset_id=asset1.id, value=Decimal("15000.00")
+    )
+    asset_sv2 = SnapshotValue(snapshot_id=snapshot.id, asset_id=asset2.id, value=Decimal("5000.00"))
+    test_db_session.add_all([asset_sv1, asset_sv2])
     test_db_session.commit()
 
     result = get_dashboard_data(test_db_session)

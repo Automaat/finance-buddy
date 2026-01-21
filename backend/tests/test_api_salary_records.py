@@ -1,6 +1,6 @@
 from datetime import date
 
-from app.models import SalaryRecord
+from tests.factories import create_test_salary_record
 
 
 def test_get_all_salary_records_empty(test_client):
@@ -17,24 +17,20 @@ def test_get_all_salary_records_empty(test_client):
 
 def test_get_all_salary_records_success(test_client, test_db_session):
     """Test GET /api/salaries returns all active salary records"""
-    record1 = SalaryRecord(
-        date=date(2024, 1, 1),
+    create_test_salary_record(
+        test_db_session,
+        salary_date=date(2024, 1, 1),
         gross_amount=10000.0,
-        contract_type="UOP",
         company="Company A",
         owner="Marcin",
-        is_active=True,
     )
-    record2 = SalaryRecord(
-        date=date(2024, 6, 1),
+    create_test_salary_record(
+        test_db_session,
+        salary_date=date(2024, 6, 1),
         gross_amount=8000.0,
-        contract_type="UOP",
         company="Company B",
         owner="Ewa",
-        is_active=True,
     )
-    test_db_session.add_all([record1, record2])
-    test_db_session.commit()
 
     response = test_client.get("/api/salaries")
 
@@ -48,24 +44,20 @@ def test_get_all_salary_records_success(test_client, test_db_session):
 
 def test_get_all_salary_records_filter_by_owner(test_client, test_db_session):
     """Test GET /api/salaries?owner=X filters by owner"""
-    record1 = SalaryRecord(
-        date=date(2024, 1, 1),
+    create_test_salary_record(
+        test_db_session,
+        salary_date=date(2024, 1, 1),
         gross_amount=10000.0,
-        contract_type="UOP",
         company="Company A",
         owner="Marcin",
-        is_active=True,
     )
-    record2 = SalaryRecord(
-        date=date(2024, 6, 1),
+    create_test_salary_record(
+        test_db_session,
+        salary_date=date(2024, 6, 1),
         gross_amount=8000.0,
-        contract_type="UOP",
         company="Company B",
         owner="Ewa",
-        is_active=True,
     )
-    test_db_session.add_all([record1, record2])
-    test_db_session.commit()
 
     response = test_client.get("/api/salaries?owner=Marcin")
 
@@ -77,32 +69,24 @@ def test_get_all_salary_records_filter_by_owner(test_client, test_db_session):
 
 def test_get_all_salary_records_filter_by_date_range(test_client, test_db_session):
     """Test GET /api/salaries with date_from and date_to filters"""
-    record1 = SalaryRecord(
-        date=date(2023, 1, 1),
+    create_test_salary_record(
+        test_db_session,
+        salary_date=date(2023, 1, 1),
         gross_amount=9000.0,
-        contract_type="UOP",
         company="Company A",
-        owner="Marcin",
-        is_active=True,
     )
-    record2 = SalaryRecord(
-        date=date(2024, 1, 1),
+    create_test_salary_record(
+        test_db_session,
+        salary_date=date(2024, 1, 1),
         gross_amount=10000.0,
-        contract_type="UOP",
         company="Company A",
-        owner="Marcin",
-        is_active=True,
     )
-    record3 = SalaryRecord(
-        date=date(2025, 1, 1),
+    create_test_salary_record(
+        test_db_session,
+        salary_date=date(2025, 1, 1),
         gross_amount=11000.0,
-        contract_type="UOP",
         company="Company B",
-        owner="Marcin",
-        is_active=True,
     )
-    test_db_session.add_all([record1, record2, record3])
-    test_db_session.commit()
 
     response = test_client.get("/api/salaries?date_from=2024-01-01&date_to=2024-12-31")
 
@@ -151,16 +135,12 @@ def test_create_salary_record_validation_fails(test_client):
 
 def test_get_salary_record_success(test_client, test_db_session):
     """Test GET /api/salaries/{salary_id} returns salary record"""
-    record = SalaryRecord(
-        date=date(2024, 1, 1),
+    record = create_test_salary_record(
+        test_db_session,
+        salary_date=date(2024, 1, 1),
         gross_amount=10000.0,
-        contract_type="UOP",
         company="Test Company",
-        owner="Marcin",
-        is_active=True,
     )
-    test_db_session.add(record)
-    test_db_session.commit()
 
     response = test_client.get(f"/api/salaries/{record.id}")
 
@@ -180,16 +160,12 @@ def test_get_salary_record_not_found(test_client):
 
 def test_update_salary_record_success(test_client, test_db_session):
     """Test PATCH /api/salaries/{salary_id} updates salary record"""
-    record = SalaryRecord(
-        date=date(2024, 1, 1),
+    record = create_test_salary_record(
+        test_db_session,
+        salary_date=date(2024, 1, 1),
         gross_amount=10000.0,
-        contract_type="UOP",
         company="Old Company",
-        owner="Marcin",
-        is_active=True,
     )
-    test_db_session.add(record)
-    test_db_session.commit()
 
     payload = {"gross_amount": 11000.0, "company": "New Company"}
 
@@ -213,16 +189,12 @@ def test_update_salary_record_not_found(test_client):
 
 def test_delete_salary_record_success(test_client, test_db_session):
     """Test DELETE /api/salaries/{salary_id} soft deletes salary record"""
-    record = SalaryRecord(
-        date=date(2024, 1, 1),
+    record = create_test_salary_record(
+        test_db_session,
+        salary_date=date(2024, 1, 1),
         gross_amount=10000.0,
-        contract_type="UOP",
         company="Test Company",
-        owner="Marcin",
-        is_active=True,
     )
-    test_db_session.add(record)
-    test_db_session.commit()
 
     response = test_client.delete(f"/api/salaries/{record.id}")
 
