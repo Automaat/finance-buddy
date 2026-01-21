@@ -1,17 +1,13 @@
 """Database helper utilities for common query patterns."""
 
-from typing import TypeVar
-
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.snapshot import SnapshotValue
 
-ModelT = TypeVar("ModelT")
 
-
-def get_or_404(db: Session, model: type[ModelT], entity_id: int) -> ModelT:
+def get_or_404[ModelT](db: Session, model: type[ModelT], entity_id: int) -> ModelT:
     """
     Fetch entity by ID or raise 404.
 
@@ -94,7 +90,7 @@ def get_latest_snapshot_values_batch(db: Session, account_ids: list[int]) -> dic
     return values_map
 
 
-def soft_delete(db: Session, model: type[ModelT], entity_id: int) -> None:
+def soft_delete[ModelT](db: Session, model: type[ModelT], entity_id: int) -> None:
     """
     Soft delete entity by setting is_active=False (idempotent).
 
@@ -116,7 +112,7 @@ def soft_delete(db: Session, model: type[ModelT], entity_id: int) -> None:
     db.commit()
 
 
-def check_duplicate_name(
+def check_duplicate_name[ModelT](
     db: Session,
     model: type[ModelT],
     name: str,
