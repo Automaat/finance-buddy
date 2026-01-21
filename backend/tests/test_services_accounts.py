@@ -92,7 +92,7 @@ def test_get_all_accounts_no_snapshots(test_db_session):
         name="Bank Account",
         type="asset",
         category="bank",
-        owner="Test",
+        owner="Marcin",
         currency="PLN",
         purpose="general",
     )
@@ -100,7 +100,7 @@ def test_get_all_accounts_no_snapshots(test_db_session):
         name="Loan",
         type="liability",
         category="mortgage",
-        owner="Test",
+        owner="Marcin",
         currency="PLN",
         purpose="general",
     )
@@ -124,7 +124,7 @@ def test_get_all_accounts_partial_values(test_db_session):
         name="Account 1",
         type="asset",
         category="bank",
-        owner="Test",
+        owner="Marcin",
         currency="PLN",
         purpose="general",
     )
@@ -132,7 +132,7 @@ def test_get_all_accounts_partial_values(test_db_session):
         name="Account 2",
         type="asset",
         category="bank",
-        owner="Test",
+        owner="Marcin",
         currency="PLN",
         purpose="general",
     )

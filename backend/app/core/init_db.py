@@ -1,6 +1,7 @@
 import logging
 
 from app.core.database import Base, SessionLocal, engine
+from app.core.enums import Owner, Wrapper
 
 # Import models to register them with SQLAlchemy Base.metadata
 # These imports are required for Base.metadata.create_all() to work
@@ -72,30 +73,30 @@ def init_db() -> None:
                 # 2026 limits - Marcin
                 RetirementLimit(
                     year=2026,
-                    account_wrapper="IKE",
-                    owner="Marcin",
+                    account_wrapper=Wrapper.IKE.value,
+                    owner=Owner.MARCIN.value,
                     limit_amount=28260.00,
                     notes="",
                 ),
                 RetirementLimit(
                     year=2026,
-                    account_wrapper="IKZE",
-                    owner="Marcin",
+                    account_wrapper=Wrapper.IKZE.value,
+                    owner=Owner.MARCIN.value,
                     limit_amount=11304.00,
                     notes="",
                 ),
                 # 2026 limits - Ewa
                 RetirementLimit(
                     year=2026,
-                    account_wrapper="IKE",
-                    owner="Ewa",
+                    account_wrapper=Wrapper.IKE.value,
+                    owner=Owner.EWA.value,
                     limit_amount=28260.00,
                     notes="",
                 ),
                 RetirementLimit(
                     year=2026,
-                    account_wrapper="IKZE",
-                    owner="Ewa",
+                    account_wrapper=Wrapper.IKZE.value,
+                    owner=Owner.EWA.value,
                     limit_amount=11304.00,
                     notes="",
                 ),

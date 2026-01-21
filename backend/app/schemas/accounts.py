@@ -3,15 +3,17 @@ from decimal import Decimal
 
 from pydantic import BaseModel, field_validator
 
+from app.core.enums import AccountType, Category, Owner, Purpose, Wrapper
+
 
 class AccountCreate(BaseModel):
     name: str
-    type: str
-    category: str
-    owner: str
+    type: AccountType
+    category: Category
+    owner: Owner
     currency: str = "PLN"
-    account_wrapper: str | None = None
-    purpose: str
+    account_wrapper: Wrapper | None = None
+    purpose: Purpose
     square_meters: Decimal | None = None
     receives_contributions: bool = True
 
@@ -22,66 +24,16 @@ class AccountCreate(BaseModel):
             raise ValueError("Name cannot be empty")
         return v.strip()
 
-    @field_validator("type")
-    @classmethod
-    def validate_type(cls, v: str) -> str:
-        if v not in {"asset", "liability"}:
-            raise ValueError("Type must be 'asset' or 'liability'")
-        return v
-
-    @field_validator("category")
-    @classmethod
-    def validate_category(cls, v: str) -> str:
-        valid_categories = {
-            "bank",
-            "saving_account",
-            "stock",
-            "bond",
-            "gold",
-            "real_estate",
-            "ppk",
-            "fund",
-            "etf",
-            "vehicle",
-            "mortgage",
-            "installment",
-            "other",
-        }
-        if v not in valid_categories:
-            raise ValueError(f"Category must be one of: {', '.join(sorted(valid_categories))}")
-        return v
-
-    @field_validator("account_wrapper")
-    @classmethod
-    def validate_account_wrapper(cls, v: str | None) -> str | None:
-        if v is not None and v not in {"IKE", "IKZE", "PPK"}:
-            raise ValueError("Account wrapper must be 'IKE', 'IKZE', or 'PPK'")
-        return v
-
-    @field_validator("purpose")
-    @classmethod
-    def validate_purpose(cls, v: str) -> str:
-        if v not in {"retirement", "emergency_fund", "general"}:
-            raise ValueError("Purpose must be 'retirement', 'emergency_fund', or 'general'")
-        return v
-
-    @field_validator("owner")
-    @classmethod
-    def validate_owner(cls, v: str) -> str:
-        if v not in {"Marcin", "Ewa", "Shared"}:
-            raise ValueError("Owner must be 'Marcin', 'Ewa', or 'Shared'")
-        return v
-
 
 class AccountResponse(BaseModel):
     id: int
     name: str
-    type: str
-    category: str
-    owner: str
+    type: AccountType
+    category: Category
+    owner: Owner
     currency: str
-    account_wrapper: str | None
-    purpose: str
+    account_wrapper: Wrapper | None
+    purpose: Purpose
     square_meters: float | None
     is_active: bool
     receives_contributions: bool
@@ -91,11 +43,11 @@ class AccountResponse(BaseModel):
 
 class AccountUpdate(BaseModel):
     name: str | None = None
-    category: str | None = None
-    owner: str | None = None
+    category: Category | None = None
+    owner: Owner | None = None
     currency: str | None = None
-    account_wrapper: str | None = None
-    purpose: str | None = None
+    account_wrapper: Wrapper | None = None
+    purpose: Purpose | None = None
     square_meters: Decimal | None = None
     receives_contributions: bool | None = None
 
@@ -106,50 +58,6 @@ class AccountUpdate(BaseModel):
             if not v or not v.strip():
                 raise ValueError("Name cannot be empty")
             return v.strip()
-        return v
-
-    @field_validator("category")
-    @classmethod
-    def validate_category(cls, v: str | None) -> str | None:
-        if v is not None:
-            valid_categories = {
-                "bank",
-                "saving_account",
-                "stock",
-                "bond",
-                "gold",
-                "real_estate",
-                "ppk",
-                "fund",
-                "etf",
-                "vehicle",
-                "mortgage",
-                "installment",
-                "other",
-            }
-            if v not in valid_categories:
-                raise ValueError(f"Category must be one of: {', '.join(sorted(valid_categories))}")
-        return v
-
-    @field_validator("account_wrapper")
-    @classmethod
-    def validate_account_wrapper(cls, v: str | None) -> str | None:
-        if v is not None and v not in {"IKE", "IKZE", "PPK"}:
-            raise ValueError("Account wrapper must be 'IKE', 'IKZE', or 'PPK'")
-        return v
-
-    @field_validator("purpose")
-    @classmethod
-    def validate_purpose(cls, v: str | None) -> str | None:
-        if v is not None and v not in {"retirement", "emergency_fund", "general"}:
-            raise ValueError("Purpose must be 'retirement', 'emergency_fund', or 'general'")
-        return v
-
-    @field_validator("owner")
-    @classmethod
-    def validate_owner(cls, v: str | None) -> str | None:
-        if v is not None and v not in {"Marcin", "Ewa", "Shared"}:
-            raise ValueError("Owner must be 'Marcin', 'Ewa', or 'Shared'")
         return v
 
 

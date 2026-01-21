@@ -44,14 +44,14 @@ class TestRetirementLimitCreateValidation:
 
     def test_invalid_wrapper_fails(self):
         """Test that invalid wrapper raises validation error"""
-        with pytest.raises(ValidationError, match="Account wrapper must be IKE, IKZE, or PPK"):
+        with pytest.raises(ValidationError, match="Input should be 'IKE', 'IKZE' or 'PPK'"):
             RetirementLimitCreate(
                 year=2024, account_wrapper="INVALID", owner="Marcin", limit_amount=10000.0
             )
 
     def test_invalid_owner_fails(self):
         """Test that invalid owner raises validation error"""
-        with pytest.raises(ValidationError, match="Owner must be 'Marcin' or 'Ewa'"):
+        with pytest.raises(ValidationError, match="Input should be 'Marcin', 'Ewa' or 'Shared'"):
             RetirementLimitCreate(
                 year=2024, account_wrapper="IKE", owner="InvalidOwner", limit_amount=10000.0
             )
@@ -120,7 +120,7 @@ class TestPPKContributionGenerateRequestValidation:
 
     def test_invalid_owner_fails(self):
         """Test that invalid owner raises validation error"""
-        with pytest.raises(ValidationError, match="Owner must be 'Marcin' or 'Ewa'"):
+        with pytest.raises(ValidationError, match="Input should be 'Marcin', 'Ewa' or 'Shared'"):
             PPKContributionGenerateRequest(owner="InvalidOwner", month=1, year=2024)
 
     def test_month_too_low_fails(self):

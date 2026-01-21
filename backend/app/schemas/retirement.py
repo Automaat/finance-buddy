@@ -1,10 +1,12 @@
 from pydantic import BaseModel, field_validator
 
+from app.core.enums import Owner, Wrapper
+
 
 class RetirementLimitCreate(BaseModel):
     year: int
-    account_wrapper: str
-    owner: str
+    account_wrapper: Wrapper
+    owner: Owner
     limit_amount: float
     notes: str | None = None
 
@@ -20,16 +22,9 @@ class RetirementLimitCreate(BaseModel):
 
     @field_validator("owner")
     @classmethod
-    def validate_owner(cls, v: str) -> str:
-        if v not in {"Marcin", "Ewa"}:
+    def validate_owner(cls, v: Owner) -> Owner:
+        if v not in {Owner.MARCIN, Owner.EWA}:
             raise ValueError("Owner must be 'Marcin' or 'Ewa'")
-        return v
-
-    @field_validator("account_wrapper")
-    @classmethod
-    def validate_wrapper(cls, v: str) -> str:
-        if v not in {"IKE", "IKZE", "PPK"}:
-            raise ValueError("Account wrapper must be IKE, IKZE, or PPK")
         return v
 
     @field_validator("limit_amount")
@@ -46,8 +41,8 @@ class RetirementLimitResponse(RetirementLimitCreate):
 
 class YearlyStatsResponse(BaseModel):
     year: int
-    account_wrapper: str
-    owner: str
+    account_wrapper: Wrapper
+    owner: Owner
     limit_amount: float | None
     total_contributed: float
     employee_contributed: float
@@ -58,7 +53,7 @@ class YearlyStatsResponse(BaseModel):
 
 
 class PPKStatsResponse(BaseModel):
-    owner: str
+    owner: Owner
     total_value: float
     employee_contributed: float
     employer_contributed: float
@@ -69,14 +64,14 @@ class PPKStatsResponse(BaseModel):
 
 
 class PPKContributionGenerateRequest(BaseModel):
-    owner: str
+    owner: Owner
     month: int
     year: int
 
     @field_validator("owner")
     @classmethod
-    def validate_owner(cls, v: str) -> str:
-        if v not in {"Marcin", "Ewa"}:
+    def validate_owner(cls, v: Owner) -> Owner:
+        if v not in {Owner.MARCIN, Owner.EWA}:
             raise ValueError("Owner must be 'Marcin' or 'Ewa'")
         return v
 
@@ -99,7 +94,7 @@ class PPKContributionGenerateRequest(BaseModel):
 
 
 class PPKContributionGenerateResponse(BaseModel):
-    owner: str
+    owner: Owner
     month: int
     year: int
     gross_salary: float
