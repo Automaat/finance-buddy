@@ -108,9 +108,7 @@ def get_salary_record(db: Session, salary_id: int) -> SalaryRecordResponse:
     record = get_or_404(db, SalaryRecord, salary_id)
 
     if not record.is_active:
-        raise HTTPException(
-            status_code=404, detail=f"Salary record with id {salary_id} not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Salary record with id {salary_id} not found")
 
     return SalaryRecordResponse(
         id=record.id,
@@ -131,9 +129,7 @@ def update_salary_record(
     record = get_or_404(db, SalaryRecord, salary_id)
 
     if not record.is_active:
-        raise HTTPException(
-            status_code=404, detail=f"Salary record with id {salary_id} not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Salary record with id {salary_id} not found")
 
     if data.date is not None:
         record.date = data.date
