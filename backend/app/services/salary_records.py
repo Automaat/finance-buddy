@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from fastapi import HTTPException
 from sqlalchemy import desc, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import SalaryRecord
@@ -78,6 +79,21 @@ def _get_current_salary(db: Session, owner: str, as_of_date: date) -> float | No
 
 def create_salary_record(db: Session, data: SalaryRecordCreate) -> SalaryRecordResponse:
     """Create new salary record"""
+    # Check for duplicate salary record (owner, date)
+    conflicting = db.execute(
+        select(SalaryRecord).where(
+            SalaryRecord.owner == data.owner,
+            SalaryRecord.date == data.date,
+            SalaryRecord.is_active.is_(True),
+        )
+    ).scalar_one_or_none()
+
+    if conflicting:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Salary record for {data.owner} on {data.date} already exists",
+        )
+
     record = SalaryRecord(
         date=data.date,
         gross_amount=data.gross_amount,
@@ -87,9 +103,16 @@ def create_salary_record(db: Session, data: SalaryRecordCreate) -> SalaryRecordR
         is_active=True,
     )
 
-    db.add(record)
-    db.commit()
-    db.refresh(record)
+    try:
+        db.add(record)
+        db.commit()
+        db.refresh(record)
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to create salary record due to database integrity error",
+        ) from e
 
     return SalaryRecordResponse(
         id=record.id,
@@ -142,8 +165,33 @@ def update_salary_record(
     if data.owner is not None:
         record.owner = data.owner
 
-    db.commit()
-    db.refresh(record)
+    # Check for duplicate salary record (owner, date, excluding current)
+    conflicting = db.execute(
+        select(SalaryRecord).where(
+            SalaryRecord.owner == record.owner,
+            SalaryRecord.date == record.date,
+            SalaryRecord.id != salary_id,
+            SalaryRecord.is_active.is_(True),
+        )
+    ).scalar_one_or_none()
+
+    if conflicting:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Salary record for {record.owner} on {record.date} conflicts with existing record"
+            ),
+        )
+
+    try:
+        db.commit()
+        db.refresh(record)
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to update salary record due to database integrity error",
+        ) from e
 
     return SalaryRecordResponse(
         id=record.id,

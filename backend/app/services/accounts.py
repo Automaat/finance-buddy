@@ -1,4 +1,6 @@
+from fastapi import HTTPException
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import Account
@@ -67,9 +69,17 @@ def create_account(db: Session, data: AccountCreate) -> AccountResponse:
         receives_contributions=data.receives_contributions,
         is_active=True,
     )
-    db.add(account)
-    db.commit()
-    db.refresh(account)
+
+    try:
+        db.add(account)
+        db.commit()
+        db.refresh(account)
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to create account due to database integrity error",
+        ) from e
 
     return AccountResponse(
         id=account.id,
@@ -117,8 +127,15 @@ def update_account(db: Session, account_id: int, data: AccountUpdate) -> Account
     if "square_meters" in _field_set:
         account.square_meters = data.square_meters
 
-    db.commit()
-    db.refresh(account)
+    try:
+        db.commit()
+        db.refresh(account)
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to update account due to database integrity error",
+        ) from e
 
     # Get current value
     current_value = get_latest_snapshot_value(db, account.id)

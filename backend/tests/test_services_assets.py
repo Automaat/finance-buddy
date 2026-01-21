@@ -1,8 +1,10 @@
 from datetime import date
 from decimal import Decimal
+from unittest.mock import patch
 
 import pytest
 from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
 
 from app.models import Asset, Snapshot, SnapshotValue
 from app.schemas.assets import AssetCreate, AssetUpdate
@@ -250,3 +252,33 @@ def test_delete_asset_idempotent(test_db_session):
     # Verify still inactive
     deleted = test_db_session.get(Asset, asset.id)
     assert deleted.is_active is False
+
+
+def test_create_asset_integrity_error(test_db_session):
+    """Test creating asset with IntegrityError returns 500"""
+    data = AssetCreate(name="Test Asset")
+
+    # Mock db.commit to raise IntegrityError
+    with patch.object(test_db_session, "commit", side_effect=IntegrityError("", "", Exception())):
+        with pytest.raises(HTTPException) as exc_info:
+            create_asset(test_db_session, data)
+
+        assert exc_info.value.status_code == 500
+        assert "integrity error" in exc_info.value.detail.lower()
+
+
+def test_update_asset_integrity_error(test_db_session):
+    """Test updating asset with IntegrityError returns 500"""
+    asset = Asset(name="Test Asset", is_active=True)
+    test_db_session.add(asset)
+    test_db_session.commit()
+
+    data = AssetUpdate(name="Updated Name")
+
+    # Mock db.commit to raise IntegrityError
+    with patch.object(test_db_session, "commit", side_effect=IntegrityError("", "", Exception())):
+        with pytest.raises(HTTPException) as exc_info:
+            update_asset(test_db_session, asset.id, data)
+
+        assert exc_info.value.status_code == 500
+        assert "integrity error" in exc_info.value.detail.lower()

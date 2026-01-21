@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -18,14 +20,14 @@ router = APIRouter(prefix="/api/simulations", tags=["simulations"])
 @router.post("/retirement", response_model=SimulationResponse)
 def simulate_retirement(
     inputs: SimulationInputs,
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Annotated[Session, Depends(get_db)],
 ) -> SimulationResponse:
     """Calculate retirement account projections"""
     return sim_service.run_simulation(db, inputs)
 
 
 @router.get("/prefill", response_model=PrefillResponse)
-def get_prefill_data(db: Session = Depends(get_db)) -> PrefillResponse:  # noqa: B008
+def get_prefill_data(db: Annotated[Session, Depends(get_db)]) -> PrefillResponse:
     """Get current balances and config for form prefill"""
     balances_dict = sim_service.fetch_current_balances(db)
     config = db.execute(select(AppConfig)).scalar_one_or_none()
