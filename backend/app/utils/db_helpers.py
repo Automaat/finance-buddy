@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.snapshot import SnapshotValue
+from app.models.snapshot import Snapshot, SnapshotValue
 
 
 def get_or_404[ModelT](db: Session, model: type[ModelT], entity_id: int) -> ModelT:
@@ -42,8 +42,9 @@ def get_latest_snapshot_value(db: Session, account_id: int) -> float:
     """
     result = db.execute(
         select(SnapshotValue.value)
+        .join(Snapshot, SnapshotValue.snapshot_id == Snapshot.id)
         .where(SnapshotValue.account_id == account_id)
-        .order_by(SnapshotValue.snapshot_id.desc())
+        .order_by(Snapshot.date.desc())
         .limit(1)
     ).scalar()
     return float(result) if result is not None else 0.0
@@ -63,15 +64,16 @@ def get_latest_snapshot_values_batch(db: Session, account_ids: list[int]) -> dic
     if not account_ids:
         return {}
 
-    # Subquery to get latest snapshot_id per account
+    # Query to get all account snapshots, ordered by date desc
     latest_snapshots = (
         select(
             SnapshotValue.account_id,
-            SnapshotValue.snapshot_id,
+            Snapshot.date,
             SnapshotValue.value,
         )
+        .join(Snapshot, SnapshotValue.snapshot_id == Snapshot.id)
         .where(SnapshotValue.account_id.in_(account_ids))
-        .order_by(SnapshotValue.account_id, SnapshotValue.snapshot_id.desc())
+        .order_by(SnapshotValue.account_id, Snapshot.date.desc())
     )
 
     results = db.execute(latest_snapshots).all()
@@ -86,6 +88,50 @@ def get_latest_snapshot_values_batch(db: Session, account_ids: list[int]) -> dic
     for account_id in account_ids:
         if account_id not in values_map:
             values_map[account_id] = 0.0
+
+    return values_map
+
+
+def get_latest_snapshot_values_batch_for_assets(
+    db: Session, asset_ids: list[int]
+) -> dict[int, float]:
+    """
+    Batch fetch latest snapshot values for multiple assets.
+
+    Args:
+        db: Database session
+        asset_ids: List of asset IDs
+
+    Returns:
+        Dict mapping asset_id -> latest_value (0.0 if no snapshots)
+    """
+    if not asset_ids:
+        return {}
+
+    # Query to get all asset snapshots, ordered by date desc
+    latest_snapshots = (
+        select(
+            SnapshotValue.asset_id,
+            Snapshot.date,
+            SnapshotValue.value,
+        )
+        .join(Snapshot, SnapshotValue.snapshot_id == Snapshot.id)
+        .where(SnapshotValue.asset_id.in_(asset_ids))
+        .order_by(SnapshotValue.asset_id, Snapshot.date.desc())
+    )
+
+    results = db.execute(latest_snapshots).all()
+
+    # Group by asset_id, take first (latest) value
+    values_map: dict[int, float] = {}
+    for asset_id, _, value in results:
+        if asset_id not in values_map:
+            values_map[asset_id] = value
+
+    # Fill missing assets with 0.0
+    for asset_id in asset_ids:
+        if asset_id not in values_map:
+            values_map[asset_id] = 0.0
 
     return values_map
 

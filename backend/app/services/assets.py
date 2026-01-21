@@ -3,7 +3,12 @@ from sqlalchemy.orm import Session
 
 from app.models import Asset, Snapshot, SnapshotValue
 from app.schemas.assets import AssetCreate, AssetResponse, AssetsListResponse, AssetUpdate
-from app.utils.db_helpers import check_duplicate_name, get_or_404, soft_delete
+from app.utils.db_helpers import (
+    check_duplicate_name,
+    get_latest_snapshot_values_batch_for_assets,
+    get_or_404,
+    soft_delete,
+)
 
 
 def get_all_assets(db: Session) -> AssetsListResponse:
@@ -11,21 +16,9 @@ def get_all_assets(db: Session) -> AssetsListResponse:
     # Get all active assets
     assets = db.execute(select(Asset).where(Asset.is_active.is_(True))).scalars().all()
 
-    # Get latest snapshot
-    latest_snapshot = db.execute(
-        select(Snapshot).order_by(desc(Snapshot.date)).limit(1)
-    ).scalar_one_or_none()
-
-    # Get latest values if snapshot exists
-    latest_values = {}
-    if latest_snapshot:
-        values = db.execute(
-            select(SnapshotValue).where(
-                SnapshotValue.snapshot_id == latest_snapshot.id,
-                SnapshotValue.asset_id.is_not(None),
-            )
-        ).scalars()
-        latest_values = {sv.asset_id: float(sv.value) for sv in values}
+    # Batch fetch latest snapshot values for all assets
+    asset_ids = [asset.id for asset in assets]
+    latest_values = get_latest_snapshot_values_batch_for_assets(db, asset_ids)
 
     # Build response
     asset_responses = []
