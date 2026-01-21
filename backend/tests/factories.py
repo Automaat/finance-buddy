@@ -292,6 +292,7 @@ def create_test_debt_payment(
     amount: float = 50000.0,
     payment_date: date = date(2024, 6, 1),
     owner: str = "Shared",
+    is_active: bool = True,
     **kwargs: Any,
 ) -> DebtPayment:
     """Factory for test debt payments with sensible defaults.
@@ -302,6 +303,7 @@ def create_test_debt_payment(
         amount: Payment amount
         payment_date: Payment date
         owner: Payment owner (Marcin, Ewa, Shared)
+        is_active: Whether payment is active
         **kwargs: Additional fields
 
     Returns:
@@ -312,6 +314,7 @@ def create_test_debt_payment(
         "amount": amount,
         "date": payment_date,
         "owner": owner,
+        "is_active": is_active,
     }
     defaults.update(kwargs)
     debt_payment = DebtPayment(**defaults)
