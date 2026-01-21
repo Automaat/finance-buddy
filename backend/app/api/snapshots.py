@@ -25,8 +25,6 @@ def get_snapshots(db: Annotated[Session, Depends(get_db)]) -> list[SnapshotListI
 
 
 @router.get("/{snapshot_id}", response_model=SnapshotResponse)
-def get_snapshot(
-    snapshot_id: int, db: Annotated[Session, Depends(get_db)]
-) -> SnapshotResponse:
+def get_snapshot(snapshot_id: int, db: Annotated[Session, Depends(get_db)]) -> SnapshotResponse:
     """Get single snapshot with all account values"""
     return snapshots.get_snapshot_by_id(db, snapshot_id)

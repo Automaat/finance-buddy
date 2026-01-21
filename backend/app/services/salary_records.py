@@ -179,8 +179,7 @@ def update_salary_record(
         raise HTTPException(
             status_code=409,
             detail=(
-                f"Salary record for {record.owner} on {record.date} "
-                "conflicts with existing record"
+                f"Salary record for {record.owner} on {record.date} conflicts with existing record"
             ),
         )
 
