@@ -217,6 +217,46 @@ def test_get_latest_snapshot_values_batch_for_assets_empty_list(test_db_session)
     assert result == {}
 
 
+def test_get_latest_snapshot_values_batch_for_assets_out_of_order(test_db_session):
+    """Test batch fetch with out-of-order snapshots returns latest by date"""
+    from datetime import date
+
+    from app.models import Asset, Snapshot
+    from app.models.snapshot import SnapshotValue
+    from app.utils.db_helpers import get_latest_snapshot_values_batch_for_assets
+
+    # Create asset
+    asset = Asset(name="Test Asset", is_active=True)
+    test_db_session.add(asset)
+    test_db_session.commit()
+
+    # Create snapshots OUT OF ORDER
+    # 1. Create Feb snapshot (id=1, date=2024-02-28)
+    snapshot_feb = Snapshot(date=date(2024, 2, 28), notes="February")
+    test_db_session.add(snapshot_feb)
+    test_db_session.commit()
+
+    value_feb = SnapshotValue(snapshot_id=snapshot_feb.id, asset_id=asset.id, value=2000.0)
+    test_db_session.add(value_feb)
+    test_db_session.commit()
+
+    # 2. Backfill Jan snapshot (id=2, date=2024-01-31)
+    snapshot_jan = Snapshot(date=date(2024, 1, 31), notes="January")
+    test_db_session.add(snapshot_jan)
+    test_db_session.commit()
+
+    value_jan = SnapshotValue(snapshot_id=snapshot_jan.id, asset_id=asset.id, value=1000.0)
+    test_db_session.add(value_jan)
+    test_db_session.commit()
+
+    # Verify IDs: snapshot_feb.id < snapshot_jan.id (out of date order)
+    assert snapshot_feb.id < snapshot_jan.id
+
+    # Should return Feb value (2000.0) not Jan value (1000.0)
+    result = get_latest_snapshot_values_batch_for_assets(test_db_session, [asset.id])
+    assert result == {asset.id: 2000.0}
+
+
 def test_soft_delete_success(test_db_session):
     """Test soft deleting entity sets is_active=False"""
     account = Account(
