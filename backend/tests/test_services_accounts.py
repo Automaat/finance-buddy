@@ -500,9 +500,7 @@ def test_create_account_integrity_error(test_db_session):
     )
 
     # Mock db.commit to raise IntegrityError
-    with patch.object(
-        test_db_session, "commit", side_effect=IntegrityError("", "", Exception())
-    ):
+    with patch.object(test_db_session, "commit", side_effect=IntegrityError("", "", Exception())):
         with pytest.raises(HTTPException) as exc_info:
             create_account(test_db_session, data)
 
@@ -526,9 +524,7 @@ def test_update_account_integrity_error(test_db_session):
     data = AccountUpdate(name="Updated Name")
 
     # Mock db.commit to raise IntegrityError
-    with patch.object(
-        test_db_session, "commit", side_effect=IntegrityError("", "", Exception())
-    ):
+    with patch.object(test_db_session, "commit", side_effect=IntegrityError("", "", Exception())):
         with pytest.raises(HTTPException) as exc_info:
             update_account(test_db_session, account.id, data)
 

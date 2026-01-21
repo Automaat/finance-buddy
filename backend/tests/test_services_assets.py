@@ -259,9 +259,7 @@ def test_create_asset_integrity_error(test_db_session):
     data = AssetCreate(name="Test Asset")
 
     # Mock db.commit to raise IntegrityError
-    with patch.object(
-        test_db_session, "commit", side_effect=IntegrityError("", "", Exception())
-    ):
+    with patch.object(test_db_session, "commit", side_effect=IntegrityError("", "", Exception())):
         with pytest.raises(HTTPException) as exc_info:
             create_asset(test_db_session, data)
 
@@ -278,9 +276,7 @@ def test_update_asset_integrity_error(test_db_session):
     data = AssetUpdate(name="Updated Name")
 
     # Mock db.commit to raise IntegrityError
-    with patch.object(
-        test_db_session, "commit", side_effect=IntegrityError("", "", Exception())
-    ):
+    with patch.object(test_db_session, "commit", side_effect=IntegrityError("", "", Exception())):
         with pytest.raises(HTTPException) as exc_info:
             update_asset(test_db_session, asset.id, data)
 
