@@ -4,10 +4,9 @@ from decimal import Decimal
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.models.account import Account
 from app.models.app_config import AppConfig
 from app.models.retirement_limit import RetirementLimit
-from app.models.snapshot import Snapshot, SnapshotValue
+from tests.factories import create_test_account, create_test_snapshot, create_test_snapshot_value
 
 
 def create_app_config():
@@ -163,39 +162,40 @@ def test_get_prefill_data_with_balances(test_client: TestClient, test_db_session
     """Test prefill data with actual balances from snapshot"""
     config = create_app_config()
     test_db_session.add(config)
+    test_db_session.commit()
 
-    # Create accounts
-    ike_marcin = Account(
+    ike_marcin = create_test_account(
+        test_db_session,
         name="IKE Marcin",
-        type="asset",
+        account_type="asset",
         category="retirement",
         owner="Marcin",
-        currency="PLN",
         account_wrapper="IKE",
         purpose="retirement",
     )
-    ikze_ewa = Account(
+    ikze_ewa = create_test_account(
+        test_db_session,
         name="IKZE Ewa",
-        type="asset",
+        account_type="asset",
         category="retirement",
         owner="Ewa",
-        currency="PLN",
         account_wrapper="IKZE",
         purpose="retirement",
     )
-    test_db_session.add_all([ike_marcin, ikze_ewa])
-    test_db_session.commit()
 
-    # Create snapshot
-    snapshot = Snapshot(date=date(2026, 1, 31), notes="Test")
-    test_db_session.add(snapshot)
-    test_db_session.commit()
-
-    # Create snapshot values
-    value1 = SnapshotValue(snapshot_id=snapshot.id, account_id=ike_marcin.id, value=50000.0)
-    value2 = SnapshotValue(snapshot_id=snapshot.id, account_id=ikze_ewa.id, value=30000.0)
-    test_db_session.add_all([value1, value2])
-    test_db_session.commit()
+    snapshot = create_test_snapshot(test_db_session, snapshot_date=date(2026, 1, 31))
+    create_test_snapshot_value(
+        test_db_session,
+        snapshot_id=snapshot.id,
+        account_id=ike_marcin.id,
+        value=50000.0,
+    )
+    create_test_snapshot_value(
+        test_db_session,
+        snapshot_id=snapshot.id,
+        account_id=ikze_ewa.id,
+        value=30000.0,
+    )
 
     response = test_client.get("/api/simulations/prefill")
 

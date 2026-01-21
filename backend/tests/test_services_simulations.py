@@ -2,10 +2,8 @@ from datetime import date
 
 from sqlalchemy.orm import Session
 
-from app.models.account import Account
 from app.models.app_config import AppConfig
 from app.models.retirement_limit import RetirementLimit
-from app.models.snapshot import Snapshot, SnapshotValue
 from app.schemas.simulations import PPKSimulationConfig, SimulationInputs
 from app.services.simulations import (
     fetch_current_balances,
@@ -17,6 +15,7 @@ from app.services.simulations import (
     simulate_account,
     simulate_ppk_account,
 )
+from tests.factories import create_test_account, create_test_snapshot, create_test_snapshot_value
 
 
 def test_get_limit_for_year_from_db(test_db_session: Session):
@@ -54,37 +53,29 @@ def test_fetch_current_balances_no_snapshot(test_db_session: Session):
 def test_fetch_current_balances_with_snapshot(test_db_session: Session):
     """Test fetching balances from latest snapshot"""
     # Create accounts
-    ike_marcin = Account(
+    ike_marcin = create_test_account(
+        test_db_session,
         name="IKE Marcin",
-        type="asset",
         category="retirement",
         owner="Marcin",
-        currency="PLN",
         account_wrapper="IKE",
         purpose="retirement",
     )
-    ikze_ewa = Account(
+    ikze_ewa = create_test_account(
+        test_db_session,
         name="IKZE Ewa",
-        type="asset",
         category="retirement",
         owner="Ewa",
-        currency="PLN",
         account_wrapper="IKZE",
         purpose="retirement",
     )
-    test_db_session.add_all([ike_marcin, ikze_ewa])
-    test_db_session.commit()
 
     # Create snapshot
-    snapshot = Snapshot(date=date(2026, 1, 31), notes="Test")
-    test_db_session.add(snapshot)
-    test_db_session.commit()
+    snapshot = create_test_snapshot(test_db_session, snapshot_date=date(2026, 1, 31), notes="Test")
 
     # Create snapshot values
-    value1 = SnapshotValue(snapshot_id=snapshot.id, account_id=ike_marcin.id, value=50000.0)
-    value2 = SnapshotValue(snapshot_id=snapshot.id, account_id=ikze_ewa.id, value=30000.0)
-    test_db_session.add_all([value1, value2])
-    test_db_session.commit()
+    create_test_snapshot_value(test_db_session, snapshot.id, ike_marcin.id, value=50000.0)
+    create_test_snapshot_value(test_db_session, snapshot.id, ikze_ewa.id, value=30000.0)
 
     balances = fetch_current_balances(test_db_session)
 
@@ -560,37 +551,29 @@ def test_simulate_ppk_account_monthly_compounding():
 def test_fetch_ppk_balances(test_db_session: Session):
     """Test fetching PPK balances from snapshot"""
     # Create PPK accounts
-    ppk_marcin = Account(
+    ppk_marcin = create_test_account(
+        test_db_session,
         name="PPK Marcin",
-        type="asset",
         category="retirement",
         owner="Marcin",
-        currency="PLN",
         account_wrapper="PPK",
         purpose="retirement",
     )
-    ppk_ewa = Account(
+    ppk_ewa = create_test_account(
+        test_db_session,
         name="PPK Ewa",
-        type="asset",
         category="retirement",
         owner="Ewa",
-        currency="PLN",
         account_wrapper="PPK",
         purpose="retirement",
     )
-    test_db_session.add_all([ppk_marcin, ppk_ewa])
-    test_db_session.commit()
 
     # Create snapshot
-    snapshot = Snapshot(date=date(2026, 1, 31), notes="Test")
-    test_db_session.add(snapshot)
-    test_db_session.commit()
+    snapshot = create_test_snapshot(test_db_session, snapshot_date=date(2026, 1, 31), notes="Test")
 
     # Create snapshot values
-    value1 = SnapshotValue(snapshot_id=snapshot.id, account_id=ppk_marcin.id, value=15000.0)
-    value2 = SnapshotValue(snapshot_id=snapshot.id, account_id=ppk_ewa.id, value=12000.0)
-    test_db_session.add_all([value1, value2])
-    test_db_session.commit()
+    create_test_snapshot_value(test_db_session, snapshot.id, ppk_marcin.id, value=15000.0)
+    create_test_snapshot_value(test_db_session, snapshot.id, ppk_ewa.id, value=12000.0)
 
     balances = fetch_ppk_balances(test_db_session)
 

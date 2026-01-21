@@ -1,45 +1,38 @@
 """Tests for investment API endpoints"""
 
 from datetime import date
-from decimal import Decimal
 
-from app.models import Account, Snapshot, SnapshotValue, Transaction
+from tests.factories import (
+    create_test_account,
+    create_test_snapshot,
+    create_test_snapshot_value,
+    create_test_transaction,
+)
 
 
 def test_get_stock_stats_endpoint(test_client, test_db_session):
     """Test GET /api/investment/stock-stats endpoint"""
-    # Create stock account
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Stock Account",
-        type="asset",
+        account_type="asset",
         category="stock",
-        account_wrapper=None,
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
-    # Create transaction
-    transaction = Transaction(
+    create_test_transaction(
+        test_db_session,
         account_id=account.id,
-        amount=Decimal("5000.0"),
-        date=date(2024, 1, 1),
-        owner="Marcin",
-        is_active=True,
+        amount=5000.0,
+        transaction_date=date(2024, 1, 1),
     )
-    test_db_session.add(transaction)
-    test_db_session.commit()
 
-    # Create snapshot
-    snapshot = Snapshot(date=date(2024, 12, 31), notes="Test snapshot")
-    test_db_session.add(snapshot)
-    test_db_session.commit()
-
-    sv = SnapshotValue(snapshot_id=snapshot.id, account_id=account.id, value=Decimal("6000.0"))
-    test_db_session.add(sv)
-    test_db_session.commit()
+    snapshot = create_test_snapshot(test_db_session, snapshot_date=date(2024, 12, 31))
+    create_test_snapshot_value(
+        test_db_session,
+        snapshot_id=snapshot.id,
+        account_id=account.id,
+        value=6000.0,
+    )
 
     # Call API
     response = test_client.get("/api/investment/stock-stats")
@@ -55,38 +48,30 @@ def test_get_stock_stats_endpoint(test_client, test_db_session):
 
 def test_get_bond_stats_endpoint(test_client, test_db_session):
     """Test GET /api/investment/bond-stats endpoint"""
-    # Create bond account
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Bond Account",
-        type="asset",
+        account_type="asset",
         category="bond",
         account_wrapper="IKZE",
         owner="Ewa",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
-    # Create transaction
-    transaction = Transaction(
+    create_test_transaction(
+        test_db_session,
         account_id=account.id,
-        amount=Decimal("10000.0"),
-        date=date(2024, 1, 1),
+        amount=10000.0,
+        transaction_date=date(2024, 1, 1),
         owner="Ewa",
-        is_active=True,
     )
-    test_db_session.add(transaction)
-    test_db_session.commit()
 
-    # Create snapshot
-    snapshot = Snapshot(date=date(2024, 12, 31), notes="Test snapshot")
-    test_db_session.add(snapshot)
-    test_db_session.commit()
-
-    sv = SnapshotValue(snapshot_id=snapshot.id, account_id=account.id, value=Decimal("10300.0"))
-    test_db_session.add(sv)
-    test_db_session.commit()
+    snapshot = create_test_snapshot(test_db_session, snapshot_date=date(2024, 12, 31))
+    create_test_snapshot_value(
+        test_db_session,
+        snapshot_id=snapshot.id,
+        account_id=account.id,
+        value=10300.0,
+    )
 
     # Call API
     response = test_client.get("/api/investment/bond-stats")

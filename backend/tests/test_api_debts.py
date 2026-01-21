@@ -1,6 +1,6 @@
 from datetime import date
 
-from app.models import Account, Debt
+from tests.factories import create_test_account, create_test_debt
 
 
 def test_get_all_debts_empty(test_client):
@@ -17,48 +17,40 @@ def test_get_all_debts_empty(test_client):
 def test_get_all_debts_success(test_client, test_db_session):
     """Test GET /api/debts returns all active debts"""
     # Create liability accounts
-    account1 = Account(
+    account1 = create_test_account(
+        test_db_session,
         name="Mortgage",
-        type="liability",
+        account_type="liability",
         category="mortgage",
         owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    account2 = Account(
+    account2 = create_test_account(
+        test_db_session,
         name="Car Loan",
-        type="liability",
+        account_type="liability",
         category="installment",
         owner="Ewa",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add_all([account1, account2])
-    test_db_session.commit()
 
     # Create debts
-    debt1 = Debt(
+    create_test_debt(
+        test_db_session,
         account_id=account1.id,
         name="Home Mortgage",
         debt_type="mortgage",
         start_date=date(2020, 1, 1),
         initial_amount=500000.0,
         interest_rate=3.5,
-        currency="PLN",
-        is_active=True,
     )
-    debt2 = Debt(
+    create_test_debt(
+        test_db_session,
         account_id=account2.id,
         name="Car Financing",
         debt_type="installment_0percent",
         start_date=date(2023, 6, 1),
         initial_amount=80000.0,
         interest_rate=5.0,
-        currency="PLN",
-        is_active=True,
     )
-    test_db_session.add_all([debt1, debt2])
-    test_db_session.commit()
 
     response = test_client.get("/api/debts")
 
@@ -72,47 +64,39 @@ def test_get_all_debts_success(test_client, test_db_session):
 
 def test_get_all_debts_filter_by_account(test_client, test_db_session):
     """Test GET /api/debts?account_id=X filters by account"""
-    account1 = Account(
+    account1 = create_test_account(
+        test_db_session,
         name="Mortgage",
-        type="liability",
+        account_type="liability",
         category="mortgage",
         owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    account2 = Account(
+    account2 = create_test_account(
+        test_db_session,
         name="Car Loan",
-        type="liability",
+        account_type="liability",
         category="installment",
         owner="Ewa",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add_all([account1, account2])
-    test_db_session.commit()
 
-    debt1 = Debt(
+    create_test_debt(
+        test_db_session,
         account_id=account1.id,
         name="Home Mortgage",
         debt_type="mortgage",
         start_date=date(2020, 1, 1),
         initial_amount=500000.0,
         interest_rate=3.5,
-        currency="PLN",
-        is_active=True,
     )
-    debt2 = Debt(
+    create_test_debt(
+        test_db_session,
         account_id=account2.id,
         name="Car Financing",
         debt_type="installment_0percent",
         start_date=date(2023, 6, 1),
         initial_amount=80000.0,
         interest_rate=5.0,
-        currency="PLN",
-        is_active=True,
     )
-    test_db_session.add_all([debt1, debt2])
-    test_db_session.commit()
 
     response = test_client.get(f"/api/debts?account_id={account1.id}")
 
@@ -125,47 +109,39 @@ def test_get_all_debts_filter_by_account(test_client, test_db_session):
 
 def test_get_all_debts_filter_by_type(test_client, test_db_session):
     """Test GET /api/debts?debt_type=X filters by type"""
-    account1 = Account(
+    account1 = create_test_account(
+        test_db_session,
         name="Mortgage",
-        type="liability",
+        account_type="liability",
         category="mortgage",
         owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    account2 = Account(
+    account2 = create_test_account(
+        test_db_session,
         name="Car Loan",
-        type="liability",
+        account_type="liability",
         category="installment",
         owner="Ewa",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add_all([account1, account2])
-    test_db_session.commit()
 
-    debt1 = Debt(
+    create_test_debt(
+        test_db_session,
         account_id=account1.id,
         name="Home Mortgage",
         debt_type="mortgage",
         start_date=date(2020, 1, 1),
         initial_amount=500000.0,
         interest_rate=3.5,
-        currency="PLN",
-        is_active=True,
     )
-    debt2 = Debt(
+    create_test_debt(
+        test_db_session,
         account_id=account2.id,
         name="Car Financing",
         debt_type="installment_0percent",
         start_date=date(2023, 6, 1),
         initial_amount=80000.0,
         interest_rate=5.0,
-        currency="PLN",
-        is_active=True,
     )
-    test_db_session.add_all([debt1, debt2])
-    test_db_session.commit()
 
     response = test_client.get("/api/debts?debt_type=mortgage")
 
@@ -177,16 +153,13 @@ def test_get_all_debts_filter_by_type(test_client, test_db_session):
 
 def test_create_debt_success(test_client, test_db_session):
     """Test POST /api/accounts/{account_id}/debts"""
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Mortgage",
-        type="liability",
+        account_type="liability",
         category="mortgage",
         owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
     payload = {
         "name": "Home Mortgage",
@@ -227,16 +200,13 @@ def test_create_debt_account_not_found(test_client):
 
 def test_create_debt_not_liability_account(test_client, test_db_session):
     """Test POST debt for non-liability account fails"""
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Bank Account",
-        type="asset",
+        account_type="asset",
         category="bank",
         owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
     payload = {
         "name": "Invalid Debt",
@@ -255,29 +225,23 @@ def test_create_debt_not_liability_account(test_client, test_db_session):
 
 def test_get_debt_success(test_client, test_db_session):
     """Test GET /api/debts/{debt_id}"""
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Mortgage",
-        type="liability",
+        account_type="liability",
         category="mortgage",
         owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
-    debt = Debt(
+    debt = create_test_debt(
+        test_db_session,
         account_id=account.id,
         name="Home Mortgage",
         debt_type="mortgage",
         start_date=date(2020, 1, 1),
         initial_amount=500000.0,
         interest_rate=3.5,
-        currency="PLN",
-        is_active=True,
     )
-    test_db_session.add(debt)
-    test_db_session.commit()
 
     response = test_client.get(f"/api/debts/{debt.id}")
 
@@ -297,29 +261,23 @@ def test_get_debt_not_found(test_client):
 
 def test_update_debt_success(test_client, test_db_session):
     """Test PUT /api/debts/{debt_id}"""
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Mortgage",
-        type="liability",
+        account_type="liability",
         category="mortgage",
         owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
-    debt = Debt(
+    debt = create_test_debt(
+        test_db_session,
         account_id=account.id,
         name="Home Mortgage",
         debt_type="mortgage",
         start_date=date(2020, 1, 1),
         initial_amount=500000.0,
         interest_rate=3.5,
-        currency="PLN",
-        is_active=True,
     )
-    test_db_session.add(debt)
-    test_db_session.commit()
 
     payload = {"name": "Updated Mortgage Name", "interest_rate": 4.0}
 
@@ -343,29 +301,23 @@ def test_update_debt_not_found(test_client):
 
 def test_delete_debt_success(test_client, test_db_session):
     """Test DELETE /api/debts/{debt_id}"""
-    account = Account(
+    account = create_test_account(
+        test_db_session,
         name="Mortgage",
-        type="liability",
+        account_type="liability",
         category="mortgage",
         owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add(account)
-    test_db_session.commit()
 
-    debt = Debt(
+    debt = create_test_debt(
+        test_db_session,
         account_id=account.id,
         name="Home Mortgage",
         debt_type="mortgage",
         start_date=date(2020, 1, 1),
         initial_amount=500000.0,
         interest_rate=3.5,
-        currency="PLN",
-        is_active=True,
     )
-    test_db_session.add(debt)
-    test_db_session.commit()
 
     response = test_client.delete(f"/api/debts/{debt.id}")
 

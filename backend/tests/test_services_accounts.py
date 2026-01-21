@@ -1,4 +1,3 @@
-from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -6,67 +5,38 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 
-from app.models import Account, Snapshot, SnapshotValue
+from app.models import Account
 from app.schemas.accounts import AccountCreate, AccountUpdate
 from app.services.accounts import create_account, delete_account, get_all_accounts, update_account
+from tests.factories import create_test_account, create_test_snapshot, create_test_snapshot_value
 
 
 def test_get_all_accounts_with_values(test_db_session):
     """Test getting all accounts with their latest snapshot values"""
     # Create accounts
-    asset1 = Account(
-        name="Bank Account",
-        type="asset",
-        category="bank",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
-    )
-    asset2 = Account(
+    asset1 = create_test_account(test_db_session, name="Bank Account")
+    asset2 = create_test_account(
+        test_db_session,
         name="IKE",
-        type="asset",
         category="fund",
-        owner="Marcin",
-        currency="PLN",
         account_wrapper="IKE",
         purpose="retirement",
     )
-    liability = Account(
+    liability = create_test_account(
+        test_db_session,
         name="Mortgage",
-        type="liability",
+        account_type="liability",
         category="mortgage",
         owner="Shared",
-        currency="PLN",
-        purpose="general",
     )
-    inactive = Account(
-        name="Old Account",
-        type="asset",
-        category="bank",
-        owner="Marcin",
-        currency="PLN",
-        is_active=False,
-        purpose="general",
-    )
-    test_db_session.add_all([asset1, asset2, liability, inactive])
-    test_db_session.commit()
+    inactive = create_test_account(test_db_session, name="Old Account", is_active=False)
 
     # Create snapshot with values
-    snapshot = Snapshot(date=date(2024, 1, 31))
-    test_db_session.add(snapshot)
-    test_db_session.commit()
-
-    test_db_session.add_all(
-        [
-            SnapshotValue(snapshot_id=snapshot.id, account_id=asset1.id, value=Decimal("50000")),
-            SnapshotValue(snapshot_id=snapshot.id, account_id=asset2.id, value=Decimal("20000")),
-            SnapshotValue(
-                snapshot_id=snapshot.id, account_id=liability.id, value=Decimal("100000")
-            ),
-            SnapshotValue(snapshot_id=snapshot.id, account_id=inactive.id, value=Decimal("1000")),
-        ]
-    )
-    test_db_session.commit()
+    snapshot = create_test_snapshot(test_db_session)
+    create_test_snapshot_value(test_db_session, snapshot.id, asset1.id, Decimal("50000"))
+    create_test_snapshot_value(test_db_session, snapshot.id, asset2.id, Decimal("20000"))
+    create_test_snapshot_value(test_db_session, snapshot.id, liability.id, Decimal("100000"))
+    create_test_snapshot_value(test_db_session, snapshot.id, inactive.id, Decimal("1000"))
 
     # Get all accounts
     result = get_all_accounts(test_db_session)
@@ -93,24 +63,13 @@ def test_get_all_accounts_with_values(test_db_session):
 def test_get_all_accounts_no_snapshots(test_db_session):
     """Test getting accounts when no snapshots exist"""
     # Create accounts without snapshots
-    asset = Account(
-        name="Bank Account",
-        type="asset",
-        category="bank",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
-    )
-    liability = Account(
+    create_test_account(test_db_session, name="Bank Account")
+    create_test_account(
+        test_db_session,
         name="Loan",
-        type="liability",
+        account_type="liability",
         category="mortgage",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
     )
-    test_db_session.add_all([asset, liability])
-    test_db_session.commit()
 
     # Get all accounts
     result = get_all_accounts(test_db_session)
@@ -125,34 +84,12 @@ def test_get_all_accounts_no_snapshots(test_db_session):
 def test_get_all_accounts_partial_values(test_db_session):
     """Test getting accounts when only some have values in latest snapshot"""
     # Create accounts
-    account1 = Account(
-        name="Account 1",
-        type="asset",
-        category="bank",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
-    )
-    account2 = Account(
-        name="Account 2",
-        type="asset",
-        category="bank",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
-    )
-    test_db_session.add_all([account1, account2])
-    test_db_session.commit()
+    account1 = create_test_account(test_db_session, name="Account 1")
+    create_test_account(test_db_session, name="Account 2")
 
     # Create snapshot with only one account value
-    snapshot = Snapshot(date=date(2024, 1, 31))
-    test_db_session.add(snapshot)
-    test_db_session.commit()
-
-    test_db_session.add(
-        SnapshotValue(snapshot_id=snapshot.id, account_id=account1.id, value=Decimal("1000"))
-    )
-    test_db_session.commit()
+    snapshot = create_test_snapshot(test_db_session)
+    create_test_snapshot_value(test_db_session, snapshot.id, account1.id, Decimal("1000"))
 
     # Get all accounts
     result = get_all_accounts(test_db_session)
@@ -296,16 +233,7 @@ def test_create_account_duplicate_name(test_db_session):
 def test_update_account_success(test_db_session):
     """Test updating an account successfully"""
     # Create account
-    account = Account(
-        name="Original Name",
-        type="asset",
-        category="bank",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
-    )
-    test_db_session.add(account)
-    test_db_session.commit()
+    account = create_test_account(test_db_session, name="Original Name")
     account_id = account.id
 
     # Update account
@@ -326,28 +254,9 @@ def test_update_account_success(test_db_session):
 
 def test_update_account_duplicate_name(test_db_session):
     """Test updating account with duplicate name fails"""
-    import pytest
-    from fastapi import HTTPException
-
     # Create two accounts
-    account1 = Account(
-        name="Account 1",
-        type="asset",
-        category="bank",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
-    )
-    account2 = Account(
-        name="Account 2",
-        type="asset",
-        category="bank",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
-    )
-    test_db_session.add_all([account1, account2])
-    test_db_session.commit()
+    create_test_account(test_db_session, name="Account 1")
+    account2 = create_test_account(test_db_session, name="Account 2")
 
     # Try to update account2 with account1's name
     data = AccountUpdate(name="Account 1")
@@ -361,9 +270,6 @@ def test_update_account_duplicate_name(test_db_session):
 
 def test_update_account_not_found(test_db_session):
     """Test updating non-existent account fails"""
-    import pytest
-    from fastapi import HTTPException
-
     data = AccountUpdate(name="New Name")
 
     with pytest.raises(HTTPException) as exc_info:
@@ -376,16 +282,7 @@ def test_update_account_not_found(test_db_session):
 def test_update_account_partial(test_db_session):
     """Test partial update of account"""
     # Create account
-    account = Account(
-        name="Original",
-        type="asset",
-        category="bank",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
-    )
-    test_db_session.add(account)
-    test_db_session.commit()
+    account = create_test_account(test_db_session, name="Original")
     account_id = account.id
 
     # Update only name
@@ -402,16 +299,7 @@ def test_update_account_partial(test_db_session):
 def test_update_account_purpose(test_db_session):
     """Test updating account purpose"""
     # Create account
-    account = Account(
-        name="Test Account",
-        type="asset",
-        category="bank",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
-    )
-    test_db_session.add(account)
-    test_db_session.commit()
+    account = create_test_account(test_db_session, name="Test Account")
     account_id = account.id
 
     # Update purpose
@@ -429,16 +317,7 @@ def test_update_account_purpose(test_db_session):
 def test_delete_account_success(test_db_session):
     """Test soft deleting an account"""
     # Create account
-    account = Account(
-        name="To Delete",
-        type="asset",
-        category="bank",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
-    )
-    test_db_session.add(account)
-    test_db_session.commit()
+    account = create_test_account(test_db_session, name="To Delete")
     account_id = account.id
 
     # Delete account
@@ -452,9 +331,6 @@ def test_delete_account_success(test_db_session):
 
 def test_delete_account_not_found(test_db_session):
     """Test deleting non-existent account fails"""
-    import pytest
-    from fastapi import HTTPException
-
     with pytest.raises(HTTPException) as exc_info:
         delete_account(test_db_session, 999)
 
@@ -465,16 +341,7 @@ def test_delete_account_not_found(test_db_session):
 def test_delete_account_idempotent(test_db_session):
     """Test deleting already deleted account is idempotent"""
     # Create account
-    account = Account(
-        name="Already Deleted",
-        type="asset",
-        category="bank",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
-    )
-    test_db_session.add(account)
-    test_db_session.commit()
+    account = create_test_account(test_db_session, name="Already Deleted")
     account_id = account.id
 
     # Delete once
@@ -510,16 +377,7 @@ def test_create_account_integrity_error(test_db_session):
 
 def test_update_account_integrity_error(test_db_session):
     """Test updating account with IntegrityError returns 500"""
-    account = Account(
-        name="Test Account",
-        type="asset",
-        category="bank",
-        owner="Marcin",
-        currency="PLN",
-        purpose="general",
-    )
-    test_db_session.add(account)
-    test_db_session.commit()
+    account = create_test_account(test_db_session, name="Test Account")
 
     data = AccountUpdate(name="Updated Name")
 

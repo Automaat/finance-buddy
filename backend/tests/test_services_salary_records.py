@@ -3,7 +3,6 @@ from datetime import date
 import pytest
 from fastapi import HTTPException
 
-from app.models import SalaryRecord
 from app.schemas.salary_records import SalaryRecordCreate, SalaryRecordUpdate
 from app.services.salary_records import (
     create_salary_record,
@@ -13,6 +12,7 @@ from app.services.salary_records import (
     get_salary_record,
     update_salary_record,
 )
+from tests.factories import create_test_salary_record
 
 
 def test_create_salary_record_success(test_db_session):
@@ -39,16 +39,7 @@ def test_create_salary_record_success(test_db_session):
 def test_create_salary_record_duplicate(test_db_session):
     """Test creating duplicate salary record fails"""
     # Create first record
-    record = SalaryRecord(
-        date=date(2024, 1, 1),
-        gross_amount=10000.0,
-        contract_type="UOP",
-        company="Company A",
-        owner="Marcin",
-        is_active=True,
-    )
-    test_db_session.add(record)
-    test_db_session.commit()
+    create_test_salary_record(test_db_session)
 
     # Try to create duplicate (same owner, date)
     data = SalaryRecordCreate(
@@ -68,25 +59,8 @@ def test_create_salary_record_duplicate(test_db_session):
 
 def test_get_all_salary_records(test_db_session):
     """Test getting all salary records"""
-    record1 = SalaryRecord(
-        date=date(2024, 1, 1),
-        gross_amount=10000.0,
-        contract_type="UOP",
-        company="Company A",
-        owner="Marcin",
-        is_active=True,
-    )
-    record2 = SalaryRecord(
-        date=date(2024, 6, 1),
-        gross_amount=12000.0,
-        contract_type="UOP",
-        company="Company A",
-        owner="Marcin",
-        is_active=True,
-    )
-    test_db_session.add(record1)
-    test_db_session.add(record2)
-    test_db_session.commit()
+    create_test_salary_record(test_db_session)
+    create_test_salary_record(test_db_session, salary_date=date(2024, 6, 1), gross_amount=12000.0)
 
     result = get_all_salary_records(test_db_session)
 
@@ -99,25 +73,14 @@ def test_get_all_salary_records(test_db_session):
 
 def test_get_all_salary_records_with_filters(test_db_session):
     """Test getting salary records with filters"""
-    record1 = SalaryRecord(
-        date=date(2024, 1, 1),
-        gross_amount=10000.0,
-        contract_type="UOP",
-        company="Company A",
-        owner="Marcin",
-        is_active=True,
-    )
-    record2 = SalaryRecord(
-        date=date(2024, 6, 1),
+    create_test_salary_record(test_db_session)
+    create_test_salary_record(
+        test_db_session,
+        salary_date=date(2024, 6, 1),
         gross_amount=8000.0,
-        contract_type="UOP",
         company="Company B",
         owner="Ewa",
-        is_active=True,
     )
-    test_db_session.add(record1)
-    test_db_session.add(record2)
-    test_db_session.commit()
 
     result = get_all_salary_records(test_db_session, owner="Marcin")
 
@@ -127,16 +90,7 @@ def test_get_all_salary_records_with_filters(test_db_session):
 
 def test_get_salary_record(test_db_session):
     """Test getting a single salary record"""
-    record = SalaryRecord(
-        date=date(2024, 1, 1),
-        gross_amount=10000.0,
-        contract_type="UOP",
-        company="Test Company",
-        owner="Marcin",
-        is_active=True,
-    )
-    test_db_session.add(record)
-    test_db_session.commit()
+    record = create_test_salary_record(test_db_session, company="Test Company")
 
     result = get_salary_record(test_db_session, record.id)
 
@@ -156,16 +110,7 @@ def test_get_salary_record_not_found(test_db_session):
 
 def test_update_salary_record(test_db_session):
     """Test updating a salary record"""
-    record = SalaryRecord(
-        date=date(2024, 1, 1),
-        gross_amount=10000.0,
-        contract_type="UOP",
-        company="Old Company",
-        owner="Marcin",
-        is_active=True,
-    )
-    test_db_session.add(record)
-    test_db_session.commit()
+    record = create_test_salary_record(test_db_session, company="Old Company")
 
     data = SalaryRecordUpdate(gross_amount=11000.0, company="New Company")
     result = update_salary_record(test_db_session, record.id, data)
@@ -178,24 +123,13 @@ def test_update_salary_record(test_db_session):
 def test_update_salary_record_duplicate(test_db_session):
     """Test updating salary record to duplicate owner+date fails"""
     # Create two records
-    record1 = SalaryRecord(
-        date=date(2024, 1, 1),
-        gross_amount=10000.0,
-        contract_type="UOP",
-        company="Company A",
-        owner="Marcin",
-        is_active=True,
-    )
-    record2 = SalaryRecord(
-        date=date(2024, 2, 1),
+    create_test_salary_record(test_db_session)
+    record2 = create_test_salary_record(
+        test_db_session,
+        salary_date=date(2024, 2, 1),
         gross_amount=11000.0,
-        contract_type="UOP",
         company="Company B",
-        owner="Marcin",
-        is_active=True,
     )
-    test_db_session.add_all([record1, record2])
-    test_db_session.commit()
 
     # Try to update record2 to have same date as record1
     data = SalaryRecordUpdate(date=date(2024, 1, 1))
@@ -209,16 +143,7 @@ def test_update_salary_record_duplicate(test_db_session):
 
 def test_delete_salary_record(test_db_session):
     """Test soft deleting a salary record"""
-    record = SalaryRecord(
-        date=date(2024, 1, 1),
-        gross_amount=10000.0,
-        contract_type="UOP",
-        company="Test Company",
-        owner="Marcin",
-        is_active=True,
-    )
-    test_db_session.add(record)
-    test_db_session.commit()
+    record = create_test_salary_record(test_db_session)
 
     delete_salary_record(test_db_session, record.id)
 
@@ -228,25 +153,13 @@ def test_delete_salary_record(test_db_session):
 
 def test_get_current_salary(test_db_session):
     """Test getting current salary for owner"""
-    record1 = SalaryRecord(
-        date=date(2023, 1, 1),
-        gross_amount=10000.0,
-        contract_type="UOP",
-        company="Company A",
-        owner="Marcin",
-        is_active=True,
-    )
-    record2 = SalaryRecord(
-        date=date(2024, 1, 1),
+    create_test_salary_record(test_db_session, salary_date=date(2023, 1, 1))
+    create_test_salary_record(
+        test_db_session,
+        salary_date=date(2024, 1, 1),
         gross_amount=12000.0,
-        contract_type="UOP",
         company="Company B",
-        owner="Marcin",
-        is_active=True,
     )
-    test_db_session.add(record1)
-    test_db_session.add(record2)
-    test_db_session.commit()
 
     result = get_current_salary(test_db_session, "Marcin")
 
