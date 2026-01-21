@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
@@ -10,9 +12,9 @@ router = APIRouter(prefix="/api", tags=["debts"])
 
 @router.get("/debts", response_model=DebtsListResponse)
 def get_all_debts(
-    account_id: int | None = Query(None),  # noqa: B008
-    debt_type: str | None = Query(None),  # noqa: B008
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Annotated[Session, Depends(get_db)],
+    account_id: int | None = Query(None),
+    debt_type: str | None = Query(None),
 ) -> DebtsListResponse:
     """Get all active debts with optional filters"""
     return debts.get_all_debts(db, account_id, debt_type)
@@ -22,7 +24,7 @@ def get_all_debts(
 def create_debt(
     account_id: int,
     data: DebtCreate,
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Annotated[Session, Depends(get_db)],
 ) -> DebtResponse:
     """Create new debt for a liability account"""
     return debts.create_debt(db, account_id, data)
@@ -31,7 +33,7 @@ def create_debt(
 @router.get("/debts/{debt_id}", response_model=DebtResponse)
 def get_debt(
     debt_id: int,
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Annotated[Session, Depends(get_db)],
 ) -> DebtResponse:
     """Get a single debt by ID"""
     return debts.get_debt(db, debt_id)
@@ -41,7 +43,7 @@ def get_debt(
 def update_debt(
     debt_id: int,
     data: DebtUpdate,
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Annotated[Session, Depends(get_db)],
 ) -> DebtResponse:
     """Update debt fields"""
     return debts.update_debt(db, debt_id, data)
@@ -50,7 +52,7 @@ def update_debt(
 @router.delete("/debts/{debt_id}", status_code=204)
 def delete_debt(
     debt_id: int,
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """Delete debt (soft delete by setting is_active=False)"""
     debts.delete_debt(db, debt_id)

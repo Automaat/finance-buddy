@@ -6,6 +6,7 @@ select = ["E", "F", "I", "N", "W", "UP", "B", "A", "C4", "DTZ", "T20", "RET", "S
 
 [lint.per-file-ignores]
 "scripts/*.py" = ["T201"]
+"app/api/*.py" = ["B008"]
 
 [lint.isort]
 known-first-party = ["app"]

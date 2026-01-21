@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -9,7 +11,7 @@ router = APIRouter(prefix="/api/config", tags=["config"])
 
 
 @router.get("", response_model=ConfigResponse)
-def get_app_config(db: Session = Depends(get_db)) -> ConfigResponse:  # noqa: B008
+def get_app_config(db: Annotated[Session, Depends(get_db)]) -> ConfigResponse:
     """Get app configuration"""
     config = get_config(db)
     if not config:
@@ -20,7 +22,7 @@ def get_app_config(db: Session = Depends(get_db)) -> ConfigResponse:  # noqa: B0
 @router.put("", response_model=ConfigResponse)
 def update_app_config(
     data: ConfigCreate,
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Annotated[Session, Depends(get_db)],
 ) -> ConfigResponse:
     """Create or update app configuration"""
     return upsert_config(db, data)

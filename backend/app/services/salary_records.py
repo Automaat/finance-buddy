@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from fastapi import HTTPException
 from sqlalchemy import desc, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import SalaryRecord
@@ -87,9 +88,16 @@ def create_salary_record(db: Session, data: SalaryRecordCreate) -> SalaryRecordR
         is_active=True,
     )
 
-    db.add(record)
-    db.commit()
-    db.refresh(record)
+    try:
+        db.add(record)
+        db.commit()
+        db.refresh(record)
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail=f"Salary record for {data.owner} on {data.date} already exists",
+        ) from e
 
     return SalaryRecordResponse(
         id=record.id,
@@ -142,8 +150,18 @@ def update_salary_record(
     if data.owner is not None:
         record.owner = data.owner
 
-    db.commit()
-    db.refresh(record)
+    try:
+        db.commit()
+        db.refresh(record)
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Salary record for {record.owner} on {record.date} "
+                "conflicts with existing record"
+            ),
+        ) from e
 
     return SalaryRecordResponse(
         id=record.id,

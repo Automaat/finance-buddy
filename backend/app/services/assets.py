@@ -1,4 +1,6 @@
+from fastapi import HTTPException
 from sqlalchemy import desc, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import Asset, Snapshot, SnapshotValue
@@ -44,9 +46,14 @@ def create_asset(db: Session, data: AssetCreate) -> AssetResponse:
         name=data.name,
         is_active=True,
     )
-    db.add(asset)
-    db.commit()
-    db.refresh(asset)
+
+    try:
+        db.add(asset)
+        db.commit()
+        db.refresh(asset)
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=f"Asset '{data.name}' already exists") from e
 
     return AssetResponse(
         id=asset.id,
@@ -69,8 +76,15 @@ def update_asset(db: Session, asset_id: int, data: AssetUpdate) -> AssetResponse
     if data.name is not None:
         asset.name = data.name
 
-    db.commit()
-    db.refresh(asset)
+    try:
+        db.commit()
+        db.refresh(asset)
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail=f"Asset '{data.name or asset.name}' conflicts with existing asset",
+        ) from e
 
     # Get current value
     latest_snapshot = db.execute(

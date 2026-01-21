@@ -2,6 +2,7 @@ from datetime import date
 
 from fastapi import HTTPException
 from sqlalchemy import desc, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import Account, DebtPayment
@@ -141,9 +142,17 @@ def create_payment(db: Session, account_id: int, data: DebtPaymentCreate) -> Deb
         owner=data.owner,
         is_active=True,
     )
-    db.add(payment)
-    db.commit()
-    db.refresh(payment)
+
+    try:
+        db.add(payment)
+        db.commit()
+        db.refresh(payment)
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail=f"Payment for account '{account.name}' on {data.date} already exists",
+        ) from e
 
     return DebtPaymentResponse(
         id=payment.id,

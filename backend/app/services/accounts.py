@@ -1,4 +1,6 @@
+from fastapi import HTTPException
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import Account
@@ -67,9 +69,16 @@ def create_account(db: Session, data: AccountCreate) -> AccountResponse:
         receives_contributions=data.receives_contributions,
         is_active=True,
     )
-    db.add(account)
-    db.commit()
-    db.refresh(account)
+
+    try:
+        db.add(account)
+        db.commit()
+        db.refresh(account)
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=409, detail=f"Account '{data.name}' already exists"
+        ) from e
 
     return AccountResponse(
         id=account.id,
@@ -117,8 +126,15 @@ def update_account(db: Session, account_id: int, data: AccountUpdate) -> Account
     if "square_meters" in _field_set:
         account.square_meters = data.square_meters
 
-    db.commit()
-    db.refresh(account)
+    try:
+        db.commit()
+        db.refresh(account)
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail=f"Account '{data.name or account.name}' conflicts with existing account",
+        ) from e
 
     # Get current value
     current_value = get_latest_snapshot_value(db, account.id)

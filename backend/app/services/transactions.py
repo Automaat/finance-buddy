@@ -2,6 +2,7 @@ from datetime import date
 
 from fastapi import HTTPException
 from sqlalchemy import desc, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import Account, Transaction
@@ -150,9 +151,17 @@ def create_transaction(
         transaction_type=data.transaction_type,
         is_active=True,
     )
-    db.add(transaction)
-    db.commit()
-    db.refresh(transaction)
+
+    try:
+        db.add(transaction)
+        db.commit()
+        db.refresh(transaction)
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail=f"Transaction for account '{account.name}' on {data.date} already exists",
+        ) from e
 
     return TransactionResponse(
         id=transaction.id,
