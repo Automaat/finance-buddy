@@ -416,7 +416,7 @@
 			<input id="name" type="text" bind:value={formData.name} required />
 		</div>
 
-		<div class="form-row">
+		<div class="grid grid-cols-1 md:grid-cols-2">
 			<div class="form-group">
 				<label for="debt_type">Typ zobowiązania</label>
 				<select id="debt_type" bind:value={formData.debt_type} required>
@@ -431,7 +431,7 @@
 			</div>
 		</div>
 
-		<div class="form-row">
+		<div class="grid grid-cols-1 md:grid-cols-2">
 			<div class="form-group">
 				<label for="initial_amount">Kwota początkowa (główna)</label>
 				<input
@@ -480,7 +480,7 @@
 		</CardHeader>
 		<CardContent>
 			<form on:submit|preventDefault={addPayment}>
-				<div class="form-row">
+				<div class="grid grid-cols-1 md:grid-cols-2">
 					<div class="form-group">
 						<label for="payment_amount">Kwota</label>
 						<input
@@ -704,11 +704,6 @@
 		text-align: right;
 	}
 
-	.form-row {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: var(--size-4);
-	}
 
 	.form-group {
 		display: flex;
@@ -808,8 +803,5 @@
 			gap: var(--size-4);
 		}
 
-		.form-row {
-			grid-template-columns: 1fr;
-		}
 	}
 </style>

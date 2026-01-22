@@ -382,7 +382,9 @@
 						<td data-label="Nazwa" class="name-cell">{account.name}</td>
 						<td data-label="Kategoria">{categoryLabels[account.category] || account.category}</td>
 						<td data-label="Właściciel">{account.owner}</td>
-						<td data-label="Wartość" class="value-cell negative">{formatPLN(account.current_value)}</td>
+						<td data-label="Wartość" class="value-cell negative"
+							>{formatPLN(account.current_value)}</td
+						>
 						<td data-label="Akcje" class="actions-cell">
 							<button class="btn-icon tap-target" on:click={() => startEdit(account)}>✏️</button>
 							<button class="btn-icon tap-target" on:click={() => handleDelete(account.id)}
@@ -411,7 +413,7 @@
 			<div class="error-message">{error}</div>
 		{/if}
 
-		<div class="form-row">
+		<div class="grid grid-cols-1 md:grid-cols-2">
 			<div class="form-group">
 				<label for="name">Nazwa</label>
 				<input
@@ -432,7 +434,7 @@
 			</div>
 		</div>
 
-		<div class="form-row">
+		<div class="grid grid-cols-1 md:grid-cols-2">
 			<div class="form-group">
 				<label for="category">Kategoria</label>
 				<select id="category" bind:value={formData.category} required>
@@ -466,7 +468,7 @@
 			</div>
 		</div>
 
-		<div class="form-row">
+		<div class="grid grid-cols-1 md:grid-cols-2">
 			<div class="form-group">
 				<label for="account_wrapper">Opakowanie rachunku (opcjonalne)</label>
 				<select id="account_wrapper" bind:value={formData.account_wrapper}>
@@ -589,7 +591,7 @@
 			<div class="transaction-form">
 				<h3>Dodaj transakcję</h3>
 				<form on:submit|preventDefault={addTransaction}>
-					<div class="form-row">
+					<div class="grid grid-cols-1 md:grid-cols-2">
 						<div class="form-group">
 							<label for="transaction-amount">Kwota (PLN)</label>
 							<input
@@ -764,11 +766,6 @@
 		gap: var(--size-5);
 	}
 
-	.form-row {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: var(--size-4);
-	}
 
 	.form-group {
 		display: flex;
@@ -906,10 +903,6 @@
 		.page-header {
 			flex-direction: column;
 			gap: var(--size-4);
-		}
-
-		.form-row {
-			grid-template-columns: 1fr;
 		}
 
 		.transactions-header {
