@@ -704,7 +704,6 @@
 		text-align: right;
 	}
 
-
 	.form-group {
 		display: flex;
 		flex-direction: column;
@@ -802,6 +801,5 @@
 			flex-direction: column;
 			gap: var(--size-4);
 		}
-
 	}
 </style>

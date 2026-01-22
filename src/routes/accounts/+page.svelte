@@ -766,7 +766,6 @@
 		gap: var(--size-5);
 	}
 
-
 	.form-group {
 		display: flex;
 		flex-direction: column;
