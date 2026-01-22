@@ -1,7 +1,24 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeAll } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { vi } from 'vitest';
 import Page from './+page.svelte';
+
+// Mock window.matchMedia for media query tests
+beforeAll(() => {
+	Object.defineProperty(window, 'matchMedia', {
+		writable: true,
+		value: vi.fn().mockImplementation((query) => ({
+			matches: false,
+			media: query,
+			onchange: null,
+			addListener: vi.fn(),
+			removeListener: vi.fn(),
+			addEventListener: vi.fn(),
+			removeEventListener: vi.fn(),
+			dispatchEvent: vi.fn()
+		}))
+	});
+});
 
 // Mock SvelteKit env module
 vi.mock('$env/dynamic/public', () => ({
