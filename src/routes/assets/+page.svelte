@@ -1,5 +1,13 @@
 <script lang="ts">
-	import { Card, CardHeader, CardTitle, CardContent, Modal, formatPLN } from '@mskalski/home-ui';
+	import {
+		Card,
+		CardHeader,
+		CardTitle,
+		CardContent,
+		Modal,
+		Table,
+		formatPLN
+	} from '@mskalski/home-ui';
 	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
 	import type { Asset } from './+page';
@@ -169,29 +177,19 @@
 				<p>Brak majątku</p>
 			</div>
 		{:else}
-			<div class="table-container">
-				<table class="assets-table">
-					<thead>
-						<tr>
-							<th>Nazwa</th>
-							<th>Wartość</th>
-							<th>Akcje</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each data.assets as asset}
-							<tr>
-								<td class="name-cell">{asset.name}</td>
-								<td class="value-cell">{formatPLN(asset.current_value)}</td>
-								<td class="actions-cell">
-									<button class="btn-icon" on:click={() => startEdit(asset)}>✏️</button>
-									<button class="btn-icon" on:click={() => handleDelete(asset.id)}>🗑️</button>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
+			<Table headers={['Nazwa', 'Wartość', 'Akcje']} mobileCardView class="assets-table">
+				{#each data.assets as asset}
+					<tr>
+						<td data-label="Nazwa" class="name-cell">{asset.name}</td>
+						<td data-label="Wartość" class="value-cell">{formatPLN(asset.current_value)}</td>
+						<td data-label="Akcje" class="actions-cell">
+							<button class="btn-icon tap-target" on:click={() => startEdit(asset)}>✏️</button>
+							<button class="btn-icon tap-target" on:click={() => handleDelete(asset.id)}>🗑️</button
+							>
+						</td>
+					</tr>
+				{/each}
+			</Table>
 		{/if}
 	</CardContent>
 </Card>

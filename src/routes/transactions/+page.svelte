@@ -1,5 +1,13 @@
 <script lang="ts">
-	import { Card, CardHeader, CardTitle, CardContent, Modal, formatPLN } from '@mskalski/home-ui';
+	import {
+		Card,
+		CardHeader,
+		CardTitle,
+		CardContent,
+		Modal,
+		Table,
+		formatPLN
+	} from '@mskalski/home-ui';
 	import { env } from '$env/dynamic/public';
 	import { goto, invalidateAll } from '$app/navigation';
 
@@ -250,38 +258,31 @@
 				<p>Brak transakcji</p>
 			</div>
 		{:else}
-			<div class="table-container">
-				<table class="transactions-table">
-					<thead>
-						<tr>
-							<th>Data zakupu</th>
-							<th>Konto</th>
-							<th>Właściciel</th>
-							<th>Kwota</th>
-							<th>Akcje</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each data.transactions.transactions as transaction}
-							<tr>
-								<td>{new Date(transaction.date).toLocaleDateString('pl-PL')}</td>
-								<td class="name-cell">{transaction.account_name}</td>
-								<td>{transaction.owner}</td>
-								<td class="value-cell">{formatPLN(transaction.amount)}</td>
-								<td class="actions-cell">
-									<button
-										class="btn-icon"
-										on:click={() => deleteTransaction(transaction.account_id, transaction.id)}
-										title="Usuń"
-									>
-										🗑️
-									</button>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
+			<Table
+				headers={['Data zakupu', 'Konto', 'Właściciel', 'Kwota', 'Akcje']}
+				mobileCardView
+				class="transactions-table"
+			>
+				{#each data.transactions.transactions as transaction}
+					<tr>
+						<td data-label="Data zakupu"
+							>{new Date(transaction.date).toLocaleDateString('pl-PL')}</td
+						>
+						<td data-label="Konto" class="name-cell">{transaction.account_name}</td>
+						<td data-label="Właściciel">{transaction.owner}</td>
+						<td data-label="Kwota" class="value-cell">{formatPLN(transaction.amount)}</td>
+						<td data-label="Akcje" class="actions-cell">
+							<button
+								class="btn-icon tap-target"
+								on:click={() => deleteTransaction(transaction.account_id, transaction.id)}
+								title="Usuń"
+							>
+								🗑️
+							</button>
+						</td>
+					</tr>
+				{/each}
+			</Table>
 		{/if}
 	</CardContent>
 </Card>
