@@ -10,7 +10,9 @@
 		Modal,
 		formatPLN,
 		formatPercent,
-		calculateChange
+		calculateChange,
+		isMobile,
+		isTablet
 	} from '@mskalski/home-ui';
 	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
@@ -19,6 +21,17 @@
 
 	let chartContainer: HTMLDivElement;
 	let pieChartContainer: HTMLDivElement;
+	let lineChart: echarts.ECharts;
+	let pieChart: echarts.ECharts;
+
+	// Responsive chart configuration
+	$: gridConfig = $isMobile
+		? { left: '40px', right: '20px' }
+		: $isTablet
+			? { left: '60px', right: '30px' }
+			: { left: '80px', right: '40px' };
+
+	$: titleFontSize = $isMobile ? 14 : 16;
 
 	// Retirement limits modal
 	let showLimitsModal = false;
@@ -108,12 +121,15 @@
 
 	onMount(() => {
 		// Net Worth Line Chart
-		const lineChart = echarts.init(chartContainer);
+		lineChart = echarts.init(chartContainer);
 
 		const lineOption: EChartsOption = {
 			title: {
 				text: 'Wartość Netto w Czasie',
-				left: 'center'
+				left: 'center',
+				textStyle: {
+					fontSize: titleFontSize
+				}
 			},
 			tooltip: {
 				trigger: 'axis',
@@ -149,21 +165,21 @@
 					}
 				}
 			],
-			grid: {
-				left: '80px',
-				right: '40px'
-			}
+			grid: gridConfig
 		};
 
 		lineChart.setOption(lineOption);
 
 		// Asset Allocation Pie Chart
-		const pieChart = echarts.init(pieChartContainer);
+		pieChart = echarts.init(pieChartContainer);
 
 		const pieOption: EChartsOption = {
 			title: {
 				text: 'Alokacja Aktywów',
-				left: 'center'
+				left: 'center',
+				textStyle: {
+					fontSize: titleFontSize
+				}
 			},
 			tooltip: {
 				trigger: 'item',
@@ -218,6 +234,20 @@
 		data.current_net_worth,
 		data.current_net_worth - data.change_vs_last_month
 	);
+
+	// Update charts when screen size changes
+	$: if (lineChart && gridConfig) {
+		lineChart.setOption({
+			grid: gridConfig,
+			title: { textStyle: { fontSize: titleFontSize } }
+		});
+	}
+
+	$: if (pieChart && titleFontSize) {
+		pieChart.setOption({
+			title: { textStyle: { fontSize: titleFontSize } }
+		});
+	}
 </script>
 
 <svelte:head>
@@ -329,7 +359,7 @@
 	{/if}
 
 	<!-- Charts -->
-	<div class="charts-grid">
+	<div class="grid grid-cols-1 lg:grid-cols-2">
 		<Card>
 			<CardContent>
 				<div bind:this={chartContainer} class="chart-container"></div>
@@ -455,20 +485,14 @@
 		color: var(--color-text-muted);
 	}
 
-	.charts-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-		gap: var(--size-6);
-	}
-
 	.chart-container {
 		width: 100%;
-		height: 400px;
+		height: 300px;
 	}
 
-	@media (max-width: 768px) {
-		.charts-grid {
-			grid-template-columns: 1fr;
+	@media (min-width: 768px) {
+		.chart-container {
+			height: 400px;
 		}
 	}
 
