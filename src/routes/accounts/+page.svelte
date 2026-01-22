@@ -1,5 +1,13 @@
 <script lang="ts">
-	import { Card, CardHeader, CardTitle, CardContent, Modal, formatPLN } from '@mskalski/home-ui';
+	import {
+		Card,
+		CardHeader,
+		CardTitle,
+		CardContent,
+		Modal,
+		Table,
+		formatPLN
+	} from '@mskalski/home-ui';
 	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
@@ -320,43 +328,36 @@
 				<p>Brak aktywów</p>
 			</div>
 		{:else}
-			<div class="table-container">
-				<table class="accounts-table">
-					<thead>
-						<tr>
-							<th>Nazwa</th>
-							<th>Kategoria</th>
-							<th>Właściciel</th>
-							<th>Wartość</th>
-							<th>Akcje</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each data.assets as account}
-							<tr>
-								<td class="name-cell">{account.name}</td>
-								<td>{categoryLabels[account.category] || account.category}</td>
-								<td>{account.owner}</td>
-								<td class="value-cell">{formatPLN(account.current_value)}</td>
-								<td class="actions-cell">
-									<button class="btn-icon" on:click={() => startEdit(account)}>✏️</button>
-									{#if INVESTMENT_CATEGORIES.has(account.category) || account.account_wrapper}
-										<button
-											class="btn-icon transaction-btn"
-											title="Transakcje"
-											on:click={() =>
-												openTransactions(account.id, account.name, account.account_wrapper)}
-										>
-											📊 ({transactionCounts[account.id] || 0})
-										</button>
-									{/if}
-									<button class="btn-icon" on:click={() => handleDelete(account.id)}>🗑️</button>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
+			<Table
+				headers={['Nazwa', 'Kategoria', 'Właściciel', 'Wartość', 'Akcje']}
+				mobileCardView
+				class="accounts-table"
+			>
+				{#each data.assets as account}
+					<tr>
+						<td data-label="Nazwa" class="name-cell">{account.name}</td>
+						<td data-label="Kategoria">{categoryLabels[account.category] || account.category}</td>
+						<td data-label="Właściciel">{account.owner}</td>
+						<td data-label="Wartość" class="value-cell">{formatPLN(account.current_value)}</td>
+						<td data-label="Akcje" class="actions-cell">
+							<button class="btn-icon tap-target" on:click={() => startEdit(account)}>✏️</button>
+							{#if INVESTMENT_CATEGORIES.has(account.category) || account.account_wrapper}
+								<button
+									class="btn-icon tap-target transaction-btn"
+									title="Transakcje"
+									on:click={() =>
+										openTransactions(account.id, account.name, account.account_wrapper)}
+								>
+									📊 ({transactionCounts[account.id] || 0})
+								</button>
+							{/if}
+							<button class="btn-icon tap-target" on:click={() => handleDelete(account.id)}
+								>🗑️</button
+							>
+						</td>
+					</tr>
+				{/each}
+			</Table>
 		{/if}
 	</CardContent>
 </Card>
@@ -371,33 +372,28 @@
 				<p>Brak pasywów</p>
 			</div>
 		{:else}
-			<div class="table-container">
-				<table class="accounts-table">
-					<thead>
-						<tr>
-							<th>Nazwa</th>
-							<th>Kategoria</th>
-							<th>Właściciel</th>
-							<th>Wartość</th>
-							<th>Akcje</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each data.liabilities as account}
-							<tr>
-								<td class="name-cell">{account.name}</td>
-								<td>{categoryLabels[account.category] || account.category}</td>
-								<td>{account.owner}</td>
-								<td class="value-cell negative">{formatPLN(account.current_value)}</td>
-								<td class="actions-cell">
-									<button class="btn-icon" on:click={() => startEdit(account)}>✏️</button>
-									<button class="btn-icon" on:click={() => handleDelete(account.id)}>🗑️</button>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
+			<Table
+				headers={['Nazwa', 'Kategoria', 'Właściciel', 'Wartość', 'Akcje']}
+				mobileCardView
+				class="accounts-table"
+			>
+				{#each data.liabilities as account}
+					<tr>
+						<td data-label="Nazwa" class="name-cell">{account.name}</td>
+						<td data-label="Kategoria">{categoryLabels[account.category] || account.category}</td>
+						<td data-label="Właściciel">{account.owner}</td>
+						<td data-label="Wartość" class="value-cell negative"
+							>{formatPLN(account.current_value)}</td
+						>
+						<td data-label="Akcje" class="actions-cell">
+							<button class="btn-icon tap-target" on:click={() => startEdit(account)}>✏️</button>
+							<button class="btn-icon tap-target" on:click={() => handleDelete(account.id)}
+								>🗑️</button
+							>
+						</td>
+					</tr>
+				{/each}
+			</Table>
 		{/if}
 	</CardContent>
 </Card>
@@ -417,7 +413,7 @@
 			<div class="error-message">{error}</div>
 		{/if}
 
-		<div class="form-row">
+		<div class="grid grid-cols-1 md:grid-cols-2">
 			<div class="form-group">
 				<label for="name">Nazwa</label>
 				<input
@@ -438,7 +434,7 @@
 			</div>
 		</div>
 
-		<div class="form-row">
+		<div class="grid grid-cols-1 md:grid-cols-2">
 			<div class="form-group">
 				<label for="category">Kategoria</label>
 				<select id="category" bind:value={formData.category} required>
@@ -472,7 +468,7 @@
 			</div>
 		</div>
 
-		<div class="form-row">
+		<div class="grid grid-cols-1 md:grid-cols-2">
 			<div class="form-group">
 				<label for="account_wrapper">Opakowanie rachunku (opcjonalne)</label>
 				<select id="account_wrapper" bind:value={formData.account_wrapper}>
@@ -595,7 +591,7 @@
 			<div class="transaction-form">
 				<h3>Dodaj transakcję</h3>
 				<form on:submit|preventDefault={addTransaction}>
-					<div class="form-row">
+					<div class="grid grid-cols-1 md:grid-cols-2">
 						<div class="form-group">
 							<label for="transaction-amount">Kwota (PLN)</label>
 							<input
@@ -770,12 +766,6 @@
 		gap: var(--size-5);
 	}
 
-	.form-row {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: var(--size-4);
-	}
-
 	.form-group {
 		display: flex;
 		flex-direction: column;
@@ -912,10 +902,6 @@
 		.page-header {
 			flex-direction: column;
 			gap: var(--size-4);
-		}
-
-		.form-row {
-			grid-template-columns: 1fr;
 		}
 
 		.transactions-header {

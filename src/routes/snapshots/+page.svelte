@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Card, CardHeader, CardTitle, CardContent, formatPLN } from '@mskalski/home-ui';
+	import { Card, CardHeader, CardTitle, CardContent, Table, formatPLN } from '@mskalski/home-ui';
 
 	export let data;
 </script>
@@ -30,32 +30,23 @@
 				</button>
 			</div>
 		{:else}
-			<div class="table-container">
-				<table class="snapshots-table">
-					<thead>
-						<tr>
-							<th>Data</th>
-							<th>Wartość Netto</th>
-							<th>Notatki</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each data.snapshots as snapshot}
-							<tr>
-								<td class="date-cell">
-									{new Date(snapshot.date).toLocaleDateString('pl-PL', {
-										year: 'numeric',
-										month: 'long',
-										day: 'numeric'
-									})}
-								</td>
-								<td class="value-cell">{formatPLN(snapshot.total_net_worth)}</td>
-								<td class="notes-cell">{snapshot.notes || '—'}</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
+			<Table headers={['Data', 'Wartość Netto', 'Notatki']} mobileCardView class="snapshots-table">
+				{#each data.snapshots as snapshot}
+					<tr>
+						<td data-label="Data" class="date-cell">
+							{new Date(snapshot.date).toLocaleDateString('pl-PL', {
+								year: 'numeric',
+								month: 'long',
+								day: 'numeric'
+							})}
+						</td>
+						<td data-label="Wartość Netto" class="value-cell"
+							>{formatPLN(snapshot.total_net_worth)}</td
+						>
+						<td data-label="Notatki" class="notes-cell">{snapshot.notes || '—'}</td>
+					</tr>
+				{/each}
+			</Table>
 		{/if}
 	</CardContent>
 </Card>

@@ -33,9 +33,27 @@
 
 	.main {
 		flex: 1;
-		padding: var(--size-6);
+		padding: var(--spacing-mobile);
 		max-width: 1200px;
 		margin: 0 auto;
 		width: 100%;
+	}
+
+	@media (min-width: 768px) {
+		.main {
+			padding: var(--spacing-tablet);
+		}
+	}
+
+	@media (min-width: 1024px) {
+		.main {
+			padding: var(--spacing-desktop);
+		}
+	}
+
+	@media (max-width: 767px) {
+		.main {
+			margin-top: 60px;
+		}
 	}
 </style>

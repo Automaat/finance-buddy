@@ -5,6 +5,7 @@
 		CardTitle,
 		CardContent,
 		Modal,
+		Table,
 		formatPLN,
 		formatDate
 	} from '@mskalski/home-ui';
@@ -330,63 +331,67 @@
 				<p>Brak zobowiązań</p>
 			</div>
 		{:else}
-			<div class="table-container">
-				<table class="data-table">
-					<thead>
-						<tr>
-							<th>Nazwa</th>
-							<th>Typ</th>
-							<th>Kwota początkowa</th>
-							<th>Pozostało do spłaty</th>
-							<th>Wpłacono łącznie</th>
-							<th>Odsetki</th>
-							<th>Oprocentowanie</th>
-							<th>Data rozpoczęcia</th>
-							<th>Właściciel</th>
-							<th>Akcje</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each data.debts as debt}
-							<tr>
-								<td>{debt.name}</td>
-								<td>{debtTypeLabels[debt.debt_type] || debt.debt_type}</td>
-								<td class="value-cell">{formatPLN(debt.initial_amount)}</td>
-								<td class="value-cell negative">
-									{#if debt.latest_balance !== null}
-										<div>{formatPLN(debt.latest_balance)}</div>
-										{#if debt.latest_balance_date}
-											<div class="amount-detail">na {formatDate(debt.latest_balance_date)}</div>
-										{/if}
-									{:else}
-										<span class="text-muted">brak danych</span>
-									{/if}
-								</td>
-								<td class="value-cell">{formatPLN(debt.total_paid)}</td>
-								<td class="value-cell negative">{formatPLN(debt.interest_paid)}</td>
-								<td>{debt.interest_rate}%</td>
-								<td>{formatDate(debt.start_date)}</td>
-								<td>{debt.account_owner}</td>
-								<td class="actions-cell">
-									<button
-										class="btn-icon"
-										title="Historia wpłat"
-										on:click={() => openPayments(debt)}
-									>
-										💰 ({paymentCounts[debt.account_id] || 0})
-									</button>
-									<button class="btn-icon" title="Edytuj" on:click={() => startEdit(debt)}>
-										✏️
-									</button>
-									<button class="btn-icon" title="Usuń" on:click={() => handleDelete(debt.id)}>
-										🗑️
-									</button>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
+			<Table
+				headers={[
+					'Nazwa',
+					'Typ',
+					'Kwota początkowa',
+					'Pozostało do spłaty',
+					'Wpłacono łącznie',
+					'Odsetki',
+					'Oprocentowanie',
+					'Data rozpoczęcia',
+					'Właściciel',
+					'Akcje'
+				]}
+				mobileCardView
+				class="data-table"
+			>
+				{#each data.debts as debt}
+					<tr>
+						<td data-label="Nazwa">{debt.name}</td>
+						<td data-label="Typ">{debtTypeLabels[debt.debt_type] || debt.debt_type}</td>
+						<td data-label="Kwota początkowa" class="value-cell"
+							>{formatPLN(debt.initial_amount)}</td
+						>
+						<td data-label="Pozostało do spłaty" class="value-cell negative">
+							{#if debt.latest_balance !== null}
+								<div>{formatPLN(debt.latest_balance)}</div>
+								{#if debt.latest_balance_date}
+									<div class="amount-detail">na {formatDate(debt.latest_balance_date)}</div>
+								{/if}
+							{:else}
+								<span class="text-muted">brak danych</span>
+							{/if}
+						</td>
+						<td data-label="Wpłacono łącznie" class="value-cell">{formatPLN(debt.total_paid)}</td>
+						<td data-label="Odsetki" class="value-cell negative">{formatPLN(debt.interest_paid)}</td
+						>
+						<td data-label="Oprocentowanie">{debt.interest_rate}%</td>
+						<td data-label="Data rozpoczęcia">{formatDate(debt.start_date)}</td>
+						<td data-label="Właściciel">{debt.account_owner}</td>
+						<td data-label="Akcje" class="actions-cell">
+							<button
+								class="btn-icon tap-target"
+								title="Historia wpłat"
+								on:click={() => openPayments(debt)}
+							>
+								💰 ({paymentCounts[debt.account_id] || 0})
+							</button>
+							<button class="btn-icon tap-target" title="Edytuj" on:click={() => startEdit(debt)}>
+								✏️
+							</button>
+							<button
+								class="btn-icon tap-target"
+								title="Usuń"
+								on:click={() => handleDelete(debt.id)}
+							>
+								🗑️
+							</button>
+						</td>
+					</tr>
+				{/each}
+			</Table>
 		{/if}
 	</CardContent>
 </Card>
@@ -411,7 +416,7 @@
 			<input id="name" type="text" bind:value={formData.name} required />
 		</div>
 
-		<div class="form-row">
+		<div class="grid grid-cols-1 md:grid-cols-2">
 			<div class="form-group">
 				<label for="debt_type">Typ zobowiązania</label>
 				<select id="debt_type" bind:value={formData.debt_type} required>
@@ -426,7 +431,7 @@
 			</div>
 		</div>
 
-		<div class="form-row">
+		<div class="grid grid-cols-1 md:grid-cols-2">
 			<div class="form-group">
 				<label for="initial_amount">Kwota początkowa (główna)</label>
 				<input
@@ -475,7 +480,7 @@
 		</CardHeader>
 		<CardContent>
 			<form on:submit|preventDefault={addPayment}>
-				<div class="form-row">
+				<div class="grid grid-cols-1 md:grid-cols-2">
 					<div class="form-group">
 						<label for="payment_amount">Kwota</label>
 						<input
@@ -521,42 +526,32 @@
 				<p>Liczba wpłat: {paymentsData.payment_count}</p>
 			</div>
 
-			<div class="table-container">
-				<table class="data-table">
-					<thead>
+			{#if paymentsData.payments.length === 0}
+				<div class="empty-state">Brak wpłat</div>
+			{:else}
+				<Table
+					headers={['Data wpłaty', 'Kwota', 'Kto wpłacił', 'Akcje']}
+					mobileCardView
+					class="data-table"
+				>
+					{#each paymentsData.payments as payment}
 						<tr>
-							<th>Data wpłaty</th>
-							<th>Kwota</th>
-							<th>Kto wpłacił</th>
-							<th>Akcje</th>
+							<td data-label="Data wpłaty">{formatDate(payment.date)}</td>
+							<td data-label="Kwota">{formatPLN(payment.amount)}</td>
+							<td data-label="Kto wpłacił">{payment.owner}</td>
+							<td data-label="Akcje" class="actions-cell">
+								<button
+									class="btn-icon tap-target"
+									title="Usuń wpłatę"
+									on:click={() => handleDeletePayment(payment.id)}
+								>
+									🗑️
+								</button>
+							</td>
 						</tr>
-					</thead>
-					<tbody>
-						{#if paymentsData.payments.length === 0}
-							<tr>
-								<td colspan="4" class="empty-state">Brak wpłat</td>
-							</tr>
-						{:else}
-							{#each paymentsData.payments as payment}
-								<tr>
-									<td>{formatDate(payment.date)}</td>
-									<td>{formatPLN(payment.amount)}</td>
-									<td>{payment.owner}</td>
-									<td class="actions-cell">
-										<button
-											class="btn-icon"
-											title="Usuń wpłatę"
-											on:click={() => handleDeletePayment(payment.id)}
-										>
-											🗑️
-										</button>
-									</td>
-								</tr>
-							{/each}
-						{/if}
-					</tbody>
-				</table>
-			</div>
+					{/each}
+				</Table>
+			{/if}
 		</CardContent>
 	</Card>
 {/if}
@@ -709,12 +704,6 @@
 		text-align: right;
 	}
 
-	.form-row {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: var(--size-4);
-	}
-
 	.form-group {
 		display: flex;
 		flex-direction: column;
@@ -811,10 +800,6 @@
 		.page-header {
 			flex-direction: column;
 			gap: var(--size-4);
-		}
-
-		.form-row {
-			grid-template-columns: 1fr;
 		}
 	}
 </style>
