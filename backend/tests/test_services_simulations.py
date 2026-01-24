@@ -846,6 +846,5 @@ def test_run_simulation_custom_inflation_rate(test_db_session: Session):
     )
     # Nominal income should be same
     assert (
-        result_5pct.summary.estimated_monthly_income
-        == result_3pct.summary.estimated_monthly_income
+        result_5pct.summary.estimated_monthly_income == result_3pct.summary.estimated_monthly_income
     )
