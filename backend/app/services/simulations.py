@@ -250,6 +250,7 @@ def simulate_brokerage_account(
     - No tax benefits
     - 19% capital gains tax applied to annual returns
     """
+    current_year = datetime.now(UTC).year
     years = retirement_age - current_age
     balance = starting_balance
     projections = []
@@ -259,23 +260,27 @@ def simulate_brokerage_account(
     for year_offset in range(years):
         year_age = current_age + year_offset + 1
 
-        # Add monthly contributions
+        # Calculate gross returns on existing balance
+        gross_returns = balance * (annual_return_rate / 100)
+
+        # Apply capital gains tax (19% Belka tax) only on positive returns
+        if gross_returns > 0:
+            net_returns = gross_returns * (1 - capital_gains_tax_rate / 100)
+        else:
+            # No tax on losses; reflect full negative return
+            net_returns = gross_returns
+
+        balance += net_returns
+        cumulative_returns += net_returns
+
+        # Add monthly contributions after applying returns
         annual_contribution = monthly_contribution * 12
         balance += annual_contribution
         cumulative_contributions += annual_contribution
 
-        # Calculate gross returns
-        gross_returns = balance * (annual_return_rate / 100)
-
-        # Apply capital gains tax (19% Belka tax)
-        net_returns = gross_returns * (1 - capital_gains_tax_rate / 100)
-        balance += net_returns
-
-        cumulative_returns += net_returns
-
         projections.append(
             YearlyProjection(
-                year=year_offset + 1,
+                year=current_year + year_offset + 1,
                 age=year_age,
                 annual_contribution=annual_contribution,
                 balance_end_of_year=balance,
