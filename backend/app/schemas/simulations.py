@@ -109,10 +109,19 @@ class SimulationInputs(BaseModel):
     annual_return_rate: float = 7.0
     limit_growth_rate: float = 5.0
     expected_salary_growth: float = 3.0
+    inflation_rate: float = 3.0
 
     # PPK configuration
     ppk_marcin: PPKSimulationConfig | None = None
     ppk_ewa: PPKSimulationConfig | None = None
+
+    # Brokerage accounts
+    simulate_brokerage_marcin: bool = False
+    simulate_brokerage_ewa: bool = False
+    brokerage_marcin_balance: float = 0
+    brokerage_ewa_balance: float = 0
+    brokerage_marcin_monthly: float = 0
+    brokerage_ewa_monthly: float = 0
 
     @field_validator("annual_return_rate")
     @classmethod
@@ -167,6 +176,25 @@ class SimulationInputs(BaseModel):
             raise ValueError("Limit growth rate must be between 0% and 20%")
         return v
 
+    @field_validator("inflation_rate")
+    @classmethod
+    def validate_inflation_rate(cls, v: float) -> float:
+        if v < 0 or v > 20:
+            raise ValueError("Inflation rate must be between 0% and 20%")
+        return v
+
+    @field_validator(
+        "brokerage_marcin_balance",
+        "brokerage_ewa_balance",
+        "brokerage_marcin_monthly",
+        "brokerage_ewa_monthly",
+    )
+    @classmethod
+    def validate_brokerage(cls, v: float) -> float:
+        if v < 0:
+            raise ValueError("Brokerage values cannot be negative")
+        return v
+
     @model_validator(mode="after")
     def validate_retirement_age(self):
         if self.retirement_age <= self.current_age:
@@ -185,6 +213,8 @@ class SimulationInputs(BaseModel):
             or self.simulate_ikze_ewa
             or ppk_marcin_enabled
             or ppk_ewa_enabled
+            or self.simulate_brokerage_marcin
+            or self.simulate_brokerage_ewa
         ):
             raise ValueError("At least one account must be selected for simulation")
         return self

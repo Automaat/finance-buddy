@@ -233,6 +233,71 @@ def get_ppk_return_for_age(age: int) -> float:
     return 4.0  # Defensive: 20% stocks
 
 
+def simulate_brokerage_account(
+    account_name: str,
+    starting_balance: float,
+    monthly_contribution: float,
+    current_age: int,
+    retirement_age: int,
+    annual_return_rate: float,
+    capital_gains_tax_rate: float = 19.0,
+) -> AccountSimulation:
+    """
+    Simulate taxable brokerage account with capital gains tax.
+
+    Unlike IKE/IKZE:
+    - No contribution limits
+    - No tax benefits
+    - 19% capital gains tax applied to annual returns
+    """
+    years = retirement_age - current_age
+    balance = starting_balance
+    projections = []
+    cumulative_contributions = 0.0
+    cumulative_returns = 0.0
+
+    for year_offset in range(years):
+        year_age = current_age + year_offset + 1
+
+        # Add monthly contributions
+        annual_contribution = monthly_contribution * 12
+        balance += annual_contribution
+        cumulative_contributions += annual_contribution
+
+        # Calculate gross returns
+        gross_returns = balance * (annual_return_rate / 100)
+
+        # Apply capital gains tax (19% Belka tax)
+        net_returns = gross_returns * (1 - capital_gains_tax_rate / 100)
+        balance += net_returns
+
+        cumulative_returns += net_returns
+
+        projections.append(
+            YearlyProjection(
+                year=year_offset + 1,
+                age=year_age,
+                annual_contribution=annual_contribution,
+                balance_end_of_year=balance,
+                cumulative_contributions=cumulative_contributions,
+                cumulative_returns=cumulative_returns,
+                annual_limit=0,  # No limits for brokerage
+                limit_utilized_pct=0,
+                tax_savings=0,  # No tax savings
+            )
+        )
+
+    return AccountSimulation(
+        account_name=account_name,
+        starting_balance=starting_balance,
+        total_contributions=cumulative_contributions,
+        total_returns=cumulative_returns,
+        total_tax_savings=0,
+        final_balance=balance,
+        yearly_projections=projections,
+    )
+
+
 def simulate_ppk_account(
     config: PPKSimulationConfig, current_age: int, retirement_age: int, salary_growth: float = 3.0
 ) -> AccountSimulation:
@@ -403,6 +468,29 @@ def run_simulation(db: Session, inputs: SimulationInputs) -> SimulationResponse:
         )
         simulations.append(ppk_sim)
 
+    # Add brokerage simulations
+    if inputs.simulate_brokerage_marcin:
+        brokerage_sim = simulate_brokerage_account(
+            "Rachunek maklerski (Marcin)",
+            inputs.brokerage_marcin_balance,
+            inputs.brokerage_marcin_monthly,
+            inputs.current_age,
+            inputs.retirement_age,
+            inputs.annual_return_rate,
+        )
+        simulations.append(brokerage_sim)
+
+    if inputs.simulate_brokerage_ewa:
+        brokerage_sim = simulate_brokerage_account(
+            "Rachunek maklerski (Ewa)",
+            inputs.brokerage_ewa_balance,
+            inputs.brokerage_ewa_monthly,
+            inputs.current_age,
+            inputs.retirement_age,
+            inputs.annual_return_rate,
+        )
+        simulations.append(brokerage_sim)
+
     # Calculate summary
     total_final = sum(s.final_balance for s in simulations)
     total_contrib = sum(s.total_contributions for s in simulations)
@@ -412,8 +500,8 @@ def run_simulation(db: Session, inputs: SimulationInputs) -> SimulationResponse:
     monthly_income = (total_final * SAFE_WITHDRAWAL_RATE) / 12
 
     # Adjust for inflation to show purchasing power in today's money
-    inflation_rate = 0.03  # 3% annual inflation assumption
-    monthly_income_today = monthly_income / ((1 + inflation_rate) ** years_to_retirement)
+    inflation_factor = (1 + inputs.inflation_rate / 100) ** years_to_retirement
+    monthly_income_today = monthly_income / inflation_factor
 
     summary = SimulationSummary(
         total_final_balance=total_final,

@@ -13,6 +13,7 @@ from app.services.simulations import (
     get_ppk_return_for_age,
     run_simulation,
     simulate_account,
+    simulate_brokerage_account,
     simulate_ppk_account,
 )
 from tests.factories import create_test_account, create_test_snapshot, create_test_snapshot_value
@@ -657,3 +658,194 @@ def test_run_simulation_with_ppk(test_db_session: Session):
     assert result.summary.total_subsidies > 0  # Should have PPK subsidies
     assert result.summary.total_final_balance > 0
     assert result.summary.estimated_monthly_income > 0
+
+
+def test_simulate_brokerage_account_basic():
+    """Test basic brokerage simulation with capital gains tax"""
+    result = simulate_brokerage_account(
+        account_name="Rachunek maklerski (Marcin)",
+        starting_balance=10000.0,
+        monthly_contribution=1000.0,
+        current_age=30,
+        retirement_age=35,
+        annual_return_rate=7.0,
+        capital_gains_tax_rate=19.0,
+    )
+
+    assert result.account_name == "Rachunek maklerski (Marcin)"
+    assert result.starting_balance == 10000.0
+    assert len(result.yearly_projections) == 5
+    assert result.final_balance > 10000.0
+    assert result.total_contributions == 1000.0 * 12 * 5
+    assert result.total_returns > 0
+    assert result.total_tax_savings == 0  # No tax savings for brokerage
+
+
+def test_simulate_brokerage_account_tax_calculation():
+    """Test capital gains tax is correctly applied"""
+    result = simulate_brokerage_account(
+        account_name="Rachunek maklerski (Marcin)",
+        starting_balance=10000.0,
+        monthly_contribution=0,
+        current_age=30,
+        retirement_age=31,
+        annual_return_rate=10.0,
+        capital_gains_tax_rate=19.0,
+    )
+
+    # Year 1: 10000 + (10000 * 12 * 0) = 10000
+    # Gross returns: 10000 * 0.10 = 1000
+    # Tax: 1000 * 0.19 = 190
+    # Net returns: 1000 * 0.81 = 810
+    # Final balance: 10000 + 810 = 10810
+    expected_balance = 10000 + (10000 * 0.10 * 0.81)
+    assert abs(result.final_balance - expected_balance) < 0.01
+    assert abs(result.total_returns - 810.0) < 0.01
+
+
+def test_simulate_brokerage_account_zero_values():
+    """Test brokerage simulation with zero balance and contributions"""
+    result = simulate_brokerage_account(
+        account_name="Rachunek maklerski (Ewa)",
+        starting_balance=0,
+        monthly_contribution=0,
+        current_age=30,
+        retirement_age=35,
+        annual_return_rate=7.0,
+    )
+
+    assert result.final_balance == 0
+    assert result.total_contributions == 0
+    assert result.total_returns == 0
+
+
+def test_simulate_brokerage_account_no_limits():
+    """Test brokerage has no contribution limits"""
+    result = simulate_brokerage_account(
+        account_name="Rachunek maklerski (Marcin)",
+        starting_balance=0,
+        monthly_contribution=10000.0,  # Large contribution
+        current_age=30,
+        retirement_age=32,
+        annual_return_rate=7.0,
+    )
+
+    # Should accept full contribution (10000 * 12 = 120000 per year)
+    assert result.yearly_projections[0].annual_contribution == 120000.0
+    assert result.yearly_projections[0].annual_limit == 0
+    assert result.yearly_projections[0].limit_utilized_pct == 0
+
+
+def test_run_simulation_with_brokerage(test_db_session: Session):
+    """Test full simulation including brokerage accounts"""
+    from decimal import Decimal
+
+    config = AppConfig(
+        id=1,
+        birth_date=date(1990, 1, 1),
+        retirement_age=65,
+        retirement_monthly_salary=Decimal("5000"),
+        allocation_real_estate=20,
+        allocation_stocks=50,
+        allocation_bonds=20,
+        allocation_gold=5,
+        allocation_commodities=5,
+    )
+    test_db_session.add(config)
+
+    limit = RetirementLimit(year=2026, account_wrapper="IKE", owner="Marcin", limit_amount=28260.0)
+    test_db_session.add(limit)
+    test_db_session.commit()
+
+    inputs = SimulationInputs(
+        current_age=30,
+        retirement_age=35,
+        simulate_ike_marcin=True,
+        simulate_ike_ewa=False,
+        simulate_ikze_marcin=False,
+        simulate_ikze_ewa=False,
+        ike_marcin_balance=10000.0,
+        ike_marcin_auto_fill=True,
+        simulate_brokerage_marcin=True,
+        simulate_brokerage_ewa=False,
+        brokerage_marcin_balance=5000.0,
+        brokerage_marcin_monthly=1000.0,
+        annual_return_rate=7.0,
+        limit_growth_rate=5.0,
+        inflation_rate=3.0,
+    )
+
+    result = run_simulation(test_db_session, inputs)
+
+    # Should have IKE Marcin + Brokerage Marcin
+    assert len(result.simulations) == 2
+    brokerage_sims = [s for s in result.simulations if "maklerski" in s.account_name]
+    assert len(brokerage_sims) == 1
+    assert brokerage_sims[0].account_name == "Rachunek maklerski (Marcin)"
+    assert result.summary.total_final_balance > 0
+    assert result.summary.estimated_monthly_income > 0
+
+
+def test_run_simulation_custom_inflation_rate(test_db_session: Session):
+    """Test inflation rate parameter affects monthly income calculation"""
+    from decimal import Decimal
+
+    config = AppConfig(
+        id=1,
+        birth_date=date(1990, 1, 1),
+        retirement_age=65,
+        retirement_monthly_salary=Decimal("5000"),
+        allocation_real_estate=20,
+        allocation_stocks=50,
+        allocation_bonds=20,
+        allocation_gold=5,
+        allocation_commodities=5,
+    )
+    test_db_session.add(config)
+
+    limit = RetirementLimit(year=2026, account_wrapper="IKE", owner="Marcin", limit_amount=28260.0)
+    test_db_session.add(limit)
+    test_db_session.commit()
+
+    # Run with 3% inflation
+    inputs_3pct = SimulationInputs(
+        current_age=30,
+        retirement_age=35,
+        simulate_ike_marcin=True,
+        simulate_ike_ewa=False,
+        simulate_ikze_marcin=False,
+        simulate_ikze_ewa=False,
+        ike_marcin_balance=10000.0,
+        ike_marcin_auto_fill=True,
+        annual_return_rate=7.0,
+        limit_growth_rate=5.0,
+        inflation_rate=3.0,
+    )
+    result_3pct = run_simulation(test_db_session, inputs_3pct)
+
+    # Run with 5% inflation
+    inputs_5pct = SimulationInputs(
+        current_age=30,
+        retirement_age=35,
+        simulate_ike_marcin=True,
+        simulate_ike_ewa=False,
+        simulate_ikze_marcin=False,
+        simulate_ikze_ewa=False,
+        ike_marcin_balance=10000.0,
+        ike_marcin_auto_fill=True,
+        annual_return_rate=7.0,
+        limit_growth_rate=5.0,
+        inflation_rate=5.0,
+    )
+    result_5pct = run_simulation(test_db_session, inputs_5pct)
+
+    # Higher inflation = lower purchasing power today
+    assert (
+        result_5pct.summary.estimated_monthly_income_today
+        < result_3pct.summary.estimated_monthly_income_today
+    )
+    # Nominal income should be same
+    assert (
+        result_5pct.summary.estimated_monthly_income
+        == result_3pct.summary.estimated_monthly_income
+    )

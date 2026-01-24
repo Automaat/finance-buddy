@@ -87,6 +87,7 @@
 	let annualReturnRate = 7.0;
 	let limitGrowthRate = 5.0;
 	let expectedSalaryGrowth = 3.0;
+	let inflationRate = 3.0;
 
 	// PPK configuration
 	let ppkMarcinEnabled = false;
@@ -104,6 +105,15 @@
 	let ppkEwaEmployerRate = 1.5;
 	let ppkEwaBelowThreshold = false;
 	let ppkEwaIncludeSubsidies = true;
+
+	// Brokerage configuration
+	let brokerageMarcinEnabled = false;
+	let brokerageMarcinBalance = 0;
+	let brokerageMarcinMonthly = 0;
+
+	let brokerageEwaEnabled = false;
+	let brokerageEwaBalance = 0;
+	let brokerageEwaMonthly = 0;
 
 	// Results
 	let results: SimulationResponse | null = null;
@@ -183,7 +193,14 @@
 				ewa_tax_rate: ewaTaxRate,
 				annual_return_rate: annualReturnRate,
 				limit_growth_rate: limitGrowthRate,
-				expected_salary_growth: expectedSalaryGrowth
+				expected_salary_growth: expectedSalaryGrowth,
+				inflation_rate: inflationRate,
+				simulate_brokerage_marcin: brokerageMarcinEnabled,
+				simulate_brokerage_ewa: brokerageEwaEnabled,
+				brokerage_marcin_balance: brokerageMarcinBalance,
+				brokerage_ewa_balance: brokerageEwaBalance,
+				brokerage_marcin_monthly: brokerageMarcinMonthly,
+				brokerage_ewa_monthly: brokerageEwaMonthly
 			};
 
 			// Add PPK configurations if enabled
@@ -558,6 +575,50 @@
 						</div>
 					{/if}
 				</div>
+
+				<div class="account-card">
+					<label class="checkbox-label">
+						<input type="checkbox" bind:checked={brokerageMarcinEnabled} />
+						Rachunek maklerski (Marcin)
+					</label>
+					{#if brokerageMarcinEnabled}
+						<label>
+							Obecna wartość (PLN)
+							<input type="number" bind:value={brokerageMarcinBalance} min="0" step="1000" />
+						</label>
+						<label>
+							Wpłata miesięczna (PLN)
+							<input type="number" bind:value={brokerageMarcinMonthly} min="0" step="100" />
+						</label>
+						<div class="card-note">
+							<small
+								>Rachunki maklerskie są opodatkowane 19% podatkiem Belki od zysków kapitałowych</small
+							>
+						</div>
+					{/if}
+				</div>
+
+				<div class="account-card">
+					<label class="checkbox-label">
+						<input type="checkbox" bind:checked={brokerageEwaEnabled} />
+						Rachunek maklerski (Ewa)
+					</label>
+					{#if brokerageEwaEnabled}
+						<label>
+							Obecna wartość (PLN)
+							<input type="number" bind:value={brokerageEwaBalance} min="0" step="1000" />
+						</label>
+						<label>
+							Wpłata miesięczna (PLN)
+							<input type="number" bind:value={brokerageEwaMonthly} min="0" step="100" />
+						</label>
+						<div class="card-note">
+							<small
+								>Rachunki maklerskie są opodatkowane 19% podatkiem Belki od zysków kapitałowych</small
+							>
+						</div>
+					{/if}
+				</div>
 			</div>
 
 			<h3>Założenia</h3>
@@ -574,6 +635,11 @@
 					Przewidywany wzrost wynagrodzeń (%)
 					<input type="number" bind:value={expectedSalaryGrowth} min="0" max="10" step="0.5" />
 					<small>Roczny wzrost płacy brutto (typowo 3-5%)</small>
+				</label>
+				<label>
+					Inflacja (%)
+					<input type="number" bind:value={inflationRate} min="0" max="20" step="0.1" />
+					<small>Roczna inflacja do przeliczenia dochodu na dzisiejsze pieniądze</small>
 				</label>
 			</div>
 
