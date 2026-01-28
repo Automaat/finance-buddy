@@ -603,6 +603,26 @@
 						: 'red'}
 			/>
 		{/if}
+
+		{#if metricCards.hour_of_work_cost !== null}
+			<MetricCard
+				label="Koszt godziny pracy"
+				value={metricCards.hour_of_work_cost}
+				decimals={2}
+				suffix=" PLN"
+				color="blue"
+			/>
+		{/if}
+
+		{#if metricCards.hour_of_life_cost !== null}
+			<MetricCard
+				label="Koszt godziny życia"
+				value={metricCards.hour_of_life_cost}
+				decimals={2}
+				suffix=" PLN"
+				color="green"
+			/>
+		{/if}
 	</div>
 
 	<!-- PPK Stats Section -->

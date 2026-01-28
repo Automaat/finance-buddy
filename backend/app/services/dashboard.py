@@ -22,6 +22,10 @@ from app.schemas.dashboard import (
     WrapperTimeSeries,
 )
 
+# Time constants for hourly cost calculations
+MONTHLY_WORK_HOURS = 160  # Standard monthly work hours
+MONTHLY_LIFE_HOURS = 730  # Total hours per month (24h × 365d / 12m)
+
 
 def _calculate_savings_rate(
     snapshots_df: pd.DataFrame, df: pd.DataFrame, db: Session
@@ -86,6 +90,16 @@ def _calculate_savings_rate(
     return (avg_delta / avg_salary) * 100
 
 
+def _get_latest_active_salary(db: Session) -> SalaryRecord | None:
+    """Get latest active salary record."""
+    return (
+        db.query(SalaryRecord)
+        .filter(SalaryRecord.is_active.is_(True))
+        .order_by(SalaryRecord.date.desc())
+        .first()
+    )
+
+
 def _calculate_debt_to_income(db: Session) -> float | None:
     """
     Calculate debt-to-income ratio.
@@ -97,17 +111,32 @@ def _calculate_debt_to_income(db: Session) -> float | None:
         return None
 
     # Get latest salary
-    latest_salary = (
-        db.query(SalaryRecord)
-        .filter(SalaryRecord.is_active.is_(True))
-        .order_by(SalaryRecord.date.desc())
-        .first()
-    )
+    latest_salary = _get_latest_active_salary(db)
 
     if not latest_salary or latest_salary.gross_amount == 0:
         return None
 
     return (float(config.monthly_mortgage_payment) / float(latest_salary.gross_amount)) * 100
+
+
+def _calculate_hour_of_work_cost(db: Session) -> float | None:
+    """Calculate cost of one work hour (gross_salary / 160h)"""
+    latest_salary = _get_latest_active_salary(db)
+
+    if not latest_salary or latest_salary.gross_amount == 0:
+        return None
+
+    return float(latest_salary.gross_amount) / MONTHLY_WORK_HOURS
+
+
+def _calculate_hour_of_life_cost(db: Session) -> float | None:
+    """Calculate cost of one life hour (gross_salary / 730h)"""
+    latest_salary = _get_latest_active_salary(db)
+
+    if not latest_salary or latest_salary.gross_amount == 0:
+        return None
+
+    return float(latest_salary.gross_amount) / MONTHLY_LIFE_HOURS
 
 
 def get_dashboard_data(db: Session) -> DashboardResponse:
@@ -378,6 +407,8 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
         # Calculate new metrics
         savings_rate = _calculate_savings_rate(snapshots_df, df, db)
         debt_to_income_ratio = _calculate_debt_to_income(db)
+        hour_of_work_cost = _calculate_hour_of_work_cost(db)
+        hour_of_life_cost = _calculate_hour_of_life_cost(db)
 
         metric_cards = MetricCards(
             property_sqm=property_sqm,
@@ -391,6 +422,8 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
             investment_returns=investment_returns,
             savings_rate=savings_rate,
             debt_to_income_ratio=debt_to_income_ratio,
+            hour_of_work_cost=hour_of_work_cost,
+            hour_of_life_cost=hour_of_life_cost,
         )
     else:
         metric_cards = MetricCards(
@@ -405,6 +438,8 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
             investment_returns=0,
             savings_rate=None,
             debt_to_income_ratio=None,
+            hour_of_work_cost=None,
+            hour_of_life_cost=None,
         )
 
     # Calculate allocation analysis

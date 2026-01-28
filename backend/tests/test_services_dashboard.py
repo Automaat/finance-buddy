@@ -7,6 +7,8 @@ from app.models.salary_record import SalaryRecord
 from app.models.snapshot import Snapshot, SnapshotValue
 from app.services.dashboard import (
     _calculate_debt_to_income,
+    _calculate_hour_of_life_cost,
+    _calculate_hour_of_work_cost,
     _calculate_savings_rate,
     get_dashboard_data,
 )
@@ -1685,5 +1687,95 @@ def test_calculate_debt_to_income_zero_salary(test_db_session):
     test_db_session.commit()
 
     result = _calculate_debt_to_income(test_db_session)
+
+    assert result is None
+
+
+def test_calculate_hour_of_work_cost_happy_path(test_db_session):
+    """Test hour of work cost calculation with valid data."""
+    salary = SalaryRecord(
+        date=date(2024, 1, 1),
+        gross_amount=Decimal("10000"),
+        contract_type="B2B",
+        company="Company A",
+        owner="John",
+        is_active=True,
+    )
+    test_db_session.add(salary)
+    test_db_session.commit()
+
+    result = _calculate_hour_of_work_cost(test_db_session)
+
+    # 10000 / 160 = 62.5
+    assert result is not None
+    assert round(result, 1) == 62.5
+
+
+def test_calculate_hour_of_work_cost_no_salary(test_db_session):
+    """Test hour of work cost when no salary records exist."""
+    result = _calculate_hour_of_work_cost(test_db_session)
+
+    assert result is None
+
+
+def test_calculate_hour_of_work_cost_zero_salary(test_db_session):
+    """Test hour of work cost when salary is zero."""
+    salary = SalaryRecord(
+        date=date(2024, 1, 1),
+        gross_amount=Decimal("0"),
+        contract_type="B2B",
+        company="Company A",
+        owner="John",
+        is_active=True,
+    )
+    test_db_session.add(salary)
+    test_db_session.commit()
+
+    result = _calculate_hour_of_work_cost(test_db_session)
+
+    assert result is None
+
+
+def test_calculate_hour_of_life_cost_happy_path(test_db_session):
+    """Test hour of life cost calculation with valid data."""
+    salary = SalaryRecord(
+        date=date(2024, 1, 1),
+        gross_amount=Decimal("10000"),
+        contract_type="B2B",
+        company="Company A",
+        owner="John",
+        is_active=True,
+    )
+    test_db_session.add(salary)
+    test_db_session.commit()
+
+    result = _calculate_hour_of_life_cost(test_db_session)
+
+    # 10000 / 730 = 13.698...
+    assert result is not None
+    assert round(result, 2) == 13.70
+
+
+def test_calculate_hour_of_life_cost_no_salary(test_db_session):
+    """Test hour of life cost when no salary records exist."""
+    result = _calculate_hour_of_life_cost(test_db_session)
+
+    assert result is None
+
+
+def test_calculate_hour_of_life_cost_zero_salary(test_db_session):
+    """Test hour of life cost when salary is zero."""
+    salary = SalaryRecord(
+        date=date(2024, 1, 1),
+        gross_amount=Decimal("0"),
+        contract_type="B2B",
+        company="Company A",
+        owner="John",
+        is_active=True,
+    )
+    test_db_session.add(salary)
+    test_db_session.commit()
+
+    result = _calculate_hour_of_life_cost(test_db_session)
 
     assert result is None
