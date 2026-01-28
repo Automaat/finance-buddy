@@ -26,6 +26,8 @@ class MetricCards(BaseModel):
     investment_returns: float
     savings_rate: float | None = None
     debt_to_income_ratio: float | None = None
+    hour_of_work_cost: float | None = None
+    hour_of_life_cost: float | None = None
 
 
 class AllocationBreakdown(BaseModel):
