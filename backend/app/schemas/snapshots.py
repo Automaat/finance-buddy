@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import datetime
 from datetime import date
 
 from pydantic import BaseModel, field_validator, model_validator
@@ -31,6 +34,23 @@ class SnapshotCreate(BaseModel):
     def validate_values_not_empty(cls, v: list[SnapshotValueInput]) -> list[SnapshotValueInput]:
         if len(v) == 0:
             raise ValueError("Snapshot must contain at least one account value")
+        return v
+
+
+class SnapshotUpdate(BaseModel):
+    """Update snapshot - all fields optional"""
+
+    date: datetime.date | None = None
+    notes: str | None = None
+    values: list[SnapshotValueInput] | None = None
+
+    @field_validator("values")
+    @classmethod
+    def validate_values_not_empty(
+        cls, v: list[SnapshotValueInput] | None
+    ) -> list[SnapshotValueInput] | None:
+        if v is not None and len(v) == 0:
+            raise ValueError("Snapshot must contain at least one value")
         return v
 
 
