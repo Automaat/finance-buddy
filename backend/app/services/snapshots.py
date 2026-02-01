@@ -206,11 +206,7 @@ def update_snapshot(db: Session, snapshot_id: int, data: SnapshotUpdate) -> Snap
 
         # Validate all assets exist
         if asset_ids:
-            assets = (
-                db.execute(select(Asset).where(Asset.id.in_(asset_ids)))
-                .scalars()
-                .all()
-            )
+            assets = db.execute(select(Asset).where(Asset.id.in_(asset_ids))).scalars().all()
             if len(assets) != len(asset_ids):
                 found_ids = {a.id for a in assets}
                 missing = set(asset_ids) - found_ids
@@ -221,11 +217,7 @@ def update_snapshot(db: Session, snapshot_id: int, data: SnapshotUpdate) -> Snap
         # Validate all accounts exist
         if account_ids:
             accounts = (
-                db.execute(
-                    select(Account).where(Account.id.in_(account_ids))
-                )
-                .scalars()
-                .all()
+                db.execute(select(Account).where(Account.id.in_(account_ids))).scalars().all()
             )
             if len(accounts) != len(account_ids):
                 found_ids = {a.id for a in accounts}
