@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import datetime
-from datetime import date
+from datetime import date as date_type
 
 from pydantic import BaseModel, field_validator, model_validator
 
@@ -25,7 +24,7 @@ class SnapshotValueInput(BaseModel):
 class SnapshotCreate(BaseModel):
     """Request to create new snapshot"""
 
-    date: date
+    date: date_type
     notes: str | None = None
     values: list[SnapshotValueInput]
 
@@ -40,7 +39,7 @@ class SnapshotCreate(BaseModel):
 class SnapshotUpdate(BaseModel):
     """Update snapshot - all fields optional"""
 
-    date: datetime.date | None = None
+    date: date_type | None = None
     notes: str | None = None
     values: list[SnapshotValueInput] | None = None
 
@@ -69,7 +68,7 @@ class SnapshotResponse(BaseModel):
     """Snapshot with all account values"""
 
     id: int
-    date: date
+    date: date_type
     notes: str | None
     values: list[SnapshotValueResponse]
 
@@ -78,6 +77,6 @@ class SnapshotListItem(BaseModel):
     """Snapshot summary for list view"""
 
     id: int
-    date: date
+    date: date_type
     notes: str | None
     total_net_worth: float

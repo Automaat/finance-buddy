@@ -204,10 +204,10 @@ def update_snapshot(db: Session, snapshot_id: int, data: SnapshotUpdate) -> Snap
         if len(account_ids) != len(set(account_ids)):
             raise HTTPException(status_code=400, detail="Duplicate account IDs in snapshot values")
 
-        # Validate all assets exist and are active
+        # Validate all assets exist
         if asset_ids:
             assets = (
-                db.execute(select(Asset).where(Asset.id.in_(asset_ids), Asset.is_active.is_(True)))
+                db.execute(select(Asset).where(Asset.id.in_(asset_ids)))
                 .scalars()
                 .all()
             )
@@ -218,11 +218,11 @@ def update_snapshot(db: Session, snapshot_id: int, data: SnapshotUpdate) -> Snap
         else:
             assets = []
 
-        # Validate all accounts exist and are active
+        # Validate all accounts exist
         if account_ids:
             accounts = (
                 db.execute(
-                    select(Account).where(Account.id.in_(account_ids), Account.is_active.is_(True))
+                    select(Account).where(Account.id.in_(account_ids))
                 )
                 .scalars()
                 .all()
@@ -259,7 +259,10 @@ def update_snapshot(db: Session, snapshot_id: int, data: SnapshotUpdate) -> Snap
         db.refresh(snapshot)
     except IntegrityError as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Failed to update snapshot") from e
+        detail = "Failed to update snapshot"
+        if hasattr(e, "orig") and e.orig:
+            detail = f"{detail}: {e.orig}"
+        raise HTTPException(status_code=400, detail=detail) from e
 
     # Build response - fetch fresh values if not replaced
     if data.values is None:

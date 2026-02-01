@@ -17,8 +17,8 @@
 
 	// Separate investments from regular assets
 	const investmentCategories = ['ike', 'ikze', 'ppk', 'bonds', 'stocks', 'fund', 'etf'];
-	let investments = assets.filter((a: any) => investmentCategories.includes(a.category));
-	let regularAssets = assets.filter((a: any) => !investmentCategories.includes(a.category));
+	$: investments = assets.filter((a: any) => investmentCategories.includes(a.category));
+	$: regularAssets = assets.filter((a: any) => !investmentCategories.includes(a.category));
 
 	// Track visible accounts and assets
 	let visibleAccountIds = new Set<number>();
@@ -44,15 +44,11 @@
 			editingSnapshot.values.forEach((v) => {
 				if (v.account_id !== null && v.account_id !== undefined) {
 					accountValues[v.account_id] = v.value;
-					if (v.value > 0) {
-						visibleAccountIds.add(v.account_id);
-					}
+					visibleAccountIds.add(v.account_id);
 				}
 				if (v.asset_id !== null && v.asset_id !== undefined) {
 					assetValues[v.asset_id] = v.value;
-					if (v.value > 0) {
-						visibleAssetIds.add(v.asset_id);
-					}
+					visibleAssetIds.add(v.asset_id);
 				}
 			});
 			visibleAccountIds = new Set(visibleAccountIds);
@@ -243,31 +239,59 @@
 
 		try {
 			const allAccounts = [...investments, ...regularAssets, ...liabilities];
-			const accountPayloads = allAccounts.map((account) => {
-				const isVisible = visibleAccountIds.has(account.id);
-				const value = isVisible ? accountValues[account.id] : 0;
-				const parsedValue = parseFloat(value.toString());
-				if (Number.isNaN(parsedValue)) {
-					throw new Error('Invalid value for account. Please enter a valid number.');
-				}
-				return {
-					account_id: account.id,
-					value: parsedValue
-				};
-			});
+			const accountPayloads = editingSnapshot
+				? allAccounts
+						.filter((account) => visibleAccountIds.has(account.id))
+						.map((account) => {
+							const value = accountValues[account.id];
+							const parsedValue = parseFloat(value.toString());
+							if (Number.isNaN(parsedValue)) {
+								throw new Error('Invalid value for account. Please enter a valid number.');
+							}
+							return {
+								account_id: account.id,
+								value: parsedValue
+							};
+						})
+				: allAccounts.map((account) => {
+						const isVisible = visibleAccountIds.has(account.id);
+						const value = isVisible ? accountValues[account.id] : 0;
+						const parsedValue = parseFloat(value.toString());
+						if (Number.isNaN(parsedValue)) {
+							throw new Error('Invalid value for account. Please enter a valid number.');
+						}
+						return {
+							account_id: account.id,
+							value: parsedValue
+						};
+					});
 
-			const assetPayloads = physicalAssets.map((asset: any) => {
-				const isVisible = visibleAssetIds.has(asset.id);
-				const value = isVisible ? assetValues[asset.id] : 0;
-				const parsedValue = parseFloat(value.toString());
-				if (Number.isNaN(parsedValue)) {
-					throw new Error('Invalid value for asset. Please enter a valid number.');
-				}
-				return {
-					asset_id: asset.id,
-					value: parsedValue
-				};
-			});
+			const assetPayloads = editingSnapshot
+				? physicalAssets
+						.filter((asset: any) => visibleAssetIds.has(asset.id))
+						.map((asset: any) => {
+							const value = assetValues[asset.id];
+							const parsedValue = parseFloat(value.toString());
+							if (Number.isNaN(parsedValue)) {
+								throw new Error('Invalid value for asset. Please enter a valid number.');
+							}
+							return {
+								asset_id: asset.id,
+								value: parsedValue
+							};
+						})
+				: physicalAssets.map((asset: any) => {
+						const isVisible = visibleAssetIds.has(asset.id);
+						const value = isVisible ? assetValues[asset.id] : 0;
+						const parsedValue = parseFloat(value.toString());
+						if (Number.isNaN(parsedValue)) {
+							throw new Error('Invalid value for asset. Please enter a valid number.');
+						}
+						return {
+							asset_id: asset.id,
+							value: parsedValue
+						};
+					});
 
 			const payload = {
 				date: snapshotDate,
@@ -583,13 +607,7 @@
 
 	<!-- New Account Modal -->
 	{#if showNewAccountForm}
-		<div
-			class="modal-overlay"
-			role="button"
-			tabindex="0"
-			on:click={() => (showNewAccountForm = false)}
-			on:keydown={(e) => e.key === 'Escape' && (showNewAccountForm = false)}
-		>
+		<div class="modal-overlay" on:click={() => (showNewAccountForm = false)}>
 			<div class="modal" role="dialog" on:click|stopPropagation>
 				<div class="modal-header">
 					<h2>Dodaj nowe konto</h2>
@@ -684,13 +702,7 @@
 
 	<!-- New Asset Modal -->
 	{#if showNewAssetForm}
-		<div
-			class="modal-overlay"
-			role="button"
-			tabindex="0"
-			on:click={() => (showNewAssetForm = false)}
-			on:keydown={(e) => e.key === 'Escape' && (showNewAssetForm = false)}
-		>
+		<div class="modal-overlay" on:click={() => (showNewAssetForm = false)}>
 			<div class="modal" role="dialog" on:click|stopPropagation>
 				<div class="modal-header">
 					<h2>Dodaj nowy majątek</h2>
