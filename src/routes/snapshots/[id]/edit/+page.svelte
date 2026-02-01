@@ -5,18 +5,18 @@
 </script>
 
 <svelte:head>
-	<title>Nowy Snapshot | Finansowa Forteca</title>
+	<title>Edytuj Snapshot | Finansowa Forteca</title>
 </svelte:head>
 
 <div class="page-header">
 	<div>
-		<h1 class="page-title">Nowy Snapshot</h1>
-		<p class="page-description">Zaktualizuj wartości wszystkich kont</p>
+		<h1 class="page-title">Edytuj Snapshot</h1>
+		<p class="page-description">Zaktualizuj wartości z dnia {data.snapshot.date}</p>
 	</div>
 </div>
 
 <SnapshotForm
-	editingSnapshot={null}
+	editingSnapshot={data.snapshot}
 	assets={data.assets}
 	liabilities={data.liabilities}
 	physicalAssets={data.physicalAssets}

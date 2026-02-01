@@ -30,7 +30,11 @@
 				</button>
 			</div>
 		{:else}
-			<Table headers={['Data', 'Wartość Netto', 'Notatki']} mobileCardView class="snapshots-table">
+			<Table
+				headers={['Data', 'Wartość Netto', 'Notatki', 'Akcje']}
+				mobileCardView
+				class="snapshots-table"
+			>
 				{#each data.snapshots as snapshot}
 					<tr>
 						<td data-label="Data" class="date-cell">
@@ -44,6 +48,15 @@
 							>{formatPLN(snapshot.total_net_worth)}</td
 						>
 						<td data-label="Notatki" class="notes-cell">{snapshot.notes || '—'}</td>
+						<td data-label="Akcje" class="actions-cell">
+							<button
+								class="btn-edit"
+								on:click={() => goto(`/snapshots/${snapshot.id}/edit`)}
+								title="Edytuj snapshot"
+							>
+								✏️ Edytuj
+							</button>
+						</td>
 					</tr>
 				{/each}
 			</Table>
@@ -162,10 +175,35 @@
 		font-style: italic;
 	}
 
+	.actions-cell {
+		text-align: right;
+	}
+
+	.btn-edit {
+		padding: var(--size-2) var(--size-3);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-2);
+		background: transparent;
+		color: var(--color-text);
+		font-size: var(--font-size-1);
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.btn-edit:hover {
+		background: var(--color-primary);
+		color: var(--nord6);
+		border-color: var(--color-primary);
+	}
+
 	@media (max-width: 768px) {
 		.page-header {
 			flex-direction: column;
 			gap: var(--size-4);
+		}
+
+		.actions-cell {
+			text-align: left;
 		}
 	}
 </style>
