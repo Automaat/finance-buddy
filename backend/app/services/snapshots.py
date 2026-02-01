@@ -207,9 +207,7 @@ def update_snapshot(db: Session, snapshot_id: int, data: SnapshotUpdate) -> Snap
         # Validate all assets exist and are active
         if asset_ids:
             assets = (
-                db.execute(
-                    select(Asset).where(Asset.id.in_(asset_ids), Asset.is_active.is_(True))
-                )
+                db.execute(select(Asset).where(Asset.id.in_(asset_ids), Asset.is_active.is_(True)))
                 .scalars()
                 .all()
             )
