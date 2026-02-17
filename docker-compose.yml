@@ -1,14 +1,28 @@
 services:
+  finance-backend:
+    image: ghcr.io/automaat/finance-buddy-backend:latest
+    container_name: finance-backend
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-postgresql://finance:password@postgres:5432/finance}
+      - APP_PASSWORD=${APP_PASSWORD:?APP_PASSWORD must be set}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+    restart: unless-stopped
+    depends_on:
+      - postgres
+
   finance-app:
-    build: .
+    image: ghcr.io/automaat/finance-buddy-frontend:latest
     container_name: finance-buddy
     ports:
       - '3000:3000'
     environment:
-      - DATABASE_URL=${DATABASE_URL:-postgresql://finance:password@postgres:5432/finance}
+      - PUBLIC_API_URL=http://finance-backend:8000
+      - PUBLIC_API_URL_BROWSER=${PUBLIC_API_URL_BROWSER:-http://localhost:8000}
       - ORIGIN=${ORIGIN:-http://localhost:3000}
       - APP_PASSWORD=${APP_PASSWORD:?APP_PASSWORD must be set}
     restart: unless-stopped
+    depends_on:
+      - finance-backend
 
   postgres:
     image: postgres:18-alpine
@@ -20,8 +34,6 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
     restart: unless-stopped
-    ports:
-      - '5432:5432'
 
 volumes:
   postgres-data:
