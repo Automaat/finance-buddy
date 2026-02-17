@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import TypedDict
 
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
@@ -395,13 +396,23 @@ def simulate_ppk_account(
     )
 
 
+class _AccountConfig(TypedDict):
+    enabled: bool
+    wrapper: str
+    owner: str
+    balance: float
+    auto_fill: bool
+    monthly: float
+    tax_rate: float
+
+
 def run_simulation(db: Session, inputs: SimulationInputs) -> SimulationResponse:
     """Orchestrate simulation for all selected accounts"""
     years_to_retirement = inputs.retirement_age - inputs.current_age
     simulations = []
 
     # Configuration-driven account simulation
-    account_configs = [
+    account_configs: list[_AccountConfig] = [
         {
             "enabled": inputs.simulate_ike_marcin,
             "wrapper": "IKE",
