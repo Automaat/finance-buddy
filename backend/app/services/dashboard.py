@@ -391,7 +391,14 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
                 (trans_with_accounts["category"].isin(investment_categories))
                 & (trans_with_accounts["date"] <= latest_snapshot["date"])
             ]
-            investment_contributions = float(investment_trans["amount"].sum())
+            investment_trans = investment_trans.copy()
+            investment_trans["signed_amount"] = investment_trans.apply(
+                lambda row: -row["amount"]
+                if row["transaction_type"] == "withdrawal"
+                else row["amount"],
+                axis=1,
+            )
+            investment_contributions = float(investment_trans["signed_amount"].sum())
 
             # Get current value of investment accounts
             investment_accounts_df = latest_df[
