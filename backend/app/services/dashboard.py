@@ -384,11 +384,11 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
                 accounts_df, left_on="account_id", right_on="id", how="left"
             )
 
-            # Filter for investment accounts (by category: stock, bond, fund, etf, gold, ppk)
+            # Filter for retirement investment accounts (purpose='retirement')
+            # to match retirement_total scope, excluding non-retirement investments
             # Only include transactions up to latest snapshot date
-            investment_categories = {"stock", "bond", "fund", "etf", "gold", "ppk"}
             investment_trans = trans_with_accounts[
-                (trans_with_accounts["category"].isin(investment_categories))
+                (trans_with_accounts["purpose"] == "retirement")
                 & (trans_with_accounts["date"] <= latest_snapshot["date"])
             ]
             investment_trans = investment_trans.copy()
@@ -400,13 +400,8 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
             )
             investment_contributions = float(investment_trans["signed_amount"].sum())
 
-            # Get current value of investment accounts
-            investment_accounts_df = latest_df[
-                (pd.notna(latest_df["account_id"]))
-                & (latest_df["type"] == "asset")
-                & (latest_df["category"].isin(investment_categories))
-            ]
-            investment_current_value = float(investment_accounts_df["value"].sum())
+            # Reuse already-calculated retirement account value for consistency
+            investment_current_value = retirement_account_value
             investment_returns = investment_current_value - investment_contributions
         else:
             investment_contributions = 0

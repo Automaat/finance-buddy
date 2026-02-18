@@ -463,8 +463,8 @@ def test_metric_cards_calculation(test_db_session):
     assert result.metric_cards.mortgage_months_left == 100  # 300000 / 3000
     assert result.metric_cards.mortgage_years_left == 100 / 12
     assert result.metric_cards.retirement_total == 100000.0
-    assert result.metric_cards.investment_contributions == 30000.0  # 10000 + 20000
-    assert result.metric_cards.investment_returns == 120000.0  # (50000 + 100000) - 30000
+    assert result.metric_cards.investment_contributions == 20000.0  # only retirement account
+    assert result.metric_cards.investment_returns == 80000.0  # 100000 (retirement value) - 20000
 
 
 def test_metric_cards_null_square_meters(test_db_session):
