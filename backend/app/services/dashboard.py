@@ -48,7 +48,7 @@ def _calculate_savings_rate(
         if pd.notna(row["asset_id"]) and pd.notna(row.get("name")):
             return row["value"]
         if pd.notna(row["account_id"]) and pd.notna(row.get("type")):
-            return row["value"] if row["type"] == "asset" else -row["value"]
+            return row["value"]
         return 0
 
     # Calculate net worth for each snapshot
@@ -217,7 +217,7 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
             return row["value"]
         if pd.notna(row["account_id"]) and pd.notna(row.get("type")):
             # From Account table - depends on type (only if account was in the join)
-            return row["value"] if row["type"] == "asset" else -row["value"]
+            return row["value"]
         return 0
 
     df["signed_value"] = df.apply(calculate_signed_value, axis=1)
@@ -335,7 +335,7 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
 
         # Calculate equity percentage and owned square meters
         if property_value > 0:
-            equity_percentage = (property_value - mortgage_remaining) / property_value
+            equity_percentage = (property_value + mortgage_remaining) / property_value
             property_sqm = total_property_sqm * max(0.0, equity_percentage)
         else:
             property_sqm = 0.0
@@ -360,7 +360,7 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
 
         # 5. Months to mortgage payoff - mortgage_remaining / monthly_mortgage_payment
         mortgage_months_left = int(
-            mortgage_remaining / float(app_config.monthly_mortgage_payment)
+            abs(mortgage_remaining) / float(app_config.monthly_mortgage_payment)
             if app_config.monthly_mortgage_payment > 0
             else 0
         )
@@ -570,6 +570,11 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
         transactions_with_accounts_df = transactions_df.merge(
             accounts_df, left_on="account_id", right_on="id", how="left"
         )
+        # Withdrawals reduce cumulative contributions — negate their amount
+        transactions_with_accounts_df["signed_amount"] = transactions_with_accounts_df.apply(
+            lambda row: -row["amount"] if row["transaction_type"] == "withdrawal" else row["amount"],
+            axis=1,
+        )
     else:
         transactions_with_accounts_df = pd.DataFrame()
 
@@ -601,7 +606,7 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
                     (transactions_with_accounts_df["category"].isin(investment_categories))
                     & (transactions_with_accounts_df["date"] <= snapshot_date)
                 ]
-                cumulative_contributions = float(investment_trans["amount"].sum())
+                cumulative_contributions = float(investment_trans["signed_amount"].sum())
 
             # Calculate returns
             returns = investment_value - cumulative_contributions
@@ -651,7 +656,7 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
                         & (transactions_with_accounts_df["account_wrapper"] == wrapper)
                         & (transactions_with_accounts_df["date"] <= snapshot_date)
                     ]
-                    cumulative_contributions = float(wrapper_trans["amount"].sum())
+                    cumulative_contributions = float(wrapper_trans["signed_amount"].sum())
 
                 returns = wrapper_value - cumulative_contributions
 
@@ -711,7 +716,7 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
                         (transactions_with_accounts_df["category"].isin(matching_categories))
                         & (transactions_with_accounts_df["date"] <= snapshot_date)
                     ]
-                    cumulative_contributions = float(category_trans["amount"].sum())
+                    cumulative_contributions = float(category_trans["signed_amount"].sum())
 
                 returns = category_value - cumulative_contributions
 

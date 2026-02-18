@@ -124,10 +124,7 @@ def get_all_snapshots(db: Session) -> list[SnapshotListItem]:
             if asset is not None:
                 net_worth += float(sv.value)
             elif account is not None:
-                if account.type == "asset":
-                    net_worth += float(sv.value)
-                else:  # liability
-                    net_worth -= float(sv.value)
+                net_worth += float(sv.value)
 
         result.append(
             SnapshotListItem(

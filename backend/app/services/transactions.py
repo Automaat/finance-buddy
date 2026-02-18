@@ -62,7 +62,9 @@ def get_account_transactions(db: Session, account_id: int) -> TransactionsListRe
         for t in transactions
     ]
 
-    total_invested = sum(t.amount for t in transaction_list)
+    total_invested = sum(
+        -t.amount if t.transaction_type == "withdrawal" else t.amount for t in transaction_list
+    )
 
     return TransactionsListResponse(
         transactions=transaction_list,
@@ -114,7 +116,9 @@ def get_all_transactions(
         for t, account_name in results
     ]
 
-    total_invested = sum(t.amount for t in transaction_list)
+    total_invested = sum(
+        -t.amount if t.transaction_type == "withdrawal" else t.amount for t in transaction_list
+    )
 
     return TransactionsListResponse(
         transactions=transaction_list,
@@ -140,21 +144,6 @@ def create_transaction(
                 f"Account '{account.name}' cannot have transactions. "
                 "Only investment or retirement accounts (IKE/IKZE/PPK) can track transactions."
             ),
-        )
-
-    # Check for duplicate transaction (account_id, date)
-    conflicting = db.execute(
-        select(Transaction).where(
-            Transaction.account_id == account_id,
-            Transaction.date == data.date,
-            Transaction.is_active.is_(True),
-        )
-    ).scalar_one_or_none()
-
-    if conflicting:
-        raise HTTPException(
-            status_code=409,
-            detail=f"Transaction for account '{account.name}' on {data.date} already exists",
         )
 
     # Create transaction

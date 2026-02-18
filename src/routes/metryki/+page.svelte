@@ -819,13 +819,13 @@
 
 	h1 {
 		margin-bottom: var(--size-6);
-		color: var(--text-1);
+		color: var(--color-text);
 	}
 
 	h2 {
 		margin-top: var(--size-8);
 		margin-bottom: var(--size-4);
-		color: var(--text-1);
+		color: var(--color-text);
 		font-size: var(--font-size-4);
 	}
 
@@ -956,7 +956,7 @@
 	.ppk-owner-title {
 		font-size: var(--font-size-3);
 		font-weight: var(--font-weight-6);
-		color: var(--text-1);
+		color: var(--color-text);
 		margin-top: var(--size-4);
 		margin-bottom: var(--size-3);
 	}
