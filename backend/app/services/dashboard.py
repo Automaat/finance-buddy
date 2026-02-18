@@ -572,7 +572,9 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
         )
         # Withdrawals reduce cumulative contributions — negate their amount
         transactions_with_accounts_df["signed_amount"] = transactions_with_accounts_df.apply(
-            lambda row: -row["amount"] if row["transaction_type"] == "withdrawal" else row["amount"],
+            lambda row: -row["amount"]
+            if row["transaction_type"] == "withdrawal"
+            else row["amount"],
             axis=1,
         )
     else:
