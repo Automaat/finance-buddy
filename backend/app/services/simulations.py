@@ -593,8 +593,8 @@ def simulate_mortgage_vs_invest(inputs: MortgageVsInvestInputs) -> MortgageVsInv
         # Collect yearly snapshot
         if month % 12 == 0:
             year = month // 12
-            # positive = B (invest) has more wealth, negative = A (overpay) winning
-            net_advantage = investment_b - investment_a
+            # Net worth comparison: (portfolio - mortgage) for each strategy
+            net_advantage = (investment_b - balance_b) - (investment_a - balance_a)
             yearly_projections.append(
                 MortgageVsInvestYearlyRow(
                     year=year,

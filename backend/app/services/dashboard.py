@@ -44,11 +44,12 @@ def _calculate_savings_rate(
     last_4_snapshots = snapshots_df.tail(4).copy()
 
     # Calculate signed value (same logic as main function)
+    # Liability values are stored as negative in DB, so raw value is already signed correctly
     def calculate_signed_value(row):
         if pd.notna(row["asset_id"]) and pd.notna(row.get("name")):
             return row["value"]
         if pd.notna(row["account_id"]) and pd.notna(row.get("type")):
-            return row["value"] if row["type"] == "asset" else -row["value"]
+            return row["value"]
         return 0
 
     # Calculate net worth for each snapshot
@@ -211,13 +212,14 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
     # Assets (from Asset table) contribute positively
     # Accounts depend on account.type (asset=+, liability=-)
     # Note: Inactive accounts/assets will have NaN in name/type after LEFT JOIN, exclude them
+    # Note: Liability values are stored as negative in DB, so we use raw value (no negation needed)
     def calculate_signed_value(row):
         if pd.notna(row["asset_id"]) and pd.notna(row.get("name")):
             # From Asset table - always positive (only if asset was in the join)
             return row["value"]
         if pd.notna(row["account_id"]) and pd.notna(row.get("type")):
-            # From Account table - assets positive, liabilities negative
-            return row["value"] if row["type"] == "asset" else -row["value"]
+            # From Account table - values already signed: assets positive, liabilities negative
+            return row["value"]
         return 0
 
     df["signed_value"] = df.apply(calculate_signed_value, axis=1)
@@ -334,9 +336,9 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
         mortgage_remaining = float(mortgage_df["value"].sum())
 
         # Calculate equity percentage and owned square meters
-        # mortgage_remaining is positive (liability value), subtract from property value
+        # mortgage_remaining is negative (liability stored as negative), add to property value
         if property_value > 0:
-            equity_percentage = (property_value - mortgage_remaining) / property_value
+            equity_percentage = (property_value + mortgage_remaining) / property_value
             property_sqm = total_property_sqm * max(0.0, equity_percentage)
         else:
             property_sqm = 0.0
@@ -391,7 +393,14 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
                 (trans_with_accounts["category"].isin(investment_categories))
                 & (trans_with_accounts["date"] <= latest_snapshot["date"])
             ]
-            investment_contributions = float(investment_trans["amount"].sum())
+            investment_trans = investment_trans.copy()
+            investment_trans["signed_amount"] = investment_trans.apply(
+                lambda row: -row["amount"]
+                if row["transaction_type"] == "withdrawal"
+                else row["amount"],
+                axis=1,
+            )
+            investment_contributions = float(investment_trans["signed_amount"].sum())
 
             # Get current value of investment accounts
             investment_accounts_df = latest_df[
