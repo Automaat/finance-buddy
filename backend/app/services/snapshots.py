@@ -120,13 +120,14 @@ def get_all_snapshots(db: Session) -> list[SnapshotListItem]:
 
         net_worth = 0.0
         for sv, asset, account in values:
-            # Assets contribute positively, account type determines sign
             if asset is not None:
+                # Asset table entries always contribute positively
                 net_worth += float(sv.value)
             elif account is not None:
+                # Account type determines sign: assets positive, liabilities negative
                 if account.type == "asset":
                     net_worth += float(sv.value)
-                else:  # liability
+                else:
                     net_worth -= float(sv.value)
 
         result.append(

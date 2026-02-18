@@ -134,19 +134,18 @@ def create_payment(db: Session, account_id: int, data: DebtPaymentCreate) -> Deb
             f"Only liability accounts can have debt payments.",
         )
 
-    # Check for duplicate payment (account_id, date)
-    conflicting = db.execute(
+    # Check for duplicate (same account_id + date)
+    existing = db.execute(
         select(DebtPayment).where(
             DebtPayment.account_id == account_id,
             DebtPayment.date == data.date,
             DebtPayment.is_active.is_(True),
         )
     ).scalar_one_or_none()
-
-    if conflicting:
+    if existing:
         raise HTTPException(
             status_code=409,
-            detail=f"Payment for account '{account.name}' on {data.date} already exists",
+            detail=f"Payment for account {account_id} on {data.date} already exists",
         )
 
     # Create payment

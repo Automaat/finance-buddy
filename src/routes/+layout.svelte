@@ -56,4 +56,14 @@
 			margin-top: 60px;
 		}
 	}
+
+	/* Force light mode regardless of OS preference */
+	:global(:root) {
+		--surface-1: hsl(210 20% 98%);
+		--surface-2: hsl(210 16% 93%);
+		--surface-3: hsl(210 14% 89%);
+		--surface-4: hsl(210 14% 85%);
+		--text-1: hsl(210 10% 23%);
+		--text-2: hsl(210 7% 40%);
+	}
 </style>
