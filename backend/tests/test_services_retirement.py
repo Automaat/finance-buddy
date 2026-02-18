@@ -509,6 +509,54 @@ class TestGetPPKStats:
         assert result[0].returns == -1000.0
         assert result[0].roi_percentage == -100.0
 
+    def test_get_ppk_stats_withdrawal_excluded_from_contributions(self, test_db_session):
+        """Test that withdrawal transactions are excluded from contribution totals"""
+        account = create_test_account(
+            test_db_session,
+            name="PPK Account",
+            category="stock",
+            account_wrapper="PPK",
+        )
+
+        # Create contribution transactions
+        create_test_transaction(
+            test_db_session,
+            account_id=account.id,
+            amount=1000.0,
+            transaction_date=date(2024, 1, 31),
+            transaction_type="employee",
+        )
+        create_test_transaction(
+            test_db_session,
+            account_id=account.id,
+            amount=1500.0,
+            transaction_date=date(2024, 2, 28),
+            transaction_type="employer",
+        )
+        # Withdrawal should NOT count toward contributions
+        create_test_transaction(
+            test_db_session,
+            account_id=account.id,
+            amount=500.0,
+            transaction_date=date(2024, 3, 31),
+            transaction_type="withdrawal",
+        )
+
+        # Snapshot reflects value after withdrawal
+        snapshot = create_test_snapshot(test_db_session, snapshot_date=date(2024, 12, 31))
+        create_test_snapshot_value(
+            test_db_session, snapshot_id=snapshot.id, account_id=account.id, value=2200.0
+        )
+
+        result = get_ppk_stats(test_db_session)
+
+        assert len(result) == 1
+        assert result[0].total_contributed == 2500.0  # 1000 + 1500, withdrawal excluded
+        assert result[0].employee_contributed == 1000.0
+        assert result[0].employer_contributed == 1500.0
+        assert result[0].total_value == 2200.0
+        assert result[0].returns == -300.0  # 2200 - 2500
+
     def test_get_ppk_stats_filters_by_owner(self, test_db_session):
         """Test filtering PPK stats by owner"""
         # Create PPK accounts for both owners

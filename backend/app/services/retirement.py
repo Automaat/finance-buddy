@@ -3,7 +3,7 @@ from datetime import date
 from decimal import Decimal
 
 from fastapi import HTTPException
-from sqlalchemy import case, extract, func
+from sqlalchemy import case, extract, func, or_
 from sqlalchemy.orm import Session
 
 from app.models import Account, AppConfig, RetirementLimit, Snapshot, SnapshotValue, Transaction
@@ -188,7 +188,23 @@ def get_ppk_stats(db: Session, owner: str | None = None) -> list[PPKStatsRespons
         # Aggregate all-time contributions by type
         contributions = (
             db.query(
-                func.coalesce(func.sum(Transaction.amount), 0).label("total"),
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (
+                                or_(
+                                    Transaction.transaction_type.in_(
+                                        ["employee", "employer", "government"]
+                                    ),
+                                    Transaction.transaction_type.is_(None),
+                                ),
+                                Transaction.amount,
+                            ),
+                            else_=0,
+                        )
+                    ),
+                    0,
+                ).label("total"),
                 func.coalesce(
                     func.sum(
                         case(

@@ -199,6 +199,7 @@
 	title="Potwierdzenie usunięcia"
 	onConfirm={confirmDelete}
 	onCancel={cancelDelete}
+	confirmText="Usuń"
 >
 	<p>Czy na pewno chcesz usunąć ten majątek?</p>
 	<p>Operacja ta ustawi majątek jako nieaktywny.</p>
