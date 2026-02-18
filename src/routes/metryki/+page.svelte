@@ -478,7 +478,7 @@
 					if (point.date > existing.last.date) existing.last = pt;
 				}
 			}
-			const years = [...byYear.keys()].sort();
+			const years = [...byYear.keys()].sort((a, b) => a - b);
 			const result = new Map<number, number>();
 			for (let i = 0; i < years.length; i++) {
 				const { first, last: end } = byYear.get(years[i])!;
@@ -520,7 +520,7 @@
 				textStyle: { color: '#2e3440' },
 				formatter: (params: Array<{ seriesName: string; value: number }>) =>
 					params
-						.map((p) => `${p.seriesName}: ${p.value !== undefined ? p.value + '%' : 'brak danych'}`)
+						.map((p) => `${p.seriesName}: ${p.value != null ? p.value + '%' : 'brak danych'}`)
 						.join('<br/>')
 			},
 			legend: {
@@ -547,7 +547,7 @@
 					itemStyle: { color: '#a3be8c' },
 					label: {
 						show: true,
-						position: 'top',
+						position: (params: { value: number }) => (params.value >= 0 ? 'top' : 'bottom'),
 						formatter: '{c}%',
 						color: '#2e3440',
 						fontSize: 11
@@ -567,7 +567,7 @@
 					itemStyle: { color: '#d08770' },
 					label: {
 						show: true,
-						position: 'top',
+						position: (params: { value: number }) => (params.value >= 0 ? 'top' : 'bottom'),
 						formatter: '{c}%',
 						color: '#2e3440',
 						fontSize: 11
@@ -581,7 +581,7 @@
 					itemStyle: { color: '#88c0d0' },
 					label: {
 						show: true,
-						position: 'top',
+						position: (params: { value: number }) => (params.value >= 0 ? 'top' : 'bottom'),
 						formatter: '{c}%',
 						color: '#2e3440',
 						fontSize: 11
