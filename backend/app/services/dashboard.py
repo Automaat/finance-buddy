@@ -48,7 +48,7 @@ def _calculate_savings_rate(
         if pd.notna(row["asset_id"]) and pd.notna(row.get("name")):
             return row["value"]
         if pd.notna(row["account_id"]) and pd.notna(row.get("type")):
-            return row["value"]
+            return row["value"] if row["type"] == "asset" else -row["value"]
         return 0
 
     # Calculate net worth for each snapshot
@@ -216,8 +216,8 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
             # From Asset table - always positive (only if asset was in the join)
             return row["value"]
         if pd.notna(row["account_id"]) and pd.notna(row.get("type")):
-            # From Account table - depends on type (only if account was in the join)
-            return row["value"]
+            # From Account table - assets positive, liabilities negative
+            return row["value"] if row["type"] == "asset" else -row["value"]
         return 0
 
     df["signed_value"] = df.apply(calculate_signed_value, axis=1)
@@ -334,8 +334,9 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
         mortgage_remaining = float(mortgage_df["value"].sum())
 
         # Calculate equity percentage and owned square meters
+        # mortgage_remaining is positive (liability value), subtract from property value
         if property_value > 0:
-            equity_percentage = (property_value + mortgage_remaining) / property_value
+            equity_percentage = (property_value - mortgage_remaining) / property_value
             property_sqm = total_property_sqm * max(0.0, equity_percentage)
         else:
             property_sqm = 0.0

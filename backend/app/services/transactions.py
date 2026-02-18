@@ -146,6 +146,20 @@ def create_transaction(
             ),
         )
 
+    # Check for duplicate (same account_id + date)
+    existing = db.execute(
+        select(Transaction).where(
+            Transaction.account_id == account_id,
+            Transaction.date == data.date,
+            Transaction.is_active.is_(True),
+        )
+    ).scalar_one_or_none()
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Transaction for account {account_id} on {data.date} already exists",
+        )
+
     # Create transaction
     transaction = Transaction(
         account_id=account_id,
