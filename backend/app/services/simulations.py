@@ -619,9 +619,11 @@ def simulate_mortgage_vs_invest(inputs: MortgageVsInvestInputs) -> MortgageVsInv
             cumulative_interest_b += interest_b
             # Recalculate minimum payment: balance paid off over remaining term at current rate
             if current_monthly_rate > 0 and remaining_months > 0:
-                min_payment_b = balance_b * (
-                    current_monthly_rate * (1 + current_monthly_rate) ** remaining_months
-                ) / ((1 + current_monthly_rate) ** remaining_months - 1)
+                min_payment_b = (
+                    balance_b
+                    * (current_monthly_rate * (1 + current_monthly_rate) ** remaining_months)
+                    / ((1 + current_monthly_rate) ** remaining_months - 1)
+                )
             else:
                 min_payment_b = balance_b  # zero-rate or last month: pay off balance
             principal_payment_b = min_payment_b - interest_b

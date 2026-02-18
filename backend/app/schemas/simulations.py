@@ -324,7 +324,6 @@ class MortgageVsInvestInputs(BaseModel):
         return v
 
 
-
 class MortgageVsInvestYearlyRow(BaseModel):
     year: int
     annual_rate: float  # effective mortgage rate at end of this year (percent)

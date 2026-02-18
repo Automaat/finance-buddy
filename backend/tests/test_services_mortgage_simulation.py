@@ -10,7 +10,7 @@ def _base_inputs(**overrides) -> MortgageVsInvestInputs:
         "remaining_principal": 300_000,
         "annual_interest_rate": 6.5,
         "remaining_months": 240,
-        "extra_monthly_amount": 1000,
+        "total_monthly_budget": 3_300,  # ~2237 regular payment + ~1000 extra
         "expected_annual_return": 8.0,
     }
     defaults.update(overrides)
@@ -19,13 +19,13 @@ def _base_inputs(**overrides) -> MortgageVsInvestInputs:
 
 def test_regular_payment_formula():
     """M = P * [r(1+r)^n] / [(1+r)^n - 1]"""
-    inputs = _base_inputs(extra_monthly_amount=0)
-    result = simulate_mortgage_vs_invest(inputs)
-
     r = 6.5 / 100 / 12
     n = 240
     p = 300_000
     expected = p * (r * (1 + r) ** n) / ((1 + r) ** n - 1)
+    # budget exactly equals regular payment: no extra
+    inputs = _base_inputs(total_monthly_budget=expected)
+    result = simulate_mortgage_vs_invest(inputs)
 
     assert abs(result.summary.regular_monthly_payment - expected) < 0.01
 
@@ -36,7 +36,7 @@ def test_scenario_a_pays_off_early_with_large_extra():
         remaining_principal=100_000,
         annual_interest_rate=5.0,
         remaining_months=120,
-        extra_monthly_amount=5000,
+        total_monthly_budget=6_100,  # ~1061 regular + 5000 extra
         expected_annual_return=4.0,
     )
     result = simulate_mortgage_vs_invest(inputs)
@@ -66,7 +66,11 @@ def test_low_return_overpay_wins():
 
 def test_zero_extra_no_difference():
     """With no extra amount both scenarios have same interest; no portfolio in B."""
-    inputs = _base_inputs(extra_monthly_amount=0)
+    r = 6.5 / 100 / 12
+    n = 240
+    p = 300_000
+    regular = p * (r * (1 + r) ** n) / ((1 + r) ** n - 1)
+    inputs = _base_inputs(total_monthly_budget=regular)  # no extra
     result = simulate_mortgage_vs_invest(inputs)
 
     assert result.summary.total_interest_a == result.summary.total_interest_b
@@ -77,7 +81,8 @@ def test_zero_extra_no_difference():
 
 def test_yearly_projections_count():
     """Yearly projections should have one row per year."""
-    inputs = _base_inputs(remaining_months=120)
+    # 300k/6.5%/120m regular payment ~3406, use 4000 budget
+    inputs = _base_inputs(remaining_months=120, total_monthly_budget=4_000)
     result = simulate_mortgage_vs_invest(inputs)
 
     assert len(result.yearly_projections) == 10
@@ -103,7 +108,7 @@ def test_invalid_principal():
             remaining_principal=-1000,
             annual_interest_rate=6.5,
             remaining_months=120,
-            extra_monthly_amount=500,
+            total_monthly_budget=2000,
             expected_annual_return=7.0,
         )
 
@@ -114,7 +119,7 @@ def test_invalid_interest_rate():
             remaining_principal=100_000,
             annual_interest_rate=0,
             remaining_months=120,
-            extra_monthly_amount=500,
+            total_monthly_budget=2000,
             expected_annual_return=7.0,
         )
 
@@ -133,6 +138,6 @@ def test_invalid_expected_return():
             remaining_principal=100_000,
             annual_interest_rate=6.5,
             remaining_months=120,
-            extra_monthly_amount=500,
+            total_monthly_budget=2000,
             expected_annual_return=-1.0,
         )
