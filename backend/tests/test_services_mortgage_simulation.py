@@ -1,17 +1,18 @@
 import pytest
+from pydantic import ValidationError
 
 from app.schemas.simulations import MortgageVsInvestInputs
 from app.services.simulations import simulate_mortgage_vs_invest
 
 
 def _base_inputs(**overrides) -> MortgageVsInvestInputs:
-    defaults = dict(
-        remaining_principal=300_000,
-        annual_interest_rate=6.5,
-        remaining_months=240,
-        extra_monthly_amount=1000,
-        expected_annual_return=8.0,
-    )
+    defaults = {
+        "remaining_principal": 300_000,
+        "annual_interest_rate": 6.5,
+        "remaining_months": 240,
+        "extra_monthly_amount": 1000,
+        "expected_annual_return": 8.0,
+    }
     defaults.update(overrides)
     return MortgageVsInvestInputs(**defaults)
 
@@ -97,7 +98,7 @@ def test_yearly_projections_balances_decrease():
 
 
 def test_invalid_principal():
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         MortgageVsInvestInputs(
             remaining_principal=-1000,
             annual_interest_rate=6.5,
@@ -108,7 +109,7 @@ def test_invalid_principal():
 
 
 def test_invalid_interest_rate():
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         MortgageVsInvestInputs(
             remaining_principal=100_000,
             annual_interest_rate=0,
