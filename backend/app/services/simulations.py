@@ -614,23 +614,16 @@ def simulate_mortgage_vs_invest(inputs: MortgageVsInvestInputs) -> MortgageVsInv
             investment_a = (investment_a + inputs.total_monthly_budget) * (1 + monthly_invest_rate)
 
         # Scenario B: recalculate minimum payment at current rate, invest the rest
-        if balance_b > 0:
-            interest_b = balance_b * current_monthly_rate
-            cumulative_interest_b += interest_b
-            # Recalculate minimum payment: balance paid off over remaining term at current rate
-            if current_monthly_rate > 0 and remaining_months > 0:
-                min_payment_b = (
-                    balance_b
-                    * (current_monthly_rate * (1 + current_monthly_rate) ** remaining_months)
-                    / ((1 + current_monthly_rate) ** remaining_months - 1)
-                )
-            else:
-                min_payment_b = balance_b  # zero-rate or last month: pay off balance
-            principal_payment_b = min_payment_b - interest_b
-            balance_b = max(0.0, balance_b - principal_payment_b)
-            extra_b = max(0.0, inputs.total_monthly_budget - min_payment_b)
-        else:
-            extra_b = inputs.total_monthly_budget
+        interest_b = balance_b * current_monthly_rate
+        cumulative_interest_b += interest_b
+        min_payment_b = (
+            balance_b
+            * (current_monthly_rate * (1 + current_monthly_rate) ** remaining_months)
+            / ((1 + current_monthly_rate) ** remaining_months - 1)
+        )
+        principal_payment_b = min_payment_b - interest_b
+        balance_b = max(0.0, balance_b - principal_payment_b)
+        extra_b = max(0.0, inputs.total_monthly_budget - min_payment_b)
 
         total_invested_b += extra_b
         investment_b = (investment_b + extra_b) * (1 + monthly_invest_rate)
