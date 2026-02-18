@@ -21,6 +21,7 @@
 	let ppkChart: HTMLDivElement;
 	let stockChart: HTMLDivElement;
 	let bondChart: HTMLDivElement;
+	let yearlyRoiChart: HTMLDivElement;
 
 	onMount(() => {
 		// Allocation by category chart (current vs target)
@@ -452,6 +453,143 @@
 			categoryTimeSeries.bond
 		);
 
+		// Yearly ROI chart
+		function computeYearlyROI(
+			series: Array<{
+				date: string;
+				value?: number;
+				total_value?: number;
+				contributions?: number;
+				cumulative_contributions?: number;
+			}>
+		): Map<number, number> {
+			type Pt = { date: string; value: number; contribs: number };
+			const byYear = new Map<number, { first: Pt; last: Pt }>();
+			for (const point of series) {
+				const year = new Date(point.date).getFullYear();
+				const val = point.value ?? point.total_value ?? 0;
+				const contrib = point.contributions ?? point.cumulative_contributions ?? 0;
+				const pt: Pt = { date: point.date, value: val, contribs: contrib };
+				const existing = byYear.get(year);
+				if (!existing) {
+					byYear.set(year, { first: pt, last: pt });
+				} else {
+					if (point.date < existing.first.date) existing.first = pt;
+					if (point.date > existing.last.date) existing.last = pt;
+				}
+			}
+			const years = [...byYear.keys()].sort();
+			const result = new Map<number, number>();
+			for (let i = 0; i < years.length; i++) {
+				const { first, last: end } = byYear.get(years[i])!;
+				let start: Pt;
+				if (i === 0) {
+					// Skip first year if it starts with value=0 (placeholder entry)
+					if (first.value === 0) continue;
+					start = first;
+				} else {
+					start = byYear.get(years[i - 1])!.last;
+				}
+				const yearContribs = end.contribs - start.contribs;
+				const denom = start.value + yearContribs / 2;
+				const roi = denom > 0 ? ((end.value - start.value - yearContribs) / denom) * 100 : 0;
+				result.set(years[i], parseFloat(roi.toFixed(2)));
+			}
+			return result;
+		}
+
+		const stockRoi = computeYearlyROI(categoryTimeSeries.stock);
+		const bondRoi = computeYearlyROI(categoryTimeSeries.bond);
+		const ppkRoi = computeYearlyROI(wrapperTimeSeries.ppk);
+		const allYears = [...new Set([...stockRoi.keys(), ...bondRoi.keys(), ...ppkRoi.keys()])].sort();
+
+		const yearlyRoiChartInstance = echarts.init(yearlyRoiChart);
+		yearlyRoiChartInstance.setOption({
+			backgroundColor: 'transparent',
+			title: {
+				text: 'Roczny ROI: Akcje, Obligacje, PPK',
+				left: 'center',
+				top: 10,
+				textStyle: { color: '#2e3440', fontSize: 16, fontWeight: 'bold' }
+			},
+			tooltip: {
+				trigger: 'axis',
+				axisPointer: { type: 'shadow' },
+				backgroundColor: 'rgba(255, 255, 255, 0.95)',
+				borderColor: '#d8dee9',
+				textStyle: { color: '#2e3440' },
+				formatter: (params: Array<{ seriesName: string; value: number }>) =>
+					params
+						.map((p) => `${p.seriesName}: ${p.value !== undefined ? p.value + '%' : 'brak danych'}`)
+						.join('<br/>')
+			},
+			legend: {
+				top: 40,
+				textStyle: { color: '#2e3440' }
+			},
+			grid: { top: 80, left: 60, right: 30, bottom: 60 },
+			xAxis: {
+				type: 'category',
+				data: allYears.map(String),
+				axisLabel: { color: '#4c566a' }
+			},
+			yAxis: {
+				type: 'value',
+				axisLabel: { formatter: '{value}%', color: '#4c566a' },
+				splitLine: { lineStyle: { color: '#e5e9f0' } }
+			},
+			series: [
+				{
+					name: 'Akcje',
+					type: 'bar',
+					barWidth: '25%',
+					data: allYears.map((y) => stockRoi.get(y) ?? null),
+					itemStyle: { color: '#a3be8c' },
+					label: {
+						show: true,
+						position: 'top',
+						formatter: '{c}%',
+						color: '#2e3440',
+						fontSize: 11
+					},
+					markLine: {
+						silent: true,
+						symbol: 'none',
+						data: [{ yAxis: 0 }],
+						lineStyle: { color: '#4c566a', type: 'solid', width: 1 }
+					}
+				},
+				{
+					name: 'Obligacje',
+					type: 'bar',
+					barWidth: '25%',
+					data: allYears.map((y) => bondRoi.get(y) ?? null),
+					itemStyle: { color: '#d08770' },
+					label: {
+						show: true,
+						position: 'top',
+						formatter: '{c}%',
+						color: '#2e3440',
+						fontSize: 11
+					}
+				},
+				{
+					name: 'PPK',
+					type: 'bar',
+					barWidth: '25%',
+					data: allYears.map((y) => ppkRoi.get(y) ?? null),
+					itemStyle: { color: '#88c0d0' },
+					label: {
+						show: true,
+						position: 'top',
+						formatter: '{c}%',
+						color: '#2e3440',
+						fontSize: 11
+					}
+				}
+			]
+		});
+
 		return () => {
 			allocationChartInstance.dispose();
 			wrapperChartInstance.dispose();
@@ -461,6 +599,7 @@
 			ppkChartInstance.dispose();
 			stockChartInstance.dispose();
 			bondChartInstance.dispose();
+			yearlyRoiChartInstance.dispose();
 		};
 	});
 </script>
@@ -807,6 +946,12 @@
 		<div class="chart-container">
 			<div bind:this={bondChart} class="chart"></div>
 		</div>
+	</div>
+
+	<h2>Roczny ROI według klasy aktywów</h2>
+
+	<div class="chart-container-wide">
+		<div bind:this={yearlyRoiChart} class="chart-wide"></div>
 	</div>
 </div>
 
