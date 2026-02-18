@@ -117,3 +117,22 @@ def test_invalid_interest_rate():
             extra_monthly_amount=500,
             expected_annual_return=7.0,
         )
+
+
+def test_zero_expected_return_is_valid():
+    """0% expected return is valid (money kept without growth)."""
+    inputs = _base_inputs(expected_annual_return=0)
+    result = simulate_mortgage_vs_invest(inputs)
+
+    assert result.summary.winning_strategy == "nadpłata"
+
+
+def test_invalid_expected_return():
+    with pytest.raises(ValidationError):
+        MortgageVsInvestInputs(
+            remaining_principal=100_000,
+            annual_interest_rate=6.5,
+            remaining_months=120,
+            extra_monthly_amount=500,
+            expected_annual_return=-1.0,
+        )

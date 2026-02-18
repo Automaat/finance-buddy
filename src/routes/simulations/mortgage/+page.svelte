@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { browser } from '$app/environment';
 	import { env } from '$env/dynamic/public';
 	import * as echarts from 'echarts';
@@ -52,6 +52,11 @@
 	async function runSimulation() {
 		loading = true;
 		error = '';
+
+		if (chart) {
+			chart.dispose();
+			chart = null;
+		}
 		results = null;
 
 		try {
@@ -76,6 +81,7 @@
 			}
 
 			results = await response.json();
+			await tick();
 			renderChart();
 		} catch (err) {
 			console.error('Simulation failed:', err);

@@ -566,10 +566,17 @@ def simulate_mortgage_vs_invest(inputs: MortgageVsInvestInputs) -> MortgageVsInv
         if balance_a > 0:
             interest_a = balance_a * monthly_rate
             cumulative_interest_a += interest_a
-            principal_payment_a = regular_payment - interest_a + extra
-            balance_a = max(0.0, balance_a - principal_payment_a)
+            # Cap payment to actual amount needed to clear balance+interest
+            amount_to_clear = balance_a + interest_a
+            total_payment_a = regular_payment + extra
+            actual_payment_a = min(total_payment_a, amount_to_clear)
+            surplus_a = total_payment_a - actual_payment_a
+            balance_a = max(0.0, balance_a - (actual_payment_a - interest_a))
             if balance_a == 0 and payoff_month_a == n:
                 payoff_month_a = month
+            # Invest any surplus from the payoff month
+            if surplus_a > 0:
+                investment_a = (investment_a + surplus_a) * (1 + monthly_invest_rate)
         else:
             # Mortgage paid off: invest the full freed monthly amount
             investment_a = (investment_a + regular_payment + extra) * (1 + monthly_invest_rate)
