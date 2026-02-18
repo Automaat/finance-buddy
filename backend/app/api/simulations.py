@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.app_config import AppConfig
 from app.schemas.simulations import (
+    MortgageVsInvestInputs,
+    MortgageVsInvestResponse,
     PrefillBalances,
     PrefillResponse,
     SimulationInputs,
@@ -15,6 +17,12 @@ from app.schemas.simulations import (
 from app.services import simulations as sim_service
 
 router = APIRouter(prefix="/api/simulations", tags=["simulations"])
+
+
+@router.post("/mortgage-vs-invest", response_model=MortgageVsInvestResponse)
+def simulate_mortgage_vs_invest(inputs: MortgageVsInvestInputs) -> MortgageVsInvestResponse:
+    """Compare overpaying mortgage vs investing extra amount"""
+    return sim_service.simulate_mortgage_vs_invest(inputs)
 
 
 @router.post("/retirement", response_model=SimulationResponse)

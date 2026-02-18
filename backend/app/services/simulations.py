@@ -10,6 +10,10 @@ from app.models.retirement_limit import RetirementLimit
 from app.models.snapshot import Snapshot, SnapshotValue
 from app.schemas.simulations import (
     AccountSimulation,
+    MortgageVsInvestInputs,
+    MortgageVsInvestResponse,
+    MortgageVsInvestSummary,
+    MortgageVsInvestYearlyRow,
     PPKSimulationConfig,
     SimulationInputs,
     SimulationResponse,
@@ -531,3 +535,97 @@ def run_simulation(db: Session, inputs: SimulationInputs) -> SimulationResponse:
     )
 
     return SimulationResponse(inputs=inputs, simulations=simulations, summary=summary)
+
+
+def simulate_mortgage_vs_invest(inputs: MortgageVsInvestInputs) -> MortgageVsInvestResponse:
+    """Compare overpaying mortgage vs investing the extra amount month by month."""
+    monthly_rate = inputs.annual_interest_rate / 100 / 12
+    monthly_invest_rate = inputs.expected_annual_return / 100 / 12
+    n = inputs.remaining_months
+    p = inputs.remaining_principal
+    extra = inputs.extra_monthly_amount
+
+    # Regular payment formula: M = P * [r(1+r)^n] / [(1+r)^n - 1]
+    regular_payment = p * (monthly_rate * (1 + monthly_rate) ** n) / ((1 + monthly_rate) ** n - 1)
+
+    # Scenario A: overpay mortgage, then invest freed cash after payoff
+    balance_a = p
+    cumulative_interest_a = 0.0
+    investment_a = 0.0
+    payoff_month_a = n  # default: pays off at term end
+
+    # Scenario B: invest the extra each month
+    balance_b = p
+    investment_b = 0.0
+    cumulative_interest_b = 0.0
+
+    yearly_projections: list[MortgageVsInvestYearlyRow] = []
+
+    for month in range(1, n + 1):
+        # Scenario A: overpay while mortgage exists, then invest regular_payment+extra
+        if balance_a > 0:
+            interest_a = balance_a * monthly_rate
+            cumulative_interest_a += interest_a
+            principal_payment_a = regular_payment - interest_a + extra
+            balance_a = max(0.0, balance_a - principal_payment_a)
+            if balance_a == 0 and payoff_month_a == n:
+                payoff_month_a = month
+        else:
+            # Mortgage paid off: invest the full freed monthly amount
+            investment_a = (investment_a + regular_payment + extra) * (1 + monthly_invest_rate)
+
+        # Scenario B: regular payment + invest extra
+        if balance_b > 0:
+            interest_b = balance_b * monthly_rate
+            cumulative_interest_b += interest_b
+            principal_payment_b = regular_payment - interest_b
+            balance_b = max(0.0, balance_b - principal_payment_b)
+
+        investment_b = (investment_b + extra) * (1 + monthly_invest_rate)
+
+        # Collect yearly snapshot
+        if month % 12 == 0:
+            year = month // 12
+            # positive = B (invest) has more wealth, negative = A (overpay) winning
+            net_advantage = investment_b - investment_a
+            yearly_projections.append(
+                MortgageVsInvestYearlyRow(
+                    year=year,
+                    scenario_a_mortgage_balance=round(balance_a, 2),
+                    scenario_a_cumulative_interest=round(cumulative_interest_a, 2),
+                    scenario_a_investment_balance=round(investment_a, 2),
+                    scenario_a_paid_off=balance_a == 0,
+                    scenario_b_mortgage_balance=round(balance_b, 2),
+                    scenario_b_investment_balance=round(investment_b, 2),
+                    scenario_b_cumulative_interest=round(cumulative_interest_b, 2),
+                    net_advantage_invest=round(net_advantage, 2),
+                )
+            )
+
+    interest_saved = cumulative_interest_b - cumulative_interest_a
+    months_saved = n - payoff_month_a
+    net_advantage_final = investment_b - investment_a
+
+    if net_advantage_final >= 0:
+        winning_strategy = "inwestycja"
+        net_advantage = net_advantage_final
+    else:
+        winning_strategy = "nadpłata"
+        net_advantage = investment_a - investment_b
+
+    summary = MortgageVsInvestSummary(
+        regular_monthly_payment=round(regular_payment, 2),
+        total_interest_a=round(cumulative_interest_a, 2),
+        total_interest_b=round(cumulative_interest_b, 2),
+        interest_saved=round(interest_saved, 2),
+        final_investment_portfolio=round(investment_b, 2),
+        months_saved=months_saved,
+        winning_strategy=winning_strategy,
+        net_advantage=round(net_advantage, 2),
+    )
+
+    return MortgageVsInvestResponse(
+        inputs=inputs,
+        yearly_projections=yearly_projections,
+        summary=summary,
+    )

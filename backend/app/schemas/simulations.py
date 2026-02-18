@@ -269,3 +269,75 @@ class SimulationResponse(BaseModel):
     inputs: SimulationInputs
     simulations: list[AccountSimulation]
     summary: SimulationSummary
+
+
+class MortgageVsInvestInputs(BaseModel):
+    remaining_principal: float
+    annual_interest_rate: float  # percent
+    remaining_months: int
+    extra_monthly_amount: float
+    expected_annual_return: float  # percent
+
+    @field_validator("remaining_principal")
+    @classmethod
+    def validate_principal(cls, v: float) -> float:
+        if v <= 0:
+            raise ValueError("Remaining principal must be positive")
+        return v
+
+    @field_validator("annual_interest_rate")
+    @classmethod
+    def validate_interest_rate(cls, v: float) -> float:
+        if not (0 < v <= 30):
+            raise ValueError("Annual interest rate must be between 0 and 30%")
+        return v
+
+    @field_validator("remaining_months")
+    @classmethod
+    def validate_months(cls, v: int) -> int:
+        if not (1 <= v <= 600):
+            raise ValueError("Remaining months must be between 1 and 600")
+        return v
+
+    @field_validator("extra_monthly_amount")
+    @classmethod
+    def validate_extra_amount(cls, v: float) -> float:
+        if v < 0:
+            raise ValueError("Extra monthly amount cannot be negative")
+        return v
+
+    @field_validator("expected_annual_return")
+    @classmethod
+    def validate_return(cls, v: float) -> float:
+        if not (0 < v <= 50):
+            raise ValueError("Expected annual return must be between 0 and 50%")
+        return v
+
+
+class MortgageVsInvestYearlyRow(BaseModel):
+    year: int
+    scenario_a_mortgage_balance: float
+    scenario_a_cumulative_interest: float
+    scenario_a_investment_balance: float  # grows after payoff
+    scenario_a_paid_off: bool
+    scenario_b_mortgage_balance: float
+    scenario_b_investment_balance: float
+    scenario_b_cumulative_interest: float
+    net_advantage_invest: float  # positive = invest winning
+
+
+class MortgageVsInvestSummary(BaseModel):
+    regular_monthly_payment: float
+    total_interest_a: float
+    total_interest_b: float
+    interest_saved: float
+    final_investment_portfolio: float
+    months_saved: int
+    winning_strategy: str  # "nadpłata" or "inwestycja"
+    net_advantage: float  # PLN advantage of winner
+
+
+class MortgageVsInvestResponse(BaseModel):
+    inputs: MortgageVsInvestInputs
+    yearly_projections: list[MortgageVsInvestYearlyRow]
+    summary: MortgageVsInvestSummary
