@@ -228,7 +228,10 @@
 				<label>
 					Miesięczny budżet (PLN)
 					<input type="number" bind:value={totalMonthlyBudget} min="0" step="100" />
-					<small>Łączna kwota na ratę i inwestycje (A: wszystko na nadpłatę, B: reszta po racie inwestowana)</small>
+					<small
+						>Łączna kwota na ratę i inwestycje (A: wszystko na nadpłatę, B: reszta po racie
+						inwestowana)</small
+					>
 				</label>
 				<label>
 					Oczekiwany zwrot z inwestycji (% rocznie)
@@ -310,11 +313,15 @@
 					</div>
 					<div class="summary-card real">
 						<div class="card-label">Portfel A realny (dziś PLN)</div>
-						<div class="card-value">{formatCurrency(results.summary.final_portfolio_a_real)} PLN</div>
+						<div class="card-value">
+							{formatCurrency(results.summary.final_portfolio_a_real)} PLN
+						</div>
 					</div>
 					<div class="summary-card real">
 						<div class="card-label">Portfel B realny (dziś PLN)</div>
-						<div class="card-value">{formatCurrency(results.summary.final_portfolio_b_real)} PLN</div>
+						<div class="card-value">
+							{formatCurrency(results.summary.final_portfolio_b_real)} PLN
+						</div>
 					</div>
 				</div>
 
