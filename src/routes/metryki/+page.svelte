@@ -501,7 +501,9 @@
 		const stockRoi = computeYearlyROI(categoryTimeSeries.stock);
 		const bondRoi = computeYearlyROI(categoryTimeSeries.bond);
 		const ppkRoi = computeYearlyROI(wrapperTimeSeries.ppk);
-		const allYears = [...new Set([...stockRoi.keys(), ...bondRoi.keys(), ...ppkRoi.keys()])].sort((a, b) => a - b);
+		const allYears = [...new Set([...stockRoi.keys(), ...bondRoi.keys(), ...ppkRoi.keys()])].sort(
+			(a, b) => a - b
+		);
 
 		const yearlyRoiChartInstance = echarts.init(yearlyRoiChart);
 		yearlyRoiChartInstance.setOption({
