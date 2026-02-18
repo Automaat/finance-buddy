@@ -1,6 +1,8 @@
+import math
 from datetime import UTC, datetime
 from typing import TypedDict
 
+from fastapi import HTTPException
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
@@ -543,67 +545,127 @@ def simulate_mortgage_vs_invest(inputs: MortgageVsInvestInputs) -> MortgageVsInv
     monthly_invest_rate = inputs.expected_annual_return / 100 / 12
     n = inputs.remaining_months
     p = inputs.remaining_principal
-    extra = inputs.extra_monthly_amount
+    belka_rate = 0.19
 
-    # Regular payment formula: M = P * [r(1+r)^n] / [(1+r)^n - 1]
+    # Initial payment at starting rate (used for budget validation and summary)
     regular_payment = p * (monthly_rate * (1 + monthly_rate) ** n) / ((1 + monthly_rate) ** n - 1)
+
+    if inputs.total_monthly_budget < regular_payment:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Total monthly budget ({inputs.total_monthly_budget:.2f} PLN) is less than "
+                f"the required mortgage payment ({regular_payment:.2f} PLN)"
+            ),
+        )
 
     # Scenario A: overpay mortgage, then invest freed cash after payoff
     balance_a = p
     cumulative_interest_a = 0.0
     investment_a = 0.0
+    total_invested_a = 0.0  # track contributions (not returns) for Belka tax
     payoff_month_a = n  # default: pays off at term end
 
-    # Scenario B: invest the extra each month
+    # Scenario B: pay minimum each month, invest the rest
     balance_b = p
     investment_b = 0.0
+    total_invested_b = 0.0  # track contributions (not returns) for Belka tax
     cumulative_interest_b = 0.0
 
     yearly_projections: list[MortgageVsInvestYearlyRow] = []
+    current_annual_rate = inputs.annual_interest_rate  # updated each month if variable
 
     for month in range(1, n + 1):
-        # Scenario A: overpay while mortgage exists, then invest regular_payment+extra
+        remaining_months = n - month + 1
+
+        # Compute current mortgage rate
+        if inputs.enable_variable_rate:
+            # Pure cyclical model calibrated to Polish rate history (1% COVID low, 8% 2022 peak).
+            # long_term_mean=4.5%, amplitude=3.5% → range 1%–8%, period=10yr.
+            # Phase is derived from the starting rate so the trajectory always begins
+            # going DOWN (reflecting current NBP rate-cutting cycle).
+            long_term_mean = 4.5
+            cycle_amplitude = 3.5
+            cycle_period = 10.0
+            sin_val = (inputs.annual_interest_rate - long_term_mean) / cycle_amplitude
+            sin_val = max(-1.0, min(1.0, sin_val))
+            # Second-quadrant phase → cosine negative → cycle decreasing at year 0
+            phase = math.pi - math.asin(sin_val)
+            year = (month - 1) / 12
+            angle = 2 * math.pi * year / cycle_period + phase
+            current_annual_rate = max(1.0, long_term_mean + cycle_amplitude * math.sin(angle))
+        current_monthly_rate = current_annual_rate / 100 / 12
+
+        # Scenario A: pay full budget towards mortgage, invest after payoff
         if balance_a > 0:
-            interest_a = balance_a * monthly_rate
+            interest_a = balance_a * current_monthly_rate
             cumulative_interest_a += interest_a
-            # Cap payment to actual amount needed to clear balance+interest
             amount_to_clear = balance_a + interest_a
-            total_payment_a = regular_payment + extra
-            actual_payment_a = min(total_payment_a, amount_to_clear)
-            surplus_a = total_payment_a - actual_payment_a
+            actual_payment_a = min(inputs.total_monthly_budget, amount_to_clear)
+            surplus_a = inputs.total_monthly_budget - actual_payment_a
             balance_a = max(0.0, balance_a - (actual_payment_a - interest_a))
             if balance_a == 0 and payoff_month_a == n:
                 payoff_month_a = month
-            # Invest any surplus from the payoff month
             if surplus_a > 0:
+                total_invested_a += surplus_a
                 investment_a = (investment_a + surplus_a) * (1 + monthly_invest_rate)
         else:
-            # Mortgage paid off: invest the full freed monthly amount
-            investment_a = (investment_a + regular_payment + extra) * (1 + monthly_invest_rate)
+            total_invested_a += inputs.total_monthly_budget
+            investment_a = (investment_a + inputs.total_monthly_budget) * (1 + monthly_invest_rate)
 
-        # Scenario B: regular payment + invest extra
+        # Scenario B: recalculate minimum payment at current rate, invest the rest
         if balance_b > 0:
-            interest_b = balance_b * monthly_rate
+            interest_b = balance_b * current_monthly_rate
             cumulative_interest_b += interest_b
-            principal_payment_b = regular_payment - interest_b
+            # Recalculate minimum payment: balance paid off over remaining term at current rate
+            if current_monthly_rate > 0 and remaining_months > 0:
+                min_payment_b = balance_b * (
+                    current_monthly_rate * (1 + current_monthly_rate) ** remaining_months
+                ) / ((1 + current_monthly_rate) ** remaining_months - 1)
+            else:
+                min_payment_b = balance_b  # zero-rate or last month: pay off balance
+            principal_payment_b = min_payment_b - interest_b
             balance_b = max(0.0, balance_b - principal_payment_b)
+            extra_b = max(0.0, inputs.total_monthly_budget - min_payment_b)
+        else:
+            extra_b = inputs.total_monthly_budget
 
-        investment_b = (investment_b + extra) * (1 + monthly_invest_rate)
+        total_invested_b += extra_b
+        investment_b = (investment_b + extra_b) * (1 + monthly_invest_rate)
 
         # Collect yearly snapshot
         if month % 12 == 0:
             year = month // 12
-            # positive = B (invest) has more wealth, negative = A (overpay) winning
-            net_advantage = investment_b - investment_a
+            # Belka tax (19%) on capital gains if liquidating at this point
+            gains_a = max(0.0, investment_a - total_invested_a)
+            after_tax_a = investment_a - gains_a * belka_rate
+            gains_b = max(0.0, investment_b - total_invested_b)
+            after_tax_b = investment_b - gains_b * belka_rate
+            # Inflation-adjusted (real) values in today's PLN
+            inflation_factor = (1 + inputs.inflation_rate / 100) ** year
+            real_a = after_tax_a / inflation_factor
+            real_b = after_tax_b / inflation_factor
+            # Inflation also erodes the real value of outstanding mortgage debt
+            real_balance_a = balance_a / inflation_factor
+            real_balance_b = balance_b / inflation_factor
+            # Net worth comparison: real after-tax portfolio minus real mortgage balance
+            net_advantage = (real_b - real_balance_b) - (real_a - real_balance_a)
             yearly_projections.append(
                 MortgageVsInvestYearlyRow(
                     year=year,
+                    annual_rate=round(current_annual_rate, 4),
                     scenario_a_mortgage_balance=round(balance_a, 2),
+                    scenario_a_real_mortgage_balance=round(real_balance_a, 2),
                     scenario_a_cumulative_interest=round(cumulative_interest_a, 2),
                     scenario_a_investment_balance=round(investment_a, 2),
+                    scenario_a_after_tax_portfolio=round(after_tax_a, 2),
+                    scenario_a_real_portfolio=round(real_a, 2),
                     scenario_a_paid_off=balance_a == 0,
                     scenario_b_mortgage_balance=round(balance_b, 2),
+                    scenario_b_real_mortgage_balance=round(real_balance_b, 2),
                     scenario_b_investment_balance=round(investment_b, 2),
+                    scenario_b_after_tax_portfolio=round(after_tax_b, 2),
+                    scenario_b_real_portfolio=round(real_b, 2),
                     scenario_b_cumulative_interest=round(cumulative_interest_b, 2),
                     net_advantage_invest=round(net_advantage, 2),
                 )
@@ -611,14 +673,26 @@ def simulate_mortgage_vs_invest(inputs: MortgageVsInvestInputs) -> MortgageVsInv
 
     interest_saved = cumulative_interest_b - cumulative_interest_a
     months_saved = n - payoff_month_a
-    net_advantage_final = investment_b - investment_a
+    # Final Belka tax on gains at end of simulation
+    final_gains_a = max(0.0, investment_a - total_invested_a)
+    final_belka_tax_a = final_gains_a * belka_rate
+    final_after_tax_a = investment_a - final_belka_tax_a
+    final_gains_b = max(0.0, investment_b - total_invested_b)
+    final_belka_tax_b = final_gains_b * belka_rate
+    final_after_tax_b = investment_b - final_belka_tax_b
+    # Inflation-adjust final portfolios to today's PLN
+    final_inflation_factor = (1 + inputs.inflation_rate / 100) ** (n / 12)
+    final_real_a = final_after_tax_a / final_inflation_factor
+    final_real_b = final_after_tax_b / final_inflation_factor
+
+    net_advantage_final = final_real_b - final_real_a
 
     if net_advantage_final >= 0:
         winning_strategy = "inwestycja"
         net_advantage = net_advantage_final
     else:
         winning_strategy = "nadpłata"
-        net_advantage = investment_a - investment_b
+        net_advantage = final_real_a - final_real_b
 
     summary = MortgageVsInvestSummary(
         regular_monthly_payment=round(regular_payment, 2),
@@ -626,6 +700,10 @@ def simulate_mortgage_vs_invest(inputs: MortgageVsInvestInputs) -> MortgageVsInv
         total_interest_b=round(cumulative_interest_b, 2),
         interest_saved=round(interest_saved, 2),
         final_investment_portfolio=round(investment_b, 2),
+        belka_tax_a=round(final_belka_tax_a, 2),
+        belka_tax_b=round(final_belka_tax_b, 2),
+        final_portfolio_a_real=round(final_real_a, 2),
+        final_portfolio_b_real=round(final_real_b, 2),
         months_saved=months_saved,
         winning_strategy=winning_strategy,
         net_advantage=round(net_advantage, 2),
