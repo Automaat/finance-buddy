@@ -927,13 +927,13 @@
 
 	.category-name {
 		flex: 1;
-		color: var(--text-1);
+		color: var(--color-text);
 		text-transform: capitalize;
 	}
 
 	.amount {
 		font-weight: var(--font-weight-7);
-		color: var(--text-1);
+		color: var(--color-text);
 		font-size: var(--font-size-3);
 	}
 
