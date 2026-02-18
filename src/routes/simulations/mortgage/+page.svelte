@@ -7,12 +7,19 @@
 
 	interface MortgageVsInvestYearlyRow {
 		year: number;
+		annual_rate: number;
 		scenario_a_mortgage_balance: number;
+		scenario_a_real_mortgage_balance: number;
 		scenario_a_cumulative_interest: number;
 		scenario_a_investment_balance: number;
+		scenario_a_after_tax_portfolio: number;
+		scenario_a_real_portfolio: number;
 		scenario_a_paid_off: boolean;
 		scenario_b_mortgage_balance: number;
+		scenario_b_real_mortgage_balance: number;
 		scenario_b_investment_balance: number;
+		scenario_b_after_tax_portfolio: number;
+		scenario_b_real_portfolio: number;
 		scenario_b_cumulative_interest: number;
 		net_advantage_invest: number;
 	}
@@ -23,6 +30,10 @@
 		total_interest_b: number;
 		interest_saved: number;
 		final_investment_portfolio: number;
+		belka_tax_a: number;
+		belka_tax_b: number;
+		final_portfolio_a_real: number;
+		final_portfolio_b_real: number;
 		months_saved: number;
 		winning_strategy: string;
 		net_advantage: number;
@@ -37,8 +48,10 @@
 	let remainingPrincipal = 300000;
 	let annualInterestRate = 6.5;
 	let remainingMonths = 240;
-	let extraMonthlyAmount = 1000;
+	let totalMonthlyBudget = 3500;
 	let expectedAnnualReturn = 7.0;
+	let inflationRate = 3.0;
+	let enableVariableRate = false;
 
 	// Results
 	let results: MortgageVsInvestResponse | null = null;
@@ -70,8 +83,10 @@
 					remaining_principal: remainingPrincipal,
 					annual_interest_rate: annualInterestRate,
 					remaining_months: remainingMonths,
-					extra_monthly_amount: extraMonthlyAmount,
-					expected_annual_return: expectedAnnualReturn
+					total_monthly_budget: totalMonthlyBudget,
+					expected_annual_return: expectedAnnualReturn,
+					inflation_rate: inflationRate,
+					enable_variable_rate: enableVariableRate
 				})
 			});
 
@@ -101,11 +116,13 @@
 		}
 
 		const years = results.yearly_projections.map((r) => `Rok ${r.year}`);
-		const portfolioA = results.yearly_projections.map((r) => r.scenario_a_investment_balance);
-		const portfolioB = results.yearly_projections.map((r) => r.scenario_b_investment_balance);
+		const nominalA = results.yearly_projections.map((r) => r.scenario_a_after_tax_portfolio);
+		const nominalB = results.yearly_projections.map((r) => r.scenario_b_after_tax_portfolio);
+		const realA = results.yearly_projections.map((r) => r.scenario_a_real_portfolio);
+		const realB = results.yearly_projections.map((r) => r.scenario_b_real_portfolio);
 
 		const option: EChartsOption = {
-			title: { text: 'Porównanie strategii' },
+			title: { text: 'Porównanie strategii (po podatku Belki)' },
 			tooltip: {
 				trigger: 'axis',
 				formatter: (params: any) => {
@@ -116,8 +133,16 @@
 					return result;
 				}
 			},
-			legend: { data: ['Portfel A (nadpłata)', 'Portfel B (inwestycja)'], bottom: 0 },
-			grid: { left: '3%', right: '4%', bottom: '15%', containLabel: true },
+			legend: {
+				data: [
+					'Portfel A nominalne',
+					'Portfel B nominalne',
+					'Portfel A realne',
+					'Portfel B realne'
+				],
+				bottom: 0
+			},
+			grid: { left: '3%', right: '4%', bottom: '20%', containLabel: true },
 			xAxis: { type: 'category', data: years },
 			yAxis: {
 				type: 'value',
@@ -126,17 +151,33 @@
 			},
 			series: [
 				{
-					name: 'Portfel A (nadpłata)',
+					name: 'Portfel A nominalne',
 					type: 'line',
-					data: portfolioA,
+					data: nominalA,
 					smooth: true,
 					itemStyle: { color: '#5E81AC' }
 				},
 				{
-					name: 'Portfel B (inwestycja)',
+					name: 'Portfel B nominalne',
 					type: 'line',
-					data: portfolioB,
+					data: nominalB,
 					smooth: true,
+					itemStyle: { color: '#A3BE8C' }
+				},
+				{
+					name: 'Portfel A realne',
+					type: 'line',
+					data: realA,
+					smooth: true,
+					lineStyle: { type: 'dashed' },
+					itemStyle: { color: '#5E81AC' }
+				},
+				{
+					name: 'Portfel B realne',
+					type: 'line',
+					data: realB,
+					smooth: true,
+					lineStyle: { type: 'dashed' },
 					itemStyle: { color: '#A3BE8C' }
 				}
 			]
@@ -185,13 +226,27 @@
 					<small>{Math.floor(remainingMonths / 12)} lat {remainingMonths % 12} mies.</small>
 				</label>
 				<label>
-					Dodatkowa miesięczna kwota (PLN)
-					<input type="number" bind:value={extraMonthlyAmount} min="0" step="100" />
-					<small>Kwota do nadpłaty lub inwestycji</small>
+					Miesięczny budżet (PLN)
+					<input type="number" bind:value={totalMonthlyBudget} min="0" step="100" />
+					<small
+						>Łączna kwota na ratę i inwestycje (A: wszystko na nadpłatę, B: reszta po racie
+						inwestowana)</small
+					>
 				</label>
 				<label>
 					Oczekiwany zwrot z inwestycji (% rocznie)
 					<input type="number" bind:value={expectedAnnualReturn} min="0.1" max="50" step="0.1" />
+				</label>
+				<label>
+					Inflacja (% rocznie)
+					<input type="number" bind:value={inflationRate} min="0" max="20" step="0.1" />
+					<small>Do przeliczenia wartości realnej (siły nabywczej)</small>
+				</label>
+
+				<label class="checkbox-label">
+					<input type="checkbox" bind:checked={enableVariableRate} />
+					Zmienna stopa procentowa
+					<small>Cykle 10-letnie: spadek do ~1%, wzrost do ~8%, powtarza się</small>
 				</label>
 			</div>
 
@@ -227,7 +282,7 @@
 						<div class="card-value">{formatCurrency(results.summary.interest_saved)} PLN</div>
 					</div>
 					<div class="summary-card">
-						<div class="card-label">Portfel inwestycyjny B</div>
+						<div class="card-label">Portfel inwestycyjny B (brutto)</div>
 						<div class="card-value">
 							{formatCurrency(results.summary.final_investment_portfolio)} PLN
 						</div>
@@ -248,6 +303,26 @@
 						<div class="card-label">Odsetki razem (inwestycja B)</div>
 						<div class="card-value">{formatCurrency(results.summary.total_interest_b)} PLN</div>
 					</div>
+					<div class="summary-card belka">
+						<div class="card-label">Podatek Belki A (19%)</div>
+						<div class="card-value">{formatCurrency(results.summary.belka_tax_a)} PLN</div>
+					</div>
+					<div class="summary-card belka">
+						<div class="card-label">Podatek Belki B (19%)</div>
+						<div class="card-value">{formatCurrency(results.summary.belka_tax_b)} PLN</div>
+					</div>
+					<div class="summary-card real">
+						<div class="card-label">Portfel A realny (dziś PLN)</div>
+						<div class="card-value">
+							{formatCurrency(results.summary.final_portfolio_a_real)} PLN
+						</div>
+					</div>
+					<div class="summary-card real">
+						<div class="card-label">Portfel B realny (dziś PLN)</div>
+						<div class="card-value">
+							{formatCurrency(results.summary.final_portfolio_b_real)} PLN
+						</div>
+					</div>
 				</div>
 
 				<div class="chart-container" bind:this={chartContainer}></div>
@@ -259,23 +334,37 @@
 							<thead>
 								<tr>
 									<th>Rok</th>
+									<th>Stopa %</th>
 									<th>Saldo A</th>
-									<th>Portfel A</th>
+									<th>Saldo A (realne)</th>
+									<th>Portfel A (brutto)</th>
+									<th>Portfel A (po Belce)</th>
+									<th>Portfel A (realny)</th>
 									<th>Spłacone A</th>
 									<th>Saldo B</th>
-									<th>Portfel B</th>
-									<th>Przewaga B</th>
+									<th>Saldo B (realne)</th>
+									<th>Portfel B (brutto)</th>
+									<th>Portfel B (po Belce)</th>
+									<th>Portfel B (realny)</th>
+									<th>Przewaga B (realna)</th>
 								</tr>
 							</thead>
 							<tbody>
 								{#each results.yearly_projections as row}
 									<tr class:paid-off={row.scenario_a_paid_off}>
 										<td>{row.year}</td>
+										<td>{row.annual_rate.toFixed(2)}%</td>
 										<td>{formatCurrency(row.scenario_a_mortgage_balance)}</td>
+										<td>{formatCurrency(row.scenario_a_real_mortgage_balance)}</td>
 										<td>{formatCurrency(row.scenario_a_investment_balance)}</td>
+										<td>{formatCurrency(row.scenario_a_after_tax_portfolio)}</td>
+										<td>{formatCurrency(row.scenario_a_real_portfolio)}</td>
 										<td>{row.scenario_a_paid_off ? '✓' : '—'}</td>
 										<td>{formatCurrency(row.scenario_b_mortgage_balance)}</td>
+										<td>{formatCurrency(row.scenario_b_real_mortgage_balance)}</td>
 										<td>{formatCurrency(row.scenario_b_investment_balance)}</td>
+										<td>{formatCurrency(row.scenario_b_after_tax_portfolio)}</td>
+										<td>{formatCurrency(row.scenario_b_real_portfolio)}</td>
 										<td
 											class:positive={row.net_advantage_invest >= 0}
 											class:negative={row.net_advantage_invest < 0}
@@ -352,6 +441,19 @@
 	small {
 		font-size: var(--font-size-0);
 		color: var(--color-text-3);
+	}
+
+	.checkbox-label {
+		flex-direction: row;
+		align-items: center;
+		gap: var(--size-2);
+		font-weight: 600;
+	}
+
+	.checkbox-label input[type='checkbox'] {
+		width: 1rem;
+		height: 1rem;
+		cursor: pointer;
 	}
 
 	.primary-button {
@@ -434,6 +536,14 @@
 		font-size: var(--font-size-0);
 		color: var(--color-text-3);
 		margin-top: var(--size-1);
+	}
+
+	.summary-card.belka {
+		border-left: 3px solid hsl(30 70% 55%);
+	}
+
+	.summary-card.real {
+		border-left: 3px solid hsl(200 60% 55%);
 	}
 
 	.chart-container {

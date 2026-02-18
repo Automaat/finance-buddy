@@ -275,8 +275,11 @@ class MortgageVsInvestInputs(BaseModel):
     remaining_principal: float
     annual_interest_rate: float  # percent
     remaining_months: int
-    extra_monthly_amount: float
+    total_monthly_budget: float  # total monthly spend: covers mortgage + investing
     expected_annual_return: float  # percent
+    inflation_rate: float = 3.0  # percent, for real value calculations
+    # Variable rate: mean-reverting + cyclical simulation (no user config needed)
+    enable_variable_rate: bool = False
 
     @field_validator("remaining_principal")
     @classmethod
@@ -299,11 +302,11 @@ class MortgageVsInvestInputs(BaseModel):
             raise ValueError("Remaining months must be between 1 and 600")
         return v
 
-    @field_validator("extra_monthly_amount")
+    @field_validator("total_monthly_budget")
     @classmethod
-    def validate_extra_amount(cls, v: float) -> float:
-        if v < 0:
-            raise ValueError("Extra monthly amount cannot be negative")
+    def validate_budget(cls, v: float) -> float:
+        if v <= 0:
+            raise ValueError("Total monthly budget must be positive")
         return v
 
     @field_validator("expected_annual_return")
@@ -313,17 +316,31 @@ class MortgageVsInvestInputs(BaseModel):
             raise ValueError("Expected annual return must be between 0 and 50%")
         return v
 
+    @field_validator("inflation_rate")
+    @classmethod
+    def validate_inflation(cls, v: float) -> float:
+        if not (0 <= v <= 20):
+            raise ValueError("Inflation rate must be between 0 and 20%")
+        return v
+
 
 class MortgageVsInvestYearlyRow(BaseModel):
     year: int
+    annual_rate: float  # effective mortgage rate at end of this year (percent)
     scenario_a_mortgage_balance: float
+    scenario_a_real_mortgage_balance: float  # nominal balance deflated to today's PLN
     scenario_a_cumulative_interest: float
     scenario_a_investment_balance: float  # grows after payoff
+    scenario_a_after_tax_portfolio: float  # after 19% Belka tax on gains
+    scenario_a_real_portfolio: float  # after-tax, inflation-adjusted to today's PLN
     scenario_a_paid_off: bool
     scenario_b_mortgage_balance: float
+    scenario_b_real_mortgage_balance: float  # nominal balance deflated to today's PLN
     scenario_b_investment_balance: float
+    scenario_b_after_tax_portfolio: float  # after 19% Belka tax on gains
+    scenario_b_real_portfolio: float  # after-tax, inflation-adjusted to today's PLN
     scenario_b_cumulative_interest: float
-    net_advantage_invest: float  # positive = invest winning
+    net_advantage_invest: float  # positive = invest winning (real net worth)
 
 
 class MortgageVsInvestSummary(BaseModel):
@@ -332,9 +349,13 @@ class MortgageVsInvestSummary(BaseModel):
     total_interest_b: float
     interest_saved: float
     final_investment_portfolio: float
+    belka_tax_a: float  # 19% capital gains tax on scenario A portfolio
+    belka_tax_b: float  # 19% capital gains tax on scenario B portfolio
+    final_portfolio_a_real: float  # scenario A after-tax, inflation-adjusted
+    final_portfolio_b_real: float  # scenario B after-tax, inflation-adjusted
     months_saved: int
     winning_strategy: str  # "nadpłata" or "inwestycja"
-    net_advantage: float  # PLN advantage of winner
+    net_advantage: float  # PLN advantage of winner (after-tax, real)
 
 
 class MortgageVsInvestResponse(BaseModel):
