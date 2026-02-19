@@ -306,10 +306,8 @@
 					</div>
 					<div
 						class="summary-card belka"
-						class:above-breakeven={expectedAnnualReturn >=
-							results.summary.break_even_gross_return}
-						class:below-breakeven={expectedAnnualReturn <
-							results.summary.break_even_gross_return}
+						class:above-breakeven={expectedAnnualReturn >= results.summary.break_even_gross_return}
+						class:below-breakeven={expectedAnnualReturn < results.summary.break_even_gross_return}
 					>
 						<div class="card-label">Próg rentowności (brutto)</div>
 						<div class="card-value">{results.summary.break_even_gross_return.toFixed(2)}%</div>

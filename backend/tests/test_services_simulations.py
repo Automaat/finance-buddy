@@ -4,8 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.models.app_config import AppConfig
 from app.models.retirement_limit import RetirementLimit
-from app.schemas.simulations import PPKSimulationConfig, SimulationInputs
-from app.schemas.simulations import MortgageVsInvestInputs
+from app.schemas.simulations import MortgageVsInvestInputs, PPKSimulationConfig, SimulationInputs
 from app.services.simulations import (
     fetch_current_balances,
     fetch_ppk_balances,

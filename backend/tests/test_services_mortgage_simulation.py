@@ -47,8 +47,8 @@ def test_scenario_a_pays_off_early_with_large_extra():
 
 
 def test_high_return_invest_wins():
-    """With high investment return (8%) invest should beat overpaying (6.5% mortgage)."""
-    inputs = _base_inputs(expected_annual_return=8.0)
+    """With high investment return (9%) net-of-Belka (7.29%) beats overpaying (6.5% mortgage)."""
+    inputs = _base_inputs(expected_annual_return=9.0)
     result = simulate_mortgage_vs_invest(inputs)
 
     assert result.summary.winning_strategy == "inwestycja"
