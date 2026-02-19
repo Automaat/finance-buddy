@@ -70,7 +70,8 @@ const mockResults = {
 		final_portfolio_b_real: 75000,
 		months_saved: 24,
 		winning_strategy: 'inwestycja',
-		net_advantage: 15000
+		net_advantage: 15000,
+		break_even_gross_return: 7.5
 	}
 };
 
