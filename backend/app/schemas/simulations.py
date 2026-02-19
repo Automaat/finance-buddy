@@ -349,13 +349,15 @@ class MortgageVsInvestSummary(BaseModel):
     total_interest_b: float
     interest_saved: float
     final_investment_portfolio: float
-    belka_tax_a: float  # 19% capital gains tax on scenario A portfolio
-    belka_tax_b: float  # 19% capital gains tax on scenario B portfolio
+    belka_tax_a: float  # Deprecated: always 0.0 since Belka tax is now baked into monthly rate
+    belka_tax_b: float  # Deprecated: always 0.0 since Belka tax is now baked into monthly rate
     final_portfolio_a_real: float  # scenario A after-tax, inflation-adjusted
     final_portfolio_b_real: float  # scenario B after-tax, inflation-adjusted
     months_saved: int
     winning_strategy: str  # "nadpłata" or "inwestycja"
     net_advantage: float  # PLN advantage of winner (after-tax, real)
+    # gross investment return needed to match mortgage rate after 19% Belka tax
+    break_even_gross_return: float
 
 
 class MortgageVsInvestResponse(BaseModel):
