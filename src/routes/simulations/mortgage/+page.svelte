@@ -37,6 +37,7 @@
 		months_saved: number;
 		winning_strategy: string;
 		net_advantage: number;
+		break_even_gross_return: number;
 	}
 
 	interface MortgageVsInvestResponse {
@@ -122,7 +123,7 @@
 		const realB = results.yearly_projections.map((r) => r.scenario_b_real_portfolio);
 
 		const option: EChartsOption = {
-			title: { text: 'Porównanie strategii (po podatku Belki)' },
+			title: { text: 'Porównanie strategii (Belka wbudowana w stopę zwrotu)' },
 			tooltip: {
 				trigger: 'axis',
 				formatter: (params: any) => {
@@ -303,13 +304,24 @@
 						<div class="card-label">Odsetki razem (inwestycja B)</div>
 						<div class="card-value">{formatCurrency(results.summary.total_interest_b)} PLN</div>
 					</div>
-					<div class="summary-card belka">
-						<div class="card-label">Podatek Belki A (19%)</div>
-						<div class="card-value">{formatCurrency(results.summary.belka_tax_a)} PLN</div>
+					<div
+						class="summary-card belka"
+						class:above-breakeven={expectedAnnualReturn >=
+							results.summary.break_even_gross_return}
+						class:below-breakeven={expectedAnnualReturn <
+							results.summary.break_even_gross_return}
+					>
+						<div class="card-label">Próg rentowności (brutto)</div>
+						<div class="card-value">{results.summary.break_even_gross_return.toFixed(2)}%</div>
+						<div class="card-note">
+							min. stopa przed podatkiem Belki · twój cel: {expectedAnnualReturn.toFixed(1)}%
+							{expectedAnnualReturn >= results.summary.break_even_gross_return ? '✓' : '✗'}
+						</div>
 					</div>
 					<div class="summary-card belka">
-						<div class="card-label">Podatek Belki B (19%)</div>
-						<div class="card-value">{formatCurrency(results.summary.belka_tax_b)} PLN</div>
+						<div class="card-label">Podatek Belki (19%)</div>
+						<div class="card-value">wbudowany</div>
+						<div class="card-note">odliczany co miesiąc od stopy zwrotu</div>
 					</div>
 					<div class="summary-card real">
 						<div class="card-label">Portfel A realny (dziś PLN)</div>
@@ -540,6 +552,22 @@
 
 	.summary-card.belka {
 		border-left: 3px solid hsl(30 70% 55%);
+	}
+
+	.summary-card.above-breakeven {
+		border-left: 3px solid hsl(140 60% 45%);
+	}
+
+	.summary-card.above-breakeven .card-note {
+		color: hsl(140 60% 35%);
+	}
+
+	.summary-card.below-breakeven {
+		border-left: 3px solid hsl(0 65% 50%);
+	}
+
+	.summary-card.below-breakeven .card-note {
+		color: hsl(0 65% 40%);
 	}
 
 	.summary-card.real {

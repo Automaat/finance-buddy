@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.models.app_config import AppConfig
 from app.models.retirement_limit import RetirementLimit
 from app.schemas.simulations import PPKSimulationConfig, SimulationInputs
+from app.schemas.simulations import MortgageVsInvestInputs
 from app.services.simulations import (
     fetch_current_balances,
     fetch_ppk_balances,
@@ -14,6 +15,7 @@ from app.services.simulations import (
     run_simulation,
     simulate_account,
     simulate_brokerage_account,
+    simulate_mortgage_vs_invest,
     simulate_ppk_account,
 )
 from tests.factories import create_test_account, create_test_snapshot, create_test_snapshot_value
@@ -848,3 +850,37 @@ def test_run_simulation_custom_inflation_rate(test_db_session: Session):
     assert (
         result_5pct.summary.estimated_monthly_income == result_3pct.summary.estimated_monthly_income
     )
+
+
+def test_mortgage_vs_invest_break_even_gross_return():
+    """break_even_gross_return = mortgage_rate / (1 - 0.19)"""
+    inputs = MortgageVsInvestInputs(
+        remaining_principal=300000,
+        annual_interest_rate=6.5,
+        remaining_months=240,
+        total_monthly_budget=3500,
+        expected_annual_return=7.0,
+        inflation_rate=3.0,
+        enable_variable_rate=False,
+    )
+    result = simulate_mortgage_vs_invest(inputs)
+
+    expected = round(6.5 / (1 - 0.19), 4)
+    assert result.summary.break_even_gross_return == expected
+
+
+def test_mortgage_vs_invest_break_even_below_expected_return():
+    """When expected_return > break_even, investment scenario should win"""
+    inputs = MortgageVsInvestInputs(
+        remaining_principal=300000,
+        annual_interest_rate=5.0,
+        remaining_months=240,
+        total_monthly_budget=3500,
+        expected_annual_return=10.0,  # well above break-even of 6.17%
+        inflation_rate=3.0,
+        enable_variable_rate=False,
+    )
+    result = simulate_mortgage_vs_invest(inputs)
+
+    assert result.summary.break_even_gross_return == round(5.0 / 0.81, 4)
+    assert result.summary.winning_strategy == "inwestycja"

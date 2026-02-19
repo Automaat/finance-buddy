@@ -356,6 +356,8 @@ class MortgageVsInvestSummary(BaseModel):
     months_saved: int
     winning_strategy: str  # "nadpłata" or "inwestycja"
     net_advantage: float  # PLN advantage of winner (after-tax, real)
+    # gross investment return needed to match mortgage rate after 19% Belka tax
+    break_even_gross_return: float
 
 
 class MortgageVsInvestResponse(BaseModel):
