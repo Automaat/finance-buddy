@@ -10,6 +10,14 @@ class DebtPaymentCreate(BaseModel):
     date: date
     owner: str
 
+    @field_validator("owner")
+    @classmethod
+    def validate_owner(cls, v: str) -> str:
+        stripped = v.strip()
+        if not stripped:
+            raise ValueError("Owner cannot be empty")
+        return stripped
+
     @field_validator("amount")
     @classmethod
     def validate_amount(cls, v: float) -> float:

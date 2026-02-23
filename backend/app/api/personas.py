@@ -6,7 +6,11 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.account import Account
+from app.models.debt_payment import DebtPayment
 from app.models.persona import Persona
+from app.models.retirement_limit import RetirementLimit
+from app.models.salary_record import SalaryRecord
+from app.models.transaction import Transaction
 from app.schemas.personas import PersonaCreate, PersonaResponse, PersonaUpdate
 
 router = APIRouter(prefix="/api/personas", tags=["personas"])
@@ -43,6 +47,8 @@ def update_persona(
     if not persona:
         raise HTTPException(status_code=404, detail="Persona not found")
 
+    old_name = persona.name
+
     if data.name is not None:
         persona.name = data.name
     if data.ppk_employee_rate is not None:
@@ -51,6 +57,12 @@ def update_persona(
         persona.ppk_employer_rate = data.ppk_employer_rate
 
     try:
+        if data.name is not None and data.name != old_name:
+            db.query(Account).filter(Account.owner == old_name).update({"owner": data.name})
+            db.query(Transaction).filter(Transaction.owner == old_name).update({"owner": data.name})
+            db.query(SalaryRecord).filter(SalaryRecord.owner == old_name).update({"owner": data.name})
+            db.query(DebtPayment).filter(DebtPayment.owner == old_name).update({"owner": data.name})
+            db.query(RetirementLimit).filter(RetirementLimit.owner == old_name).update({"owner": data.name})
         db.commit()
         db.refresh(persona)
     except IntegrityError as e:
@@ -65,11 +77,27 @@ def delete_persona(persona_id: int, db: Annotated[Session, Depends(get_db)]) -> 
     if not persona:
         raise HTTPException(status_code=404, detail="Persona not found")
 
+    conflicts: list[str] = []
     account_count = db.query(Account).filter(Account.owner == persona.name).count()
     if account_count > 0:
+        conflicts.append(f"{account_count} account(s)")
+    transaction_count = db.query(Transaction).filter(Transaction.owner == persona.name).count()
+    if transaction_count > 0:
+        conflicts.append(f"{transaction_count} transaction(s)")
+    salary_count = db.query(SalaryRecord).filter(SalaryRecord.owner == persona.name).count()
+    if salary_count > 0:
+        conflicts.append(f"{salary_count} salary record(s)")
+    payment_count = db.query(DebtPayment).filter(DebtPayment.owner == persona.name).count()
+    if payment_count > 0:
+        conflicts.append(f"{payment_count} debt payment(s)")
+    limit_count = db.query(RetirementLimit).filter(RetirementLimit.owner == persona.name).count()
+    if limit_count > 0:
+        conflicts.append(f"{limit_count} retirement limit(s)")
+
+    if conflicts:
         raise HTTPException(
             status_code=409,
-            detail=f"Cannot delete persona '{persona.name}': {account_count} accounts reference it",
+            detail=f"Cannot delete persona '{persona.name}': referenced by {', '.join(conflicts)}",
         )
 
     db.delete(persona)

@@ -67,18 +67,23 @@
 		const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
 		try {
 			const requests = Object.entries(limits).map(([key, amount]) => {
-				const [wrapper, owner] = key.split('_');
-				return fetch(`${apiUrl}/api/retirement/limits/${limitsYear}/${wrapper}/${owner}`, {
-					method: 'PUT',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						year: limitsYear,
-						account_wrapper: wrapper,
-						owner: owner,
-						limit_amount: amount,
-						notes: ''
-					})
-				});
+				const sep = key.indexOf('_');
+				const wrapper = key.slice(0, sep);
+				const owner = key.slice(sep + 1);
+				return fetch(
+					`${apiUrl}/api/retirement/limits/${limitsYear}/${wrapper}/${encodeURIComponent(owner)}`,
+					{
+						method: 'PUT',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							year: limitsYear,
+							account_wrapper: wrapper,
+							owner: owner,
+							limit_amount: amount,
+							notes: ''
+						})
+					}
+				);
 			});
 
 			const responses = await Promise.all(requests);

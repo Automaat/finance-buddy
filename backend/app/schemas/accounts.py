@@ -21,7 +21,15 @@ class AccountCreate(BaseModel):
     @field_validator("name")
     @classmethod
     def validate_name(cls, v: str) -> str:
-        return validate_not_empty_string(v)  # type: ignore[return-value]
+        return validate_not_empty_string(v)
+
+    @field_validator("owner")
+    @classmethod
+    def validate_owner(cls, v: str) -> str:
+        stripped = v.strip()
+        if not stripped:
+            raise ValueError("Owner cannot be empty")
+        return stripped
 
 
 class AccountResponse(BaseModel):
@@ -53,6 +61,11 @@ class AccountUpdate(BaseModel):
     @field_validator("name")
     @classmethod
     def validate_name(cls, v: str | None) -> str | None:
+        return validate_not_empty_string(v)
+
+    @field_validator("owner")
+    @classmethod
+    def validate_owner(cls, v: str | None) -> str | None:
         return validate_not_empty_string(v)
 
 

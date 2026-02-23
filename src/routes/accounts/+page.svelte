@@ -463,6 +463,9 @@
 			<div class="form-group">
 				<label for="owner">Właściciel</label>
 				<select id="owner" bind:value={formData.owner} required>
+					{#if !personas.some((p) => p.name === formData.owner)}
+						<option value={formData.owner}>{formData.owner}</option>
+					{/if}
 					{#each personas as persona}
 						<option value={persona.name}>{persona.name}</option>
 					{/each}

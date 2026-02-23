@@ -1,6 +1,7 @@
 """Pydantic validator utilities for common validation patterns."""
 
 from datetime import UTC, date, datetime
+from typing import overload
 
 
 def validate_positive_amount(v: float, field_name: str = "Amount") -> float:
@@ -58,6 +59,14 @@ def validate_not_future_date(v: date, field_name: str = "Date") -> date:
     if v > datetime.now(UTC).date():
         raise ValueError(f"{field_name} cannot be in the future")
     return v
+
+
+@overload
+def validate_not_empty_string(v: None, field_name: str = ...) -> None: ...
+
+
+@overload
+def validate_not_empty_string(v: str, field_name: str = ...) -> str: ...
 
 
 def validate_not_empty_string(v: str | None, field_name: str = "Name") -> str | None:
