@@ -3,7 +3,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, field_validator
 
-from app.core.enums import ContractType, Owner
+from app.core.enums import ContractType
 from app.utils.validators import (
     validate_not_empty_string,
     validate_not_future_date,
@@ -16,7 +16,7 @@ class SalaryRecordCreate(BaseModel):
     gross_amount: float
     contract_type: ContractType
     company: str
-    owner: Owner
+    owner: str
 
     @field_validator("gross_amount")
     @classmethod
@@ -39,7 +39,7 @@ class SalaryRecordUpdate(BaseModel):
     gross_amount: float | None = None
     contract_type: ContractType | None = None
     company: str | None = None
-    owner: Owner | None = None
+    owner: str | None = None
 
     @field_validator("gross_amount")
     @classmethod
@@ -67,7 +67,7 @@ class SalaryRecordResponse(BaseModel):
     gross_amount: float
     contract_type: ContractType
     company: str
-    owner: Owner
+    owner: str
     is_active: bool
     created_at: datetime
 
@@ -75,5 +75,4 @@ class SalaryRecordResponse(BaseModel):
 class SalaryRecordsListResponse(BaseModel):
     salary_records: list[SalaryRecordResponse]
     total_count: int
-    current_salary_marcin: float | None
-    current_salary_ewa: float | None
+    current_salaries: dict[str, float | None] = {}

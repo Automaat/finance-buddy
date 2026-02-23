@@ -3,6 +3,7 @@ import { env } from '$env/dynamic/public';
 import { browser } from '$app/environment';
 import type { PageLoad } from './$types';
 import type { Transaction, TransactionsData } from '$lib/types/transactions';
+import type { Persona } from '$lib/types/personas';
 
 export interface Account {
 	id: number;
@@ -33,14 +34,21 @@ export const load: PageLoad = async ({ fetch }) => {
 		if (!apiUrl) {
 			throw error(500, 'API URL is not configured');
 		}
-		const response = await fetch(`${apiUrl}/api/accounts`);
+		const [accountsResponse, personasResponse] = await Promise.all([
+			fetch(`${apiUrl}/api/accounts`),
+			fetch(`${apiUrl}/api/personas`)
+		]);
 
-		if (!response.ok) {
-			throw error(response.status, 'Failed to load accounts');
+		if (!accountsResponse.ok) {
+			throw error(accountsResponse.status, 'Failed to load accounts');
+		}
+		if (!personasResponse.ok) {
+			throw error(personasResponse.status, 'Failed to load personas');
 		}
 
-		const data: AccountsData = await response.json();
-		return data;
+		const data: AccountsData = await accountsResponse.json();
+		const personas: Persona[] = await personasResponse.json();
+		return { ...data, personas };
 	} catch (err) {
 		if (err instanceof Error && 'status' in err) {
 			throw err;

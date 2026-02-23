@@ -14,7 +14,8 @@
 		{ href: '/debts', label: 'Zobowiązania', icon: '📋' },
 		{ href: '/snapshots', label: 'Snapshoty', icon: '📸' },
 		{ href: '/salaries', label: 'Wynagrodzenia', icon: '💵' },
-		{ href: '/config', label: 'Konfiguracja', icon: '⚙️' }
+		{ href: '/config', label: 'Konfiguracja', icon: '⚙️' },
+		{ href: '/settings', label: 'Ustawienia', icon: '👤' }
 	];
 </script>
 

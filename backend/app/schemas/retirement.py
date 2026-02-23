@@ -1,13 +1,13 @@
 from pydantic import BaseModel, field_validator
 
-from app.core.enums import Owner, Wrapper
-from app.utils.validators import validate_owner_marcin_or_ewa, validate_positive_amount
+from app.core.enums import Wrapper
+from app.utils.validators import validate_positive_amount
 
 
 class RetirementLimitCreate(BaseModel):
     year: int
     account_wrapper: Wrapper
-    owner: Owner
+    owner: str
     limit_amount: float
     notes: str | None = None
 
@@ -23,8 +23,11 @@ class RetirementLimitCreate(BaseModel):
 
     @field_validator("owner")
     @classmethod
-    def validate_owner(cls, v: Owner) -> Owner:
-        return validate_owner_marcin_or_ewa(v)
+    def validate_owner(cls, v: str) -> str:
+        stripped = v.strip()
+        if not stripped:
+            raise ValueError("Owner cannot be empty")
+        return stripped
 
     @field_validator("limit_amount")
     @classmethod
@@ -39,7 +42,7 @@ class RetirementLimitResponse(RetirementLimitCreate):
 class YearlyStatsResponse(BaseModel):
     year: int
     account_wrapper: Wrapper
-    owner: Owner
+    owner: str
     limit_amount: float | None
     total_contributed: float
     employee_contributed: float
@@ -50,7 +53,7 @@ class YearlyStatsResponse(BaseModel):
 
 
 class PPKStatsResponse(BaseModel):
-    owner: Owner
+    owner: str
     total_value: float
     employee_contributed: float
     employer_contributed: float
@@ -61,14 +64,17 @@ class PPKStatsResponse(BaseModel):
 
 
 class PPKContributionGenerateRequest(BaseModel):
-    owner: Owner
+    owner: str
     month: int
     year: int
 
     @field_validator("owner")
     @classmethod
-    def validate_owner(cls, v: Owner) -> Owner:
-        return validate_owner_marcin_or_ewa(v)
+    def validate_owner(cls, v: str) -> str:
+        stripped = v.strip()
+        if not stripped:
+            raise ValueError("Owner cannot be empty")
+        return stripped
 
     @field_validator("month")
     @classmethod
@@ -89,7 +95,7 @@ class PPKContributionGenerateRequest(BaseModel):
 
 
 class PPKContributionGenerateResponse(BaseModel):
-    owner: Owner
+    owner: str
     month: int
     year: int
     gross_salary: float

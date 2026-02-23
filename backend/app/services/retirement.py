@@ -6,7 +6,8 @@ from fastapi import HTTPException
 from sqlalchemy import case, extract, func, or_
 from sqlalchemy.orm import Session
 
-from app.models import Account, AppConfig, RetirementLimit, Snapshot, SnapshotValue, Transaction
+from app.models import Account, RetirementLimit, Snapshot, SnapshotValue, Transaction
+from app.models.persona import Persona
 from app.schemas.retirement import (
     PPKContributionGenerateRequest,
     PPKContributionGenerateResponse,
@@ -20,7 +21,7 @@ def get_yearly_stats(db: Session, year: int, owner: str | None = None) -> list[Y
     """Calculate yearly contribution stats for IKE/IKZE per owner"""
     stats = []
 
-    owners = [owner] if owner else ["Marcin", "Ewa"]
+    owners = [owner] if owner else [p.name for p in db.query(Persona).order_by(Persona.name).all()]
     wrappers = ["IKE", "IKZE"]
 
     for wrapper in wrappers:
@@ -170,7 +171,7 @@ def update_limit(
 def get_ppk_stats(db: Session, owner: str | None = None) -> list[PPKStatsResponse]:
     """Calculate PPK contribution breakdown and returns per owner"""
     stats = []
-    owners = [owner] if owner else ["Marcin", "Ewa"]
+    owners = [owner] if owner else [p.name for p in db.query(Persona).order_by(Persona.name).all()]
 
     for owner_name in owners:
         # Get all PPK accounts for this owner
@@ -300,20 +301,13 @@ def generate_ppk_contributions(
             detail=f"No salary record found for {data.owner} in {data.month}/{data.year}",
         )
 
-    # Get PPK rates from AppConfig
-    config = db.query(AppConfig).filter(AppConfig.id == 1).first()
-    if not config:
-        raise HTTPException(status_code=500, detail="App configuration not found")
+    # Get PPK rates from Persona table
+    persona = db.query(Persona).filter(Persona.name == data.owner).first()
+    if not persona:
+        raise HTTPException(status_code=404, detail=f"Persona '{data.owner}' not found")
 
-    # Get appropriate rates based on owner
-    if data.owner == "Marcin":
-        employee_rate = float(config.ppk_employee_rate_marcin)
-        employer_rate = float(config.ppk_employer_rate_marcin)
-    elif data.owner == "Ewa":
-        employee_rate = float(config.ppk_employee_rate_ewa)
-        employer_rate = float(config.ppk_employer_rate_ewa)
-    else:
-        raise HTTPException(status_code=400, detail=f"Unknown owner: {data.owner}")
+    employee_rate = float(persona.ppk_employee_rate)
+    employer_rate = float(persona.ppk_employer_rate)
 
     # Calculate contribution amounts
     employee_amount = gross_salary * (employee_rate / 100)

@@ -32,10 +32,6 @@
 		data.config?.allocation_commodities ?? defaults.allocation_commodities;
 	let monthlyExpenses = data.config?.monthly_expenses ?? 0;
 	let monthlyMortgagePayment = data.config?.monthly_mortgage_payment ?? 0;
-	let ppkEmployeeRateMarcin = data.config?.ppk_employee_rate_marcin ?? 2.0;
-	let ppkEmployerRateMarcin = data.config?.ppk_employer_rate_marcin ?? 1.5;
-	let ppkEmployeeRateEwa = data.config?.ppk_employee_rate_ewa ?? 2.0;
-	let ppkEmployerRateEwa = data.config?.ppk_employer_rate_ewa ?? 1.5;
 
 	let error = '';
 	let saving = false;
@@ -105,11 +101,7 @@
 					allocation_gold: allocationGold,
 					allocation_commodities: allocationCommodities,
 					monthly_expenses: monthlyExpenses,
-					monthly_mortgage_payment: monthlyMortgagePayment,
-					ppk_employee_rate_marcin: ppkEmployeeRateMarcin,
-					ppk_employer_rate_marcin: ppkEmployerRateMarcin,
-					ppk_employee_rate_ewa: ppkEmployeeRateEwa,
-					ppk_employer_rate_ewa: ppkEmployerRateEwa
+					monthly_mortgage_payment: monthlyMortgagePayment
 				})
 			});
 
@@ -318,71 +310,6 @@
 		</CardContent>
 	</Card>
 
-	<Card>
-		<CardHeader>
-			<CardTitle>🏦 PPK - Stawki składek</CardTitle>
-		</CardHeader>
-		<CardContent>
-			<div class="ppk-info-banner">
-				ℹ️ Podstawowe stawki PPK: 2% pracownik, 1.5% pracodawca (maksymalnie 4% każdy)
-			</div>
-			<div class="ppk-section">
-				<h3 class="section-title">Marcin</h3>
-				<div class="form-group">
-					<label for="ppk-employee-marcin">Składka pracownika (%)</label>
-					<input
-						id="ppk-employee-marcin"
-						type="number"
-						min="0.5"
-						max="4"
-						step="0.5"
-						bind:value={ppkEmployeeRateMarcin}
-						class="input"
-					/>
-				</div>
-				<div class="form-group">
-					<label for="ppk-employer-marcin">Składka pracodawcy (%)</label>
-					<input
-						id="ppk-employer-marcin"
-						type="number"
-						min="0.5"
-						max="4"
-						step="0.5"
-						bind:value={ppkEmployerRateMarcin}
-						class="input"
-					/>
-				</div>
-			</div>
-			<div class="ppk-section">
-				<h3 class="section-title">Ewa</h3>
-				<div class="form-group">
-					<label for="ppk-employee-ewa">Składka pracownika (%)</label>
-					<input
-						id="ppk-employee-ewa"
-						type="number"
-						min="0.5"
-						max="4"
-						step="0.5"
-						bind:value={ppkEmployeeRateEwa}
-						class="input"
-					/>
-				</div>
-				<div class="form-group">
-					<label for="ppk-employer-ewa">Składka pracodawcy (%)</label>
-					<input
-						id="ppk-employer-ewa"
-						type="number"
-						min="0.5"
-						max="4"
-						step="0.5"
-						bind:value={ppkEmployerRateEwa}
-						class="input"
-					/>
-				</div>
-			</div>
-		</CardContent>
-	</Card>
-
 	{#if error}
 		<div class="error-message">{error}</div>
 	{/if}
@@ -550,26 +477,5 @@
 		font-weight: var(--font-weight-6);
 		color: var(--color-text);
 		margin-bottom: var(--size-3);
-	}
-
-	.ppk-info-banner {
-		background: rgba(136, 192, 208, 0.1);
-		border: 1px solid var(--nord8);
-		border-radius: var(--radius-2);
-		padding: var(--size-3);
-		margin-bottom: var(--size-4);
-		color: var(--nord10);
-		font-size: var(--font-size-1);
-	}
-
-	.ppk-section {
-		margin-bottom: var(--size-4);
-		padding-bottom: var(--size-3);
-		border-bottom: 1px solid var(--color-border);
-	}
-
-	.ppk-section:last-of-type {
-		border-bottom: none;
-		margin-bottom: 0;
 	}
 </style>

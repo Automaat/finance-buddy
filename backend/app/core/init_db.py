@@ -1,7 +1,11 @@
+import importlib
 import logging
+import sys
+from decimal import Decimal
+from pathlib import Path
 
 from app.core.database import Base, SessionLocal, engine
-from app.core.enums import Owner, Wrapper
+from app.core.enums import Wrapper
 
 # Import models to register them with SQLAlchemy Base.metadata
 # These imports are required for Base.metadata.create_all() to work
@@ -12,6 +16,7 @@ from app.models import (
     Debt,
     DebtPayment,
     Goal,
+    Persona,
     RetirementLimit,
     SalaryRecord,
     Snapshot,
@@ -29,6 +34,7 @@ _ = (
     Debt,
     DebtPayment,
     Goal,
+    Persona,
     RetirementLimit,
     SalaryRecord,
     Snapshot,
@@ -36,71 +42,72 @@ _ = (
     Transaction,
 )
 
+MIGRATION_MODULES = [
+    "add_account_purpose",
+    "add_metric_fields",
+    "add_ppk_rates",
+    "add_receives_contributions",
+    "add_transaction_unique_constraint",
+]
+
 
 def init_db() -> None:
     Base.metadata.create_all(bind=engine)
 
     # Run migrations
     try:
-        import sys
-        from pathlib import Path
-
-        # Add migrations directory to path
         migrations_dir = Path(__file__).parent.parent.parent / "migrations"
         sys.path.insert(0, str(migrations_dir))
 
-        # Import and run migrations
-        import add_account_purpose  # type: ignore
-        import add_metric_fields  # type: ignore
-        import add_ppk_rates  # type: ignore
-        import add_receives_contributions  # type: ignore
-        import add_transaction_unique_constraint  # type: ignore
-
-        add_account_purpose.migrate()  # type: ignore
-        add_metric_fields.migrate()  # type: ignore
-        add_ppk_rates.migrate()  # type: ignore
-        add_receives_contributions.migrate()  # type: ignore
-        add_transaction_unique_constraint.migrate()  # type: ignore
+        for module_name in MIGRATION_MODULES:
+            mod = importlib.import_module(module_name)
+            mod.migrate()
     except Exception as e:
         # Migrations may have already run or columns may already exist
         logger.warning("Migration warning (may be expected if already applied): %s", e)
 
-    # Seed default retirement limits if none exist
+    # Seed default personas if none exist
     db = SessionLocal()
     try:
-        if db.query(RetirementLimit).count() == 0:
-            defaults = [
-                # 2026 limits - Marcin
-                RetirementLimit(
-                    year=2026,
-                    account_wrapper=Wrapper.IKE.value,
-                    owner=Owner.MARCIN.value,
-                    limit_amount=28260.00,
-                    notes="",
+        if db.query(Persona).count() == 0:
+            default_personas = [
+                Persona(
+                    name="Marcin",
+                    ppk_employee_rate=Decimal("2.0"),
+                    ppk_employer_rate=Decimal("1.5"),
                 ),
-                RetirementLimit(
-                    year=2026,
-                    account_wrapper=Wrapper.IKZE.value,
-                    owner=Owner.MARCIN.value,
-                    limit_amount=11304.00,
-                    notes="",
-                ),
-                # 2026 limits - Ewa
-                RetirementLimit(
-                    year=2026,
-                    account_wrapper=Wrapper.IKE.value,
-                    owner=Owner.EWA.value,
-                    limit_amount=28260.00,
-                    notes="",
-                ),
-                RetirementLimit(
-                    year=2026,
-                    account_wrapper=Wrapper.IKZE.value,
-                    owner=Owner.EWA.value,
-                    limit_amount=11304.00,
-                    notes="",
+                Persona(
+                    name="Ewa",
+                    ppk_employee_rate=Decimal("2.0"),
+                    ppk_employer_rate=Decimal("1.5"),
                 ),
             ]
+            db.add_all(default_personas)
+            db.commit()
+
+        # Seed default retirement limits if none exist
+        if db.query(RetirementLimit).count() == 0:
+            personas = db.query(Persona).all()
+            defaults = []
+            for persona in personas:
+                defaults.append(
+                    RetirementLimit(
+                        year=2026,
+                        account_wrapper=Wrapper.IKE.value,
+                        owner=persona.name,
+                        limit_amount=28260.00,
+                        notes="",
+                    )
+                )
+                defaults.append(
+                    RetirementLimit(
+                        year=2026,
+                        account_wrapper=Wrapper.IKZE.value,
+                        owner=persona.name,
+                        limit_amount=11304.00,
+                        notes="",
+                    )
+                )
             db.add_all(defaults)
             db.commit()
     finally:

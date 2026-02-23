@@ -8,10 +8,15 @@ export const load: PageLoad = async ({ fetch }) => {
 		const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
 		if (!apiUrl) throw error(500, 'API URL not configured');
 
-		const response = await fetch(`${apiUrl}/api/simulations/prefill`);
-		if (!response.ok) throw error(response.status, 'Failed to load prefill data');
+		const [prefillRes, personasRes] = await Promise.all([
+			fetch(`${apiUrl}/api/simulations/prefill`),
+			fetch(`${apiUrl}/api/personas`)
+		]);
+		if (!prefillRes.ok) throw error(prefillRes.status, 'Failed to load prefill data');
 
-		return await response.json();
+		const prefill = await prefillRes.json();
+		const personas = personasRes.ok ? await personasRes.json() : [];
+		return { ...prefill, personas };
 	} catch (err) {
 		if (err instanceof Error && 'status' in err) throw err;
 		throw error(500, 'Failed to load simulation data');

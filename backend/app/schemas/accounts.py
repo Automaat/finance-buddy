@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, field_validator
 
-from app.core.enums import AccountType, Category, Owner, Purpose, Wrapper
+from app.core.enums import AccountType, Category, Purpose, Wrapper
 from app.utils.validators import validate_not_empty_string
 
 
@@ -11,7 +11,7 @@ class AccountCreate(BaseModel):
     name: str
     type: AccountType
     category: Category
-    owner: Owner
+    owner: str
     currency: str = "PLN"
     account_wrapper: Wrapper | None = None
     purpose: Purpose
@@ -21,7 +21,15 @@ class AccountCreate(BaseModel):
     @field_validator("name")
     @classmethod
     def validate_name(cls, v: str) -> str:
-        return validate_not_empty_string(v)  # type: ignore[return-value]
+        return validate_not_empty_string(v)
+
+    @field_validator("owner")
+    @classmethod
+    def validate_owner(cls, v: str) -> str:
+        stripped = v.strip()
+        if not stripped:
+            raise ValueError("Owner cannot be empty")
+        return stripped
 
 
 class AccountResponse(BaseModel):
@@ -29,7 +37,7 @@ class AccountResponse(BaseModel):
     name: str
     type: AccountType
     category: Category
-    owner: Owner
+    owner: str
     currency: str
     account_wrapper: Wrapper | None
     purpose: Purpose
@@ -43,7 +51,7 @@ class AccountResponse(BaseModel):
 class AccountUpdate(BaseModel):
     name: str | None = None
     category: Category | None = None
-    owner: Owner | None = None
+    owner: str | None = None
     currency: str | None = None
     account_wrapper: Wrapper | None = None
     purpose: Purpose | None = None
@@ -53,6 +61,11 @@ class AccountUpdate(BaseModel):
     @field_validator("name")
     @classmethod
     def validate_name(cls, v: str | None) -> str | None:
+        return validate_not_empty_string(v)
+
+    @field_validator("owner")
+    @classmethod
+    def validate_owner(cls, v: str | None) -> str | None:
         return validate_not_empty_string(v)
 
 

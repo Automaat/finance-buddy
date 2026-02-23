@@ -34,9 +34,9 @@ class TestRetirementLimitCreateValidation:
             )
             assert data.account_wrapper == wrapper
 
-    def test_all_valid_owners(self):
-        """Test all valid owners"""
-        for owner in ["Marcin", "Ewa"]:
+    def test_any_non_empty_owner_valid(self):
+        """Test any non-empty string is valid as owner"""
+        for owner in ["Marcin", "Ewa", "CustomOwner"]:
             data = RetirementLimitCreate(
                 year=2024, account_wrapper="IKE", owner=owner, limit_amount=10000.0
             )
@@ -49,12 +49,10 @@ class TestRetirementLimitCreateValidation:
                 year=2024, account_wrapper="INVALID", owner="Marcin", limit_amount=10000.0
             )
 
-    def test_invalid_owner_fails(self):
-        """Test that invalid owner raises validation error"""
-        with pytest.raises(ValidationError, match="Input should be 'Marcin', 'Ewa' or 'Shared'"):
-            RetirementLimitCreate(
-                year=2024, account_wrapper="IKE", owner="InvalidOwner", limit_amount=10000.0
-            )
+    def test_empty_owner_fails(self):
+        """Test that empty owner raises validation error"""
+        with pytest.raises(ValidationError, match="Owner cannot be empty"):
+            RetirementLimitCreate(year=2024, account_wrapper="IKE", owner="", limit_amount=10000.0)
 
     def test_year_too_old_fails(self):
         """Test that year before 2000 raises validation error"""
@@ -112,16 +110,16 @@ class TestPPKContributionGenerateRequestValidation:
         assert data.month == 6
         assert data.year == 2024
 
-    def test_all_valid_owners(self):
-        """Test all valid owners"""
-        for owner in ["Marcin", "Ewa"]:
+    def test_any_non_empty_owner_valid(self):
+        """Test any non-empty string is valid as owner"""
+        for owner in ["Marcin", "Ewa", "CustomOwner"]:
             data = PPKContributionGenerateRequest(owner=owner, month=1, year=2024)
             assert data.owner == owner
 
-    def test_invalid_owner_fails(self):
-        """Test that invalid owner raises validation error"""
-        with pytest.raises(ValidationError, match="Input should be 'Marcin', 'Ewa' or 'Shared'"):
-            PPKContributionGenerateRequest(owner="InvalidOwner", month=1, year=2024)
+    def test_empty_owner_fails(self):
+        """Test that empty owner raises validation error"""
+        with pytest.raises(ValidationError, match="Owner cannot be empty"):
+            PPKContributionGenerateRequest(owner="", month=1, year=2024)
 
     def test_month_too_low_fails(self):
         """Test that month below 1 raises validation error"""

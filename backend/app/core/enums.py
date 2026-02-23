@@ -3,14 +3,6 @@
 from enum import Enum
 
 
-class Owner(str, Enum):
-    """Account/transaction owner."""
-
-    MARCIN = "Marcin"
-    EWA = "Ewa"
-    SHARED = "Shared"
-
-
 class AccountType(str, Enum):
     """Account type classification."""
 

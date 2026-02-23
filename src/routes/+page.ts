@@ -11,9 +11,10 @@ export async function load({ fetch }) {
 
 		const currentYear = new Date().getFullYear();
 
-		const [dashboardRes, retirementRes] = await Promise.all([
+		const [dashboardRes, retirementRes, personasRes] = await Promise.all([
 			fetch(`${apiUrl}/api/dashboard`),
-			fetch(`${apiUrl}/api/retirement/stats?year=${currentYear}`)
+			fetch(`${apiUrl}/api/retirement/stats?year=${currentYear}`),
+			fetch(`${apiUrl}/api/personas`)
 		]);
 
 		if (!dashboardRes.ok) {
@@ -22,10 +23,12 @@ export async function load({ fetch }) {
 
 		const dashboard = await dashboardRes.json();
 		const retirement = retirementRes.ok ? await retirementRes.json() : [];
+		const personas = personasRes.ok ? await personasRes.json() : [];
 
 		return {
 			...dashboard,
 			retirementStats: retirement,
+			personas,
 			currentYear
 		};
 	} catch (err) {

@@ -6,11 +6,13 @@
 	import { env } from '$env/dynamic/public';
 	import { goto, invalidateAll } from '$app/navigation';
 	import type { SalaryRecord } from '$lib/types/salaries';
+	import type { Persona } from '$lib/types/personas';
 
 	export let data;
 
 	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
-	const defaultOwner = env.PUBLIC_DEFAULT_OWNER || 'Marcin';
+	$: personas = data.personas as Persona[];
+	$: defaultOwner = personas.length > 0 ? personas[0].name : 'Marcin';
 
 	let chartContainer: HTMLDivElement;
 
@@ -256,22 +258,14 @@
 	</CardHeader>
 	<CardContent>
 		<div class="current-salaries">
-			<div class="salary-item">
-				<span class="salary-label">Marcin:</span>
-				<strong class="salary-value">
-					{data.salaries.current_salary_marcin !== null
-						? formatPLN(data.salaries.current_salary_marcin)
-						: 'Brak danych'}
-				</strong>
-			</div>
-			<div class="salary-item">
-				<span class="salary-label">Ewa:</span>
-				<strong class="salary-value">
-					{data.salaries.current_salary_ewa !== null
-						? formatPLN(data.salaries.current_salary_ewa)
-						: 'Brak danych'}
-				</strong>
-			</div>
+			{#each Object.entries(data.salaries.current_salaries) as [name, salary]}
+				<div class="salary-item">
+					<span class="salary-label">{name}:</span>
+					<strong class="salary-value">
+						{salary !== null ? formatPLN(salary) : 'Brak danych'}
+					</strong>
+				</div>
+			{/each}
 		</div>
 	</CardContent>
 </Card>
@@ -296,8 +290,9 @@
 					<label for="filter-owner">Właściciel</label>
 					<select id="filter-owner" bind:value={filterOwner}>
 						<option value="">Wszystkie</option>
-						<option value="Marcin">Marcin</option>
-						<option value="Ewa">Ewa</option>
+						{#each personas as persona}
+							<option value={persona.name}>{persona.name}</option>
+						{/each}
 					</select>
 				</div>
 
@@ -428,8 +423,9 @@
 		<div class="form-group">
 			<label for="salary-owner">Właściciel*</label>
 			<select id="salary-owner" bind:value={salaryFormData.owner} required>
-				<option value="Marcin">Marcin</option>
-				<option value="Ewa">Ewa</option>
+				{#each personas as persona}
+					<option value={persona.name}>{persona.name}</option>
+				{/each}
 			</select>
 		</div>
 	</form>

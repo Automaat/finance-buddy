@@ -136,23 +136,6 @@ def test_create_payment_future_date(test_client, test_db_session):
     assert response.status_code == 422
 
 
-def test_create_payment_invalid_owner(test_client, test_db_session):
-    """Test POST payment with invalid owner fails"""
-    account = create_test_account(
-        test_db_session,
-        name="Mortgage",
-        account_type="liability",
-        category="mortgage",
-        owner="Marcin",
-    )
-
-    payload = {"amount": 5000.0, "date": "2024-01-15", "owner": "InvalidOwner"}
-
-    response = test_client.post(f"/api/accounts/{account.id}/payments", json=payload)
-
-    assert response.status_code == 422
-
-
 def test_delete_payment_success(test_client, test_db_session):
     """Test DELETE /api/accounts/{account_id}/payments/{payment_id}"""
     account = create_test_account(

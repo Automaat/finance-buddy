@@ -33,21 +33,28 @@
 
 	$: titleFontSize = $isMobile ? 14 : 16;
 
+	import type { Persona } from '$lib/types/personas';
+
+	$: personas = (data.personas || []) as Persona[];
+
 	// Retirement limits modal
 	let showLimitsModal = false;
 	let limitsYear = data.currentYear;
-	let limits = {
-		IKE_Marcin: 0,
-		IKE_Ewa: 0,
-		IKZE_Marcin: 0,
-		IKZE_Ewa: 0
-	};
+	// Dynamic limits keyed by "{wrapper}_{owner}" e.g. "IKE_Marcin"
+	let limits: Record<string, number> = {};
 
 	function openLimitsModal() {
-		// Load current limits from retirementStats
+		// Initialize limits from personas x wrappers
+		limits = {};
+		for (const persona of personas) {
+			for (const wrapper of ['IKE', 'IKZE']) {
+				limits[`${wrapper}_${persona.name}`] = 0;
+			}
+		}
+		// Load current values from retirementStats
 		if (data.retirementStats && data.retirementStats.length > 0) {
 			data.retirementStats.forEach((stat: any) => {
-				const key = `${stat.account_wrapper}_${stat.owner}` as keyof typeof limits;
+				const key = `${stat.account_wrapper}_${stat.owner}`;
 				if (key in limits) {
 					limits[key] = stat.limit_amount || 0;
 				}
@@ -59,52 +66,27 @@
 	async function saveLimits() {
 		const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
 		try {
-			const responses = await Promise.all([
-				fetch(`${apiUrl}/api/retirement/limits/${limitsYear}/IKE/Marcin`, {
-					method: 'PUT',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						year: limitsYear,
-						account_wrapper: 'IKE',
-						owner: 'Marcin',
-						limit_amount: limits.IKE_Marcin,
-						notes: ''
-					})
-				}),
-				fetch(`${apiUrl}/api/retirement/limits/${limitsYear}/IKE/Ewa`, {
-					method: 'PUT',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						year: limitsYear,
-						account_wrapper: 'IKE',
-						owner: 'Ewa',
-						limit_amount: limits.IKE_Ewa,
-						notes: ''
-					})
-				}),
-				fetch(`${apiUrl}/api/retirement/limits/${limitsYear}/IKZE/Marcin`, {
-					method: 'PUT',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						year: limitsYear,
-						account_wrapper: 'IKZE',
-						owner: 'Marcin',
-						limit_amount: limits.IKZE_Marcin,
-						notes: ''
-					})
-				}),
-				fetch(`${apiUrl}/api/retirement/limits/${limitsYear}/IKZE/Ewa`, {
-					method: 'PUT',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						year: limitsYear,
-						account_wrapper: 'IKZE',
-						owner: 'Ewa',
-						limit_amount: limits.IKZE_Ewa,
-						notes: ''
-					})
-				})
-			]);
+			const requests = Object.entries(limits).map(([key, amount]) => {
+				const sep = key.indexOf('_');
+				const wrapper = key.slice(0, sep);
+				const owner = key.slice(sep + 1);
+				return fetch(
+					`${apiUrl}/api/retirement/limits/${limitsYear}/${wrapper}/${encodeURIComponent(owner)}`,
+					{
+						method: 'PUT',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							year: limitsYear,
+							account_wrapper: wrapper,
+							owner: owner,
+							limit_amount: amount,
+							notes: ''
+						})
+					}
+				);
+			});
+
+			const responses = await Promise.all(requests);
 
 			const failedResponses = responses.filter((r) => !r.ok);
 			if (failedResponses.length > 0) {
@@ -393,25 +375,20 @@
 			</label>
 
 			<div class="limit-inputs-grid">
-				<label>
-					IKE Marcin (PLN)
-					<input type="number" bind:value={limits.IKE_Marcin} step="0.01" required />
-				</label>
-
-				<label>
-					IKE Ewa (PLN)
-					<input type="number" bind:value={limits.IKE_Ewa} step="0.01" required />
-				</label>
-
-				<label>
-					IKZE Marcin (PLN)
-					<input type="number" bind:value={limits.IKZE_Marcin} step="0.01" required />
-				</label>
-
-				<label>
-					IKZE Ewa (PLN)
-					<input type="number" bind:value={limits.IKZE_Ewa} step="0.01" required />
-				</label>
+				{#each ['IKE', 'IKZE'] as wrapper}
+					{#each personas as persona}
+						<label>
+							{wrapper}
+							{persona.name} (PLN)
+							<input
+								type="number"
+								bind:value={limits[`${wrapper}_${persona.name}`]}
+								step="0.01"
+								required
+							/>
+						</label>
+					{/each}
+				{/each}
 			</div>
 		</div>
 

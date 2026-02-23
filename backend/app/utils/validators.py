@@ -1,8 +1,7 @@
 """Pydantic validator utilities for common validation patterns."""
 
 from datetime import UTC, date, datetime
-
-from app.core.enums import Owner
+from typing import overload
 
 
 def validate_positive_amount(v: float, field_name: str = "Amount") -> float:
@@ -62,6 +61,14 @@ def validate_not_future_date(v: date, field_name: str = "Date") -> date:
     return v
 
 
+@overload
+def validate_not_empty_string(v: None, field_name: str = ...) -> None: ...
+
+
+@overload
+def validate_not_empty_string(v: str, field_name: str = ...) -> str: ...
+
+
 def validate_not_empty_string(v: str | None, field_name: str = "Name") -> str | None:
     """
     Validate string is not empty (after stripping whitespace).
@@ -84,21 +91,3 @@ def validate_not_empty_string(v: str | None, field_name: str = "Name") -> str | 
     if not stripped:
         raise ValueError(f"{field_name} cannot be empty")
     return stripped
-
-
-def validate_owner_marcin_or_ewa(v: Owner) -> Owner:
-    """
-    Validate owner is MARCIN or EWA only (restrict SHARED for retirement accounts).
-
-    Args:
-        v: Owner enum value
-
-    Returns:
-        Validated owner
-
-    Raises:
-        ValueError: If owner is SHARED
-    """
-    if v == Owner.SHARED:
-        raise ValueError("Owner must be MARCIN or EWA for individual retirement accounts")
-    return v

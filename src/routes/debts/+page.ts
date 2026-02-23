@@ -40,11 +40,16 @@ export interface DebtsListResponse {
 	active_debts_count: number;
 }
 
-export const load: PageLoad = async ({ fetch }): Promise<DebtsListResponse> => {
+export const load: PageLoad = async ({ fetch }) => {
 	const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
-	const response = await fetch(`${apiUrl}/api/debts`);
-	if (!response.ok) {
-		throw error(response.status, 'Failed to load debts');
+	const [debtsResponse, personasResponse] = await Promise.all([
+		fetch(`${apiUrl}/api/debts`),
+		fetch(`${apiUrl}/api/personas`)
+	]);
+	if (!debtsResponse.ok) {
+		throw error(debtsResponse.status, 'Failed to load debts');
 	}
-	return response.json();
+	const debts = await debtsResponse.json();
+	const personas = personasResponse.ok ? await personasResponse.json() : [];
+	return { ...debts, personas };
 };

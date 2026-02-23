@@ -13,11 +13,13 @@
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import type { Debt, DebtPayment } from './+page';
+	import type { Persona } from '$lib/types/personas';
 
 	export let data;
 
 	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
-	const defaultOwner = env.PUBLIC_DEFAULT_OWNER || 'Marcin';
+	$: personas = data.personas as Persona[];
+	$: defaultOwner = personas.length > 0 ? personas[0].name : 'Marcin';
 
 	let showForm = false;
 	let editingDebt: Debt | null = null;
@@ -498,9 +500,9 @@
 					<div class="form-group">
 						<label for="payment_owner">Kto wpłacił</label>
 						<select id="payment_owner" bind:value={paymentFormData.owner}>
-							<option value="Marcin">Marcin</option>
-							<option value="Ewa">Ewa</option>
-							<option value="Shared">Wspólne</option>
+							{#each personas as persona}
+								<option value={persona.name}>{persona.name}</option>
+							{/each}
 						</select>
 					</div>
 				</div>
