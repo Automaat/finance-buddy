@@ -478,11 +478,12 @@ def run_simulation(db: Session, inputs: SimulationInputs) -> SimulationResponse:
 
 def simulate_mortgage_vs_invest(inputs: MortgageVsInvestInputs) -> MortgageVsInvestResponse:
     """Compare overpaying mortgage vs investing the extra amount month by month."""
+    belka_rate = 0.19
     monthly_rate = inputs.annual_interest_rate / 100 / 12
-    monthly_invest_rate = inputs.expected_annual_return / 100 / 12
+    # Belka (19%) baked into monthly compounding: break-even at mortgage_rate / (1 - belka_rate)
+    monthly_invest_rate = inputs.expected_annual_return * (1 - belka_rate) / 100 / 12
     n = inputs.remaining_months
     p = inputs.remaining_principal
-    belka_rate = 0.19
 
     # Initial payment at starting rate (used for budget validation and summary)
     regular_payment = p * (monthly_rate * (1 + monthly_rate) ** n) / ((1 + monthly_rate) ** n - 1)
@@ -500,13 +501,11 @@ def simulate_mortgage_vs_invest(inputs: MortgageVsInvestInputs) -> MortgageVsInv
     balance_a = p
     cumulative_interest_a = 0.0
     investment_a = 0.0
-    total_invested_a = 0.0  # track contributions (not returns) for Belka tax
     payoff_month_a = n  # default: pays off at term end
 
     # Scenario B: pay minimum each month, invest the rest
     balance_b = p
     investment_b = 0.0
-    total_invested_b = 0.0  # track contributions (not returns) for Belka tax
     cumulative_interest_b = 0.0
 
     yearly_projections: list[MortgageVsInvestYearlyRow] = []
@@ -544,10 +543,8 @@ def simulate_mortgage_vs_invest(inputs: MortgageVsInvestInputs) -> MortgageVsInv
             if balance_a == 0 and payoff_month_a == n:
                 payoff_month_a = month
             if surplus_a > 0:
-                total_invested_a += surplus_a
                 investment_a = (investment_a + surplus_a) * (1 + monthly_invest_rate)
         else:
-            total_invested_a += inputs.total_monthly_budget
             investment_a = (investment_a + inputs.total_monthly_budget) * (1 + monthly_invest_rate)
 
         # Scenario B: recalculate minimum payment at current rate, invest the rest
@@ -562,17 +559,14 @@ def simulate_mortgage_vs_invest(inputs: MortgageVsInvestInputs) -> MortgageVsInv
         balance_b = max(0.0, balance_b - principal_payment_b)
         extra_b = max(0.0, inputs.total_monthly_budget - min_payment_b)
 
-        total_invested_b += extra_b
         investment_b = (investment_b + extra_b) * (1 + monthly_invest_rate)
 
         # Collect yearly snapshot
         if month % 12 == 0:
             year = month // 12
-            # Belka tax (19%) on capital gains if liquidating at this point
-            gains_a = max(0.0, investment_a - total_invested_a)
-            after_tax_a = investment_a - gains_a * belka_rate
-            gains_b = max(0.0, investment_b - total_invested_b)
-            after_tax_b = investment_b - gains_b * belka_rate
+            # Belka already baked into monthly_invest_rate — portfolio values are net
+            after_tax_a = investment_a
+            after_tax_b = investment_b
             # Inflation-adjusted (real) values in today's PLN
             inflation_factor = (1 + inputs.inflation_rate / 100) ** year
             real_a = after_tax_a / inflation_factor
@@ -605,13 +599,9 @@ def simulate_mortgage_vs_invest(inputs: MortgageVsInvestInputs) -> MortgageVsInv
 
     interest_saved = cumulative_interest_b - cumulative_interest_a
     months_saved = n - payoff_month_a
-    # Final Belka tax on gains at end of simulation
-    final_gains_a = max(0.0, investment_a - total_invested_a)
-    final_belka_tax_a = final_gains_a * belka_rate
-    final_after_tax_a = investment_a - final_belka_tax_a
-    final_gains_b = max(0.0, investment_b - total_invested_b)
-    final_belka_tax_b = final_gains_b * belka_rate
-    final_after_tax_b = investment_b - final_belka_tax_b
+    # Belka baked into monthly rate — no lump-sum tax at liquidation
+    final_after_tax_a = investment_a
+    final_after_tax_b = investment_b
     # Inflation-adjust final portfolios to today's PLN
     final_inflation_factor = (1 + inputs.inflation_rate / 100) ** (n / 12)
     final_real_a = final_after_tax_a / final_inflation_factor
@@ -632,13 +622,14 @@ def simulate_mortgage_vs_invest(inputs: MortgageVsInvestInputs) -> MortgageVsInv
         total_interest_b=round(cumulative_interest_b, 2),
         interest_saved=round(interest_saved, 2),
         final_investment_portfolio=round(investment_b, 2),
-        belka_tax_a=round(final_belka_tax_a, 2),
-        belka_tax_b=round(final_belka_tax_b, 2),
+        belka_tax_a=0.0,
+        belka_tax_b=0.0,
         final_portfolio_a_real=round(final_real_a, 2),
         final_portfolio_b_real=round(final_real_b, 2),
         months_saved=months_saved,
         winning_strategy=winning_strategy,
         net_advantage=round(net_advantage, 2),
+        break_even_gross_return=round(inputs.annual_interest_rate / (1 - belka_rate), 4),
     )
 
     return MortgageVsInvestResponse(
