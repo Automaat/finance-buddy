@@ -60,9 +60,13 @@ def update_persona(
         if data.name is not None and data.name != old_name:
             db.query(Account).filter(Account.owner == old_name).update({"owner": data.name})
             db.query(Transaction).filter(Transaction.owner == old_name).update({"owner": data.name})
-            db.query(SalaryRecord).filter(SalaryRecord.owner == old_name).update({"owner": data.name})
+            db.query(SalaryRecord).filter(SalaryRecord.owner == old_name).update(
+                {"owner": data.name}
+            )
             db.query(DebtPayment).filter(DebtPayment.owner == old_name).update({"owner": data.name})
-            db.query(RetirementLimit).filter(RetirementLimit.owner == old_name).update({"owner": data.name})
+            db.query(RetirementLimit).filter(RetirementLimit.owner == old_name).update(
+                {"owner": data.name}
+            )
         db.commit()
         db.refresh(persona)
     except IntegrityError as e:

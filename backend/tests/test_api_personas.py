@@ -155,4 +155,4 @@ def test_delete_persona_with_accounts_returns_409(test_client, test_db_session):
     response = test_client.delete(f"/api/personas/{persona.id}")
 
     assert response.status_code == 409
-    assert "accounts reference it" in response.json()["detail"]
+    assert "referenced by" in response.json()["detail"]
