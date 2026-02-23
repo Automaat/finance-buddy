@@ -53,9 +53,13 @@ export const load: PageLoad = async ({ fetch, url }) => {
 				.map((acc: Account) => ({ id: acc.id, name: acc.name, category: acc.category }));
 		}
 
+		const personasResponse = await fetch(`${apiUrl}/api/personas`);
+		const personas = personasResponse.ok ? await personasResponse.json() : [];
+
 		return {
 			transactions: transactionsData,
 			accounts: investmentAccounts,
+			personas,
 			filters: {
 				account_id: accountId,
 				owner,

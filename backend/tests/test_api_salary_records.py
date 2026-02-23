@@ -1,22 +1,31 @@
 from datetime import date
 
+from app.models.persona import Persona
 from tests.factories import create_test_salary_record
 
 
-def test_get_all_salary_records_empty(test_client):
+def test_get_all_salary_records_empty(test_client, test_db_session):
     """Test GET /api/salaries returns empty list"""
+    test_db_session.add(Persona(name="Marcin"))
+    test_db_session.add(Persona(name="Ewa"))
+    test_db_session.commit()
+
     response = test_client.get("/api/salaries")
 
     assert response.status_code == 200
     data = response.json()
     assert data["salary_records"] == []
     assert data["total_count"] == 0
-    assert data["current_salary_marcin"] is None
-    assert data["current_salary_ewa"] is None
+    assert data["current_salaries"]["Marcin"] is None
+    assert data["current_salaries"]["Ewa"] is None
 
 
 def test_get_all_salary_records_success(test_client, test_db_session):
     """Test GET /api/salaries returns all active salary records"""
+    test_db_session.add(Persona(name="Marcin"))
+    test_db_session.add(Persona(name="Ewa"))
+    test_db_session.commit()
+
     create_test_salary_record(
         test_db_session,
         salary_date=date(2024, 1, 1),
@@ -38,12 +47,16 @@ def test_get_all_salary_records_success(test_client, test_db_session):
     data = response.json()
     assert len(data["salary_records"]) == 2
     assert data["total_count"] == 2
-    assert data["current_salary_marcin"] == 10000.0
-    assert data["current_salary_ewa"] == 8000.0
+    assert data["current_salaries"]["Marcin"] == 10000.0
+    assert data["current_salaries"]["Ewa"] == 8000.0
 
 
 def test_get_all_salary_records_filter_by_owner(test_client, test_db_session):
     """Test GET /api/salaries?owner=X filters by owner"""
+    test_db_session.add(Persona(name="Marcin"))
+    test_db_session.add(Persona(name="Ewa"))
+    test_db_session.commit()
+
     create_test_salary_record(
         test_db_session,
         salary_date=date(2024, 1, 1),
@@ -69,6 +82,9 @@ def test_get_all_salary_records_filter_by_owner(test_client, test_db_session):
 
 def test_get_all_salary_records_filter_by_date_range(test_client, test_db_session):
     """Test GET /api/salaries with date_from and date_to filters"""
+    test_db_session.add(Persona(name="Marcin"))
+    test_db_session.commit()
+
     create_test_salary_record(
         test_db_session,
         salary_date=date(2023, 1, 1),

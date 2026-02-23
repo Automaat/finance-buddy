@@ -8,6 +8,7 @@
 	export let assets: any[];
 	export let liabilities: any[];
 	export let physicalAssets: any[];
+	export let personas: Array<{ id: number; name: string }> = [];
 
 	// Initialize form state
 	let snapshotDate = new Date().toISOString().split('T')[0];
@@ -102,7 +103,7 @@
 	let newAccountSection: 'investments' | 'assets' | 'liabilities' = 'assets';
 	let newAccountName = '';
 	let newAccountCategory = '';
-	let newAccountOwner = 'Shared';
+	let newAccountOwner = personas.length > 0 ? personas[0].name : '';
 	let newAccountValue = 0;
 	let creatingAccount = false;
 	let newAssetName = '';
@@ -661,9 +662,9 @@
 					<div class="form-group">
 						<label for="newAccountOwner" class="form-label">Właściciel</label>
 						<select id="newAccountOwner" bind:value={newAccountOwner} class="form-input">
-							<option value="Shared">Wspólne</option>
-							<option value="Marcin">Marcin</option>
-							<option value="Ewa">Ewa</option>
+							{#each personas as persona}
+								<option value={persona.name}>{persona.name}</option>
+							{/each}
 						</select>
 					</div>
 

@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.models.app_config import AppConfig
+from app.models.persona import Persona
 from app.models.retirement_limit import RetirementLimit
 from tests.factories import create_test_account, create_test_snapshot, create_test_snapshot_value
 
@@ -24,9 +25,17 @@ def create_app_config():
     )
 
 
+def _add_personas(db: Session) -> None:
+    """Add Marcin and Ewa personas to DB"""
+    db.add(
+        Persona(name="Marcin", ppk_employee_rate=Decimal("2.0"), ppk_employer_rate=Decimal("1.5"))
+    )
+    db.add(Persona(name="Ewa", ppk_employee_rate=Decimal("2.0"), ppk_employer_rate=Decimal("1.5")))
+    db.commit()
+
+
 def test_simulate_retirement_success(test_client: TestClient, test_db_session: Session):
     """Test successful retirement simulation"""
-    # Setup
     config = create_app_config()
     test_db_session.add(config)
 
@@ -37,13 +46,17 @@ def test_simulate_retirement_success(test_client: TestClient, test_db_session: S
     payload = {
         "current_age": 30,
         "retirement_age": 35,
-        "simulate_ike_marcin": True,
-        "simulate_ike_ewa": False,
-        "simulate_ikze_marcin": False,
-        "simulate_ikze_ewa": False,
-        "ike_marcin_balance": 10000.0,
-        "ike_marcin_auto_fill": True,
-        "ike_marcin_monthly": 0,
+        "ike_ikze_accounts": [
+            {
+                "enabled": True,
+                "wrapper": "IKE",
+                "owner": "Marcin",
+                "balance": 10000.0,
+                "auto_fill_limit": True,
+                "monthly_contribution": 0,
+                "tax_rate": 0,
+            }
+        ],
         "annual_return_rate": 7.0,
         "limit_growth_rate": 5.0,
     }
@@ -67,9 +80,17 @@ def test_simulate_retirement_invalid_return_rate(test_client: TestClient):
     payload = {
         "current_age": 30,
         "retirement_age": 35,
-        "simulate_ike_marcin": True,
-        "ike_marcin_balance": 10000.0,
-        "ike_marcin_auto_fill": True,
+        "ike_ikze_accounts": [
+            {
+                "enabled": True,
+                "wrapper": "IKE",
+                "owner": "Marcin",
+                "balance": 10000.0,
+                "auto_fill_limit": True,
+                "monthly_contribution": 0,
+                "tax_rate": 0,
+            }
+        ],
         "annual_return_rate": 100.0,  # Invalid - exceeds 50%
         "limit_growth_rate": 5.0,
     }
@@ -112,20 +133,40 @@ def test_simulate_retirement_all_accounts(test_client: TestClient, test_db_sessi
     payload = {
         "current_age": 30,
         "retirement_age": 40,
-        "simulate_ike_marcin": True,
-        "simulate_ike_ewa": True,
-        "simulate_ikze_marcin": True,
-        "simulate_ikze_ewa": True,
-        "ike_marcin_balance": 10000.0,
-        "ike_ewa_balance": 5000.0,
-        "ikze_marcin_balance": 3000.0,
-        "ikze_ewa_balance": 2000.0,
-        "ike_marcin_auto_fill": True,
-        "ike_ewa_auto_fill": True,
-        "ikze_marcin_auto_fill": True,
-        "ikze_ewa_auto_fill": True,
-        "marcin_tax_rate": 17.0,
-        "ewa_tax_rate": 17.0,
+        "ike_ikze_accounts": [
+            {
+                "enabled": True,
+                "wrapper": "IKE",
+                "owner": "Marcin",
+                "balance": 10000.0,
+                "auto_fill_limit": True,
+                "tax_rate": 0,
+            },
+            {
+                "enabled": True,
+                "wrapper": "IKE",
+                "owner": "Ewa",
+                "balance": 5000.0,
+                "auto_fill_limit": True,
+                "tax_rate": 0,
+            },
+            {
+                "enabled": True,
+                "wrapper": "IKZE",
+                "owner": "Marcin",
+                "balance": 3000.0,
+                "auto_fill_limit": True,
+                "tax_rate": 17.0,
+            },
+            {
+                "enabled": True,
+                "wrapper": "IKZE",
+                "owner": "Ewa",
+                "balance": 2000.0,
+                "auto_fill_limit": True,
+                "tax_rate": 17.0,
+            },
+        ],
         "annual_return_rate": 7.0,
         "limit_growth_rate": 5.0,
     }
@@ -143,7 +184,7 @@ def test_get_prefill_data_success(test_client: TestClient, test_db_session: Sess
     """Test prefill data endpoint"""
     config = create_app_config()
     test_db_session.add(config)
-    test_db_session.commit()
+    _add_personas(test_db_session)
 
     response = test_client.get("/api/simulations/prefill")
 
@@ -162,7 +203,7 @@ def test_get_prefill_data_with_balances(test_client: TestClient, test_db_session
     """Test prefill data with actual balances from snapshot"""
     config = create_app_config()
     test_db_session.add(config)
-    test_db_session.commit()
+    _add_personas(test_db_session)
 
     ike_marcin = create_test_account(
         test_db_session,
@@ -220,13 +261,17 @@ def test_simulate_retirement_fixed_monthly_contributions(
     payload = {
         "current_age": 30,
         "retirement_age": 33,
-        "simulate_ike_marcin": True,
-        "simulate_ike_ewa": False,
-        "simulate_ikze_marcin": False,
-        "simulate_ikze_ewa": False,
-        "ike_marcin_balance": 0,
-        "ike_marcin_auto_fill": False,
-        "ike_marcin_monthly": 1000.0,
+        "ike_ikze_accounts": [
+            {
+                "enabled": True,
+                "wrapper": "IKE",
+                "owner": "Marcin",
+                "balance": 0,
+                "auto_fill_limit": False,
+                "monthly_contribution": 1000.0,
+                "tax_rate": 0,
+            }
+        ],
         "annual_return_rate": 7.0,
         "limit_growth_rate": 5.0,
     }
@@ -255,13 +300,17 @@ def test_simulate_retirement_yearly_projections_structure(
     payload = {
         "current_age": 30,
         "retirement_age": 32,
-        "simulate_ike_marcin": False,
-        "simulate_ike_ewa": False,
-        "simulate_ikze_marcin": True,
-        "simulate_ikze_ewa": False,
-        "ikze_marcin_balance": 5000.0,
-        "ikze_marcin_auto_fill": True,
-        "marcin_tax_rate": 17.0,
+        "ike_ikze_accounts": [
+            {
+                "enabled": True,
+                "wrapper": "IKZE",
+                "owner": "Marcin",
+                "balance": 5000.0,
+                "auto_fill_limit": True,
+                "monthly_contribution": 0,
+                "tax_rate": 17.0,
+            }
+        ],
         "annual_return_rate": 7.0,
         "limit_growth_rate": 5.0,
     }

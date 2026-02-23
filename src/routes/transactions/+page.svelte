@@ -10,11 +10,13 @@
 	} from '@mskalski/home-ui';
 	import { env } from '$env/dynamic/public';
 	import { goto, invalidateAll } from '$app/navigation';
+	import type { Persona } from '$lib/types/personas';
 
 	export let data;
 
 	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
-	const defaultOwner = env.PUBLIC_DEFAULT_OWNER || 'Marcin';
+	$: personas = data.personas as Persona[];
+	$: defaultOwner = personas.length > 0 ? personas[0].name : 'Marcin';
 
 	let filterAccountId = data.filters.account_id || '';
 	let filterOwner = data.filters.owner || '';
@@ -216,9 +218,9 @@
 					<label for="filter-owner">Właściciel</label>
 					<select id="filter-owner" bind:value={filterOwner}>
 						<option value="">Wszystkie</option>
-						<option value="Marcin">Marcin</option>
-						<option value="Ewa">Ewa</option>
-						<option value="Shared">Wspólne</option>
+						{#each personas as persona}
+							<option value={persona.name}>{persona.name}</option>
+						{/each}
 					</select>
 				</div>
 
@@ -338,9 +340,9 @@
 		<div class="form-group">
 			<label for="transaction-owner">Właściciel *</label>
 			<select id="transaction-owner" bind:value={newTransactionData.owner} required>
-				<option value="Marcin">Marcin</option>
-				<option value="Ewa">Ewa</option>
-				<option value="Shared">Wspólne</option>
+				{#each personas as persona}
+					<option value={persona.name}>{persona.name}</option>
+				{/each}
 			</select>
 		</div>
 	</form>
@@ -363,8 +365,9 @@
 		<div class="form-group">
 			<label for="ppk-owner">Właściciel *</label>
 			<select id="ppk-owner" bind:value={ppkGenerateData.owner} required>
-				<option value="Marcin">Marcin</option>
-				<option value="Ewa">Ewa</option>
+				{#each personas as persona}
+					<option value={persona.name}>{persona.name}</option>
+				{/each}
 			</select>
 		</div>
 

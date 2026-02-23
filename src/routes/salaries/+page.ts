@@ -30,13 +30,17 @@ export const load: PageLoad = async ({ fetch, url }) => {
 
 		const data: SalariesData = await response.json();
 
+		const personasResponse = await fetch(`${apiUrl}/api/personas`);
+		const personas = personasResponse.ok ? await personasResponse.json() : [];
+
 		return {
 			salaries: data,
 			filters: {
 				owner,
 				date_from: dateFrom,
 				date_to: dateTo
-			}
+			},
+			personas
 		};
 	} catch (err) {
 		if (err instanceof Error && 'status' in err) {

@@ -2,8 +2,6 @@
 
 from datetime import UTC, date, datetime
 
-from app.core.enums import Owner
-
 
 def validate_positive_amount(v: float, field_name: str = "Amount") -> float:
     """
@@ -84,21 +82,3 @@ def validate_not_empty_string(v: str | None, field_name: str = "Name") -> str | 
     if not stripped:
         raise ValueError(f"{field_name} cannot be empty")
     return stripped
-
-
-def validate_owner_marcin_or_ewa(v: Owner) -> Owner:
-    """
-    Validate owner is MARCIN or EWA only (restrict SHARED for retirement accounts).
-
-    Args:
-        v: Owner enum value
-
-    Returns:
-        Validated owner
-
-    Raises:
-        ValueError: If owner is SHARED
-    """
-    if v == Owner.SHARED:
-        raise ValueError("Owner must be MARCIN or EWA for individual retirement accounts")
-    return v

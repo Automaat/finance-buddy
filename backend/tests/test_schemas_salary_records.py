@@ -82,17 +82,6 @@ class TestSalaryRecordCreateValidation:
                 owner="Marcin",
             )
 
-    def test_invalid_owner_fails(self):
-        """Test that invalid owner raises validation error"""
-        with pytest.raises(ValidationError, match="Input should be 'Marcin', 'Ewa' or 'Shared'"):
-            SalaryRecordCreate(
-                date=date(2024, 1, 1),
-                gross_amount=10000.0,
-                contract_type="UOP",
-                company="Test Company",
-                owner="InvalidOwner",
-            )
-
     def test_invalid_contract_type_fails(self):
         """Test that invalid contract type raises validation error"""
         with pytest.raises(ValidationError, match="Input should be 'UOP', 'UZ', 'UoD' or 'B2B'"):
@@ -178,11 +167,6 @@ class TestSalaryRecordUpdateValidation:
         """Test that whitespace-only company raises validation error"""
         with pytest.raises(ValidationError, match="Company cannot be empty"):
             SalaryRecordUpdate(company="   ")
-
-    def test_invalid_owner_fails(self):
-        """Test that invalid owner raises validation error"""
-        with pytest.raises(ValidationError, match="Input should be 'Marcin', 'Ewa' or 'Shared'"):
-            SalaryRecordUpdate(owner="InvalidOwner")
 
     def test_invalid_contract_type_fails(self):
         """Test that invalid contract type raises validation error"""

@@ -3,6 +3,7 @@ from datetime import date
 import pytest
 from fastapi import HTTPException
 
+from app.models.persona import Persona
 from app.schemas.salary_records import SalaryRecordCreate, SalaryRecordUpdate
 from app.services.salary_records import (
     create_salary_record,
@@ -59,6 +60,9 @@ def test_create_salary_record_duplicate(test_db_session):
 
 def test_get_all_salary_records(test_db_session):
     """Test getting all salary records"""
+    test_db_session.add(Persona(name="Marcin"))
+    test_db_session.commit()
+
     create_test_salary_record(test_db_session)
     create_test_salary_record(test_db_session, salary_date=date(2024, 6, 1), gross_amount=12000.0)
 
@@ -68,11 +72,15 @@ def test_get_all_salary_records(test_db_session):
     assert len(result.salary_records) == 2
     assert result.salary_records[0].gross_amount == 12000.0
     assert result.salary_records[1].gross_amount == 10000.0
-    assert result.current_salary_marcin == 12000.0
+    assert result.current_salaries.get("Marcin") == 12000.0
 
 
 def test_get_all_salary_records_with_filters(test_db_session):
     """Test getting salary records with filters"""
+    test_db_session.add(Persona(name="Marcin"))
+    test_db_session.add(Persona(name="Ewa"))
+    test_db_session.commit()
+
     create_test_salary_record(test_db_session)
     create_test_salary_record(
         test_db_session,

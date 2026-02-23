@@ -5,7 +5,6 @@ from datetime import UTC, date, datetime, timedelta
 import pytest
 from fastapi import HTTPException
 
-from app.core.enums import Owner
 from app.models import Account, Snapshot
 from app.models.snapshot import SnapshotValue
 from app.utils.db_helpers import (
@@ -19,7 +18,6 @@ from app.utils.validators import (
     validate_non_negative_amount,
     validate_not_empty_string,
     validate_not_future_date,
-    validate_owner_marcin_or_ewa,
     validate_positive_amount,
 )
 
@@ -435,17 +433,3 @@ def test_validate_not_empty_string_empty_fails():
 def test_validate_not_empty_string_nullable():
     """Test None is allowed (for nullable fields)"""
     assert validate_not_empty_string(None) is None
-
-
-def test_validate_owner_marcin_or_ewa_success():
-    """Test MARCIN and EWA pass validation"""
-    assert validate_owner_marcin_or_ewa(Owner.MARCIN) == Owner.MARCIN
-    assert validate_owner_marcin_or_ewa(Owner.EWA) == Owner.EWA
-
-
-def test_validate_owner_marcin_or_ewa_shared_fails():
-    """Test SHARED fails validation"""
-    with pytest.raises(
-        ValueError, match="Owner must be MARCIN or EWA for individual retirement accounts"
-    ):
-        validate_owner_marcin_or_ewa(Owner.SHARED)

@@ -1,10 +1,17 @@
 from datetime import date
+from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
 from app.models.app_config import AppConfig
+from app.models.persona import Persona
 from app.models.retirement_limit import RetirementLimit
-from app.schemas.simulations import PPKSimulationConfig, SimulationInputs
+from app.schemas.simulations import (
+    BrokerageAccountInput,
+    IkeIkzeAccountInput,
+    PPKSimulationConfig,
+    SimulationInputs,
+)
 from app.services.simulations import (
     fetch_current_balances,
     fetch_ppk_balances,
@@ -17,6 +24,15 @@ from app.services.simulations import (
     simulate_ppk_account,
 )
 from tests.factories import create_test_account, create_test_snapshot, create_test_snapshot_value
+
+
+def _add_personas(db: Session) -> None:
+    """Add Marcin and Ewa personas to DB"""
+    db.add(
+        Persona(name="Marcin", ppk_employee_rate=Decimal("2.0"), ppk_employer_rate=Decimal("1.5"))
+    )
+    db.add(Persona(name="Ewa", ppk_employee_rate=Decimal("2.0"), ppk_employer_rate=Decimal("1.5")))
+    db.commit()
 
 
 def test_get_limit_for_year_from_db(test_db_session: Session):
@@ -46,14 +62,17 @@ def test_get_limit_for_year_ikze(test_db_session: Session):
 
 def test_fetch_current_balances_no_snapshot(test_db_session: Session):
     """Test fetching balances when no snapshot exists"""
+    _add_personas(test_db_session)
+
     balances = fetch_current_balances(test_db_session)
 
-    assert balances == {"ike_marcin": 0, "ike_ewa": 0, "ikze_marcin": 0, "ikze_ewa": 0}
+    assert balances == {"ike_ewa": 0, "ike_marcin": 0, "ikze_ewa": 0, "ikze_marcin": 0}
 
 
 def test_fetch_current_balances_with_snapshot(test_db_session: Session):
     """Test fetching balances from latest snapshot"""
-    # Create accounts
+    _add_personas(test_db_session)
+
     ike_marcin = create_test_account(
         test_db_session,
         name="IKE Marcin",
@@ -71,10 +90,8 @@ def test_fetch_current_balances_with_snapshot(test_db_session: Session):
         purpose="retirement",
     )
 
-    # Create snapshot
     snapshot = create_test_snapshot(test_db_session, snapshot_date=date(2026, 1, 31), notes="Test")
 
-    # Create snapshot values
     create_test_snapshot_value(test_db_session, snapshot.id, ike_marcin.id, value=50000.0)
     create_test_snapshot_value(test_db_session, snapshot.id, ikze_ewa.id, value=30000.0)
 
@@ -88,8 +105,6 @@ def test_fetch_current_balances_with_snapshot(test_db_session: Session):
 
 def test_get_age_from_config(test_db_session: Session):
     """Test age calculation from config"""
-    from decimal import Decimal
-
     config = AppConfig(
         id=1,
         birth_date=date(1990, 1, 1),
@@ -111,7 +126,6 @@ def test_get_age_from_config(test_db_session: Session):
 
 def test_simulate_account_auto_fill(test_db_session: Session):
     """Test simulation with auto-fill limit"""
-    # Add limit
     limit = RetirementLimit(year=2026, account_wrapper="IKE", owner="Marcin", limit_amount=28260.0)
     test_db_session.add(limit)
     test_db_session.commit()
@@ -243,9 +257,6 @@ def test_simulate_account_compound_interest(test_db_session: Session):
 
 def test_run_simulation_all_accounts(test_db_session: Session):
     """Test full simulation with all accounts"""
-    from decimal import Decimal
-
-    # Setup
     config = AppConfig(
         id=1,
         birth_date=date(1990, 1, 1),
@@ -275,20 +286,40 @@ def test_run_simulation_all_accounts(test_db_session: Session):
     inputs = SimulationInputs(
         current_age=30,
         retirement_age=35,
-        simulate_ike_marcin=True,
-        simulate_ike_ewa=True,
-        simulate_ikze_marcin=True,
-        simulate_ikze_ewa=True,
-        ike_marcin_balance=10000.0,
-        ike_ewa_balance=5000.0,
-        ikze_marcin_balance=3000.0,
-        ikze_ewa_balance=2000.0,
-        ike_marcin_auto_fill=True,
-        ike_ewa_auto_fill=True,
-        ikze_marcin_auto_fill=True,
-        ikze_ewa_auto_fill=True,
-        marcin_tax_rate=17.0,
-        ewa_tax_rate=17.0,
+        ike_ikze_accounts=[
+            IkeIkzeAccountInput(
+                enabled=True,
+                wrapper="IKE",
+                owner="Marcin",
+                balance=10000.0,
+                auto_fill_limit=True,
+                tax_rate=0,
+            ),
+            IkeIkzeAccountInput(
+                enabled=True,
+                wrapper="IKE",
+                owner="Ewa",
+                balance=5000.0,
+                auto_fill_limit=True,
+                tax_rate=0,
+            ),
+            IkeIkzeAccountInput(
+                enabled=True,
+                wrapper="IKZE",
+                owner="Marcin",
+                balance=3000.0,
+                auto_fill_limit=True,
+                tax_rate=17.0,
+            ),
+            IkeIkzeAccountInput(
+                enabled=True,
+                wrapper="IKZE",
+                owner="Ewa",
+                balance=2000.0,
+                auto_fill_limit=True,
+                tax_rate=17.0,
+            ),
+        ],
         annual_return_rate=7.0,
         limit_growth_rate=5.0,
     )
@@ -309,8 +340,6 @@ def test_run_simulation_all_accounts(test_db_session: Session):
 
 def test_run_simulation_selective_accounts(test_db_session: Session):
     """Test simulation with only some accounts selected"""
-    from decimal import Decimal
-
     config = AppConfig(
         id=1,
         birth_date=date(1990, 1, 1),
@@ -331,12 +360,16 @@ def test_run_simulation_selective_accounts(test_db_session: Session):
     inputs = SimulationInputs(
         current_age=30,
         retirement_age=35,
-        simulate_ike_marcin=True,
-        simulate_ike_ewa=False,
-        simulate_ikze_marcin=False,
-        simulate_ikze_ewa=False,
-        ike_marcin_balance=10000.0,
-        ike_marcin_auto_fill=True,
+        ike_ikze_accounts=[
+            IkeIkzeAccountInput(
+                enabled=True,
+                wrapper="IKE",
+                owner="Marcin",
+                balance=10000.0,
+                auto_fill_limit=True,
+                tax_rate=0,
+            ),
+        ],
         annual_return_rate=7.0,
         limit_growth_rate=5.0,
     )
@@ -551,7 +584,8 @@ def test_simulate_ppk_account_monthly_compounding():
 
 def test_fetch_ppk_balances(test_db_session: Session):
     """Test fetching PPK balances from snapshot"""
-    # Create PPK accounts
+    _add_personas(test_db_session)
+
     ppk_marcin = create_test_account(
         test_db_session,
         name="PPK Marcin",
@@ -569,10 +603,8 @@ def test_fetch_ppk_balances(test_db_session: Session):
         purpose="retirement",
     )
 
-    # Create snapshot
     snapshot = create_test_snapshot(test_db_session, snapshot_date=date(2026, 1, 31), notes="Test")
 
-    # Create snapshot values
     create_test_snapshot_value(test_db_session, snapshot.id, ppk_marcin.id, value=15000.0)
     create_test_snapshot_value(test_db_session, snapshot.id, ppk_ewa.id, value=12000.0)
 
@@ -584,8 +616,6 @@ def test_fetch_ppk_balances(test_db_session: Session):
 
 def test_run_simulation_with_ppk(test_db_session: Session):
     """Test full simulation including PPK accounts"""
-    from decimal import Decimal
-
     config = AppConfig(
         id=1,
         birth_date=date(1990, 1, 1),
@@ -596,10 +626,6 @@ def test_run_simulation_with_ppk(test_db_session: Session):
         allocation_bonds=20,
         allocation_gold=5,
         allocation_commodities=5,
-        ppk_employee_rate_marcin=Decimal("2.0"),
-        ppk_employer_rate_marcin=Decimal("1.5"),
-        ppk_employee_rate_ewa=Decimal("2.0"),
-        ppk_employer_rate_ewa=Decimal("1.5"),
     )
     test_db_session.add(config)
 
@@ -616,37 +642,43 @@ def test_run_simulation_with_ppk(test_db_session: Session):
     inputs = SimulationInputs(
         current_age=30,
         retirement_age=35,
-        simulate_ike_marcin=True,
-        simulate_ike_ewa=False,
-        simulate_ikze_marcin=False,
-        simulate_ikze_ewa=False,
-        ike_marcin_balance=10000.0,
-        ike_marcin_auto_fill=True,
+        ike_ikze_accounts=[
+            IkeIkzeAccountInput(
+                enabled=True,
+                wrapper="IKE",
+                owner="Marcin",
+                balance=10000.0,
+                auto_fill_limit=True,
+                tax_rate=0,
+            ),
+        ],
+        ppk_accounts=[
+            PPKSimulationConfig(
+                owner="Marcin",
+                enabled=True,
+                starting_balance=5000,
+                monthly_gross_salary=10000,
+                employee_rate=2.0,
+                employer_rate=1.5,
+                salary_below_threshold=False,
+                include_welcome_bonus=True,
+                include_annual_subsidy=True,
+            ),
+            PPKSimulationConfig(
+                owner="Ewa",
+                enabled=True,
+                starting_balance=3000,
+                monthly_gross_salary=8000,
+                employee_rate=2.0,
+                employer_rate=1.5,
+                salary_below_threshold=False,
+                include_welcome_bonus=True,
+                include_annual_subsidy=True,
+            ),
+        ],
         annual_return_rate=7.0,
         limit_growth_rate=5.0,
         expected_salary_growth=3.0,
-        ppk_marcin=PPKSimulationConfig(
-            owner="Marcin",
-            enabled=True,
-            starting_balance=5000,
-            monthly_gross_salary=10000,
-            employee_rate=2.0,
-            employer_rate=1.5,
-            salary_below_threshold=False,
-            include_welcome_bonus=True,
-            include_annual_subsidy=True,
-        ),
-        ppk_ewa=PPKSimulationConfig(
-            owner="Ewa",
-            enabled=True,
-            starting_balance=3000,
-            monthly_gross_salary=8000,
-            employee_rate=2.0,
-            employer_rate=1.5,
-            salary_below_threshold=False,
-            include_welcome_bonus=True,
-            include_annual_subsidy=True,
-        ),
     )
 
     result = run_simulation(test_db_session, inputs)
@@ -738,8 +770,6 @@ def test_simulate_brokerage_account_no_limits():
 
 def test_run_simulation_with_brokerage(test_db_session: Session):
     """Test full simulation including brokerage accounts"""
-    from decimal import Decimal
-
     config = AppConfig(
         id=1,
         birth_date=date(1990, 1, 1),
@@ -760,16 +790,24 @@ def test_run_simulation_with_brokerage(test_db_session: Session):
     inputs = SimulationInputs(
         current_age=30,
         retirement_age=35,
-        simulate_ike_marcin=True,
-        simulate_ike_ewa=False,
-        simulate_ikze_marcin=False,
-        simulate_ikze_ewa=False,
-        ike_marcin_balance=10000.0,
-        ike_marcin_auto_fill=True,
-        simulate_brokerage_marcin=True,
-        simulate_brokerage_ewa=False,
-        brokerage_marcin_balance=5000.0,
-        brokerage_marcin_monthly=1000.0,
+        ike_ikze_accounts=[
+            IkeIkzeAccountInput(
+                enabled=True,
+                wrapper="IKE",
+                owner="Marcin",
+                balance=10000.0,
+                auto_fill_limit=True,
+                tax_rate=0,
+            ),
+        ],
+        brokerage_accounts=[
+            BrokerageAccountInput(
+                enabled=True,
+                owner="Marcin",
+                balance=5000.0,
+                monthly_contribution=1000.0,
+            ),
+        ],
         annual_return_rate=7.0,
         limit_growth_rate=5.0,
         inflation_rate=3.0,
@@ -788,8 +826,6 @@ def test_run_simulation_with_brokerage(test_db_session: Session):
 
 def test_run_simulation_custom_inflation_rate(test_db_session: Session):
     """Test inflation rate parameter affects monthly income calculation"""
-    from decimal import Decimal
-
     config = AppConfig(
         id=1,
         birth_date=date(1990, 1, 1),
@@ -807,16 +843,20 @@ def test_run_simulation_custom_inflation_rate(test_db_session: Session):
     test_db_session.add(limit)
     test_db_session.commit()
 
+    ike_account = IkeIkzeAccountInput(
+        enabled=True,
+        wrapper="IKE",
+        owner="Marcin",
+        balance=10000.0,
+        auto_fill_limit=True,
+        tax_rate=0,
+    )
+
     # Run with 3% inflation
     inputs_3pct = SimulationInputs(
         current_age=30,
         retirement_age=35,
-        simulate_ike_marcin=True,
-        simulate_ike_ewa=False,
-        simulate_ikze_marcin=False,
-        simulate_ikze_ewa=False,
-        ike_marcin_balance=10000.0,
-        ike_marcin_auto_fill=True,
+        ike_ikze_accounts=[ike_account],
         annual_return_rate=7.0,
         limit_growth_rate=5.0,
         inflation_rate=3.0,
@@ -827,12 +867,7 @@ def test_run_simulation_custom_inflation_rate(test_db_session: Session):
     inputs_5pct = SimulationInputs(
         current_age=30,
         retirement_age=35,
-        simulate_ike_marcin=True,
-        simulate_ike_ewa=False,
-        simulate_ikze_marcin=False,
-        simulate_ikze_ewa=False,
-        ike_marcin_balance=10000.0,
-        ike_marcin_auto_fill=True,
+        ike_ikze_accounts=[ike_account],
         annual_return_rate=7.0,
         limit_growth_rate=5.0,
         inflation_rate=5.0,

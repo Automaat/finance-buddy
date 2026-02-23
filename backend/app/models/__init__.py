@@ -4,6 +4,7 @@ from app.models.asset import Asset
 from app.models.debt import Debt
 from app.models.debt_payment import DebtPayment
 from app.models.goal import Goal
+from app.models.persona import Persona
 from app.models.retirement_limit import RetirementLimit
 from app.models.salary_record import SalaryRecord
 from app.models.snapshot import Snapshot, SnapshotValue
@@ -16,6 +17,7 @@ __all__ = [
     "Debt",
     "DebtPayment",
     "Goal",
+    "Persona",
     "RetirementLimit",
     "SalaryRecord",
     "Snapshot",

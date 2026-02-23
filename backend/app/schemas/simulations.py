@@ -4,12 +4,13 @@ from app.utils.validators import validate_non_negative_amount
 
 
 class PrefillBalances(BaseModel):
-    """Current balances for retirement accounts"""
+    """Current balances for retirement accounts, keyed by {wrapper}_{owner} lowercase"""
 
-    ike_marcin: float
-    ike_ewa: float
-    ikze_marcin: float
-    ikze_ewa: float
+    # Dynamic dict instead of hardcoded fields
+    # e.g. {"ike_marcin": 100.0, "ikze_ewa": 200.0}
+
+    # Keep backward-compatible with dict-style access
+    model_config = {"extra": "allow"}
 
 
 class PrefillResponse(BaseModel):
@@ -71,57 +72,75 @@ class PPKSimulationConfig(BaseModel):
         return self
 
 
+class IkeIkzeAccountInput(BaseModel):
+    """Input for a single IKE/IKZE account simulation"""
+
+    enabled: bool = False
+    wrapper: str  # "IKE" or "IKZE"
+    owner: str
+    balance: float = 0
+    auto_fill_limit: bool = False
+    monthly_contribution: float = 0
+    tax_rate: float = 0  # Only relevant for IKZE
+
+    @field_validator("balance")
+    @classmethod
+    def validate_balance(cls, v: float) -> float:
+        if v < 0:
+            raise ValueError("Account balance cannot be negative")
+        return v
+
+    @field_validator("monthly_contribution")
+    @classmethod
+    def validate_monthly(cls, v: float) -> float:
+        if v < 0:
+            raise ValueError("Monthly contribution cannot be negative")
+        return v
+
+    @field_validator("tax_rate")
+    @classmethod
+    def validate_tax_rate(cls, v: float) -> float:
+        if v < 0 or v > 100:
+            raise ValueError("Tax rate must be between 0 and 100")
+        return v
+
+
+class BrokerageAccountInput(BaseModel):
+    """Input for a single brokerage account simulation"""
+
+    enabled: bool = False
+    owner: str
+    balance: float = 0
+    monthly_contribution: float = 0
+
+    @field_validator("balance", "monthly_contribution")
+    @classmethod
+    def validate_non_negative(cls, v: float) -> float:
+        if v < 0:
+            raise ValueError("Value cannot be negative")
+        return v
+
+
 class SimulationInputs(BaseModel):
     """Input parameters for retirement simulation"""
 
-    # Personal (fetch from AppConfig, allow override)
     current_age: int
     retirement_age: int
 
-    # Account selection
-    simulate_ike_marcin: bool = True
-    simulate_ike_ewa: bool = True
-    simulate_ikze_marcin: bool = True
-    simulate_ikze_ewa: bool = True
+    # Dynamic list of IKE/IKZE accounts
+    ike_ikze_accounts: list[IkeIkzeAccountInput] = []
 
-    # Current balances (fetch from latest snapshot, editable)
-    ike_marcin_balance: float = 0
-    ike_ewa_balance: float = 0
-    ikze_marcin_balance: float = 0
-    ikze_ewa_balance: float = 0
+    # Dynamic list of PPK configs
+    ppk_accounts: list[PPKSimulationConfig] = []
 
-    # Contribution strategy (per account)
-    # If auto_fill_limit=True, ignore monthly_contribution
-    ike_marcin_auto_fill: bool = False
-    ike_marcin_monthly: float = 0
-    ike_ewa_auto_fill: bool = False
-    ike_ewa_monthly: float = 0
-    ikze_marcin_auto_fill: bool = False
-    ikze_marcin_monthly: float = 0
-    ikze_ewa_auto_fill: bool = False
-    ikze_ewa_monthly: float = 0
-
-    # Tax (for IKZE deduction calculation)
-    marcin_tax_rate: float = 17.0
-    ewa_tax_rate: float = 17.0
+    # Dynamic list of brokerage accounts
+    brokerage_accounts: list[BrokerageAccountInput] = []
 
     # Assumptions
     annual_return_rate: float = 7.0
     limit_growth_rate: float = 5.0
     expected_salary_growth: float = 3.0
     inflation_rate: float = 3.0
-
-    # PPK configuration
-    ppk_marcin: PPKSimulationConfig | None = None
-    ppk_ewa: PPKSimulationConfig | None = None
-
-    # Brokerage accounts
-    simulate_brokerage_marcin: bool = False
-    simulate_brokerage_ewa: bool = False
-    brokerage_marcin_balance: float = 0
-    brokerage_ewa_balance: float = 0
-    brokerage_marcin_monthly: float = 0
-    brokerage_ewa_monthly: float = 0
 
     @field_validator("annual_return_rate")
     @classmethod
@@ -144,31 +163,6 @@ class SimulationInputs(BaseModel):
             raise ValueError("Age must be between 18 and 120")
         return v
 
-    @field_validator(
-        "ike_marcin_balance", "ike_ewa_balance", "ikze_marcin_balance", "ikze_ewa_balance"
-    )
-    @classmethod
-    def validate_balances(cls, v: float) -> float:
-        if v < 0:
-            raise ValueError("Account balances cannot be negative")
-        return v
-
-    @field_validator(
-        "ike_marcin_monthly", "ike_ewa_monthly", "ikze_marcin_monthly", "ikze_ewa_monthly"
-    )
-    @classmethod
-    def validate_monthly_contributions(cls, v: float) -> float:
-        if v < 0:
-            raise ValueError("Monthly contributions cannot be negative")
-        return v
-
-    @field_validator("marcin_tax_rate", "ewa_tax_rate")
-    @classmethod
-    def validate_tax_rate(cls, v: float) -> float:
-        if v < 0 or v > 100:
-            raise ValueError("Tax rate must be between 0 and 100")
-        return v
-
     @field_validator("limit_growth_rate")
     @classmethod
     def validate_limit_growth(cls, v: float) -> float:
@@ -183,18 +177,6 @@ class SimulationInputs(BaseModel):
             raise ValueError("Inflation rate must be between 0% and 20%")
         return v
 
-    @field_validator(
-        "brokerage_marcin_balance",
-        "brokerage_ewa_balance",
-        "brokerage_marcin_monthly",
-        "brokerage_ewa_monthly",
-    )
-    @classmethod
-    def validate_brokerage(cls, v: float) -> float:
-        if v < 0:
-            raise ValueError("Brokerage values cannot be negative")
-        return v
-
     @model_validator(mode="after")
     def validate_retirement_age(self):
         if self.retirement_age <= self.current_age:
@@ -203,19 +185,11 @@ class SimulationInputs(BaseModel):
 
     @model_validator(mode="after")
     def validate_at_least_one_account(self):
-        ppk_marcin_enabled = self.ppk_marcin is not None and self.ppk_marcin.enabled
-        ppk_ewa_enabled = self.ppk_ewa is not None and self.ppk_ewa.enabled
+        has_ike_ikze = any(a.enabled for a in self.ike_ikze_accounts)
+        has_ppk = any(a.enabled for a in self.ppk_accounts)
+        has_brokerage = any(a.enabled for a in self.brokerage_accounts)
 
-        if not (
-            self.simulate_ike_marcin
-            or self.simulate_ike_ewa
-            or self.simulate_ikze_marcin
-            or self.simulate_ikze_ewa
-            or ppk_marcin_enabled
-            or ppk_ewa_enabled
-            or self.simulate_brokerage_marcin
-            or self.simulate_brokerage_ewa
-        ):
+        if not (has_ike_ikze or has_ppk or has_brokerage):
             raise ValueError("At least one account must be selected for simulation")
         return self
 

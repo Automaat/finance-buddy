@@ -38,20 +38,6 @@ def test_create_account_invalid_category(test_client):
     assert response.status_code == 422
 
 
-def test_create_account_invalid_owner(test_client):
-    """Test POST /api/accounts with invalid owner"""
-    payload = {
-        "name": "Invalid Owner Account",
-        "type": "asset",
-        "category": "bank",
-        "owner": "InvalidOwner",
-    }
-
-    response = test_client.post("/api/accounts", json=payload)
-
-    assert response.status_code == 422
-
-
 def test_create_account_invalid_purpose(test_client):
     """Test POST /api/accounts with invalid purpose"""
     payload = {
@@ -119,15 +105,6 @@ def test_update_account_empty_name(test_client):
 def test_update_account_invalid_category(test_client):
     """Test updating account with invalid category fails"""
     payload = {"category": "invalid_category"}
-
-    response = test_client.put("/api/accounts/1", json=payload)
-
-    assert response.status_code == 422
-
-
-def test_update_account_invalid_owner(test_client):
-    """Test updating account with invalid owner fails"""
-    payload = {"owner": "InvalidOwner"}
 
     response = test_client.put("/api/accounts/1", json=payload)
 

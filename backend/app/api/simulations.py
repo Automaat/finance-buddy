@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.app_config import AppConfig
+from app.models.persona import Persona
+from app.models.salary_record import SalaryRecord
 from app.schemas.simulations import (
     MortgageVsInvestInputs,
     MortgageVsInvestResponse,
@@ -41,50 +43,31 @@ def get_prefill_data(db: Annotated[Session, Depends(get_db)]) -> PrefillResponse
     config = db.execute(select(AppConfig)).scalar_one_or_none()
     current_age = sim_service.get_age_from_config(db)
 
-    # Provide defaults if config not initialized
     retirement_age = config.retirement_age if config else 67
 
-    # Fetch PPK rates from AppConfig
-    ppk_rates = {}
-    if config:
-        ppk_rates = {
-            "marcin": {
-                "employee": float(config.ppk_employee_rate_marcin),
-                "employer": float(config.ppk_employer_rate_marcin),
-            },
-            "ewa": {
-                "employee": float(config.ppk_employee_rate_ewa),
-                "employer": float(config.ppk_employer_rate_ewa),
-            },
+    # Fetch PPK rates from Persona table
+    personas = db.execute(select(Persona).order_by(Persona.name)).scalars().all()
+    ppk_rates = {
+        p.name.lower(): {
+            "employee": float(p.ppk_employee_rate),
+            "employer": float(p.ppk_employer_rate),
         }
-
-    # Fetch latest salary records
-    from app.models.salary_record import SalaryRecord
-
-    salary_marcin = (
-        db.execute(
-            select(SalaryRecord)
-            .where(SalaryRecord.owner == "Marcin", SalaryRecord.is_active.is_(True))
-            .order_by(SalaryRecord.date.desc())
-        )
-        .scalars()
-        .first()
-    )
-
-    salary_ewa = (
-        db.execute(
-            select(SalaryRecord)
-            .where(SalaryRecord.owner == "Ewa", SalaryRecord.is_active.is_(True))
-            .order_by(SalaryRecord.date.desc())
-        )
-        .scalars()
-        .first()
-    )
-
-    monthly_salaries = {
-        "marcin": float(salary_marcin.gross_amount) if salary_marcin else None,
-        "ewa": float(salary_ewa.gross_amount) if salary_ewa else None,
+        for p in personas
     }
+
+    # Fetch latest salary records per persona
+    monthly_salaries: dict[str, float | None] = {}
+    for persona in personas:
+        salary = (
+            db.execute(
+                select(SalaryRecord)
+                .where(SalaryRecord.owner == persona.name, SalaryRecord.is_active.is_(True))
+                .order_by(SalaryRecord.date.desc())
+            )
+            .scalars()
+            .first()
+        )
+        monthly_salaries[persona.name.lower()] = float(salary.gross_amount) if salary else None
 
     # Fetch PPK balances
     ppk_balances = sim_service.fetch_ppk_balances(db)

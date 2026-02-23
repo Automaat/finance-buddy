@@ -48,72 +48,98 @@
 		summary: SimulationSummary;
 	}
 
-	// PPK threshold (2026 value)
+	interface IkeIkzeConfig {
+		enabled: boolean;
+		wrapper: string;
+		owner: string;
+		balance: number;
+		autoFill: boolean;
+		monthly: number;
+		taxRate: number;
+	}
+
+	interface PpkConfig {
+		enabled: boolean;
+		owner: string;
+		balance: number;
+		salary: number;
+		employeeRate: number;
+		employerRate: number;
+		belowThreshold: boolean;
+		includeSubsidies: boolean;
+	}
+
+	interface BrokerageConfig {
+		enabled: boolean;
+		owner: string;
+		balance: number;
+		monthly: number;
+	}
+
 	const SALARY_THRESHOLD_2026 = 5767;
 
 	export let data: PageData;
 
-	// Form state
+	$: personas = (data.personas || []) as Array<{ name: string }>;
+
 	let currentAge = data.current_age;
 	let retirementAge = data.retirement_age;
 
-	// Account selection
-	let simulateIkeMarcin = true;
-	let simulateIkeEwa = true;
-	let simulateIkzeMarcin = true;
-	let simulateIkzeEwa = true;
+	// Dynamic IKE/IKZE accounts - one per persona per wrapper
+	let ikeIkzeAccounts: IkeIkzeConfig[] = [];
+	let ppkAccounts: PpkConfig[] = [];
+	let brokerageAccounts: BrokerageConfig[] = [];
 
-	// Balances
-	let ikeMarcinBalance = data.balances.ike_marcin;
-	let ikeEwaBalance = data.balances.ike_ewa;
-	let ikzeMarcinBalance = data.balances.ikze_marcin;
-	let ikzeEwaBalance = data.balances.ikze_ewa;
+	function initAccounts() {
+		ikeIkzeAccounts = [];
+		ppkAccounts = [];
+		brokerageAccounts = [];
 
-	// Contribution strategies
-	let ikeMarcinAutoFill = false;
-	let ikeMarcinMonthly = 0;
-	let ikeEwaAutoFill = false;
-	let ikeEwaMonthly = 0;
-	let ikzeMarcinAutoFill = false;
-	let ikzeMarcinMonthly = 0;
-	let ikzeEwaAutoFill = false;
-	let ikzeEwaMonthly = 0;
+		for (const persona of personas) {
+			const ownerLower = persona.name.toLowerCase();
 
-	// Tax rates
-	let marcinTaxRate = 17.0;
-	let ewaTaxRate = 17.0;
+			for (const wrapper of ['IKE', 'IKZE']) {
+				const balanceKey = `${wrapper.toLowerCase()}_${ownerLower}`;
+				ikeIkzeAccounts.push({
+					enabled: true,
+					wrapper,
+					owner: persona.name,
+					balance: data.balances?.[balanceKey] ?? 0,
+					autoFill: false,
+					monthly: 0,
+					taxRate: wrapper === 'IKZE' ? 17.0 : 0
+				});
+			}
+
+			ppkAccounts.push({
+				enabled: false,
+				owner: persona.name,
+				balance: data.ppk_balances?.[ownerLower] ?? 0,
+				salary: data.monthly_salaries?.[ownerLower] ?? 10000,
+				employeeRate: data.ppk_rates?.[ownerLower]?.employee ?? 2.0,
+				employerRate: data.ppk_rates?.[ownerLower]?.employer ?? 1.5,
+				belowThreshold: false,
+				includeSubsidies: true
+			});
+
+			brokerageAccounts.push({
+				enabled: false,
+				owner: persona.name,
+				balance: 0,
+				monthly: 0
+			});
+		}
+	}
+
+	$: if (personas.length > 0 && ikeIkzeAccounts.length === 0) {
+		initAccounts();
+	}
 
 	// Assumptions
 	let annualReturnRate = 7.0;
 	let limitGrowthRate = 5.0;
 	let expectedSalaryGrowth = 3.0;
 	let inflationRate = 3.0;
-
-	// PPK configuration
-	let ppkMarcinEnabled = false;
-	let ppkMarcinBalance = 0;
-	let ppkMarcinSalary = 10000;
-	let ppkMarcinEmployeeRate = 2.0;
-	let ppkMarcinEmployerRate = 1.5;
-	let ppkMarcinBelowThreshold = false;
-	let ppkMarcinIncludeSubsidies = true;
-
-	let ppkEwaEnabled = false;
-	let ppkEwaBalance = 0;
-	let ppkEwaSalary = 10000;
-	let ppkEwaEmployeeRate = 2.0;
-	let ppkEwaEmployerRate = 1.5;
-	let ppkEwaBelowThreshold = false;
-	let ppkEwaIncludeSubsidies = true;
-
-	// Brokerage configuration
-	let brokerageMarcinEnabled = false;
-	let brokerageMarcinBalance = 0;
-	let brokerageMarcinMonthly = 0;
-
-	let brokerageEwaEnabled = false;
-	let brokerageEwaBalance = 0;
-	let brokerageEwaMonthly = 0;
 
 	// Results
 	let results: SimulationResponse | null = null;
@@ -131,37 +157,20 @@
 
 		try {
 			// Validate PPK inputs
-			if (ppkMarcinEnabled) {
-				if (ppkMarcinSalary > SALARY_THRESHOLD_2026 && ppkMarcinBelowThreshold) {
-					error = `PPK Marcin: Wynagrodzenie przekracza próg (${SALARY_THRESHOLD_2026} PLN) - nie będziesz uprawniony do dopłaty rocznej`;
+			for (const ppk of ppkAccounts) {
+				if (!ppk.enabled) continue;
+				if (ppk.salary > SALARY_THRESHOLD_2026 && ppk.belowThreshold) {
+					error = `PPK ${ppk.owner}: Wynagrodzenie przekracza próg (${SALARY_THRESHOLD_2026} PLN)`;
 					loading = false;
 					return;
 				}
-				if (ppkMarcinEmployeeRate < 0.5 || ppkMarcinEmployeeRate > 4.0) {
-					error = 'PPK Marcin: Składka pracownika musi być w zakresie 0.5-4%';
+				if (ppk.employeeRate < 0.5 || ppk.employeeRate > 4.0) {
+					error = `PPK ${ppk.owner}: Składka pracownika musi być w zakresie 0.5-4%`;
 					loading = false;
 					return;
 				}
-				if (ppkMarcinEmployerRate < 1.5 || ppkMarcinEmployerRate > 4.0) {
-					error = 'PPK Marcin: Składka pracodawcy musi być w zakresie 1.5-4%';
-					loading = false;
-					return;
-				}
-			}
-
-			if (ppkEwaEnabled) {
-				if (ppkEwaSalary > SALARY_THRESHOLD_2026 && ppkEwaBelowThreshold) {
-					error = `PPK Ewa: Wynagrodzenie przekracza próg (${SALARY_THRESHOLD_2026} PLN) - nie będziesz uprawniony do dopłaty rocznej`;
-					loading = false;
-					return;
-				}
-				if (ppkEwaEmployeeRate < 0.5 || ppkEwaEmployeeRate > 4.0) {
-					error = 'PPK Ewa: Składka pracownika musi być w zakresie 0.5-4%';
-					loading = false;
-					return;
-				}
-				if (ppkEwaEmployerRate < 1.5 || ppkEwaEmployerRate > 4.0) {
-					error = 'PPK Ewa: Składka pracodawcy musi być w zakresie 1.5-4%';
+				if (ppk.employerRate < 1.5 || ppk.employerRate > 4.0) {
+					error = `PPK ${ppk.owner}: Składka pracodawcy musi być w zakresie 1.5-4%`;
 					loading = false;
 					return;
 				}
@@ -170,67 +179,42 @@
 			const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
 			if (!apiUrl) throw new Error('API URL not configured');
 
-			const requestBody: any = {
+			const requestBody = {
 				current_age: currentAge,
 				retirement_age: retirementAge,
-				simulate_ike_marcin: simulateIkeMarcin,
-				simulate_ike_ewa: simulateIkeEwa,
-				simulate_ikze_marcin: simulateIkzeMarcin,
-				simulate_ikze_ewa: simulateIkzeEwa,
-				ike_marcin_balance: ikeMarcinBalance,
-				ike_ewa_balance: ikeEwaBalance,
-				ikze_marcin_balance: ikzeMarcinBalance,
-				ikze_ewa_balance: ikzeEwaBalance,
-				ike_marcin_auto_fill: ikeMarcinAutoFill,
-				ike_marcin_monthly: ikeMarcinMonthly,
-				ike_ewa_auto_fill: ikeEwaAutoFill,
-				ike_ewa_monthly: ikeEwaMonthly,
-				ikze_marcin_auto_fill: ikzeMarcinAutoFill,
-				ikze_marcin_monthly: ikzeMarcinMonthly,
-				ikze_ewa_auto_fill: ikzeEwaAutoFill,
-				ikze_ewa_monthly: ikzeEwaMonthly,
-				marcin_tax_rate: marcinTaxRate,
-				ewa_tax_rate: ewaTaxRate,
+				ike_ikze_accounts: ikeIkzeAccounts.map((a) => ({
+					enabled: a.enabled,
+					wrapper: a.wrapper,
+					owner: a.owner,
+					balance: a.balance,
+					auto_fill_limit: a.autoFill,
+					monthly_contribution: a.monthly,
+					tax_rate: a.taxRate
+				})),
+				ppk_accounts: ppkAccounts
+					.filter((p) => p.enabled)
+					.map((p) => ({
+						owner: p.owner,
+						enabled: true,
+						starting_balance: p.balance,
+						monthly_gross_salary: p.salary,
+						employee_rate: p.employeeRate,
+						employer_rate: p.employerRate,
+						salary_below_threshold: p.belowThreshold,
+						include_welcome_bonus: p.includeSubsidies,
+						include_annual_subsidy: p.includeSubsidies
+					})),
+				brokerage_accounts: brokerageAccounts.map((b) => ({
+					enabled: b.enabled,
+					owner: b.owner,
+					balance: b.balance,
+					monthly_contribution: b.monthly
+				})),
 				annual_return_rate: annualReturnRate,
 				limit_growth_rate: limitGrowthRate,
 				expected_salary_growth: expectedSalaryGrowth,
-				inflation_rate: inflationRate,
-				simulate_brokerage_marcin: brokerageMarcinEnabled,
-				simulate_brokerage_ewa: brokerageEwaEnabled,
-				brokerage_marcin_balance: brokerageMarcinBalance,
-				brokerage_ewa_balance: brokerageEwaBalance,
-				brokerage_marcin_monthly: brokerageMarcinMonthly,
-				brokerage_ewa_monthly: brokerageEwaMonthly
+				inflation_rate: inflationRate
 			};
-
-			// Add PPK configurations if enabled
-			if (ppkMarcinEnabled) {
-				requestBody.ppk_marcin = {
-					owner: 'Marcin',
-					enabled: true,
-					starting_balance: ppkMarcinBalance,
-					monthly_gross_salary: ppkMarcinSalary,
-					employee_rate: ppkMarcinEmployeeRate,
-					employer_rate: ppkMarcinEmployerRate,
-					salary_below_threshold: ppkMarcinBelowThreshold,
-					include_welcome_bonus: ppkMarcinIncludeSubsidies,
-					include_annual_subsidy: ppkMarcinIncludeSubsidies
-				};
-			}
-
-			if (ppkEwaEnabled) {
-				requestBody.ppk_ewa = {
-					owner: 'Ewa',
-					enabled: true,
-					starting_balance: ppkEwaBalance,
-					monthly_gross_salary: ppkEwaSalary,
-					employee_rate: ppkEwaEmployeeRate,
-					employer_rate: ppkEwaEmployerRate,
-					salary_below_threshold: ppkEwaBelowThreshold,
-					include_welcome_bonus: ppkEwaIncludeSubsidies,
-					include_annual_subsidy: ppkEwaIncludeSubsidies
-				};
-			}
 
 			const response = await fetch(`${apiUrl}/api/simulations/retirement`, {
 				method: 'POST',
@@ -242,8 +226,8 @@
 				throw new Error(`Simulation failed: ${response.statusText}`);
 			}
 
-			const data = await response.json();
-			results = data;
+			const responseData = await response.json();
+			results = responseData;
 			renderChart();
 		} catch (err) {
 			console.error('Simulation failed:', err);
@@ -262,7 +246,6 @@
 			chart = echarts.init(chartContainer);
 		}
 
-		// Handle empty simulations (all accounts unchecked)
 		if (results.simulations.length === 0) {
 			chart.clear();
 			return;
@@ -312,24 +295,6 @@
 	}
 
 	onMount(() => {
-		// Prefill PPK data
-		if (data.ppk_rates) {
-			ppkMarcinEmployeeRate = data.ppk_rates.marcin?.employee ?? 2.0;
-			ppkMarcinEmployerRate = data.ppk_rates.marcin?.employer ?? 1.5;
-			ppkEwaEmployeeRate = data.ppk_rates.ewa?.employee ?? 2.0;
-			ppkEwaEmployerRate = data.ppk_rates.ewa?.employer ?? 1.5;
-		}
-
-		if (data.monthly_salaries) {
-			ppkMarcinSalary = data.monthly_salaries.marcin ?? 10000;
-			ppkEwaSalary = data.monthly_salaries.ewa ?? 10000;
-		}
-
-		if (data.ppk_balances) {
-			ppkMarcinBalance = data.ppk_balances.marcin ?? 0;
-			ppkEwaBalance = data.ppk_balances.ewa ?? 0;
-		}
-
 		const handleResize = () => chart?.resize();
 
 		if (browser) {
@@ -369,256 +334,131 @@
 
 			<h3>Konta do symulacji</h3>
 			<div class="accounts-grid">
-				<div class="account-card">
-					<label class="checkbox-label">
-						<input type="checkbox" bind:checked={simulateIkeMarcin} />
-						IKE (Marcin)
-					</label>
-					{#if simulateIkeMarcin}
-						<label>
-							Saldo obecne (PLN)
-							<input type="number" bind:value={ikeMarcinBalance} min="0" step="100" />
-						</label>
+				{#each ikeIkzeAccounts as account, i}
+					<div class="account-card">
 						<label class="checkbox-label">
-							<input type="checkbox" bind:checked={ikeMarcinAutoFill} />
-							Auto-wypełnienie limitu
+							<input type="checkbox" bind:checked={ikeIkzeAccounts[i].enabled} />
+							{account.wrapper} ({account.owner})
 						</label>
-						{#if !ikeMarcinAutoFill}
+						{#if account.enabled}
 							<label>
-								Wpłata miesięczna (PLN)
-								<input type="number" bind:value={ikeMarcinMonthly} min="0" step="100" />
+								Saldo obecne (PLN)
+								<input type="number" bind:value={ikeIkzeAccounts[i].balance} min="0" step="100" />
 							</label>
+							<label class="checkbox-label">
+								<input type="checkbox" bind:checked={ikeIkzeAccounts[i].autoFill} />
+								Auto-wypełnienie limitu
+							</label>
+							{#if !account.autoFill}
+								<label>
+									Wpłata miesięczna (PLN)
+									<input type="number" bind:value={ikeIkzeAccounts[i].monthly} min="0" step="100" />
+								</label>
+							{/if}
+							{#if account.wrapper === 'IKZE'}
+								<label>
+									Stawka podatkowa (%)
+									<input
+										type="number"
+										bind:value={ikeIkzeAccounts[i].taxRate}
+										min="0"
+										max="50"
+										step="1"
+									/>
+								</label>
+							{/if}
 						{/if}
-					{/if}
-				</div>
+					</div>
+				{/each}
 
-				<div class="account-card">
-					<label class="checkbox-label">
-						<input type="checkbox" bind:checked={simulateIkeEwa} />
-						IKE (Ewa)
-					</label>
-					{#if simulateIkeEwa}
-						<label>
-							Saldo obecne (PLN)
-							<input type="number" bind:value={ikeEwaBalance} min="0" step="100" />
-						</label>
+				{#each ppkAccounts as ppk, i}
+					<div class="account-card">
 						<label class="checkbox-label">
-							<input type="checkbox" bind:checked={ikeEwaAutoFill} />
-							Auto-wypełnienie limitu
+							<input type="checkbox" bind:checked={ppkAccounts[i].enabled} />
+							PPK ({ppk.owner})
 						</label>
-						{#if !ikeEwaAutoFill}
+						{#if ppk.enabled}
 							<label>
-								Wpłata miesięczna (PLN)
-								<input type="number" bind:value={ikeEwaMonthly} min="0" step="100" />
+								Obecna wartość (PLN)
+								<input type="number" bind:value={ppkAccounts[i].balance} min="0" step="1000" />
 							</label>
+							<label>
+								Miesięczne wynagrodzenie brutto (PLN)
+								<input type="number" bind:value={ppkAccounts[i].salary} min="1000" step="500" />
+							</label>
+							<div class="contribution-rates">
+								<label>
+									Składka pracownika (%)
+									<input
+										type="number"
+										bind:value={ppkAccounts[i].employeeRate}
+										min="0.5"
+										max="4"
+										step="0.5"
+									/>
+									<small>Zakres: 0.5-4% (podstawa: 2%)</small>
+								</label>
+								<label>
+									Składka pracodawcy (%)
+									<input
+										type="number"
+										bind:value={ppkAccounts[i].employerRate}
+										min="1.5"
+										max="4"
+										step="0.5"
+									/>
+									<small>Zakres: 1.5-4% (podstawa: 1.5%)</small>
+								</label>
+							</div>
+							<label class="checkbox-label">
+								<input type="checkbox" bind:checked={ppkAccounts[i].belowThreshold} />
+								Wynagrodzenie poniżej progu ({SALARY_THRESHOLD_2026} PLN)
+								<small>Dotyczy dopłaty rocznej 240 PLN</small>
+							</label>
+							<label class="checkbox-label">
+								<input type="checkbox" bind:checked={ppkAccounts[i].includeSubsidies} />
+								Uwzględnij dopłaty państwa (250 PLN + 240 PLN/rok)
+							</label>
+							<div class="contribution-estimate">
+								<small>
+									Szacowana miesięczna składka:
+									{formatCurrency((ppk.salary * (ppk.employeeRate + ppk.employerRate)) / 100)}
+									PLN (pracownik: {formatCurrency((ppk.salary * ppk.employeeRate) / 100)} PLN, pracodawca:
+									{formatCurrency((ppk.salary * ppk.employerRate) / 100)} PLN)
+								</small>
+							</div>
 						{/if}
-					{/if}
-				</div>
+					</div>
+				{/each}
 
-				<div class="account-card">
-					<label class="checkbox-label">
-						<input type="checkbox" bind:checked={simulateIkzeMarcin} />
-						IKZE (Marcin)
-					</label>
-					{#if simulateIkzeMarcin}
-						<label>
-							Saldo obecne (PLN)
-							<input type="number" bind:value={ikzeMarcinBalance} min="0" step="100" />
-						</label>
+				{#each brokerageAccounts as brokerage, i}
+					<div class="account-card">
 						<label class="checkbox-label">
-							<input type="checkbox" bind:checked={ikzeMarcinAutoFill} />
-							Auto-wypełnienie limitu
+							<input type="checkbox" bind:checked={brokerageAccounts[i].enabled} />
+							Rachunek maklerski ({brokerage.owner})
 						</label>
-						{#if !ikzeMarcinAutoFill}
+						{#if brokerage.enabled}
 							<label>
-								Wpłata miesięczna (PLN)
-								<input type="number" bind:value={ikzeMarcinMonthly} min="0" step="100" />
-							</label>
-						{/if}
-						<label>
-							Stawka podatkowa (%)
-							<input type="number" bind:value={marcinTaxRate} min="0" max="50" step="1" />
-						</label>
-					{/if}
-				</div>
-
-				<div class="account-card">
-					<label class="checkbox-label">
-						<input type="checkbox" bind:checked={simulateIkzeEwa} />
-						IKZE (Ewa)
-					</label>
-					{#if simulateIkzeEwa}
-						<label>
-							Saldo obecne (PLN)
-							<input type="number" bind:value={ikzeEwaBalance} min="0" step="100" />
-						</label>
-						<label class="checkbox-label">
-							<input type="checkbox" bind:checked={ikzeEwaAutoFill} />
-							Auto-wypełnienie limitu
-						</label>
-						{#if !ikzeEwaAutoFill}
-							<label>
-								Wpłata miesięczna (PLN)
-								<input type="number" bind:value={ikzeEwaMonthly} min="0" step="100" />
-							</label>
-						{/if}
-						<label>
-							Stawka podatkowa (%)
-							<input type="number" bind:value={ewaTaxRate} min="0" max="50" step="1" />
-						</label>
-					{/if}
-				</div>
-
-				<div class="account-card">
-					<label class="checkbox-label">
-						<input type="checkbox" bind:checked={ppkMarcinEnabled} />
-						PPK (Marcin)
-					</label>
-					{#if ppkMarcinEnabled}
-						<label>
-							Obecna wartość (PLN)
-							<input type="number" bind:value={ppkMarcinBalance} min="0" step="1000" />
-						</label>
-						<label>
-							Miesięczne wynagrodzenie brutto (PLN)
-							<input type="number" bind:value={ppkMarcinSalary} min="1000" step="500" />
-						</label>
-						<div class="contribution-rates">
-							<label>
-								Składka pracownika (%)
+								Obecna wartość (PLN)
 								<input
 									type="number"
-									bind:value={ppkMarcinEmployeeRate}
-									min="0.5"
-									max="4"
-									step="0.5"
+									bind:value={brokerageAccounts[i].balance}
+									min="0"
+									step="1000"
 								/>
-								<small>Zakres: 0.5-4% (podstawa: 2%)</small>
 							</label>
 							<label>
-								Składka pracodawcy (%)
-								<input
-									type="number"
-									bind:value={ppkMarcinEmployerRate}
-									min="1.5"
-									max="4"
-									step="0.5"
-								/>
-								<small>Zakres: 1.5-4% (podstawa: 1.5%)</small>
+								Wpłata miesięczna (PLN)
+								<input type="number" bind:value={brokerageAccounts[i].monthly} min="0" step="100" />
 							</label>
-						</div>
-						<label class="checkbox-label">
-							<input type="checkbox" bind:checked={ppkMarcinBelowThreshold} />
-							Wynagrodzenie poniżej progu ({SALARY_THRESHOLD_2026} PLN)
-							<small>Dotyczy dopłaty rocznej 240 PLN</small>
-						</label>
-						<label class="checkbox-label">
-							<input type="checkbox" bind:checked={ppkMarcinIncludeSubsidies} />
-							Uwzględnij dopłaty państwa (250 PLN + 240 PLN/rok)
-						</label>
-						<div class="contribution-estimate">
-							<small>
-								Szacowana miesięczna składka:
-								{formatCurrency(
-									(ppkMarcinSalary * (ppkMarcinEmployeeRate + ppkMarcinEmployerRate)) / 100
-								)}
-								PLN (pracownik: {formatCurrency((ppkMarcinSalary * ppkMarcinEmployeeRate) / 100)} PLN,
-								pracodawca:
-								{formatCurrency((ppkMarcinSalary * ppkMarcinEmployerRate) / 100)} PLN)
-							</small>
-						</div>
-					{/if}
-				</div>
-
-				<div class="account-card">
-					<label class="checkbox-label">
-						<input type="checkbox" bind:checked={ppkEwaEnabled} />
-						PPK (Ewa)
-					</label>
-					{#if ppkEwaEnabled}
-						<label>
-							Obecna wartość (PLN)
-							<input type="number" bind:value={ppkEwaBalance} min="0" step="1000" />
-						</label>
-						<label>
-							Miesięczne wynagrodzenie brutto (PLN)
-							<input type="number" bind:value={ppkEwaSalary} min="1000" step="500" />
-						</label>
-						<div class="contribution-rates">
-							<label>
-								Składka pracownika (%)
-								<input type="number" bind:value={ppkEwaEmployeeRate} min="0.5" max="4" step="0.5" />
-								<small>Zakres: 0.5-4% (podstawa: 2%)</small>
-							</label>
-							<label>
-								Składka pracodawcy (%)
-								<input type="number" bind:value={ppkEwaEmployerRate} min="1.5" max="4" step="0.5" />
-								<small>Zakres: 1.5-4% (podstawa: 1.5%)</small>
-							</label>
-						</div>
-						<label class="checkbox-label">
-							<input type="checkbox" bind:checked={ppkEwaBelowThreshold} />
-							Wynagrodzenie poniżej progu ({SALARY_THRESHOLD_2026} PLN)
-							<small>Dotyczy dopłaty rocznej 240 PLN</small>
-						</label>
-						<label class="checkbox-label">
-							<input type="checkbox" bind:checked={ppkEwaIncludeSubsidies} />
-							Uwzględnij dopłaty państwa (250 PLN + 240 PLN/rok)
-						</label>
-						<div class="contribution-estimate">
-							<small>
-								Szacowana miesięczna składka:
-								{formatCurrency((ppkEwaSalary * (ppkEwaEmployeeRate + ppkEwaEmployerRate)) / 100)}
-								PLN (pracownik: {formatCurrency((ppkEwaSalary * ppkEwaEmployeeRate) / 100)} PLN, pracodawca:
-								{formatCurrency((ppkEwaSalary * ppkEwaEmployerRate) / 100)} PLN)
-							</small>
-						</div>
-					{/if}
-				</div>
-
-				<div class="account-card">
-					<label class="checkbox-label">
-						<input type="checkbox" bind:checked={brokerageMarcinEnabled} />
-						Rachunek maklerski (Marcin)
-					</label>
-					{#if brokerageMarcinEnabled}
-						<label>
-							Obecna wartość (PLN)
-							<input type="number" bind:value={brokerageMarcinBalance} min="0" step="1000" />
-						</label>
-						<label>
-							Wpłata miesięczna (PLN)
-							<input type="number" bind:value={brokerageMarcinMonthly} min="0" step="100" />
-						</label>
-						<div class="card-note">
-							<small
-								>Rachunki maklerskie są opodatkowane 19% podatkiem Belki od zysków kapitałowych</small
-							>
-						</div>
-					{/if}
-				</div>
-
-				<div class="account-card">
-					<label class="checkbox-label">
-						<input type="checkbox" bind:checked={brokerageEwaEnabled} />
-						Rachunek maklerski (Ewa)
-					</label>
-					{#if brokerageEwaEnabled}
-						<label>
-							Obecna wartość (PLN)
-							<input type="number" bind:value={brokerageEwaBalance} min="0" step="1000" />
-						</label>
-						<label>
-							Wpłata miesięczna (PLN)
-							<input type="number" bind:value={brokerageEwaMonthly} min="0" step="100" />
-						</label>
-						<div class="card-note">
-							<small
-								>Rachunki maklerskie są opodatkowane 19% podatkiem Belki od zysków kapitałowych</small
-							>
-						</div>
-					{/if}
-				</div>
+							<div class="card-note">
+								<small
+									>Rachunki maklerskie są opodatkowane 19% podatkiem Belki od zysków kapitałowych</small
+								>
+							</div>
+						{/if}
+					</div>
+				{/each}
 			</div>
 
 			<h3>Założenia</h3>
@@ -659,7 +499,9 @@
 				<div class="summary-cards">
 					<div class="summary-card">
 						<div class="card-label">Końcowy kapitał</div>
-						<div class="card-value">{formatCurrency(results.summary.total_final_balance)} PLN</div>
+						<div class="card-value">
+							{formatCurrency(results.summary.total_final_balance)} PLN
+						</div>
 					</div>
 					<div class="summary-card">
 						<div class="card-label">Miesięczny dochód (4% rule)</div>
@@ -676,11 +518,15 @@
 					</div>
 					<div class="summary-card">
 						<div class="card-label">Suma wpłat</div>
-						<div class="card-value">{formatCurrency(results.summary.total_contributions)} PLN</div>
+						<div class="card-value">
+							{formatCurrency(results.summary.total_contributions)} PLN
+						</div>
 					</div>
 					<div class="summary-card">
 						<div class="card-label">Zyski z inwestycji</div>
-						<div class="card-value">{formatCurrency(results.summary.total_returns)} PLN</div>
+						<div class="card-value">
+							{formatCurrency(results.summary.total_returns)} PLN
+						</div>
 					</div>
 					{#if results.summary.total_tax_savings > 0}
 						<div class="summary-card">
@@ -693,7 +539,9 @@
 					{#if results.summary.total_subsidies && results.summary.total_subsidies > 0}
 						<div class="summary-card">
 							<div class="card-label">Dopłaty państwa (PPK)</div>
-							<div class="card-value">{formatCurrency(results.summary.total_subsidies)} PLN</div>
+							<div class="card-value">
+								{formatCurrency(results.summary.total_subsidies)} PLN
+							</div>
 						</div>
 					{/if}
 				</div>

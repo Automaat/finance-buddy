@@ -1,6 +1,5 @@
 import math
 from datetime import UTC, datetime
-from typing import TypedDict
 
 from fastapi import HTTPException
 from sqlalchemy import desc, select
@@ -8,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models.account import Account
 from app.models.app_config import AppConfig
+from app.models.persona import Persona
 from app.models.retirement_limit import RetirementLimit
 from app.models.snapshot import Snapshot, SnapshotValue
 from app.schemas.simulations import (
@@ -56,15 +56,21 @@ def get_limit_for_year(db: Session, year: int, wrapper: str, owner: str) -> floa
 
 
 def fetch_current_balances(db: Session) -> dict:
-    """Get latest IKE/IKZE balances from snapshot"""
+    """Get latest IKE/IKZE balances from snapshot, keyed by {wrapper}_{owner} lowercase"""
     latest_snapshot = db.execute(
         select(Snapshot).order_by(desc(Snapshot.date)).limit(1)
     ).scalar_one_or_none()
 
-    if not latest_snapshot:
-        return {"ike_marcin": 0.0, "ike_ewa": 0.0, "ikze_marcin": 0.0, "ikze_ewa": 0.0}
+    # Build default keys from personas
+    personas = db.execute(select(Persona).order_by(Persona.name)).scalars().all()
+    balances: dict[str, float] = {}
+    for p in personas:
+        for wrapper in ["ike", "ikze"]:
+            balances[f"{wrapper}_{p.name.lower()}"] = 0.0
 
-    # Query accounts with account_wrapper
+    if not latest_snapshot:
+        return balances
+
     accounts = (
         db.execute(
             select(Account).where(
@@ -75,16 +81,12 @@ def fetch_current_balances(db: Session) -> dict:
         .all()
     )
 
-    # Get values from latest snapshot
     values = (
         db.execute(select(SnapshotValue).where(SnapshotValue.snapshot_id == latest_snapshot.id))
         .scalars()
         .all()
     )
 
-    balances = {"ike_marcin": 0.0, "ike_ewa": 0.0, "ikze_marcin": 0.0, "ikze_ewa": 0.0}
-
-    # Create dict lookup for O(1) access by account_id
     values_by_account_id = {value.account_id: value.value for value in values}
 
     for account in accounts:
@@ -101,10 +103,13 @@ def fetch_ppk_balances(db: Session) -> dict[str, float]:
         select(Snapshot).order_by(desc(Snapshot.date)).limit(1)
     ).scalar_one_or_none()
 
-    if not latest_snapshot:
-        return {"marcin": 0.0, "ewa": 0.0}
+    # Build default keys from personas
+    personas = db.execute(select(Persona).order_by(Persona.name)).scalars().all()
+    balances: dict[str, float] = {p.name.lower(): 0.0 for p in personas}
 
-    # Query accounts with account_wrapper = PPK
+    if not latest_snapshot:
+        return balances
+
     accounts = (
         db.execute(
             select(Account).where(Account.is_active.is_(True), Account.account_wrapper == "PPK")
@@ -113,16 +118,12 @@ def fetch_ppk_balances(db: Session) -> dict[str, float]:
         .all()
     )
 
-    # Get values from latest snapshot
     values = (
         db.execute(select(SnapshotValue).where(SnapshotValue.snapshot_id == latest_snapshot.id))
         .scalars()
         .all()
     )
 
-    balances = {"marcin": 0.0, "ewa": 0.0}
-
-    # Create dict lookup for O(1) access by account_id
     values_by_account_id = {value.account_id: value.value for value in values}
 
     for account in accounts:
@@ -402,116 +403,52 @@ def simulate_ppk_account(
     )
 
 
-class _AccountConfig(TypedDict):
-    enabled: bool
-    wrapper: str
-    owner: str
-    balance: float
-    auto_fill: bool
-    monthly: float
-    tax_rate: float
-
-
 def run_simulation(db: Session, inputs: SimulationInputs) -> SimulationResponse:
     """Orchestrate simulation for all selected accounts"""
     years_to_retirement = inputs.retirement_age - inputs.current_age
     simulations = []
 
-    # Configuration-driven account simulation
-    account_configs: list[_AccountConfig] = [
-        {
-            "enabled": inputs.simulate_ike_marcin,
-            "wrapper": "IKE",
-            "owner": "Marcin",
-            "balance": inputs.ike_marcin_balance,
-            "auto_fill": inputs.ike_marcin_auto_fill,
-            "monthly": inputs.ike_marcin_monthly,
-            "tax_rate": 0,
-        },
-        {
-            "enabled": inputs.simulate_ike_ewa,
-            "wrapper": "IKE",
-            "owner": "Ewa",
-            "balance": inputs.ike_ewa_balance,
-            "auto_fill": inputs.ike_ewa_auto_fill,
-            "monthly": inputs.ike_ewa_monthly,
-            "tax_rate": 0,
-        },
-        {
-            "enabled": inputs.simulate_ikze_marcin,
-            "wrapper": "IKZE",
-            "owner": "Marcin",
-            "balance": inputs.ikze_marcin_balance,
-            "auto_fill": inputs.ikze_marcin_auto_fill,
-            "monthly": inputs.ikze_marcin_monthly,
-            "tax_rate": inputs.marcin_tax_rate,
-        },
-        {
-            "enabled": inputs.simulate_ikze_ewa,
-            "wrapper": "IKZE",
-            "owner": "Ewa",
-            "balance": inputs.ikze_ewa_balance,
-            "auto_fill": inputs.ikze_ewa_auto_fill,
-            "monthly": inputs.ikze_ewa_monthly,
-            "tax_rate": inputs.ewa_tax_rate,
-        },
-    ]
-
-    for config in account_configs:
-        if config["enabled"]:
+    # IKE/IKZE account simulations
+    for account in inputs.ike_ikze_accounts:
+        if account.enabled:
             sim = simulate_account(
-                config["wrapper"],
-                config["owner"],
-                config["balance"],
-                config["auto_fill"],
-                config["monthly"],
+                account.wrapper,
+                account.owner,
+                account.balance,
+                account.auto_fill_limit,
+                account.monthly_contribution,
                 years_to_retirement,
                 inputs.current_age,
                 inputs.annual_return_rate,
                 inputs.limit_growth_rate,
-                config["tax_rate"],
+                account.tax_rate,
                 db,
             )
             simulations.append(sim)
 
-    # Add PPK simulations
-    if inputs.ppk_marcin and inputs.ppk_marcin.enabled:
-        ppk_sim = simulate_ppk_account(
-            inputs.ppk_marcin,
-            inputs.current_age,
-            inputs.retirement_age,
-            inputs.expected_salary_growth,
-        )
-        simulations.append(ppk_sim)
+    # PPK simulations
+    for ppk in inputs.ppk_accounts:
+        if ppk.enabled:
+            ppk_sim = simulate_ppk_account(
+                ppk,
+                inputs.current_age,
+                inputs.retirement_age,
+                inputs.expected_salary_growth,
+            )
+            simulations.append(ppk_sim)
 
-    if inputs.ppk_ewa and inputs.ppk_ewa.enabled:
-        ppk_sim = simulate_ppk_account(
-            inputs.ppk_ewa, inputs.current_age, inputs.retirement_age, inputs.expected_salary_growth
-        )
-        simulations.append(ppk_sim)
-
-    # Add brokerage simulations
-    if inputs.simulate_brokerage_marcin:
-        brokerage_sim = simulate_brokerage_account(
-            "Rachunek maklerski (Marcin)",
-            inputs.brokerage_marcin_balance,
-            inputs.brokerage_marcin_monthly,
-            inputs.current_age,
-            inputs.retirement_age,
-            inputs.annual_return_rate,
-        )
-        simulations.append(brokerage_sim)
-
-    if inputs.simulate_brokerage_ewa:
-        brokerage_sim = simulate_brokerage_account(
-            "Rachunek maklerski (Ewa)",
-            inputs.brokerage_ewa_balance,
-            inputs.brokerage_ewa_monthly,
-            inputs.current_age,
-            inputs.retirement_age,
-            inputs.annual_return_rate,
-        )
-        simulations.append(brokerage_sim)
+    # Brokerage simulations
+    for brokerage in inputs.brokerage_accounts:
+        if brokerage.enabled:
+            brokerage_sim = simulate_brokerage_account(
+                f"Rachunek maklerski ({brokerage.owner})",
+                brokerage.balance,
+                brokerage.monthly_contribution,
+                inputs.current_age,
+                inputs.retirement_age,
+                inputs.annual_return_rate,
+            )
+            simulations.append(brokerage_sim)
 
     # Calculate summary
     total_final = sum(s.final_balance for s in simulations)

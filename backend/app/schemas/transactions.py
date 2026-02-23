@@ -2,14 +2,14 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, field_validator
 
-from app.core.enums import Owner, TransactionType
+from app.core.enums import TransactionType
 from app.utils.validators import validate_not_future_date, validate_positive_amount
 
 
 class TransactionCreate(BaseModel):
     amount: float
     date: date
-    owner: Owner
+    owner: str
     transaction_type: TransactionType | None = None
 
     @field_validator("amount")
@@ -29,7 +29,7 @@ class TransactionResponse(BaseModel):
     account_name: str
     amount: float
     date: date
-    owner: Owner
+    owner: str
     transaction_type: TransactionType | None
     created_at: datetime
 

@@ -6,7 +6,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models import SalaryRecord
+from app.models import Persona, SalaryRecord
 from app.schemas.salary_records import (
     SalaryRecordCreate,
     SalaryRecordResponse,
@@ -48,16 +48,15 @@ def get_all_salary_records(
         for record in results
     ]
 
-    # Get current salaries for Marcin and Ewa (latest salary <= today)
+    # Get current salaries for all personas
     today = datetime.now(UTC).date()
-    current_salary_marcin = _get_current_salary(db, "Marcin", today)
-    current_salary_ewa = _get_current_salary(db, "Ewa", today)
+    personas = db.execute(select(Persona).order_by(Persona.name)).scalars().all()
+    current_salaries = {p.name: _get_current_salary(db, p.name, today) for p in personas}
 
     return SalaryRecordsListResponse(
         salary_records=salary_list,
         total_count=len(salary_list),
-        current_salary_marcin=current_salary_marcin,
-        current_salary_ewa=current_salary_ewa,
+        current_salaries=current_salaries,
     )
 
 

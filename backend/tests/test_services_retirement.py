@@ -7,10 +7,10 @@ import pytest
 from fastapi import HTTPException
 
 from app.models import (
-    AppConfig,
     RetirementLimit,
     Transaction,
 )
+from app.models.persona import Persona
 from app.schemas.retirement import PPKContributionGenerateRequest
 from app.services.retirement import (
     generate_ppk_contributions,
@@ -33,6 +33,9 @@ class TestGetYearlyStats:
 
     def test_get_yearly_stats_ike_success(self, test_db_session):
         """Test calculating IKE yearly stats with contributions"""
+        test_db_session.add(Persona(name="Marcin"))
+        test_db_session.commit()
+
         # Create IKE account for Marcin
         account = create_test_account(
             test_db_session,
@@ -132,6 +135,9 @@ class TestGetYearlyStats:
 
     def test_get_yearly_stats_untyped_transactions_assigned_to_employee(self, test_db_session):
         """Test that untyped transactions are assigned to employee contributions"""
+        test_db_session.add(Persona(name="Marcin"))
+        test_db_session.commit()
+
         account = create_test_account(
             test_db_session,
             name="IKE Stocks",
@@ -172,6 +178,9 @@ class TestGetYearlyStats:
 
     def test_get_yearly_stats_warning_threshold(self, test_db_session):
         """Test that is_warning is True when >= 90% of limit used"""
+        test_db_session.add(Persona(name="Marcin"))
+        test_db_session.commit()
+
         account = create_test_account(
             test_db_session,
             name="IKE Stocks",
@@ -209,6 +218,9 @@ class TestGetYearlyStats:
 
     def test_get_yearly_stats_no_limits_returns_empty(self, test_db_session):
         """Test that accounts without limits are not included"""
+        test_db_session.add(Persona(name="Marcin"))
+        test_db_session.commit()
+
         create_test_account(
             test_db_session,
             name="IKE Stocks",
@@ -254,6 +266,9 @@ class TestGetYearlyStats:
 
     def test_get_yearly_stats_inactive_transactions_excluded(self, test_db_session):
         """Test that inactive transactions are excluded from calculations"""
+        test_db_session.add(Persona(name="Marcin"))
+        test_db_session.commit()
+
         account = create_test_account(
             test_db_session,
             name="IKE Stocks",
@@ -441,6 +456,9 @@ class TestGetPPKStats:
 
     def test_get_ppk_stats_untyped_transactions_assigned_to_employee(self, test_db_session):
         """Test that untyped transactions are assigned to employee contributions"""
+        test_db_session.add(Persona(name="Marcin"))
+        test_db_session.commit()
+
         account = create_test_account(
             test_db_session,
             name="PPK Account",
@@ -485,6 +503,9 @@ class TestGetPPKStats:
 
     def test_get_ppk_stats_no_snapshots_returns_zero_value(self, test_db_session):
         """Test that accounts without snapshots show zero total value"""
+        test_db_session.add(Persona(name="Marcin"))
+        test_db_session.commit()
+
         account = create_test_account(
             test_db_session,
             name="PPK Account",
@@ -511,6 +532,9 @@ class TestGetPPKStats:
 
     def test_get_ppk_stats_withdrawal_excluded_from_contributions(self, test_db_session):
         """Test that withdrawal transactions are excluded from contribution totals"""
+        test_db_session.add(Persona(name="Marcin"))
+        test_db_session.commit()
+
         account = create_test_account(
             test_db_session,
             name="PPK Account",
@@ -614,23 +638,13 @@ class TestGeneratePPKContributions:
 
     def test_generate_ppk_contributions_success(self, test_db_session):
         """Test successfully generating PPK contributions"""
-        # Create app config
-        config = AppConfig(
-            id=1,
-            birth_date=date(1990, 1, 1),
-            retirement_age=65,
-            retirement_monthly_salary=Decimal("5000"),
-            allocation_real_estate=20,
-            allocation_stocks=50,
-            allocation_bonds=20,
-            allocation_gold=5,
-            allocation_commodities=5,
-            ppk_employee_rate_marcin=Decimal("2.0"),
-            ppk_employer_rate_marcin=Decimal("1.5"),
-            ppk_employee_rate_ewa=Decimal("2.0"),
-            ppk_employer_rate_ewa=Decimal("1.5"),
+        test_db_session.add(
+            Persona(
+                name="Marcin",
+                ppk_employee_rate=Decimal("2.0"),
+                ppk_employer_rate=Decimal("1.5"),
+            )
         )
-        test_db_session.add(config)
         test_db_session.commit()
 
         # Create salary record
@@ -675,23 +689,13 @@ class TestGeneratePPKContributions:
 
     def test_generate_ppk_contributions_no_salary_record_fails(self, test_db_session):
         """Test that missing salary record raises error"""
-        # Create app config and PPK account without salary record
-        config = AppConfig(
-            id=1,
-            birth_date=date(1990, 1, 1),
-            retirement_age=65,
-            retirement_monthly_salary=Decimal("5000"),
-            allocation_real_estate=20,
-            allocation_stocks=50,
-            allocation_bonds=20,
-            allocation_gold=5,
-            allocation_commodities=5,
-            ppk_employee_rate_marcin=Decimal("2.0"),
-            ppk_employer_rate_marcin=Decimal("1.5"),
-            ppk_employee_rate_ewa=Decimal("2.0"),
-            ppk_employer_rate_ewa=Decimal("1.5"),
+        test_db_session.add(
+            Persona(
+                name="Marcin",
+                ppk_employee_rate=Decimal("2.0"),
+                ppk_employer_rate=Decimal("1.5"),
+            )
         )
-        test_db_session.add(config)
         test_db_session.commit()
 
         create_test_account(
@@ -710,9 +714,9 @@ class TestGeneratePPKContributions:
         assert exc_info.value.status_code == 400
         assert "No salary record found" in exc_info.value.detail
 
-    def test_generate_ppk_contributions_no_app_config_fails(self, test_db_session):
-        """Test that missing app config raises error"""
-        # Create salary and account without app config
+    def test_generate_ppk_contributions_no_persona_fails(self, test_db_session):
+        """Test that missing persona raises error"""
+        # Create salary and account without persona
         create_test_salary_record(test_db_session)
 
         create_test_account(
@@ -728,57 +732,39 @@ class TestGeneratePPKContributions:
         with pytest.raises(HTTPException) as exc_info:
             generate_ppk_contributions(test_db_session, request)
 
-        assert exc_info.value.status_code == 500
-        assert "App configuration not found" in exc_info.value.detail
+        assert exc_info.value.status_code == 404
+        assert "Persona 'Marcin' not found" in exc_info.value.detail
 
     def test_generate_ppk_contributions_unknown_owner_fails(self, test_db_session):
-        """Test that unknown owner raises error"""
-        config = AppConfig(
-            id=1,
-            birth_date=date(1990, 1, 1),
-            retirement_age=65,
-            retirement_monthly_salary=Decimal("5000"),
-            allocation_real_estate=20,
-            allocation_stocks=50,
-            allocation_bonds=20,
-            allocation_gold=5,
-            allocation_commodities=5,
-            ppk_employee_rate_marcin=Decimal("2.0"),
-            ppk_employer_rate_marcin=Decimal("1.5"),
-            ppk_employee_rate_ewa=Decimal("2.0"),
-            ppk_employer_rate_ewa=Decimal("1.5"),
+        """Test that unknown owner raises error when no persona exists"""
+        create_test_salary_record(test_db_session, owner="UnknownPerson")
+
+        create_test_account(
+            test_db_session,
+            name="PPK Account",
+            category="stock",
+            account_wrapper="PPK",
+            owner="UnknownPerson",
+            receives_contributions=True,
         )
-        test_db_session.add(config)
-        test_db_session.commit()
 
-        create_test_salary_record(test_db_session, owner="Unknown")
-
-        request = PPKContributionGenerateRequest(owner="Marcin", month=1, year=2024)
+        request = PPKContributionGenerateRequest(owner="UnknownPerson", month=1, year=2024)
 
         with pytest.raises(HTTPException) as exc_info:
             generate_ppk_contributions(test_db_session, request)
 
-        assert exc_info.value.status_code == 400
-        assert "No salary record found" in exc_info.value.detail
+        assert exc_info.value.status_code == 404
+        assert "Persona 'UnknownPerson' not found" in exc_info.value.detail
 
     def test_generate_ppk_contributions_no_ppk_account_fails(self, test_db_session):
         """Test that missing PPK account raises error"""
-        config = AppConfig(
-            id=1,
-            birth_date=date(1990, 1, 1),
-            retirement_age=65,
-            retirement_monthly_salary=Decimal("5000"),
-            allocation_real_estate=20,
-            allocation_stocks=50,
-            allocation_bonds=20,
-            allocation_gold=5,
-            allocation_commodities=5,
-            ppk_employee_rate_marcin=Decimal("2.0"),
-            ppk_employer_rate_marcin=Decimal("1.5"),
-            ppk_employee_rate_ewa=Decimal("2.0"),
-            ppk_employer_rate_ewa=Decimal("1.5"),
+        test_db_session.add(
+            Persona(
+                name="Marcin",
+                ppk_employee_rate=Decimal("2.0"),
+                ppk_employer_rate=Decimal("1.5"),
+            )
         )
-        test_db_session.add(config)
         test_db_session.commit()
 
         create_test_salary_record(test_db_session)
@@ -793,23 +779,13 @@ class TestGeneratePPKContributions:
 
     def test_generate_ppk_contributions_duplicate_fails(self, test_db_session):
         """Test that duplicate contributions for same month raise error"""
-        # Setup
-        config = AppConfig(
-            id=1,
-            birth_date=date(1990, 1, 1),
-            retirement_age=65,
-            retirement_monthly_salary=Decimal("5000"),
-            allocation_real_estate=20,
-            allocation_stocks=50,
-            allocation_bonds=20,
-            allocation_gold=5,
-            allocation_commodities=5,
-            ppk_employee_rate_marcin=Decimal("2.0"),
-            ppk_employer_rate_marcin=Decimal("1.5"),
-            ppk_employee_rate_ewa=Decimal("2.0"),
-            ppk_employer_rate_ewa=Decimal("1.5"),
+        test_db_session.add(
+            Persona(
+                name="Marcin",
+                ppk_employee_rate=Decimal("2.0"),
+                ppk_employer_rate=Decimal("1.5"),
+            )
         )
-        test_db_session.add(config)
         test_db_session.commit()
 
         create_test_salary_record(test_db_session)
@@ -835,23 +811,13 @@ class TestGeneratePPKContributions:
 
     def test_generate_ppk_contributions_for_ewa(self, test_db_session):
         """Test generating contributions for Ewa with different rates"""
-        # Create app config with different rates for Ewa
-        config = AppConfig(
-            id=1,
-            birth_date=date(1990, 1, 1),
-            retirement_age=65,
-            retirement_monthly_salary=Decimal("5000"),
-            allocation_real_estate=20,
-            allocation_stocks=50,
-            allocation_bonds=20,
-            allocation_gold=5,
-            allocation_commodities=5,
-            ppk_employee_rate_marcin=Decimal("2.0"),
-            ppk_employer_rate_marcin=Decimal("1.5"),
-            ppk_employee_rate_ewa=Decimal("3.0"),
-            ppk_employer_rate_ewa=Decimal("2.5"),
+        test_db_session.add(
+            Persona(
+                name="Ewa",
+                ppk_employee_rate=Decimal("3.0"),
+                ppk_employer_rate=Decimal("2.5"),
+            )
         )
-        test_db_session.add(config)
         test_db_session.commit()
 
         create_test_salary_record(test_db_session, gross_amount=8000.0, owner="Ewa")

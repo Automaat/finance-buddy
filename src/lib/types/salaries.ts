@@ -12,6 +12,5 @@ export interface SalaryRecord {
 export interface SalariesData {
 	salary_records: SalaryRecord[];
 	total_count: number;
-	current_salary_marcin: number | null;
-	current_salary_ewa: number | null;
+	current_salaries: Record<string, number | null>;
 }
