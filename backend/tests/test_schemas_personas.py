@@ -13,7 +13,9 @@ class TestPersonaCreateValidation:
 
     def test_valid_persona_create(self):
         """Test creating valid persona"""
-        data = PersonaCreate(name="Marcin", ppk_employee_rate=Decimal("2.0"), ppk_employer_rate=Decimal("1.5"))
+        data = PersonaCreate(
+            name="Marcin", ppk_employee_rate=Decimal("2.0"), ppk_employer_rate=Decimal("1.5")
+        )
         assert data.name == "Marcin"
         assert data.ppk_employee_rate == Decimal("2.0")
         assert data.ppk_employer_rate == Decimal("1.5")
@@ -40,7 +42,9 @@ class TestPersonaCreateValidation:
 
     def test_ppk_rate_at_boundary_valid(self):
         """Test PPK rate at boundary values 0.5 and 4.0 is valid"""
-        data = PersonaCreate(name="Test", ppk_employee_rate=Decimal("0.5"), ppk_employer_rate=Decimal("4.0"))
+        data = PersonaCreate(
+            name="Test", ppk_employee_rate=Decimal("0.5"), ppk_employer_rate=Decimal("4.0")
+        )
         assert data.ppk_employee_rate == Decimal("0.5")
         assert data.ppk_employer_rate == Decimal("4.0")
 
