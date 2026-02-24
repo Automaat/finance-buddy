@@ -16,7 +16,7 @@
 	"devDependencies": {
 		"@sveltejs/adapter-node": "5.5.3",
 		"@sveltejs/kit": "2.53.0",
-		"@sveltejs/vite-plugin-svelte": "6.2.4",
+		"@sveltejs/vite-plugin-svelte": "7.0.0",
 		"@testing-library/dom": "^10.4.1",
 		"@testing-library/svelte": "^5.3.1",
 		"@vitest/coverage-v8": "^4.0.17",
@@ -29,7 +29,7 @@
 		"svelte": "5.53.3",
 		"svelte-check": "4.4.3",
 		"typescript": "5.9.3",
-		"vite": "7.3.1",
+		"vite": "8.0.0-beta.15",
 		"vitest": "^4.0.17"
 	},
 	"type": "module",
@@ -45,6 +45,7 @@
 		"zod": "^4.3.5"
 	},
 	"overrides": {
-		"tslib": "^2.8.1"
+		"tslib": "^2.8.1",
+		"vite": "8.0.0-beta.15"
 	}
 }
