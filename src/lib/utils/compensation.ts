@@ -236,10 +236,7 @@ export function calculateOffer(input: OfferInput): OfferBreakdown {
 /** Search for the minimum gross/invoice/rate to match targetNetMonthly. */
 export function findBreakEvenAmount(template: OfferInput, targetNetMonthly: number): number {
 	// hoursPerMonth=0 means revenue is always 0 — no break-even possible
-	if (
-		template.contractType === ContractType.B2B_HOURLY &&
-		!((template.hoursPerMonth ?? 0) > 0)
-	) {
+	if (template.contractType === ContractType.B2B_HOURLY && !((template.hoursPerMonth ?? 0) > 0)) {
 		return 0;
 	}
 

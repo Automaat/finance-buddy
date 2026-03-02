@@ -64,7 +64,7 @@
 				}
 			}
 		}
-		offers = offers;
+		offers = [...offers];
 	}
 
 	let offers: OfferInput[] = [emptyOffer('Oferta 1'), emptyOffer('Oferta 2')];
@@ -343,7 +343,7 @@
 										} else {
 											offer.netInvoice = sal.gross_amount;
 										}
-										offers = offers;
+										offers = [...offers];
 									}}
 								>
 									{#each data.latestSalaries as sal, si}
