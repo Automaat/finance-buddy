@@ -25,13 +25,13 @@ export async function load({ params, fetch }) {
 	}
 
 	const snapshot: SnapshotResponse = await snapshotRes.json();
-	const allAccounts = await accountsRes.json();
-	const allAssets = await assetsRes.json();
+	const accountsData = await accountsRes.json();
+	const assetsData = await assetsRes.json();
 	const personas = await personasRes.json();
 
-	const assets = allAccounts.filter((a: any) => a.type === 'asset');
-	const liabilities = allAccounts.filter((a: any) => a.type === 'liability');
-	const physicalAssets = allAssets;
+	const assets = accountsData.assets;
+	const liabilities = accountsData.liabilities;
+	const physicalAssets = assetsData.assets;
 
 	return {
 		snapshot,
