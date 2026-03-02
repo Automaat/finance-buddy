@@ -16,9 +16,10 @@
 
 	export let data: { latestSalaries: SalaryRecord[] };
 
-	function mapContractType(dbType: string): ContractType {
+	function mapContractType(dbType: string): ContractType | null {
 		if (dbType === 'B2B') return ContractType.B2B_MONTHLY;
-		return ContractType.UOP;
+		if (dbType === 'UOP') return ContractType.UOP;
+		return null; // UZ, UoD not supported in calculator
 	}
 
 	function emptyOffer(name: string): OfferInput {
@@ -51,12 +52,15 @@
 			// Populate from latest salary (pick first available)
 			const salary = data.latestSalaries[0];
 			if (salary) {
-				offer.name = 'Aktualna praca';
-				offer.contractType = mapContractType(salary.contract_type);
-				if (offer.contractType === ContractType.UOP) {
-					offer.grossMonthly = salary.gross_amount;
-				} else {
-					offer.netInvoice = salary.gross_amount;
+				const contractType = mapContractType(salary.contract_type);
+				if (contractType !== null) {
+					offer.name = 'Aktualna praca';
+					offer.contractType = contractType;
+					if (offer.contractType === ContractType.UOP) {
+						offer.grossMonthly = salary.gross_amount;
+					} else {
+						offer.netInvoice = salary.gross_amount;
+					}
 				}
 			}
 		}
@@ -170,6 +174,14 @@
 		}
 	}
 
+	function escapeHtml(str: string): string {
+		return str
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;');
+	}
+
 	function renderChart() {
 		if (!results || !chartContainer) return;
 		if (!chart) chart = echarts.init(chartContainer);
@@ -179,9 +191,9 @@
 				trigger: 'axis',
 				formatter: (params: unknown) => {
 					const items = params as { name: string; value: number; seriesName: string }[];
-					let html = `<strong>${items[0].name}</strong><br/>`;
+					let html = `<strong>${escapeHtml(items[0].name)}</strong><br/>`;
 					for (const p of items) {
-						html += `${p.seriesName}: ${fmt(p.value)} PLN<br/>`;
+						html += `${escapeHtml(p.seriesName)}: ${fmt(p.value)} PLN<br/>`;
 					}
 					return html;
 				}
@@ -263,7 +275,7 @@
 							</label>
 						{:else if offer.contractType === ContractType.B2B_MONTHLY}
 							<label>
-								Netto na fakturze (PLN)
+								Kwota na fakturze / przychód (brutto, PLN)
 								<input type="number" bind:value={offer.netInvoice} min="0" step="500" />
 							</label>
 						{:else}
@@ -273,7 +285,7 @@
 							</label>
 							<label>
 								Godziny / miesiąc
-								<input type="number" bind:value={offer.hoursPerMonth} min="0" step="1" />
+								<input type="number" bind:value={offer.hoursPerMonth} min="1" step="1" />
 							</label>
 						{/if}
 
@@ -322,8 +334,10 @@
 								<select
 									on:change={(e) => {
 										const sal = data.latestSalaries[Number(e.currentTarget.value)];
+										const contractType = mapContractType(sal.contract_type);
+										if (contractType === null) return;
 										offer.name = 'Aktualna praca';
-										offer.contractType = mapContractType(sal.contract_type);
+										offer.contractType = contractType;
 										if (offer.contractType === ContractType.UOP) {
 											offer.grossMonthly = sal.gross_amount;
 										} else {

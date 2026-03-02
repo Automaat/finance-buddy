@@ -233,13 +233,49 @@ export function calculateOffer(input: OfferInput): OfferBreakdown {
 	return breakdown;
 }
 
-/** Binary search for the minimum gross/invoice/rate to match targetNetMonthly. */
+/** Search for the minimum gross/invoice/rate to match targetNetMonthly. */
 export function findBreakEvenAmount(template: OfferInput, targetNetMonthly: number): number {
+	// hoursPerMonth=0 means revenue is always 0 — no break-even possible
+	if (
+		template.contractType === ContractType.B2B_HOURLY &&
+		!((template.hoursPerMonth ?? 0) > 0)
+	) {
+		return 0;
+	}
+
+	const isRyczaltB2B =
+		(template.contractType === ContractType.B2B_MONTHLY ||
+			template.contractType === ContractType.B2B_HOURLY) &&
+		template.taxForm === B2BTaxForm.RYCZALT;
+
+	const hi = targetNetMonthly * 4;
+
+	// For B2B ryczałt, healthMonthly has discrete tier jumps breaking monotonicity,
+	// so binary search is unreliable — use linear search for correctness.
+	if (isRyczaltB2B) {
+		for (let amount = 0; amount <= hi; amount++) {
+			const input = { ...template };
+			switch (template.contractType) {
+				case ContractType.B2B_MONTHLY:
+					input.netInvoice = amount;
+					break;
+				case ContractType.B2B_HOURLY:
+					input.hourlyRate = amount;
+					break;
+			}
+			if (calculateOffer(input).netMonthly >= targetNetMonthly) {
+				return amount;
+			}
+		}
+		return Math.ceil(hi);
+	}
+
+	// For other contract types / tax forms, netMonthly is monotone — binary search is safe.
 	let lo = 0;
-	let hi = targetNetMonthly * 4;
+	let hiVal = hi;
 
 	for (let i = 0; i < 60; i++) {
-		const mid = (lo + hi) / 2;
+		const mid = (lo + hiVal) / 2;
 		const input = { ...template };
 		switch (template.contractType) {
 			case ContractType.UOP:
@@ -255,9 +291,9 @@ export function findBreakEvenAmount(template: OfferInput, targetNetMonthly: numb
 		if (calculateOffer(input).netMonthly < targetNetMonthly) {
 			lo = mid;
 		} else {
-			hi = mid;
+			hiVal = mid;
 		}
 	}
 
-	return Math.ceil(hi);
+	return Math.ceil(hiVal);
 }

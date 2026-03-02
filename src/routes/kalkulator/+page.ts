@@ -23,7 +23,16 @@ export const load: PageLoad = async ({ fetch }) => {
 			}
 		}
 
-		return { latestSalaries: [...byOwner.values()] };
+		const latestSalaries = [...byOwner.values()].sort((a, b) => {
+			if (a.date === b.date) {
+				if (a.owner === b.owner) return 0;
+				return a.owner < b.owner ? -1 : 1;
+			}
+			// Newest dates first
+			return a.date < b.date ? 1 : -1;
+		});
+
+		return { latestSalaries };
 	} catch {
 		return { latestSalaries: [] };
 	}
