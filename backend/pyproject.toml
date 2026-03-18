@@ -47,6 +47,9 @@ omit = [
     "*/.venv/*",
 ]
 
+[tool.pyrefly]
+search-path = ["."]
+
 [tool.coverage.report]
 exclude_lines = [
     "pragma: no cover",
