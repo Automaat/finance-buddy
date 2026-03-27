@@ -31,3 +31,6 @@ backend/README.md
 
 # Python virtual environment
 .venv
+
+# Klaudiush tooling
+.klaudiush
