@@ -29,7 +29,7 @@
 		"svelte": "5.55.1",
 		"svelte-check": "4.4.6",
 		"typescript": "6.0.2",
-		"vite": "8.0.6",
+		"vite": "8.0.7",
 		"vitest": "^4.0.17"
 	},
 	"type": "module",
@@ -46,6 +46,6 @@
 	},
 	"overrides": {
 		"tslib": "^2.8.1",
-		"vite": "8.0.6"
+		"vite": "8.0.7"
 	}
 }
