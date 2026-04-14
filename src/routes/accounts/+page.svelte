@@ -700,6 +700,11 @@
 		font-size: var(--font-size-3);
 		padding: var(--size-2);
 		transition: transform 0.2s;
+		min-width: var(--tap-target-min);
+		min-height: var(--tap-target-min);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
 	}
 
 	.btn-icon:hover {
@@ -913,6 +918,12 @@
 			flex-direction: column;
 			align-items: flex-start;
 			gap: var(--size-2);
+		}
+	}
+
+	@media (max-width: 640px) {
+		.page-header .btn {
+			width: 100%;
 		}
 	}
 </style>

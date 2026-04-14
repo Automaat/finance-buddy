@@ -446,6 +446,7 @@
 		background: var(--surface-1);
 		color: var(--color-text-1);
 		font-size: var(--font-size-1);
+		min-height: var(--tap-target-min);
 	}
 
 	small {
@@ -634,9 +635,73 @@
 		color: hsl(0 60% 45%);
 	}
 
-	@media (max-width: 1100px) {
+	@media (max-width: 640px) {
+		table {
+			font-size: var(--font-size-0);
+		}
+
+		th,
+		td {
+			padding: var(--size-1);
+			white-space: normal;
+			word-break: break-word;
+		}
+
+		th:first-child,
+		td:first-child {
+			position: sticky;
+			left: 0;
+			background: var(--surface-2);
+			z-index: 1;
+		}
+
+		th:first-child {
+			background: var(--surface-4);
+		}
+	}
+
+	@media (max-width: 1024px) {
 		.content {
 			grid-template-columns: 1fr;
+		}
+	}
+
+	@media (max-width: 640px) {
+		.mortgage-page {
+			padding: var(--size-3);
+		}
+
+		.form-section,
+		.results-section {
+			padding: var(--size-4);
+		}
+
+		.chart-container {
+			height: 280px;
+		}
+
+		.summary-cards {
+			grid-template-columns: 1fr 1fr;
+			gap: var(--size-2);
+		}
+
+		.card-value {
+			font-size: var(--font-size-2);
+		}
+
+		.winner-banner {
+			flex-direction: column;
+			align-items: flex-start;
+			font-size: var(--font-size-2);
+			gap: var(--size-2);
+		}
+
+		.primary-button {
+			min-height: var(--tap-target-min);
+		}
+
+		h1 {
+			font-size: var(--font-size-4);
 		}
 	}
 </style>

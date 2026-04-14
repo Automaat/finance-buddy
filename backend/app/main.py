@@ -18,6 +18,7 @@ from app.api import (
     simulations,
     snapshots,
     transactions,
+    zus,
 )
 from app.core.config import settings
 from app.core.init_db import init_db
@@ -55,6 +56,7 @@ app.include_router(salary_records.router)
 app.include_router(simulations.router)
 app.include_router(snapshots.router)
 app.include_router(transactions.router)
+app.include_router(zus.router)
 
 
 @app.get("/health")

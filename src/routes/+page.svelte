@@ -467,6 +467,12 @@
 		height: 300px;
 	}
 
+	@media (max-width: 640px) {
+		.chart-container {
+			height: 260px;
+		}
+	}
+
 	@media (min-width: 768px) {
 		.chart-container {
 			height: 400px;
@@ -486,8 +492,13 @@
 		border: none;
 		font-size: var(--font-size-3);
 		cursor: pointer;
-		padding: var(--size-1);
+		padding: var(--size-2);
 		transition: transform 0.2s;
+		min-width: var(--tap-target-min);
+		min-height: var(--tap-target-min);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
 	}
 
 	.settings-btn:hover {
@@ -673,5 +684,37 @@
 
 	.btn-secondary:hover {
 		background: var(--color-accent);
+	}
+
+	@media (max-width: 640px) {
+		.kpi-grid {
+			grid-template-columns: 1fr;
+			gap: var(--size-4);
+		}
+
+		.kpi-value {
+			font-size: var(--font-size-5);
+		}
+
+		.page-header h1 {
+			font-size: var(--font-size-5);
+		}
+
+		.retirement-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.limit-inputs-grid {
+			grid-template-columns: 1fr;
+			gap: var(--size-3);
+		}
+
+		.form-actions {
+			flex-direction: column-reverse;
+		}
+
+		.form-actions .btn {
+			width: 100%;
+		}
 	}
 </style>

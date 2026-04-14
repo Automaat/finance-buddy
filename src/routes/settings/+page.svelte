@@ -267,6 +267,11 @@
 		font-size: var(--font-size-3);
 		padding: var(--size-2);
 		transition: transform 0.2s;
+		min-width: var(--tap-target-min);
+		min-height: var(--tap-target-min);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
 	}
 
 	.btn-icon:hover {
@@ -322,5 +327,23 @@
 	.form-group input:focus {
 		outline: none;
 		border-color: var(--color-primary);
+	}
+
+	@media (max-width: 640px) {
+		.page-header {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: var(--size-4);
+		}
+
+		.card-header-row {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: var(--size-3);
+		}
+
+		.card-header-row .btn {
+			width: 100%;
+		}
 	}
 </style>

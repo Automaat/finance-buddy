@@ -555,6 +555,11 @@
 		font-size: var(--font-size-3);
 		padding: var(--size-2);
 		transition: transform 0.2s;
+		min-width: var(--tap-target-min);
+		min-height: var(--tap-target-min);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
 	}
 
 	.btn-icon:hover {
@@ -637,6 +642,31 @@
 	@media (max-width: 768px) {
 		.filters-row {
 			grid-template-columns: 1fr;
+		}
+	}
+
+	@media (max-width: 640px) {
+		.page-header {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: var(--size-4);
+		}
+
+		.page-header .btn {
+			width: 100%;
+		}
+
+		.filters-actions {
+			flex-direction: column;
+		}
+
+		.filters-actions .btn {
+			width: 100%;
+		}
+
+		.current-salaries {
+			flex-direction: column;
+			gap: var(--size-3);
 		}
 	}
 </style>

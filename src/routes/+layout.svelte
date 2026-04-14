@@ -8,6 +8,7 @@
 		{ href: '/metryki', label: 'Metryki', icon: '📈' },
 		{ href: '/simulations', label: 'Symulacje', icon: '🔮' },
 		{ href: '/simulations/mortgage', label: 'Hipoteka', icon: '🏦' },
+		{ href: '/simulations/zus', label: 'Emerytura ZUS', icon: '🏛️' },
 		{ href: '/accounts', label: 'Konta', icon: '💰' },
 		{ href: '/transactions', label: 'Transakcje', icon: '💸' },
 		{ href: '/assets', label: 'Majątek', icon: '🏠' },
@@ -40,6 +41,12 @@
 		max-width: 1200px;
 		margin: 0 auto;
 		width: 100%;
+		min-width: 0;
+	}
+
+	:global(html),
+	:global(body) {
+		overflow-x: hidden;
 	}
 
 	@media (min-width: 768px) {
@@ -56,7 +63,8 @@
 
 	@media (max-width: 767px) {
 		.main {
-			margin-top: 60px;
+			margin-top: var(--size-8);
+			padding-top: var(--size-6);
 		}
 	}
 

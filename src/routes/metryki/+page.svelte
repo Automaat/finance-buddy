@@ -1119,8 +1119,45 @@
 	}
 
 	@media (max-width: 640px) {
+		.container {
+			padding: var(--size-3);
+		}
+
 		.metrics-grid {
 			grid-template-columns: 1fr;
+		}
+
+		.chart {
+			height: 280px;
+		}
+
+		.chart-wide {
+			height: 320px;
+		}
+
+		.chart-container,
+		.chart-container-wide,
+		.rebalancing-container {
+			padding: var(--size-3);
+		}
+
+		h1 {
+			font-size: var(--font-size-5);
+		}
+
+		h2 {
+			font-size: var(--font-size-3);
+			margin-top: var(--size-6);
+		}
+
+		.rebalancing-item {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: var(--size-2);
+		}
+
+		.action-label {
+			min-width: auto;
 		}
 	}
 </style>
