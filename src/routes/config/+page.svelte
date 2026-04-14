@@ -354,7 +354,7 @@
 
 	.input {
 		width: 100%;
-		padding: var(--size-2) var(--size-3);
+		padding: var(--size-3);
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-2);
 		font-size: var(--font-size-2);
@@ -362,6 +362,7 @@
 		color: var(--color-text);
 		font-family: inherit;
 		transition: all 0.2s;
+		min-height: var(--tap-target-min);
 	}
 
 	.input:focus {
@@ -420,6 +421,7 @@
 		font-weight: var(--font-weight-6);
 		cursor: pointer;
 		transition: all 0.2s;
+		min-height: var(--tap-target-min);
 	}
 
 	.save-button:hover:not(:disabled) {
@@ -477,5 +479,21 @@
 		font-weight: var(--font-weight-6);
 		color: var(--color-text);
 		margin-bottom: var(--size-3);
+	}
+
+	@media (max-width: 640px) {
+		.container {
+			padding: var(--size-3);
+		}
+
+		.save-button {
+			width: 100%;
+		}
+
+		.calculated-info {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: var(--size-2);
+		}
 	}
 </style>

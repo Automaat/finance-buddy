@@ -188,6 +188,10 @@
 		font-size: var(--font-size-1);
 		cursor: pointer;
 		transition: all 0.2s;
+		min-height: var(--tap-target-min);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
 	}
 
 	.btn-edit:hover {
@@ -204,6 +208,12 @@
 
 		.actions-cell {
 			text-align: left;
+		}
+	}
+
+	@media (max-width: 640px) {
+		.page-header .btn {
+			width: 100%;
 		}
 	}
 </style>

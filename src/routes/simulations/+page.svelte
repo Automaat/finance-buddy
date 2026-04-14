@@ -829,4 +829,47 @@
 			grid-template-columns: 1fr;
 		}
 	}
+
+	@media (max-width: 640px) {
+		.simulations-page {
+			padding: var(--size-3);
+		}
+
+		.form-section,
+		.results-section {
+			padding: var(--size-4);
+		}
+
+		.chart-container {
+			height: 280px;
+		}
+
+		.summary-cards {
+			grid-template-columns: 1fr 1fr;
+			gap: var(--size-2);
+		}
+
+		.card-value {
+			font-size: var(--font-size-2);
+		}
+
+		.primary-button {
+			min-height: var(--tap-target-min);
+		}
+
+		table {
+			font-size: var(--font-size-0);
+		}
+
+		th,
+		td {
+			padding: var(--size-1);
+			white-space: normal;
+			word-break: break-word;
+		}
+
+		h1 {
+			font-size: var(--font-size-4);
+		}
+	}
 </style>

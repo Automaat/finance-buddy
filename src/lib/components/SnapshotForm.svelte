@@ -807,7 +807,7 @@
 
 	.form-input {
 		width: 100%;
-		padding: var(--size-2) var(--size-3);
+		padding: var(--size-3);
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-2);
 		background: var(--color-bg);
@@ -815,6 +815,7 @@
 		font-size: var(--font-size-2);
 		font-family: inherit;
 		transition: all 0.2s;
+		min-height: var(--tap-target-min);
 	}
 
 	.form-input:focus {
@@ -885,8 +886,8 @@
 
 	.btn-remove {
 		flex-shrink: 0;
-		width: 32px;
-		height: 32px;
+		width: var(--tap-target-min);
+		height: var(--tap-target-min);
 		margin-top: 28px;
 		padding: 0;
 		border: 1px solid var(--color-border);
@@ -897,6 +898,9 @@
 		line-height: 1;
 		cursor: pointer;
 		transition: all 0.2s;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
 	}
 
 	.btn-remove:hover {
@@ -1005,8 +1009,8 @@
 	}
 
 	.btn-close {
-		width: 32px;
-		height: 32px;
+		width: var(--tap-target-min);
+		height: var(--tap-target-min);
 		padding: 0;
 		border: none;
 		background: transparent;
@@ -1015,6 +1019,9 @@
 		line-height: 1;
 		cursor: pointer;
 		transition: all 0.2s;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
 	}
 
 	.btn-close:hover {
@@ -1034,5 +1041,20 @@
 
 	.modal-footer .btn {
 		flex: 1;
+	}
+
+	@media (max-width: 640px) {
+		.button-group {
+			flex-direction: column-reverse;
+		}
+
+		.button-group .btn {
+			width: 100%;
+			flex: none;
+		}
+
+		.btn-remove {
+			margin-top: 32px;
+		}
 	}
 </style>

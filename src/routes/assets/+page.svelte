@@ -375,4 +375,18 @@
 			gap: var(--size-4);
 		}
 	}
+
+	@media (max-width: 640px) {
+		.page-header .btn {
+			width: 100%;
+		}
+
+		.form-actions {
+			flex-direction: column-reverse;
+		}
+
+		.form-actions .btn {
+			width: 100%;
+		}
+	}
 </style>
