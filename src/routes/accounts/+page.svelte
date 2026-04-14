@@ -1,18 +1,12 @@
 <script lang="ts">
-	import {
-		Card,
-		CardHeader,
-		CardTitle,
-		CardContent,
-		Modal,
-		Table,
-		formatPLN
-	} from '@mskalski/home-ui';
+	import Modal from '$lib/components/Modal.svelte';
+	import { formatPLN } from '$lib/utils/format';
+	import { Wallet, TrendingDown, Pencil, Trash2, Plus, BarChart3 } from 'lucide-svelte';
 	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { INVESTMENT_CATEGORIES } from '$lib/constants';
-	import type { Account, Transaction, TransactionsData } from './+page';
+	import type { Account, TransactionsData } from './+page';
 	import type { Persona } from '$lib/types/personas';
 
 	export let data;
@@ -123,14 +117,10 @@
 				: `${apiUrl}/api/accounts`;
 			const method = editingAccount ? 'PUT' : 'POST';
 
-			// Conditionally include receives_contributions only for PPK accounts
 			const payload =
 				formData.account_wrapper === 'PPK'
 					? formData
-					: {
-							...formData,
-							receives_contributions: undefined
-						};
+					: { ...formData, receives_contributions: undefined };
 
 			const response = await fetch(endpoint, {
 				method,
@@ -289,9 +279,7 @@
 		try {
 			const response = await fetch(
 				`${apiUrl}/api/accounts/${selectedAccountId}/transactions/${transactionId}`,
-				{
-					method: 'DELETE'
-				}
+				{ method: 'DELETE' }
 			);
 
 			if (!response.ok) {
@@ -312,93 +300,138 @@
 	<title>Konta | Finansowa Forteca</title>
 </svelte:head>
 
-<div class="page-header">
-	<div>
-		<h1 class="page-title">Konta</h1>
-		<p class="page-description">Zarządzaj kontami aktywów i pasywów</p>
+<div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+	<div class="space-y-1">
+		<h1 class="h2">Konta</h1>
+		<p class="text-surface-700-300 text-sm">Zarządzaj kontami aktywów i pasywów</p>
 	</div>
-	<button class="btn btn-primary" on:click={startCreate}>+ Nowe Konto</button>
+	<button
+		type="button"
+		class="btn preset-filled-primary-500 w-full sm:w-auto gap-2"
+		on:click={startCreate}
+	>
+		<Plus size={16} />
+		Nowe Konto
+	</button>
 </div>
 
-<Card>
-	<CardHeader>
-		<CardTitle>💰 Aktywa</CardTitle>
-	</CardHeader>
-	<CardContent>
+<div class="space-y-4">
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header>
+			<h3 class="h3 flex items-center gap-2"><Wallet size={20} /> Aktywa</h3>
+		</header>
 		{#if data.assets.length === 0}
-			<div class="empty-state">
-				<p>Brak aktywów</p>
-			</div>
+			<div class="text-center py-12 text-surface-700-300"><p>Brak aktywów</p></div>
 		{:else}
-			<Table
-				headers={['Nazwa', 'Kategoria', 'Właściciel', 'Wartość', 'Akcje']}
-				mobileCardView
-				class="accounts-table"
-			>
-				{#each data.assets as account}
-					<tr>
-						<td data-label="Nazwa" class="name-cell">{account.name}</td>
-						<td data-label="Kategoria">{categoryLabels[account.category] || account.category}</td>
-						<td data-label="Właściciel">{account.owner}</td>
-						<td data-label="Wartość" class="value-cell">{formatPLN(account.current_value)}</td>
-						<td data-label="Akcje" class="actions-cell">
-							<button class="btn-icon tap-target" on:click={() => startEdit(account)}>✏️</button>
-							{#if INVESTMENT_CATEGORIES.has(account.category) || account.account_wrapper}
-								<button
-									class="btn-icon tap-target transaction-btn"
-									title="Transakcje"
-									on:click={() =>
-										openTransactions(account.id, account.name, account.account_wrapper)}
+			<div class="table-wrap">
+				<table class="table table-hover">
+					<thead>
+						<tr>
+							<th>Nazwa</th>
+							<th>Kategoria</th>
+							<th>Właściciel</th>
+							<th>Wartość</th>
+							<th class="text-right">Akcje</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each data.assets as account}
+							<tr>
+								<td class="font-medium">{account.name}</td>
+								<td>{categoryLabels[account.category] || account.category}</td>
+								<td>{account.owner}</td>
+								<td class="font-semibold text-primary-600-400"
+									>{formatPLN(account.current_value)}</td
 								>
-									📊 ({transactionCounts[account.id] || 0})
-								</button>
-							{/if}
-							<button class="btn-icon tap-target" on:click={() => handleDelete(account.id)}
-								>🗑️</button
-							>
-						</td>
-					</tr>
-				{/each}
-			</Table>
-		{/if}
-	</CardContent>
-</Card>
-
-<Card>
-	<CardHeader>
-		<CardTitle>📉 Pasywa</CardTitle>
-	</CardHeader>
-	<CardContent>
-		{#if data.liabilities.length === 0}
-			<div class="empty-state">
-				<p>Brak pasywów</p>
+								<td class="text-right whitespace-nowrap">
+									<button
+										type="button"
+										class="btn-icon btn-icon-sm"
+										aria-label="Edytuj"
+										on:click={() => startEdit(account)}
+									>
+										<Pencil size={16} />
+									</button>
+									{#if INVESTMENT_CATEGORIES.has(account.category) || account.account_wrapper}
+										<button
+											type="button"
+											class="btn preset-tonal-surface btn-sm gap-1"
+											aria-label="Transakcje"
+											on:click={() =>
+												openTransactions(account.id, account.name, account.account_wrapper)}
+										>
+											<BarChart3 size={14} />
+											<span>{transactionCounts[account.id] || 0}</span>
+										</button>
+									{/if}
+									<button
+										type="button"
+										class="btn-icon btn-icon-sm"
+										aria-label="Usuń"
+										on:click={() => handleDelete(account.id)}
+									>
+										<Trash2 size={16} />
+									</button>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
 			</div>
-		{:else}
-			<Table
-				headers={['Nazwa', 'Kategoria', 'Właściciel', 'Wartość', 'Akcje']}
-				mobileCardView
-				class="accounts-table"
-			>
-				{#each data.liabilities as account}
-					<tr>
-						<td data-label="Nazwa" class="name-cell">{account.name}</td>
-						<td data-label="Kategoria">{categoryLabels[account.category] || account.category}</td>
-						<td data-label="Właściciel">{account.owner}</td>
-						<td data-label="Wartość" class="value-cell negative"
-							>{formatPLN(account.current_value)}</td
-						>
-						<td data-label="Akcje" class="actions-cell">
-							<button class="btn-icon tap-target" on:click={() => startEdit(account)}>✏️</button>
-							<button class="btn-icon tap-target" on:click={() => handleDelete(account.id)}
-								>🗑️</button
-							>
-						</td>
-					</tr>
-				{/each}
-			</Table>
 		{/if}
-	</CardContent>
-</Card>
+	</div>
+
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header>
+			<h3 class="h3 flex items-center gap-2"><TrendingDown size={20} /> Pasywa</h3>
+		</header>
+		{#if data.liabilities.length === 0}
+			<div class="text-center py-12 text-surface-700-300"><p>Brak pasywów</p></div>
+		{:else}
+			<div class="table-wrap">
+				<table class="table table-hover">
+					<thead>
+						<tr>
+							<th>Nazwa</th>
+							<th>Kategoria</th>
+							<th>Właściciel</th>
+							<th>Wartość</th>
+							<th class="text-right">Akcje</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each data.liabilities as account}
+							<tr>
+								<td class="font-medium">{account.name}</td>
+								<td>{categoryLabels[account.category] || account.category}</td>
+								<td>{account.owner}</td>
+								<td class="font-semibold text-error-600-400">{formatPLN(account.current_value)}</td>
+								<td class="text-right whitespace-nowrap">
+									<button
+										type="button"
+										class="btn-icon btn-icon-sm"
+										aria-label="Edytuj"
+										on:click={() => startEdit(account)}
+									>
+										<Pencil size={16} />
+									</button>
+									<button
+										type="button"
+										class="btn-icon btn-icon-sm"
+										aria-label="Usuń"
+										on:click={() => handleDelete(account.id)}
+									>
+										<Trash2 size={16} />
+									</button>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
+	</div>
+</div>
 
 <Modal
 	open={showForm}
@@ -407,39 +440,37 @@
 	onCancel={cancelForm}
 	confirmText={saving ? 'Zapisywanie...' : editingAccount ? 'Zapisz zmiany' : 'Utwórz konto'}
 	confirmDisabled={saving}
-	confirmVariant="primary"
-	size="large"
 >
-	<form on:submit|preventDefault={handleSubmit} class="account-form">
+	<form on:submit|preventDefault={handleSubmit} class="space-y-4">
 		{#if error}
-			<div class="error-message">{error}</div>
+			<div class="card preset-filled-error-500 p-3 text-sm">{error}</div>
 		{/if}
 
-		<div class="grid grid-cols-1 md:grid-cols-2">
-			<div class="form-group">
-				<label for="name">Nazwa</label>
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+			<label class="label">
+				<span class="font-semibold text-sm">Nazwa</span>
 				<input
 					type="text"
-					id="name"
+					class="input"
 					bind:value={formData.name}
 					required
 					placeholder="np. mBank Konto"
 				/>
-			</div>
+			</label>
 
-			<div class="form-group">
-				<label for="type">Typ</label>
-				<select id="type" bind:value={formData.type} required>
+			<label class="label">
+				<span class="font-semibold text-sm">Typ</span>
+				<select class="select" bind:value={formData.type} required>
 					<option value="asset">Aktywo</option>
 					<option value="liability">Pasywo</option>
 				</select>
-			</div>
+			</label>
 		</div>
 
-		<div class="grid grid-cols-1 md:grid-cols-2">
-			<div class="form-group">
-				<label for="category">Kategoria</label>
-				<select id="category" bind:value={formData.category} required>
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+			<label class="label">
+				<span class="font-semibold text-sm">Kategoria</span>
+				<select class="select" bind:value={formData.category} required>
 					<optgroup label="Aktywa">
 						<option value="bank">Konto bankowe</option>
 						<option value="saving_account">Konto oszczędnościowe</option>
@@ -458,11 +489,11 @@
 					</optgroup>
 					<option value="other">Inne</option>
 				</select>
-			</div>
+			</label>
 
-			<div class="form-group">
-				<label for="owner">Właściciel</label>
-				<select id="owner" bind:value={formData.owner} required>
+			<label class="label">
+				<span class="font-semibold text-sm">Właściciel</span>
+				<select class="select" bind:value={formData.owner} required>
 					{#if !personas.some((p) => p.name === formData.owner)}
 						<option value={formData.owner}>{formData.owner}</option>
 					{/if}
@@ -470,59 +501,57 @@
 						<option value={persona.name}>{persona.name}</option>
 					{/each}
 				</select>
-			</div>
+			</label>
 		</div>
 
-		<div class="grid grid-cols-1 md:grid-cols-2">
-			<div class="form-group">
-				<label for="account_wrapper">Opakowanie rachunku (opcjonalne)</label>
-				<select id="account_wrapper" bind:value={formData.account_wrapper}>
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+			<label class="label">
+				<span class="font-semibold text-sm">Opakowanie rachunku (opcjonalne)</span>
+				<select class="select" bind:value={formData.account_wrapper}>
 					<option value={null}>Brak</option>
 					<option value="IKE">IKE</option>
 					<option value="IKZE">IKZE</option>
 					<option value="PPK">PPK</option>
 				</select>
-			</div>
+			</label>
 
-			<div class="form-group">
-				<label for="purpose">Cel konta</label>
-				<select id="purpose" bind:value={formData.purpose} required>
+			<label class="label">
+				<span class="font-semibold text-sm">Cel konta</span>
+				<select class="select" bind:value={formData.purpose} required>
 					<option value="general">Ogólne</option>
 					<option value="retirement">Emerytura</option>
 					<option value="emergency_fund">Fundusz awaryjny</option>
 				</select>
-			</div>
+			</label>
 		</div>
 
 		{#if formData.account_wrapper === 'PPK'}
-			<div class="form-group">
-				<label class="checkbox-label">
-					<input type="checkbox" bind:checked={formData.receives_contributions} />
-					<span>Konto otrzymuje wpłaty (aktywne PPK)</span>
-				</label>
-				<p class="form-help-text">
-					Zaznacz jeśli to konto jest aktywnie używane do otrzymywania miesięcznych wpłat PPK. Stare
-					konta PPK powinny mieć to odznaczone - będą tylko śledzone przez snapshoty.
-				</p>
-			</div>
+			<label class="flex items-center gap-2">
+				<input type="checkbox" class="checkbox" bind:checked={formData.receives_contributions} />
+				<span class="text-sm">Konto otrzymuje wpłaty (aktywne PPK)</span>
+			</label>
+			<p class="text-xs text-surface-700-300 italic">
+				Zaznacz jeśli to konto jest aktywnie używane do otrzymywania miesięcznych wpłat PPK. Stare
+				konta PPK powinny mieć to odznaczone - będą tylko śledzone przez snapshoty.
+			</p>
 		{/if}
 
 		{#if formData.category === 'real_estate'}
-			<div class="form-group">
-				<label for="square_meters">Powierzchnia (m²)</label>
+			<label class="label">
+				<span class="font-semibold text-sm">Powierzchnia (m²)</span>
 				<input
 					type="number"
-					id="square_meters"
+					class="input"
 					bind:value={formData.square_meters}
 					min="0"
 					step="0.01"
 					placeholder="np. 65.50"
 				/>
-				<p class="form-help-text">
+				<span class="text-xs text-surface-700-300 italic">
 					Powierzchnia nieruchomości w metrach kwadratowych. Używana do obliczania metryki "Ile
 					metrów mieszkania jest nasze".
-				</p>
-			</div>
+				</span>
+			</label>
 		{/if}
 	</form>
 </Modal>
@@ -532,58 +561,62 @@
 	title="Potwierdzenie usunięcia"
 	onConfirm={confirmDelete}
 	onCancel={cancelDelete}
+	confirmText="Usuń"
+	confirmVariant="danger"
 >
-	<p>Czy na pewno chcesz usunąć to konto?</p>
-	<p>Operacja ta ustawi konto jako nieaktywne.</p>
+	<p class="mb-2">Czy na pewno chcesz usunąć to konto?</p>
+	<p class="text-sm text-surface-700-300">Operacja ta ustawi konto jako nieaktywne.</p>
 </Modal>
 
 <Modal
 	open={showTransactionsModal}
 	title="Transakcje - {selectedAccountName}"
 	onCancel={closeTransactions}
-	size="large"
+	hideFooter
 >
-	<div class="transactions-modal">
+	<div class="space-y-4">
 		{#if transactionError}
-			<div class="error-message">{transactionError}</div>
+			<div class="card preset-filled-error-500 p-3 text-sm">{transactionError}</div>
 		{/if}
 
 		{#if transactionsData}
-			<div class="transactions-header">
-				<h3>Historia transakcji</h3>
-				<p class="total-invested">
-					Zainwestowano łącznie: <strong>{formatPLN(transactionsData.total_invested)}</strong>
+			<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+				<h3 class="h4">Historia transakcji</h3>
+				<p class="text-sm text-surface-700-300">
+					Zainwestowano łącznie: <strong class="text-primary-600-400"
+						>{formatPLN(transactionsData.total_invested)}</strong
+					>
 				</p>
 			</div>
 
 			{#if transactionsData.transactions.length === 0}
-				<div class="empty-state">
-					<p>Brak transakcji</p>
-				</div>
+				<div class="text-center py-8 text-surface-700-300"><p>Brak transakcji</p></div>
 			{:else}
-				<div class="table-container">
-					<table class="transactions-table">
+				<div class="table-wrap">
+					<table class="table table-hover">
 						<thead>
 							<tr>
 								<th>Data zakupu</th>
 								<th>Kwota</th>
 								<th>Właściciel</th>
-								<th>Akcje</th>
+								<th class="text-right">Akcje</th>
 							</tr>
 						</thead>
 						<tbody>
 							{#each transactionsData.transactions as transaction}
 								<tr>
 									<td>{new Date(transaction.date).toLocaleDateString('pl-PL')}</td>
-									<td class="value-cell">{formatPLN(transaction.amount)}</td>
+									<td class="font-semibold text-primary-600-400">{formatPLN(transaction.amount)}</td
+									>
 									<td>{transaction.owner}</td>
-									<td class="actions-cell">
+									<td class="text-right">
 										<button
-											class="btn-icon"
+											type="button"
+											class="btn-icon btn-icon-sm"
+											aria-label="Usuń"
 											on:click={() => deleteTransaction(transaction.id)}
-											title="Usuń"
 										>
-											🗑️
+											<Trash2 size={16} />
 										</button>
 									</td>
 								</tr>
@@ -593,58 +626,58 @@
 				</div>
 			{/if}
 
-			<div class="transaction-form">
-				<h3>Dodaj transakcję</h3>
-				<form on:submit|preventDefault={addTransaction}>
-					<div class="grid grid-cols-1 md:grid-cols-2">
-						<div class="form-group">
-							<label for="transaction-amount">Kwota (PLN)</label>
+			<div class="space-y-3 pt-4 border-t border-surface-200-800">
+				<h3 class="h4">Dodaj transakcję</h3>
+				<form on:submit|preventDefault={addTransaction} class="space-y-4">
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<label class="label">
+							<span class="font-semibold text-sm">Kwota (PLN)</span>
 							<input
 								type="number"
-								id="transaction-amount"
+								class="input"
 								bind:value={transactionFormData.amount}
 								required
 								min="0.01"
 								step="0.01"
 								placeholder="np. 5000.00"
 							/>
-						</div>
+						</label>
 
-						<div class="form-group">
-							<label for="transaction-date">Data zakupu</label>
+						<label class="label">
+							<span class="font-semibold text-sm">Data zakupu</span>
 							<input
 								type="date"
-								id="transaction-date"
+								class="input"
 								bind:value={transactionFormData.date}
 								required
 								max={new Date().toISOString().split('T')[0]}
 							/>
-						</div>
+						</label>
 
-						<div class="form-group">
-							<label for="transaction-owner">Właściciel</label>
-							<select id="transaction-owner" bind:value={transactionFormData.owner} required>
+						<label class="label">
+							<span class="font-semibold text-sm">Właściciel</span>
+							<select class="select" bind:value={transactionFormData.owner} required>
 								{#each personas as persona}
 									<option value={persona.name}>{persona.name}</option>
 								{/each}
 							</select>
-						</div>
+						</label>
 
 						{#if selectedAccountWrapper}
-							<div class="form-group">
-								<label for="transaction-type">Typ wpłaty</label>
-								<select id="transaction-type" bind:value={transactionFormData.transaction_type}>
+							<label class="label">
+								<span class="font-semibold text-sm">Typ wpłaty</span>
+								<select class="select" bind:value={transactionFormData.transaction_type}>
 									<option value="">Wpłata pracownika</option>
 									{#if selectedAccountWrapper === 'PPK'}
 										<option value="employer">Wpłata pracodawcy</option>
 									{/if}
 									<option value="withdrawal">Wypłata</option>
 								</select>
-							</div>
+							</label>
 						{/if}
 					</div>
 
-					<button type="submit" class="btn btn-primary" disabled={savingTransaction}>
+					<button type="submit" class="btn preset-filled-primary-500" disabled={savingTransaction}>
 						{savingTransaction ? 'Zapisywanie...' : 'Dodaj transakcję'}
 					</button>
 				</form>
@@ -652,278 +685,3 @@
 		{/if}
 	</div>
 </Modal>
-
-<style>
-	.page-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		margin-bottom: var(--size-6);
-	}
-
-	.page-title {
-		font-size: var(--font-size-6);
-		font-weight: var(--font-weight-7);
-		color: var(--color-text);
-		margin: 0 0 var(--size-2) 0;
-	}
-
-	.page-description {
-		color: var(--color-text-secondary);
-		font-size: var(--font-size-2);
-		margin: 0;
-	}
-
-	.btn {
-		padding: var(--size-3) var(--size-5);
-		border: none;
-		border-radius: var(--radius-2);
-		font-weight: var(--font-weight-6);
-		font-size: var(--font-size-2);
-		cursor: pointer;
-		transition: all 0.2s;
-	}
-
-	.btn-primary {
-		background: var(--color-primary);
-		color: var(--nord6);
-	}
-
-	.btn-primary:hover {
-		background: var(--nord9);
-	}
-
-	.btn-icon {
-		background: transparent;
-		border: none;
-		cursor: pointer;
-		font-size: var(--font-size-3);
-		padding: var(--size-2);
-		transition: transform 0.2s;
-		min-width: var(--tap-target-min);
-		min-height: var(--tap-target-min);
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.btn-icon:hover {
-		transform: scale(1.2);
-	}
-
-	.empty-state {
-		text-align: center;
-		padding: var(--size-8) var(--size-4);
-		color: var(--color-text-secondary);
-	}
-
-	.table-container {
-		overflow-x: auto;
-	}
-
-	.accounts-table {
-		width: 100%;
-		border-collapse: collapse;
-	}
-
-	.accounts-table thead {
-		border-bottom: 2px solid var(--color-border);
-	}
-
-	.accounts-table th {
-		text-align: left;
-		padding: var(--size-3) var(--size-4);
-		font-weight: var(--font-weight-6);
-		color: var(--color-text);
-		font-size: var(--font-size-2);
-	}
-
-	.accounts-table tbody tr {
-		border-bottom: 1px solid var(--color-border);
-		transition: background-color 0.2s;
-	}
-
-	.accounts-table tbody tr:hover {
-		background-color: var(--color-accent);
-	}
-
-	.accounts-table td {
-		padding: var(--size-4);
-		font-size: var(--font-size-2);
-	}
-
-	.name-cell {
-		font-weight: var(--font-weight-6);
-		color: var(--color-text);
-	}
-
-	.value-cell {
-		font-weight: var(--font-weight-6);
-		color: var(--color-primary);
-	}
-
-	.value-cell.negative {
-		color: var(--nord11);
-	}
-
-	.actions-cell {
-		text-align: right;
-	}
-
-	.account-form {
-		display: flex;
-		flex-direction: column;
-		gap: var(--size-5);
-	}
-
-	.form-group {
-		display: flex;
-		flex-direction: column;
-		gap: var(--size-2);
-	}
-
-	.form-group label {
-		font-weight: var(--font-weight-6);
-		color: var(--color-text);
-		font-size: var(--font-size-2);
-	}
-
-	.form-group input,
-	.form-group select {
-		padding: var(--size-3);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-2);
-		background: var(--color-background);
-		color: var(--color-text);
-		font-size: var(--font-size-2);
-	}
-
-	.form-group input:focus,
-	.form-group select:focus {
-		outline: none;
-		border-color: var(--color-primary);
-	}
-
-	.error-message {
-		padding: var(--size-3);
-		background: var(--nord11);
-		color: var(--nord6);
-		border-radius: var(--radius-2);
-		font-size: var(--font-size-2);
-	}
-
-	.checkbox-label {
-		display: flex;
-		align-items: center;
-		gap: var(--size-2);
-		cursor: pointer;
-		font-weight: var(--font-weight-5);
-	}
-
-	.checkbox-label input[type='checkbox'] {
-		width: var(--size-4);
-		height: var(--size-4);
-		cursor: pointer;
-	}
-
-	.form-help-text {
-		margin: var(--size-2) 0 0 0;
-		font-size: var(--font-size-1);
-		color: var(--color-text-secondary);
-		line-height: 1.4;
-	}
-
-	.transactions-modal {
-		display: flex;
-		flex-direction: column;
-		gap: var(--size-6);
-	}
-
-	.transactions-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding-bottom: var(--size-4);
-		border-bottom: 2px solid var(--color-border);
-	}
-
-	.transactions-header h3 {
-		margin: 0;
-		font-size: var(--font-size-4);
-		font-weight: var(--font-weight-6);
-		color: var(--color-text);
-	}
-
-	.total-invested {
-		margin: 0;
-		font-size: var(--font-size-3);
-		color: var(--color-text-secondary);
-	}
-
-	.total-invested strong {
-		color: var(--color-primary);
-		font-weight: var(--font-weight-7);
-	}
-
-	.transactions-table {
-		width: 100%;
-		border-collapse: collapse;
-	}
-
-	.transactions-table thead {
-		border-bottom: 2px solid var(--color-border);
-	}
-
-	.transactions-table th {
-		text-align: left;
-		padding: var(--size-3) var(--size-4);
-		font-weight: var(--font-weight-6);
-		color: var(--color-text);
-		font-size: var(--font-size-2);
-	}
-
-	.transactions-table tbody tr {
-		border-bottom: 1px solid var(--color-border);
-		transition: background-color 0.2s;
-	}
-
-	.transactions-table tbody tr:hover {
-		background-color: var(--color-accent);
-	}
-
-	.transactions-table td {
-		padding: var(--size-3) var(--size-4);
-		font-size: var(--font-size-2);
-	}
-
-	.transaction-form {
-		padding-top: var(--size-4);
-		border-top: 2px solid var(--color-border);
-	}
-
-	.transaction-form h3 {
-		margin: 0 0 var(--size-4) 0;
-		font-size: var(--font-size-3);
-		font-weight: var(--font-weight-6);
-		color: var(--color-text);
-	}
-
-	@media (max-width: 768px) {
-		.page-header {
-			flex-direction: column;
-			gap: var(--size-4);
-		}
-
-		.transactions-header {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: var(--size-2);
-		}
-	}
-
-	@media (max-width: 640px) {
-		.page-header .btn {
-			width: 100%;
-		}
-	}
-</style>

@@ -2,7 +2,9 @@
 	import { onMount } from 'svelte';
 	import * as echarts from 'echarts';
 	import type { EChartsOption } from 'echarts';
-	import { Card, CardHeader, CardTitle, CardContent, Modal, formatPLN } from '@mskalski/home-ui';
+	import Modal from '$lib/components/Modal.svelte';
+	import { formatPLN } from '$lib/utils/format';
+	import { Plus, Banknote, TrendingUp, Search, BarChart3, Pencil, Trash2 } from 'lucide-svelte';
 	import { env } from '$env/dynamic/public';
 	import { goto, invalidateAll } from '$app/navigation';
 	import type { SalaryRecord } from '$lib/types/salaries';
@@ -146,7 +148,6 @@
 	onMount(() => {
 		const chart = echarts.init(chartContainer);
 
-		// Group salary records by company for multi-line chart
 		const companyMap = new Map<string, Array<[string, number]>>();
 
 		data.salaries.salary_records.forEach((r) => {
@@ -157,23 +158,12 @@
 			companyMap.get(companyName)!.push([r.date, r.gross_amount]);
 		});
 
-		// Sort each company's data by date
 		companyMap.forEach((salaryData) => {
 			salaryData.sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime());
 		});
 
-		// Color palette for different companies
-		const colors = [
-			'#5E81AC', // nord10 - blue
-			'#88C0D0', // nord8 - light blue
-			'#A3BE8C', // nord14 - green
-			'#EBCB8B', // nord13 - yellow
-			'#D08770', // nord12 - orange
-			'#B48EAD', // nord15 - purple
-			'#BF616A' // nord11 - red
-		];
+		const colors = ['#5E81AC', '#88C0D0', '#A3BE8C', '#EBCB8B', '#D08770', '#B48EAD', '#BF616A'];
 
-		// Create series for each company
 		const series: Array<{
 			name: string;
 			data: Array<[string, number]>;
@@ -194,16 +184,11 @@
 		});
 
 		const option: EChartsOption = {
-			title: {
-				text: 'Progresja wynagrodzenia',
-				left: 'center'
-			},
+			title: { text: 'Progresja wynagrodzenia', left: 'center' },
 			tooltip: {
 				trigger: 'axis',
 				formatter: (params: any) => {
-					if (!params || !Array.isArray(params) || params.length === 0) {
-						return '';
-					}
+					if (!params || !Array.isArray(params) || params.length === 0) return '';
 					let result = `${new Date(params[0].value[0]).toLocaleDateString('pl-PL')}<br/>`;
 					params.forEach((p: any) => {
 						result += `${p.seriesName}: ${formatPLN(p.value[1])}<br/>`;
@@ -211,25 +196,14 @@
 					return result;
 				}
 			},
-			legend: {
-				top: 30,
-				data: series.map((s) => s.name)
-			},
-			xAxis: {
-				type: 'time'
-			},
+			legend: { top: 30, data: series.map((s) => s.name) },
+			xAxis: { type: 'time' },
 			yAxis: {
 				type: 'value',
-				axisLabel: {
-					formatter: (value: number) => formatPLN(value)
-				}
+				axisLabel: { formatter: (value: number) => formatPLN(value) }
 			},
 			series,
-			grid: {
-				left: '80px',
-				right: '40px',
-				top: '80px'
-			}
+			grid: { left: '80px', right: '40px', top: '80px' }
 		};
 
 		chart.setOption(option);
@@ -244,91 +218,92 @@
 	<title>Wynagrodzenia | Finansowa Forteca</title>
 </svelte:head>
 
-<div class="page-header">
-	<div>
-		<h1 class="page-title">Historia wynagrodzeń</h1>
-		<p class="page-description">Śledź zmiany wynagrodzenia w czasie</p>
+<div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+	<div class="space-y-1">
+		<h1 class="h2">Historia wynagrodzeń</h1>
+		<p class="text-surface-700-300 text-sm">Śledź zmiany wynagrodzenia w czasie</p>
 	</div>
-	<button class="btn btn-primary" on:click={openNewSalaryModal}>+ Nowe Wynagrodzenie</button>
+	<button
+		type="button"
+		class="btn preset-filled-primary-500 w-full sm:w-auto gap-2"
+		on:click={openNewSalaryModal}
+	>
+		<Plus size={16} />
+		Nowe Wynagrodzenie
+	</button>
 </div>
 
-<Card>
-	<CardHeader>
-		<CardTitle>💰 Aktualne wynagrodzenia</CardTitle>
-	</CardHeader>
-	<CardContent>
-		<div class="current-salaries">
+<div class="space-y-4">
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header>
+			<h3 class="h3 flex items-center gap-2"><Banknote size={20} /> Aktualne wynagrodzenia</h3>
+		</header>
+		<div class="flex flex-wrap gap-6">
 			{#each Object.entries(data.salaries.current_salaries) as [name, salary]}
-				<div class="salary-item">
-					<span class="salary-label">{name}:</span>
-					<strong class="salary-value">
+				<div class="flex items-center gap-2">
+					<span class="text-sm text-surface-700-300">{name}:</span>
+					<strong class="text-lg">
 						{salary !== null ? formatPLN(salary) : 'Brak danych'}
 					</strong>
 				</div>
 			{/each}
 		</div>
-	</CardContent>
-</Card>
+	</div>
 
-<Card>
-	<CardHeader>
-		<CardTitle>📈 Progresja wynagrodzenia</CardTitle>
-	</CardHeader>
-	<CardContent>
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header>
+			<h3 class="h3 flex items-center gap-2"><TrendingUp size={20} /> Progresja wynagrodzenia</h3>
+		</header>
 		<div bind:this={chartContainer} style="width: 100%; height: 400px;"></div>
-	</CardContent>
-</Card>
+	</div>
 
-<Card>
-	<CardHeader>
-		<CardTitle>🔍 Filtry</CardTitle>
-	</CardHeader>
-	<CardContent>
-		<form class="filters-form" on:submit|preventDefault={applyFilters}>
-			<div class="filters-row">
-				<div class="form-group">
-					<label for="filter-owner">Właściciel</label>
-					<select id="filter-owner" bind:value={filterOwner}>
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header>
+			<h3 class="h3 flex items-center gap-2"><Search size={20} /> Filtry</h3>
+		</header>
+		<form class="space-y-4" on:submit|preventDefault={applyFilters}>
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+				<label class="label">
+					<span class="font-semibold text-sm">Właściciel</span>
+					<select class="select" bind:value={filterOwner}>
 						<option value="">Wszystkie</option>
 						{#each personas as persona}
 							<option value={persona.name}>{persona.name}</option>
 						{/each}
 					</select>
-				</div>
+				</label>
 
-				<div class="form-group">
-					<label for="filter-date-from">Data od</label>
-					<input type="date" id="filter-date-from" bind:value={filterDateFrom} />
-				</div>
+				<label class="label">
+					<span class="font-semibold text-sm">Data od</span>
+					<input type="date" class="input" bind:value={filterDateFrom} />
+				</label>
 
-				<div class="form-group">
-					<label for="filter-date-to">Data do</label>
-					<input type="date" id="filter-date-to" bind:value={filterDateTo} />
-				</div>
+				<label class="label">
+					<span class="font-semibold text-sm">Data do</span>
+					<input type="date" class="input" bind:value={filterDateTo} />
+				</label>
 			</div>
 
-			<div class="filters-actions">
-				<button type="submit" class="btn btn-primary">Filtruj</button>
-				<button type="button" class="btn btn-secondary" on:click={clearFilters}>
-					Wyczyść filtry
-				</button>
+			<div class="flex flex-col sm:flex-row gap-2">
+				<button type="submit" class="btn preset-filled-primary-500">Filtruj</button>
+				<button type="button" class="btn preset-tonal-surface" on:click={clearFilters}
+					>Wyczyść filtry</button
+				>
 			</div>
 		</form>
-	</CardContent>
-</Card>
+	</div>
 
-<Card>
-	<CardHeader>
-		<CardTitle>📊 Historia zmian</CardTitle>
-	</CardHeader>
-	<CardContent>
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header>
+			<h3 class="h3 flex items-center gap-2"><BarChart3 size={20} /> Historia zmian</h3>
+		</header>
 		{#if data.salaries.salary_records.length === 0}
-			<div class="empty-state">
+			<div class="text-center py-12 text-surface-700-300">
 				<p>Brak rekordów wynagrodzeń</p>
 			</div>
 		{:else}
-			<div class="table-container">
-				<table class="transactions-table">
+			<div class="table-wrap">
+				<table class="table table-hover">
 					<thead>
 						<tr>
 							<th>Data zmiany</th>
@@ -336,7 +311,7 @@
 							<th>Firma</th>
 							<th>Pensja brutto</th>
 							<th>Rodzaj umowy</th>
-							<th>Akcje</th>
+							<th class="text-right">Akcje</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -345,18 +320,24 @@
 								<td>{new Date(record.date).toLocaleDateString('pl-PL')}</td>
 								<td>{record.owner}</td>
 								<td>{record.company}</td>
-								<td class="value-cell">{formatPLN(record.gross_amount)}</td>
+								<td class="font-semibold text-primary-600-400">{formatPLN(record.gross_amount)}</td>
 								<td>{record.contract_type}</td>
-								<td class="actions-cell">
+								<td class="text-right whitespace-nowrap">
 									<button
-										class="btn-icon"
+										type="button"
+										class="btn-icon btn-icon-sm"
+										aria-label="Edytuj"
 										on:click={() => openEditSalaryModal(record)}
-										title="Edytuj"
 									>
-										✏️
+										<Pencil size={16} />
 									</button>
-									<button class="btn-icon" on:click={() => deleteSalary(record.id)} title="Usuń">
-										🗑️
+									<button
+										type="button"
+										class="btn-icon btn-icon-sm"
+										aria-label="Usuń"
+										on:click={() => deleteSalary(record.id)}
+									>
+										<Trash2 size={16} />
 									</button>
 								</td>
 							</tr>
@@ -365,8 +346,8 @@
 				</table>
 			</div>
 		{/if}
-	</CardContent>
-</Card>
+	</div>
+</div>
 
 <Modal
 	open={showNewSalaryModal}
@@ -375,298 +356,57 @@
 	onCancel={closeSalaryModal}
 	confirmText={savingSalary ? 'Zapisywanie...' : 'Zapisz'}
 	confirmDisabled={savingSalary}
-	confirmVariant="primary"
 >
-	<form on:submit|preventDefault={saveSalary} class="salary-form">
+	<form on:submit|preventDefault={saveSalary} class="space-y-4">
 		{#if salaryError}
-			<div class="error-message">{salaryError}</div>
+			<div class="card preset-filled-error-500 p-3 text-sm">{salaryError}</div>
 		{/if}
 
-		<div class="form-group">
-			<label for="salary-date">Data zmiany*</label>
-			<input type="date" id="salary-date" bind:value={salaryFormData.date} required />
-		</div>
+		<label class="label">
+			<span class="font-semibold text-sm">Data zmiany*</span>
+			<input type="date" class="input" bind:value={salaryFormData.date} required />
+		</label>
 
-		<div class="form-group">
-			<label for="salary-amount">Pensja brutto (PLN)*</label>
+		<label class="label">
+			<span class="font-semibold text-sm">Pensja brutto (PLN)*</span>
 			<input
 				type="number"
-				id="salary-amount"
+				class="input"
 				bind:value={salaryFormData.gross_amount}
 				min="0"
 				step="0.01"
 				required
 			/>
-		</div>
+		</label>
 
-		<div class="form-group">
-			<label for="salary-contract">Rodzaj umowy*</label>
-			<select id="salary-contract" bind:value={salaryFormData.contract_type} required>
+		<label class="label">
+			<span class="font-semibold text-sm">Rodzaj umowy*</span>
+			<select class="select" bind:value={salaryFormData.contract_type} required>
 				<option value="UOP">UOP</option>
 				<option value="UZ">UZ</option>
 				<option value="UoD">UoD</option>
 				<option value="B2B">B2B</option>
 			</select>
-		</div>
+		</label>
 
-		<div class="form-group">
-			<label for="salary-company">Firma*</label>
+		<label class="label">
+			<span class="font-semibold text-sm">Firma*</span>
 			<input
 				type="text"
-				id="salary-company"
+				class="input"
 				bind:value={salaryFormData.company}
 				placeholder="Nazwa firmy"
 				required
 			/>
-		</div>
+		</label>
 
-		<div class="form-group">
-			<label for="salary-owner">Właściciel*</label>
-			<select id="salary-owner" bind:value={salaryFormData.owner} required>
+		<label class="label">
+			<span class="font-semibold text-sm">Właściciel*</span>
+			<select class="select" bind:value={salaryFormData.owner} required>
 				{#each personas as persona}
 					<option value={persona.name}>{persona.name}</option>
 				{/each}
 			</select>
-		</div>
+		</label>
 	</form>
 </Modal>
-
-<style>
-	.page-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		margin-bottom: var(--size-6);
-	}
-
-	.page-title {
-		font-size: var(--font-size-6);
-		font-weight: var(--font-weight-7);
-		color: var(--color-text);
-		margin: 0 0 var(--size-2) 0;
-	}
-
-	.page-description {
-		color: var(--color-text-secondary);
-		font-size: var(--font-size-2);
-		margin: 0;
-	}
-
-	.current-salaries {
-		display: flex;
-		gap: var(--size-6);
-		flex-wrap: wrap;
-	}
-
-	.salary-item {
-		display: flex;
-		align-items: center;
-		gap: var(--size-2);
-	}
-
-	.salary-label {
-		font-size: var(--font-size-1);
-		color: var(--color-text-2);
-	}
-
-	.salary-value {
-		font-size: var(--font-size-3);
-		color: var(--color-text-1);
-	}
-
-	.filters-form {
-		display: flex;
-		flex-direction: column;
-		gap: var(--size-5);
-	}
-
-	.filters-row {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: var(--size-4);
-	}
-
-	.form-group {
-		display: flex;
-		flex-direction: column;
-		gap: var(--size-2);
-	}
-
-	.form-group label {
-		font-weight: var(--font-weight-6);
-		color: var(--color-text);
-		font-size: var(--font-size-2);
-	}
-
-	.form-group input,
-	.form-group select {
-		padding: var(--size-3);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-2);
-		background: var(--color-background);
-		color: var(--color-text);
-		font-size: var(--font-size-2);
-	}
-
-	.form-group input:focus,
-	.form-group select:focus {
-		outline: none;
-		border-color: var(--color-primary);
-	}
-
-	.filters-actions {
-		display: flex;
-		gap: var(--size-3);
-	}
-
-	.btn {
-		padding: var(--size-3) var(--size-5);
-		border: none;
-		border-radius: var(--radius-2);
-		font-weight: var(--font-weight-6);
-		font-size: var(--font-size-2);
-		cursor: pointer;
-		transition: all 0.2s;
-	}
-
-	.btn-primary {
-		background: var(--color-primary);
-		color: var(--nord6);
-	}
-
-	.btn-primary:hover {
-		background: var(--nord9);
-	}
-
-	.btn-secondary {
-		background: var(--color-surface);
-		color: var(--color-text);
-		border: 1px solid var(--color-border);
-	}
-
-	.btn-secondary:hover {
-		background: var(--color-accent);
-	}
-
-	.btn-icon {
-		background: transparent;
-		border: none;
-		cursor: pointer;
-		font-size: var(--font-size-3);
-		padding: var(--size-2);
-		transition: transform 0.2s;
-		min-width: var(--tap-target-min);
-		min-height: var(--tap-target-min);
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.btn-icon:hover {
-		transform: scale(1.2);
-	}
-
-	.empty-state {
-		text-align: center;
-		padding: var(--size-8) var(--size-4);
-		color: var(--color-text-secondary);
-	}
-
-	.table-container {
-		overflow-x: auto;
-	}
-
-	.transactions-table {
-		width: 100%;
-		border-collapse: collapse;
-	}
-
-	.transactions-table thead {
-		border-bottom: 2px solid var(--color-border);
-	}
-
-	.transactions-table th {
-		text-align: left;
-		padding: var(--size-3) var(--size-4);
-		font-weight: var(--font-weight-6);
-		color: var(--color-text);
-		font-size: var(--font-size-2);
-	}
-
-	.transactions-table tbody tr {
-		border-bottom: 1px solid var(--color-border);
-		transition: background-color 0.2s;
-	}
-
-	.transactions-table tbody tr:hover {
-		background-color: var(--color-accent);
-	}
-
-	.transactions-table td {
-		padding: var(--size-4);
-		font-size: var(--font-size-2);
-	}
-
-	.value-cell {
-		font-weight: var(--font-weight-6);
-		color: var(--color-primary);
-	}
-
-	.actions-cell {
-		text-align: right;
-		display: flex;
-		gap: var(--size-2);
-		justify-content: flex-end;
-	}
-
-	.salary-form {
-		display: flex;
-		flex-direction: column;
-		gap: var(--size-4);
-	}
-
-	.error-message {
-		padding: var(--size-3);
-		background: var(--nord11);
-		color: var(--nord6);
-		border-radius: var(--radius-2);
-		font-size: var(--font-size-2);
-	}
-
-	@media (max-width: 1024px) {
-		.filters-row {
-			grid-template-columns: repeat(2, 1fr);
-		}
-	}
-
-	@media (max-width: 768px) {
-		.filters-row {
-			grid-template-columns: 1fr;
-		}
-	}
-
-	@media (max-width: 640px) {
-		.page-header {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: var(--size-4);
-		}
-
-		.page-header .btn {
-			width: 100%;
-		}
-
-		.filters-actions {
-			flex-direction: column;
-		}
-
-		.filters-actions .btn {
-			width: 100%;
-		}
-
-		.current-salaries {
-			flex-direction: column;
-			gap: var(--size-3);
-		}
-	}
-</style>

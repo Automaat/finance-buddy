@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Card, CardHeader, CardTitle, CardContent, Modal, Table } from '@mskalski/home-ui';
+	import Modal from '$lib/components/Modal.svelte';
+	import { Plus, Pencil, Trash2 } from 'lucide-svelte';
 	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
 	import type { Persona } from '$lib/types/personas';
@@ -109,49 +110,70 @@
 	<title>Ustawienia | Finansowa Forteca</title>
 </svelte:head>
 
-<div class="page-header">
-	<div>
-		<h1 class="page-title">Ustawienia</h1>
-		<p class="page-description">Zarządzaj personami i preferencjami</p>
-	</div>
+<div class="mb-6 space-y-1">
+	<h1 class="h2">Ustawienia</h1>
+	<p class="text-surface-700-300 text-sm">Zarządzaj personami i preferencjami</p>
 </div>
 
-<Card>
-	<CardHeader>
-		<div class="card-header-row">
-			<CardTitle>Persony</CardTitle>
-			<button class="btn btn-primary" on:click={startCreate}>+ Nowa Persona</button>
-		</div>
-	</CardHeader>
-	<CardContent>
-		{#if error && !showForm}
-			<div class="error-message">{error}</div>
-		{/if}
+<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+	<header class="flex items-center justify-between flex-wrap gap-3">
+		<h3 class="h3">Persony</h3>
+		<button type="button" class="btn preset-filled-primary-500 gap-2" on:click={startCreate}>
+			<Plus size={16} />
+			Nowa Persona
+		</button>
+	</header>
 
-		{#if data.personas.length === 0}
-			<div class="empty-state">
-				<p>Brak person</p>
-			</div>
-		{:else}
-			<Table
-				headers={['Nazwa', 'Składka PPK pracownika (%)', 'Składka PPK pracodawcy (%)', 'Akcje']}
-				mobileCardView
-			>
-				{#each data.personas as persona}
+	{#if error && !showForm}
+		<div class="card preset-filled-error-500 p-3 text-sm">{error}</div>
+	{/if}
+
+	{#if data.personas.length === 0}
+		<div class="text-center py-12 text-surface-700-300">
+			<p>Brak person</p>
+		</div>
+	{:else}
+		<div class="table-wrap">
+			<table class="table table-hover">
+				<thead>
 					<tr>
-						<td data-label="Nazwa"><strong>{persona.name}</strong></td>
-						<td data-label="Składka PPK pracownika (%)">{persona.ppk_employee_rate}%</td>
-						<td data-label="Składka PPK pracodawcy (%)">{persona.ppk_employer_rate}%</td>
-						<td data-label="Akcje" class="actions-cell">
-							<button class="btn-icon" on:click={() => startEdit(persona)}>✏️</button>
-							<button class="btn-icon" on:click={() => handleDelete(persona)}>🗑️</button>
-						</td>
+						<th>Nazwa</th>
+						<th>Składka PPK pracownika (%)</th>
+						<th>Składka PPK pracodawcy (%)</th>
+						<th class="text-right">Akcje</th>
 					</tr>
-				{/each}
-			</Table>
-		{/if}
-	</CardContent>
-</Card>
+				</thead>
+				<tbody>
+					{#each data.personas as persona}
+						<tr>
+							<td><strong>{persona.name}</strong></td>
+							<td>{persona.ppk_employee_rate}%</td>
+							<td>{persona.ppk_employer_rate}%</td>
+							<td class="text-right whitespace-nowrap">
+								<button
+									type="button"
+									class="btn-icon btn-icon-sm"
+									aria-label="Edytuj"
+									on:click={() => startEdit(persona)}
+								>
+									<Pencil size={16} />
+								</button>
+								<button
+									type="button"
+									class="btn-icon btn-icon-sm"
+									aria-label="Usuń"
+									on:click={() => handleDelete(persona)}
+								>
+									<Trash2 size={16} />
+								</button>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
+	{/if}
+</div>
 
 <Modal
 	open={showForm}
@@ -160,43 +182,48 @@
 	onCancel={cancelForm}
 	confirmText={saving ? 'Zapisywanie...' : editingPersona ? 'Zapisz zmiany' : 'Utwórz'}
 	confirmDisabled={saving}
-	confirmVariant="primary"
 >
-	<form on:submit|preventDefault={handleSubmit} class="persona-form">
+	<form on:submit|preventDefault={handleSubmit} class="space-y-4">
 		{#if error}
-			<div class="error-message">{error}</div>
+			<div class="card preset-filled-error-500 p-3 text-sm">{error}</div>
 		{/if}
 
-		<div class="form-group">
-			<label for="name">Nazwa</label>
-			<input type="text" id="name" bind:value={formData.name} required placeholder="np. Marcin" />
-		</div>
+		<label class="label">
+			<span class="font-semibold text-sm">Nazwa</span>
+			<input
+				type="text"
+				class="input"
+				bind:value={formData.name}
+				required
+				placeholder="np. Marcin"
+			/>
+		</label>
 
-		<div class="form-group">
-			<label for="ppk_employee_rate">Składka PPK pracownika (%)</label>
+		<label class="label">
+			<span class="font-semibold text-sm">Składka PPK pracownika (%)</span>
 			<input
 				type="number"
-				id="ppk_employee_rate"
+				class="input"
 				bind:value={formData.ppk_employee_rate}
 				min="0.5"
 				max="4.0"
 				step="0.5"
 				required
 			/>
-		</div>
+		</label>
 
-		<div class="form-group">
-			<label for="ppk_employer_rate">Składka PPK pracodawcy (%)</label>
+		<label class="label">
+			<span class="font-semibold text-sm">Składka PPK pracodawcy (%)</span>
 			<input
 				type="number"
-				id="ppk_employer_rate"
+				class="input"
 				bind:value={formData.ppk_employer_rate}
 				min="1.5"
 				max="4.0"
 				step="0.5"
 				required
 			/>
-		</div>
+		</label>
 	</form>
 </Modal>
 
@@ -208,142 +235,11 @@
 		showDeleteModal = false;
 		personaToDelete = null;
 	}}
+	confirmText="Usuń"
+	confirmVariant="danger"
 >
-	<p>Czy na pewno chcesz usunąć personę "{personaToDelete?.name}"?</p>
-	<p>Usunięcie jest możliwe tylko jeśli żadne konta nie odnoszą się do tej persony.</p>
+	<p class="mb-2">Czy na pewno chcesz usunąć personę "{personaToDelete?.name}"?</p>
+	<p class="text-sm text-surface-700-300">
+		Usunięcie jest możliwe tylko jeśli żadne konta nie odnoszą się do tej persony.
+	</p>
 </Modal>
-
-<style>
-	.page-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		margin-bottom: var(--size-6);
-	}
-
-	.page-title {
-		font-size: var(--font-size-6);
-		font-weight: var(--font-weight-7);
-		color: var(--color-text);
-		margin: 0 0 var(--size-2) 0;
-	}
-
-	.page-description {
-		color: var(--color-text-secondary);
-		font-size: var(--font-size-2);
-		margin: 0;
-	}
-
-	.card-header-row {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		width: 100%;
-	}
-
-	.btn {
-		padding: var(--size-3) var(--size-5);
-		border: none;
-		border-radius: var(--radius-2);
-		font-weight: var(--font-weight-6);
-		font-size: var(--font-size-2);
-		cursor: pointer;
-		transition: all 0.2s;
-	}
-
-	.btn-primary {
-		background: var(--color-primary);
-		color: var(--nord6);
-	}
-
-	.btn-primary:hover {
-		background: var(--nord9);
-	}
-
-	.btn-icon {
-		background: transparent;
-		border: none;
-		cursor: pointer;
-		font-size: var(--font-size-3);
-		padding: var(--size-2);
-		transition: transform 0.2s;
-		min-width: var(--tap-target-min);
-		min-height: var(--tap-target-min);
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.btn-icon:hover {
-		transform: scale(1.2);
-	}
-
-	.actions-cell {
-		text-align: right;
-	}
-
-	.empty-state {
-		text-align: center;
-		padding: var(--size-8) var(--size-4);
-		color: var(--color-text-secondary);
-	}
-
-	.error-message {
-		padding: var(--size-3);
-		background: var(--nord11);
-		color: var(--nord6);
-		border-radius: var(--radius-2);
-		font-size: var(--font-size-2);
-		margin-bottom: var(--size-3);
-	}
-
-	.persona-form {
-		display: flex;
-		flex-direction: column;
-		gap: var(--size-5);
-	}
-
-	.form-group {
-		display: flex;
-		flex-direction: column;
-		gap: var(--size-2);
-	}
-
-	.form-group label {
-		font-weight: var(--font-weight-6);
-		color: var(--color-text);
-		font-size: var(--font-size-2);
-	}
-
-	.form-group input {
-		padding: var(--size-3);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-2);
-		background: var(--color-background);
-		color: var(--color-text);
-		font-size: var(--font-size-2);
-	}
-
-	.form-group input:focus {
-		outline: none;
-		border-color: var(--color-primary);
-	}
-
-	@media (max-width: 640px) {
-		.page-header {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: var(--size-4);
-		}
-
-		.card-header-row {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: var(--size-3);
-		}
-
-		.card-header-row .btn {
-			width: 100%;
-		}
-	}
-</style>

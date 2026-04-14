@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { env } from '$env/dynamic/public';
-	import { Card, CardHeader, CardTitle, CardContent } from '@mskalski/home-ui';
+	import { Wallet, Umbrella, TrendingUp, Home, CreditCard } from 'lucide-svelte';
 	import type { SnapshotResponse } from '$lib/types';
 
 	export let editingSnapshot: SnapshotResponse | null = null;
@@ -372,11 +372,11 @@
 
 <form on:submit|preventDefault={handleSubmit} class="snapshot-form">
 	<!-- Date & Notes -->
-	<Card>
-		<CardHeader>
-			<CardTitle>Data Snapshot</CardTitle>
-		</CardHeader>
-		<CardContent>
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header class="space-y-1">
+			<h3 class="h3">Data Snapshot</h3>
+		</header>
+		<div class="space-y-4">
 			<div class="form-group">
 				<label for="date" class="form-label">Data</label>
 				<input id="date" type="date" bind:value={snapshotDate} required class="form-input" />
@@ -392,15 +392,15 @@
 					class="form-input"
 				/>
 			</div>
-		</CardContent>
-	</Card>
+		</div>
+	</div>
 
 	<!-- Konta finansowe -->
-	<Card>
-		<CardHeader>
-			<CardTitle>💰 Konta finansowe</CardTitle>
-		</CardHeader>
-		<CardContent>
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header class="space-y-1">
+			<h3 class="h3 flex items-center gap-2"><Wallet size={20} /> Konta finansowe</h3>
+		</header>
+		<div class="space-y-4">
 			{#each financialAccounts.filter((a: any) => visibleAccountIds.has(a.id)) as account}
 				<div class="form-group-with-remove">
 					<div class="form-group">
@@ -458,16 +458,16 @@
 					+ Dodaj nowe konto
 				</button>
 			</div>
-		</CardContent>
-	</Card>
+		</div>
+	</div>
 
 	<!-- Emerytura -->
 	{#if retirementByWrapper.length > 0}
-		<Card>
-			<CardHeader>
-				<CardTitle>🏖 Emerytura</CardTitle>
-			</CardHeader>
-			<CardContent>
+		<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+			<header class="space-y-1">
+				<h3 class="h3 flex items-center gap-2"><Umbrella size={20} /> Emerytura</h3>
+			</header>
+			<div class="space-y-4">
 				{#each retirementByWrapper as group}
 					<h3 class="wrapper-subheading">{group.wrapper}</h3>
 					{#each group.accounts.filter((a: any) => visibleAccountIds.has(a.id)) as account}
@@ -526,16 +526,16 @@
 						+ Dodaj nowe konto
 					</button>
 				</div>
-			</CardContent>
-		</Card>
+			</div>
+		</div>
 	{/if}
 
 	<!-- Inwestycje -->
-	<Card>
-		<CardHeader>
-			<CardTitle>📈 Inwestycje</CardTitle>
-		</CardHeader>
-		<CardContent>
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header class="space-y-1">
+			<h3 class="h3 flex items-center gap-2"><TrendingUp size={20} /> Inwestycje</h3>
+		</header>
+		<div class="space-y-4">
 			{#each investmentAccounts.filter((a: any) => visibleAccountIds.has(a.id)) as account}
 				<div class="form-group-with-remove">
 					<div class="form-group">
@@ -593,15 +593,15 @@
 					+ Dodaj nowe konto
 				</button>
 			</div>
-		</CardContent>
-	</Card>
+		</div>
+	</div>
 
 	<!-- Majątek -->
-	<Card>
-		<CardHeader>
-			<CardTitle>🏠 Majątek</CardTitle>
-		</CardHeader>
-		<CardContent>
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header class="space-y-1">
+			<h3 class="h3 flex items-center gap-2"><Home size={20} /> Majątek</h3>
+		</header>
+		<div class="space-y-4">
 			{#each majatekAccounts.filter((a: any) => visibleAccountIds.has(a.id)) as account}
 				<div class="form-group-with-remove">
 					<div class="form-group">
@@ -691,16 +691,16 @@
 					+ Dodaj nowy majątek
 				</button>
 			</div>
-		</CardContent>
-	</Card>
+		</div>
+	</div>
 
 	<!-- Liabilities -->
 	{#if liabilities.length > 0}
-		<Card>
-			<CardHeader>
-				<CardTitle>💸 Zobowiązania</CardTitle>
-			</CardHeader>
-			<CardContent>
+		<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+			<header class="space-y-1">
+				<h3 class="h3 flex items-center gap-2"><CreditCard size={20} /> Zobowiązania</h3>
+			</header>
+			<div class="space-y-4">
 				{#each liabilities.filter((a: any) => visibleAccountIds.has(a.id)) as account}
 					<div class="form-group-with-remove">
 						<div class="form-group">
@@ -754,8 +754,8 @@
 						+ Dodaj nowe konto
 					</button>
 				</div>
-			</CardContent>
-		</Card>
+			</div>
+		</div>
 	{/if}
 
 	<!-- New Account Modal -->

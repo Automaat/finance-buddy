@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Card, CardHeader, CardTitle, CardContent, Table, formatPLN } from '@mskalski/home-ui';
+	import { formatPLN } from '$lib/utils/format';
+	import { Plus, Camera, Pencil } from 'lucide-svelte';
 
 	export let data;
 </script>
@@ -9,211 +10,77 @@
 	<title>Snapshots | Finansowa Forteca</title>
 </svelte:head>
 
-<div class="page-header">
-	<div>
-		<h1 class="page-title">Snapshots</h1>
-		<p class="page-description">Historia zapisanych wartości netto</p>
+<div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+	<div class="space-y-1">
+		<h1 class="h2">Snapshots</h1>
+		<p class="text-surface-700-300 text-sm">Historia zapisanych wartości netto</p>
 	</div>
-	<button class="btn btn-primary" on:click={() => goto('/snapshots/new')}> + Nowy Snapshot </button>
+	<button
+		type="button"
+		class="btn preset-filled-primary-500 w-full sm:w-auto gap-2"
+		on:click={() => goto('/snapshots/new')}
+	>
+		<Plus size={16} />
+		Nowy Snapshot
+	</button>
 </div>
 
-<Card>
-	<CardHeader>
-		<CardTitle>📊 Wszystkie Snapshots</CardTitle>
-	</CardHeader>
-	<CardContent>
-		{#if data.snapshots.length === 0}
-			<div class="empty-state">
-				<p>Brak zapisanych snapshotów</p>
-				<button class="btn btn-secondary" on:click={() => goto('/snapshots/new')}>
-					Utwórz pierwszy snapshot
-				</button>
-			</div>
-		{:else}
-			<Table
-				headers={['Data', 'Wartość Netto', 'Notatki', 'Akcje']}
-				mobileCardView
-				class="snapshots-table"
+<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+	<header>
+		<h3 class="h3 flex items-center gap-2"><Camera size={20} /> Wszystkie Snapshots</h3>
+	</header>
+
+	{#if data.snapshots.length === 0}
+		<div class="text-center py-12 space-y-4 text-surface-700-300">
+			<p>Brak zapisanych snapshotów</p>
+			<button
+				type="button"
+				class="btn preset-tonal-primary"
+				on:click={() => goto('/snapshots/new')}
 			>
-				{#each data.snapshots as snapshot}
+				Utwórz pierwszy snapshot
+			</button>
+		</div>
+	{:else}
+		<div class="table-wrap">
+			<table class="table table-hover">
+				<thead>
 					<tr>
-						<td data-label="Data" class="date-cell">
-							{new Date(snapshot.date).toLocaleDateString('pl-PL', {
-								year: 'numeric',
-								month: 'long',
-								day: 'numeric'
-							})}
-						</td>
-						<td data-label="Wartość Netto" class="value-cell"
-							>{formatPLN(snapshot.total_net_worth)}</td
-						>
-						<td data-label="Notatki" class="notes-cell">{snapshot.notes || '—'}</td>
-						<td data-label="Akcje" class="actions-cell">
-							<button
-								class="btn-edit"
-								on:click={() => goto(`/snapshots/${snapshot.id}/edit`)}
-								title="Edytuj snapshot"
-							>
-								✏️ Edytuj
-							</button>
-						</td>
+						<th>Data</th>
+						<th>Wartość Netto</th>
+						<th>Notatki</th>
+						<th class="text-right">Akcje</th>
 					</tr>
-				{/each}
-			</Table>
-		{/if}
-	</CardContent>
-</Card>
-
-<style>
-	.page-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		margin-bottom: var(--size-6);
-	}
-
-	.page-title {
-		font-size: var(--font-size-6);
-		font-weight: var(--font-weight-7);
-		color: var(--color-text);
-		margin: 0 0 var(--size-2) 0;
-	}
-
-	.page-description {
-		color: var(--color-text-secondary);
-		font-size: var(--font-size-2);
-		margin: 0;
-	}
-
-	.btn {
-		padding: var(--size-3) var(--size-5);
-		border: none;
-		border-radius: var(--radius-2);
-		font-weight: var(--font-weight-6);
-		font-size: var(--font-size-2);
-		cursor: pointer;
-		transition: all 0.2s;
-	}
-
-	.btn-primary {
-		background: var(--color-primary);
-		color: var(--nord6);
-	}
-
-	.btn-primary:hover {
-		background: var(--nord9);
-	}
-
-	.btn-secondary {
-		background: transparent;
-		color: var(--color-text);
-		border: 1px solid var(--color-border);
-	}
-
-	.btn-secondary:hover {
-		background: var(--color-accent);
-	}
-
-	.empty-state {
-		text-align: center;
-		padding: var(--size-8) var(--size-4);
-		color: var(--color-text-secondary);
-	}
-
-	.empty-state p {
-		margin-bottom: var(--size-4);
-		font-size: var(--font-size-3);
-	}
-
-	.table-container {
-		overflow-x: auto;
-	}
-
-	.snapshots-table {
-		width: 100%;
-		border-collapse: collapse;
-	}
-
-	.snapshots-table thead {
-		border-bottom: 2px solid var(--color-border);
-	}
-
-	.snapshots-table th {
-		text-align: left;
-		padding: var(--size-3) var(--size-4);
-		font-weight: var(--font-weight-6);
-		color: var(--color-text);
-		font-size: var(--font-size-2);
-	}
-
-	.snapshots-table tbody tr {
-		border-bottom: 1px solid var(--color-border);
-		transition: background-color 0.2s;
-	}
-
-	.snapshots-table tbody tr:hover {
-		background-color: var(--color-accent);
-	}
-
-	.snapshots-table td {
-		padding: var(--size-4);
-		font-size: var(--font-size-2);
-	}
-
-	.date-cell {
-		font-weight: var(--font-weight-6);
-		color: var(--color-text);
-	}
-
-	.value-cell {
-		font-weight: var(--font-weight-6);
-		color: var(--color-primary);
-	}
-
-	.notes-cell {
-		color: var(--color-text-secondary);
-		font-style: italic;
-	}
-
-	.actions-cell {
-		text-align: right;
-	}
-
-	.btn-edit {
-		padding: var(--size-2) var(--size-3);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-2);
-		background: transparent;
-		color: var(--color-text);
-		font-size: var(--font-size-1);
-		cursor: pointer;
-		transition: all 0.2s;
-		min-height: var(--tap-target-min);
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.btn-edit:hover {
-		background: var(--color-primary);
-		color: var(--nord6);
-		border-color: var(--color-primary);
-	}
-
-	@media (max-width: 768px) {
-		.page-header {
-			flex-direction: column;
-			gap: var(--size-4);
-		}
-
-		.actions-cell {
-			text-align: left;
-		}
-	}
-
-	@media (max-width: 640px) {
-		.page-header .btn {
-			width: 100%;
-		}
-	}
-</style>
+				</thead>
+				<tbody>
+					{#each data.snapshots as snapshot}
+						<tr>
+							<td class="font-medium">
+								{new Date(snapshot.date).toLocaleDateString('pl-PL', {
+									year: 'numeric',
+									month: 'long',
+									day: 'numeric'
+								})}
+							</td>
+							<td class="font-semibold text-primary-600-400"
+								>{formatPLN(snapshot.total_net_worth)}</td
+							>
+							<td class="italic text-surface-700-300">{snapshot.notes || '—'}</td>
+							<td class="text-right">
+								<button
+									type="button"
+									class="btn btn-sm preset-tonal-primary gap-1"
+									on:click={() => goto(`/snapshots/${snapshot.id}/edit`)}
+									title="Edytuj snapshot"
+								>
+									<Pencil size={14} />
+									Edytuj
+								</button>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
+	{/if}
+</div>

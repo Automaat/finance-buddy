@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import * as echarts from 'echarts';
-	import { MetricCard } from '@mskalski/home-ui';
+	import MetricCard from '$lib/components/MetricCard.svelte';
+	import { TrendingUp, CheckCircle2, Lightbulb } from 'lucide-svelte';
 
 	export let data;
 
@@ -624,7 +625,7 @@
 			<div class="rebalancing-list">
 				{#each allocationAnalysis.rebalancing as suggestion}
 					<div class="rebalancing-item buy">
-						<span class="action-label"> 📈 KUP </span>
+						<span class="action-label inline-flex items-center gap-1"><TrendingUp size={14} /> KUP</span>
 						<span class="category-name">{suggestion.category}</span>
 						<span class="amount">
 							{suggestion.amount.toLocaleString('pl-PL', {
@@ -636,16 +637,16 @@
 				{/each}
 			</div>
 
-			<p class="rebalancing-note">
-				💡 Całkowita wartość portfela inwestycyjnego: {allocationAnalysis.total_investment_value.toLocaleString(
+			<p class="rebalancing-note inline-flex items-center gap-1">
+				<Lightbulb size={14} /> Całkowita wartość portfela inwestycyjnego: {allocationAnalysis.total_investment_value.toLocaleString(
 					'pl-PL',
 					{ minimumFractionDigits: 0, maximumFractionDigits: 0 }
 				)} PLN
 			</p>
 		</div>
 	{:else}
-		<div class="no-rebalancing">
-			✅ Portfel jest zgodny z docelową alokacją (różnice mniejsze niż 1%)
+		<div class="no-rebalancing inline-flex items-center gap-2">
+			<CheckCircle2 size={16} /> Portfel jest zgodny z docelową alokacją (różnice mniejsze niż 1%)
 		</div>
 	{/if}
 
