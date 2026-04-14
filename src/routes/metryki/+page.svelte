@@ -625,7 +625,9 @@
 			<div class="rebalancing-list">
 				{#each allocationAnalysis.rebalancing as suggestion}
 					<div class="rebalancing-item buy">
-						<span class="action-label inline-flex items-center gap-1"><TrendingUp size={14} /> KUP</span>
+						<span class="action-label inline-flex items-center gap-1"
+							><TrendingUp size={14} /> KUP</span
+						>
 						<span class="category-name">{suggestion.category}</span>
 						<span class="amount">
 							{suggestion.amount.toLocaleString('pl-PL', {

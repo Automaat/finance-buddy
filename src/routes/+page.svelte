@@ -5,7 +5,15 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import { formatPLN, formatPercent, calculateChange } from '$lib/utils/format';
 	import { isMobile, isTablet } from '$lib/utils/viewport';
-	import { Wallet, TrendingUp, TrendingDown, Settings, CheckCircle2, AlertTriangle, PiggyBank } from 'lucide-svelte';
+	import {
+		Wallet,
+		TrendingUp,
+		TrendingDown,
+		Settings,
+		CheckCircle2,
+		AlertTriangle,
+		PiggyBank
+	} from 'lucide-svelte';
 	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
 	import type { Persona } from '$lib/types/personas';
@@ -251,7 +259,9 @@
 	{#if data.retirementStats && data.retirementStats.length > 0}
 		<div class="card preset-filled-surface-100-900 p-4 space-y-4">
 			<header class="flex items-center justify-between gap-2">
-				<h3 class="h3 flex items-center gap-2"><PiggyBank size={20} /> Limity Emerytalne {data.currentYear}</h3>
+				<h3 class="h3 flex items-center gap-2">
+					<PiggyBank size={20} /> Limity Emerytalne {data.currentYear}
+				</h3>
 				<button
 					type="button"
 					class="btn-icon btn-icon-sm"
@@ -297,11 +307,15 @@
 						</div>
 
 						{#if stat.percentage_used >= 100}
-							<div class="card preset-filled-success-500 p-2 text-xs text-center flex items-center justify-center gap-1">
+							<div
+								class="card preset-filled-success-500 p-2 text-xs text-center flex items-center justify-center gap-1"
+							>
 								<CheckCircle2 size={14} /> Limit osiągnięty
 							</div>
 						{:else if stat.percentage_used >= 50}
-							<div class="card preset-filled-warning-500 p-2 text-xs text-center flex items-center justify-center gap-1">
+							<div
+								class="card preset-filled-warning-500 p-2 text-xs text-center flex items-center justify-center gap-1"
+							>
 								<AlertTriangle size={14} /> Zbliżasz się do limitu
 							</div>
 						{/if}

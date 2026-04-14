@@ -405,7 +405,9 @@
 	{#if selectedDebt && paymentsData}
 		<div class="card preset-filled-surface-100-900 p-4 space-y-4">
 			<header>
-				<h3 class="h3 flex items-center gap-2"><Plus size={20} /> Dodaj wpłatę - {selectedDebt.name}</h3>
+				<h3 class="h3 flex items-center gap-2">
+					<Plus size={20} /> Dodaj wpłatę - {selectedDebt.name}
+				</h3>
 			</header>
 
 			<form class="space-y-4" on:submit|preventDefault={addPayment}>
@@ -446,7 +448,9 @@
 
 		<div class="card preset-filled-surface-100-900 p-4 space-y-4">
 			<header>
-				<h3 class="h3 flex items-center gap-2"><Wallet size={20} /> Historia wpłat - {selectedDebt.name}</h3>
+				<h3 class="h3 flex items-center gap-2">
+					<Wallet size={20} /> Historia wpłat - {selectedDebt.name}
+				</h3>
 			</header>
 
 			<div class="text-sm text-surface-700-300 space-y-1">

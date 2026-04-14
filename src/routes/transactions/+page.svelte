@@ -186,7 +186,11 @@
 			<Landmark size={16} />
 			Generuj wpłaty PPK
 		</button>
-		<button type="button" class="btn preset-filled-primary-500 gap-2" on:click={openNewTransactionModal}>
+		<button
+			type="button"
+			class="btn preset-filled-primary-500 gap-2"
+			on:click={openNewTransactionModal}
+		>
 			<Plus size={16} />
 			Nowa Transakcja
 		</button>

@@ -1,6 +1,16 @@
 <script lang="ts">
 	import { formatPLN } from '$lib/utils/format';
-	import { Settings, Umbrella, PieChart, Home, TrendingUp, Info, CheckCircle2, AlertTriangle, Gauge } from 'lucide-svelte';
+	import {
+		Settings,
+		Umbrella,
+		PieChart,
+		Home,
+		TrendingUp,
+		Info,
+		CheckCircle2,
+		AlertTriangle,
+		Gauge
+	} from 'lucide-svelte';
 	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
 
@@ -186,7 +196,9 @@
 
 	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
 		<header>
-			<h3 class="h3 flex items-center gap-2"><PieChart size={20} /> Docelowa alokacja inwestycyjna</h3>
+			<h3 class="h3 flex items-center gap-2">
+				<PieChart size={20} /> Docelowa alokacja inwestycyjna
+			</h3>
 		</header>
 
 		<section class="space-y-3 pb-4 border-b border-surface-200-800">
