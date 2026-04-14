@@ -5,15 +5,12 @@
 		LayoutDashboard,
 		TrendingUp,
 		Sparkles,
-		Landmark,
-		Building2,
 		Wallet,
 		ArrowRightLeft,
 		Home,
 		ClipboardList,
 		Camera,
 		Banknote,
-		Calculator,
 		Settings,
 		User,
 		ShieldCheck
@@ -23,15 +20,12 @@
 		{ href: '/', label: 'Dashboard', icon: LayoutDashboard },
 		{ href: '/metryki', label: 'Metryki', icon: TrendingUp },
 		{ href: '/simulations', label: 'Symulacje', icon: Sparkles },
-		{ href: '/simulations/mortgage', label: 'Hipoteka', icon: Landmark },
-		{ href: '/simulations/zus', label: 'Emerytura ZUS', icon: Building2 },
 		{ href: '/accounts', label: 'Konta', icon: Wallet },
 		{ href: '/transactions', label: 'Transakcje', icon: ArrowRightLeft },
 		{ href: '/assets', label: 'Majątek', icon: Home },
 		{ href: '/debts', label: 'Zobowiązania', icon: ClipboardList },
 		{ href: '/snapshots', label: 'Snapshoty', icon: Camera },
 		{ href: '/salaries', label: 'Wynagrodzenia', icon: Banknote },
-		{ href: '/kalkulator', label: 'Kalkulator', icon: Calculator },
 		{ href: '/config', label: 'Konfiguracja', icon: Settings },
 		{ href: '/settings', label: 'Ustawienia', icon: User }
 	];
@@ -49,7 +43,10 @@
 		</div>
 		<nav class="flex-1 overflow-y-auto p-2 space-y-1">
 			{#each navItems as item}
-				{@const active = $page.url.pathname === item.href}
+				{@const active =
+					item.href === '/simulations'
+						? $page.url.pathname.startsWith('/simulations')
+						: $page.url.pathname === item.href}
 				{@const Icon = item.icon}
 				<a
 					href={item.href}
@@ -84,7 +81,10 @@
 			aria-label="Mobile navigation"
 		>
 			{#each navItems as item}
-				{@const active = $page.url.pathname === item.href}
+				{@const active =
+					item.href === '/simulations'
+						? $page.url.pathname.startsWith('/simulations')
+						: $page.url.pathname === item.href}
 				{@const Icon = item.icon}
 				<a
 					href={item.href}
