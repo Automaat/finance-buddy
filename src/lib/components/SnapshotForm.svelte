@@ -16,10 +16,27 @@
 	let loading = false;
 	let error = '';
 
-	// Separate investments from regular assets
-	const investmentCategories = ['ike', 'ikze', 'ppk', 'bonds', 'stocks', 'fund', 'etf'];
-	$: investments = assets.filter((a: any) => investmentCategories.includes(a.category));
-	$: regularAssets = assets.filter((a: any) => !investmentCategories.includes(a.category));
+	// Section grouping
+	const RETIREMENT_WRAPPERS = ['PPK', 'IKE', 'IKZE'] as const;
+	const INVESTMENT_CATEGORIES = ['stock', 'bond', 'fund', 'etf', 'gold'];
+	const FINANCIAL_CATEGORIES = ['bank', 'saving_account'];
+	const MAJATEK_CATEGORIES = ['real_estate', 'vehicle', 'other'];
+
+	$: retirementAccounts = assets.filter((a: any) => a.account_wrapper);
+	$: investmentAccounts = assets.filter(
+		(a: any) => !a.account_wrapper && INVESTMENT_CATEGORIES.includes(a.category)
+	);
+	$: financialAccounts = assets.filter(
+		(a: any) => !a.account_wrapper && FINANCIAL_CATEGORIES.includes(a.category)
+	);
+	$: majatekAccounts = assets.filter(
+		(a: any) => !a.account_wrapper && MAJATEK_CATEGORIES.includes(a.category)
+	);
+
+	$: retirementByWrapper = RETIREMENT_WRAPPERS.map((w) => ({
+		wrapper: w,
+		accounts: retirementAccounts.filter((a: any) => a.account_wrapper === w)
+	})).filter((g) => g.accounts.length > 0);
 
 	// Track visible accounts and assets
 	let visibleAccountIds = new Set<number>();
@@ -97,12 +114,15 @@
 		visibleAssetIds = new Set(visibleAssetIds);
 	}
 
+	type NewAccountSection = 'financial' | 'retirement' | 'investment' | 'majatek' | 'liabilities';
+
 	// New item creation state
 	let showNewAccountForm = false;
 	let showNewAssetForm = false;
-	let newAccountSection: 'investments' | 'assets' | 'liabilities' = 'assets';
+	let newAccountSection: NewAccountSection = 'financial';
 	let newAccountName = '';
 	let newAccountCategory = '';
+	let newAccountWrapper: '' | 'PPK' | 'IKE' | 'IKZE' = '';
 	let newAccountOwner = personas.length > 0 ? personas[0].name : '';
 	let newAccountValue = 0;
 	let creatingAccount = false;
@@ -122,6 +142,9 @@
 		try {
 			const type = newAccountSection === 'liabilities' ? 'liability' : 'asset';
 			const category = newAccountCategory || 'other';
+			const account_wrapper =
+				newAccountSection === 'retirement' && newAccountWrapper ? newAccountWrapper : null;
+			const purpose = newAccountSection === 'retirement' ? 'retirement' : 'general';
 
 			const response = await fetch(`${env.PUBLIC_API_URL_BROWSER}/api/accounts`, {
 				method: 'POST',
@@ -131,7 +154,9 @@
 					type,
 					category,
 					owner: newAccountOwner,
-					currency: 'PLN'
+					currency: 'PLN',
+					account_wrapper,
+					purpose
 				})
 			});
 
@@ -148,13 +173,10 @@
 
 			const newAccount = await response.json();
 
-			// Add to appropriate section
-			if (newAccountSection === 'investments') {
-				investments = [...investments, newAccount];
-			} else if (newAccountSection === 'assets') {
-				regularAssets = [...regularAssets, newAccount];
-			} else {
+			if (newAccountSection === 'liabilities') {
 				liabilities = [...liabilities, newAccount];
+			} else {
+				assets = [...assets, newAccount];
 			}
 
 			// Set initial value and mark as visible
@@ -166,7 +188,8 @@
 			showNewAccountForm = false;
 			newAccountName = '';
 			newAccountCategory = '';
-			newAccountOwner = 'Shared';
+			newAccountWrapper = '';
+			newAccountOwner = personas.length > 0 ? personas[0].name : '';
 			newAccountValue = 0;
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Błąd tworzenia konta';
@@ -175,12 +198,18 @@
 		}
 	}
 
-	function openNewAccountForm(section: 'investments' | 'assets' | 'liabilities') {
+	function openNewAccountForm(section: NewAccountSection) {
 		newAccountSection = section;
-		if (section === 'investments') {
-			newAccountCategory = 'ike';
-		} else if (section === 'assets') {
+		newAccountWrapper = '';
+		if (section === 'financial') {
 			newAccountCategory = 'bank';
+		} else if (section === 'retirement') {
+			newAccountCategory = 'stock';
+			newAccountWrapper = 'IKE';
+		} else if (section === 'investment') {
+			newAccountCategory = 'stock';
+		} else if (section === 'majatek') {
+			newAccountCategory = 'real_estate';
 		} else {
 			newAccountCategory = 'mortgage';
 		}
@@ -239,7 +268,7 @@
 		error = '';
 
 		try {
-			const allAccounts = [...investments, ...regularAssets, ...liabilities];
+			const allAccounts = [...assets, ...liabilities];
 			const accountPayloads = editingSnapshot
 				? allAccounts
 						.filter((account) => visibleAccountIds.has(account.id))
@@ -326,18 +355,18 @@
 
 	const categoryLabels: Record<string, string> = {
 		bank: 'Konto bankowe',
-		ike: 'IKE',
-		ikze: 'IKZE',
+		saving_account: 'Konto oszczędnościowe',
+		stock: 'Akcje',
+		bond: 'Obligacje',
+		fund: 'Fundusz',
+		etf: 'ETF',
+		gold: 'Złoto',
 		ppk: 'PPK',
-		bonds: 'Obligacje',
-		stocks: 'Akcje',
 		real_estate: 'Nieruchomości',
 		vehicle: 'Pojazd',
-		mortgage: 'Hipoteka',
-		installment: 'Raty',
 		other: 'Inne',
-		fund: 'Fundusz',
-		etf: 'ETF'
+		mortgage: 'Hipoteka',
+		installment: 'Raty'
 	};
 </script>
 
@@ -366,86 +395,20 @@
 		</CardContent>
 	</Card>
 
-	<!-- Investments -->
-	{#if investments.length > 0}
-		<Card>
-			<CardHeader>
-				<CardTitle>📈 Inwestycje</CardTitle>
-			</CardHeader>
-			<CardContent>
-				{#each investments.filter((a: any) => visibleAccountIds.has(a.id)) as account}
-					<div class="form-group-with-remove">
-						<div class="form-group">
-							<label for="account-{account.id}" class="form-label">
-								{account.name}
-								<span class="label-meta"
-									>({categoryLabels[account.category] || account.category})</span
-								>
-							</label>
-							<input
-								id="account-{account.id}"
-								type="number"
-								step="0.01"
-								bind:value={accountValues[account.id]}
-								placeholder="0.00"
-								class="form-input"
-							/>
-						</div>
-						<button
-							type="button"
-							class="btn-remove"
-							on:click={() => removeAccount(account.id)}
-							title="Usuń pole"
-						>
-							×
-						</button>
-					</div>
-				{/each}
-
-				<div class="add-account">
-					{#if investments.filter((a: any) => !visibleAccountIds.has(a.id)).length > 0}
-						<details>
-							<summary>+ Pokaż ukryte konta</summary>
-							<div class="add-account-list">
-								{#each investments.filter((a: any) => !visibleAccountIds.has(a.id)) as account}
-									<button
-										type="button"
-										class="btn-add-account"
-										on:click={() => addAccount(account.id)}
-									>
-										{account.name}
-										<span class="label-meta"
-											>({categoryLabels[account.category] || account.category})</span
-										>
-									</button>
-								{/each}
-							</div>
-						</details>
-					{/if}
-					<button
-						type="button"
-						class="btn-new-account"
-						on:click={() => openNewAccountForm('investments')}
-					>
-						+ Dodaj nowe konto
-					</button>
-				</div>
-			</CardContent>
-		</Card>
-	{/if}
-
-	<!-- Regular Assets -->
+	<!-- Konta finansowe -->
 	<Card>
 		<CardHeader>
 			<CardTitle>💰 Konta finansowe</CardTitle>
 		</CardHeader>
 		<CardContent>
-			{#each regularAssets.filter((a: any) => visibleAccountIds.has(a.id)) as account}
+			{#each financialAccounts.filter((a: any) => visibleAccountIds.has(a.id)) as account}
 				<div class="form-group-with-remove">
 					<div class="form-group">
 						<label for="account-{account.id}" class="form-label">
 							{account.name}
-							<span class="label-meta">({categoryLabels[account.category]})</span>
+							<span class="label-meta"
+								>({categoryLabels[account.category] || account.category})</span
+							>
 						</label>
 						<input
 							id="account-{account.id}"
@@ -468,36 +431,206 @@
 			{/each}
 
 			<div class="add-account">
-				{#if regularAssets.filter((a: any) => !visibleAccountIds.has(a.id)).length > 0}
+				{#if financialAccounts.filter((a: any) => !visibleAccountIds.has(a.id)).length > 0}
 					<details>
 						<summary>+ Pokaż ukryte konta</summary>
 						<div class="add-account-list">
-							{#each regularAssets.filter((a: any) => !visibleAccountIds.has(a.id)) as account}
+							{#each financialAccounts.filter((a: any) => !visibleAccountIds.has(a.id)) as account}
 								<button
 									type="button"
 									class="btn-add-account"
 									on:click={() => addAccount(account.id)}
 								>
 									{account.name}
-									<span class="label-meta">({categoryLabels[account.category]})</span>
+									<span class="label-meta"
+										>({categoryLabels[account.category] || account.category})</span
+									>
 								</button>
 							{/each}
 						</div>
 					</details>
 				{/if}
-				<button type="button" class="btn-new-account" on:click={() => openNewAccountForm('assets')}>
+				<button
+					type="button"
+					class="btn-new-account"
+					on:click={() => openNewAccountForm('financial')}
+				>
 					+ Dodaj nowe konto
 				</button>
 			</div>
 		</CardContent>
 	</Card>
 
-	<!-- Physical Assets -->
+	<!-- Emerytura -->
+	{#if retirementByWrapper.length > 0}
+		<Card>
+			<CardHeader>
+				<CardTitle>🏖 Emerytura</CardTitle>
+			</CardHeader>
+			<CardContent>
+				{#each retirementByWrapper as group}
+					<h3 class="wrapper-subheading">{group.wrapper}</h3>
+					{#each group.accounts.filter((a: any) => visibleAccountIds.has(a.id)) as account}
+						<div class="form-group-with-remove">
+							<div class="form-group">
+								<label for="account-{account.id}" class="form-label">
+									{account.name}
+									<span class="label-meta"
+										>({categoryLabels[account.category] || account.category})</span
+									>
+								</label>
+								<input
+									id="account-{account.id}"
+									type="number"
+									step="0.01"
+									bind:value={accountValues[account.id]}
+									placeholder="0.00"
+									class="form-input"
+								/>
+							</div>
+							<button
+								type="button"
+								class="btn-remove"
+								on:click={() => removeAccount(account.id)}
+								title="Usuń pole"
+							>
+								×
+							</button>
+						</div>
+					{/each}
+				{/each}
+
+				<div class="add-account">
+					{#if retirementAccounts.filter((a: any) => !visibleAccountIds.has(a.id)).length > 0}
+						<details>
+							<summary>+ Pokaż ukryte konta</summary>
+							<div class="add-account-list">
+								{#each retirementAccounts.filter((a: any) => !visibleAccountIds.has(a.id)) as account}
+									<button
+										type="button"
+										class="btn-add-account"
+										on:click={() => addAccount(account.id)}
+									>
+										{account.name}
+										<span class="label-meta">({account.account_wrapper})</span>
+									</button>
+								{/each}
+							</div>
+						</details>
+					{/if}
+					<button
+						type="button"
+						class="btn-new-account"
+						on:click={() => openNewAccountForm('retirement')}
+					>
+						+ Dodaj nowe konto
+					</button>
+				</div>
+			</CardContent>
+		</Card>
+	{/if}
+
+	<!-- Inwestycje -->
+	<Card>
+		<CardHeader>
+			<CardTitle>📈 Inwestycje</CardTitle>
+		</CardHeader>
+		<CardContent>
+			{#each investmentAccounts.filter((a: any) => visibleAccountIds.has(a.id)) as account}
+				<div class="form-group-with-remove">
+					<div class="form-group">
+						<label for="account-{account.id}" class="form-label">
+							{account.name}
+							<span class="label-meta"
+								>({categoryLabels[account.category] || account.category})</span
+							>
+						</label>
+						<input
+							id="account-{account.id}"
+							type="number"
+							step="0.01"
+							bind:value={accountValues[account.id]}
+							placeholder="0.00"
+							class="form-input"
+						/>
+					</div>
+					<button
+						type="button"
+						class="btn-remove"
+						on:click={() => removeAccount(account.id)}
+						title="Usuń pole"
+					>
+						×
+					</button>
+				</div>
+			{/each}
+
+			<div class="add-account">
+				{#if investmentAccounts.filter((a: any) => !visibleAccountIds.has(a.id)).length > 0}
+					<details>
+						<summary>+ Pokaż ukryte konta</summary>
+						<div class="add-account-list">
+							{#each investmentAccounts.filter((a: any) => !visibleAccountIds.has(a.id)) as account}
+								<button
+									type="button"
+									class="btn-add-account"
+									on:click={() => addAccount(account.id)}
+								>
+									{account.name}
+									<span class="label-meta"
+										>({categoryLabels[account.category] || account.category})</span
+									>
+								</button>
+							{/each}
+						</div>
+					</details>
+				{/if}
+				<button
+					type="button"
+					class="btn-new-account"
+					on:click={() => openNewAccountForm('investment')}
+				>
+					+ Dodaj nowe konto
+				</button>
+			</div>
+		</CardContent>
+	</Card>
+
+	<!-- Majątek -->
 	<Card>
 		<CardHeader>
 			<CardTitle>🏠 Majątek</CardTitle>
 		</CardHeader>
 		<CardContent>
+			{#each majatekAccounts.filter((a: any) => visibleAccountIds.has(a.id)) as account}
+				<div class="form-group-with-remove">
+					<div class="form-group">
+						<label for="account-{account.id}" class="form-label">
+							{account.name}
+							<span class="label-meta"
+								>({categoryLabels[account.category] || account.category})</span
+							>
+						</label>
+						<input
+							id="account-{account.id}"
+							type="number"
+							step="0.01"
+							bind:value={accountValues[account.id]}
+							placeholder="0.00"
+							class="form-input"
+						/>
+					</div>
+					<button
+						type="button"
+						class="btn-remove"
+						on:click={() => removeAccount(account.id)}
+						title="Usuń pole"
+					>
+						×
+					</button>
+				</div>
+			{/each}
+
 			{#each physicalAssets.filter((a: any) => visibleAssetIds.has(a.id)) as asset}
 				<div class="form-group-with-remove">
 					<div class="form-group">
@@ -523,10 +656,22 @@
 			{/each}
 
 			<div class="add-account">
-				{#if physicalAssets.filter((a: any) => !visibleAssetIds.has(a.id)).length > 0}
+				{#if majatekAccounts.filter((a: any) => !visibleAccountIds.has(a.id)).length > 0 || physicalAssets.filter((a: any) => !visibleAssetIds.has(a.id)).length > 0}
 					<details>
 						<summary>+ Pokaż ukryty majątek</summary>
 						<div class="add-account-list">
+							{#each majatekAccounts.filter((a: any) => !visibleAccountIds.has(a.id)) as account}
+								<button
+									type="button"
+									class="btn-add-account"
+									on:click={() => addAccount(account.id)}
+								>
+									{account.name}
+									<span class="label-meta"
+										>({categoryLabels[account.category] || account.category})</span
+									>
+								</button>
+							{/each}
 							{#each physicalAssets.filter((a: any) => !visibleAssetIds.has(a.id)) as asset}
 								<button type="button" class="btn-add-account" on:click={() => addAsset(asset.id)}>
 									{asset.name}
@@ -535,6 +680,13 @@
 						</div>
 					</details>
 				{/if}
+				<button
+					type="button"
+					class="btn-new-account"
+					on:click={() => openNewAccountForm('majatek')}
+				>
+					+ Dodaj nowe konto
+				</button>
 				<button type="button" class="btn-new-account" on:click={() => (showNewAssetForm = true)}>
 					+ Dodaj nowy majątek
 				</button>
@@ -637,17 +789,23 @@
 					<div class="form-group">
 						<label for="newAccountCategory" class="form-label">Kategoria *</label>
 						<select id="newAccountCategory" bind:value={newAccountCategory} class="form-input">
-							{#if newAccountSection === 'investments'}
-								<option value="ike">IKE</option>
-								<option value="ikze">IKZE</option>
-								<option value="ppk">PPK</option>
-								<option value="bonds">Obligacje</option>
-								<option value="stocks">Akcje</option>
+							{#if newAccountSection === 'financial'}
+								<option value="bank">Konto bankowe</option>
+								<option value="saving_account">Konto oszczędnościowe</option>
+							{:else if newAccountSection === 'retirement'}
+								<option value="stock">Akcje</option>
+								<option value="bond">Obligacje</option>
 								<option value="fund">Fundusz</option>
 								<option value="etf">ETF</option>
+								<option value="ppk">PPK</option>
+							{:else if newAccountSection === 'investment'}
+								<option value="stock">Akcje</option>
+								<option value="bond">Obligacje</option>
+								<option value="fund">Fundusz</option>
+								<option value="etf">ETF</option>
+								<option value="gold">Złoto</option>
 								<option value="other">Inne</option>
-							{:else if newAccountSection === 'assets'}
-								<option value="bank">Konto bankowe</option>
+							{:else if newAccountSection === 'majatek'}
 								<option value="real_estate">Nieruchomości</option>
 								<option value="vehicle">Pojazd</option>
 								<option value="other">Inne</option>
@@ -658,6 +816,17 @@
 							{/if}
 						</select>
 					</div>
+
+					{#if newAccountSection === 'retirement'}
+						<div class="form-group">
+							<label for="newAccountWrapper" class="form-label">Wrapper *</label>
+							<select id="newAccountWrapper" bind:value={newAccountWrapper} class="form-input">
+								<option value="IKE">IKE</option>
+								<option value="IKZE">IKZE</option>
+								<option value="PPK">PPK</option>
+							</select>
+						</div>
+					{/if}
 
 					<div class="form-group">
 						<label for="newAccountOwner" class="form-label">Właściciel</label>
@@ -803,6 +972,20 @@
 		color: var(--color-text-secondary);
 		font-weight: var(--font-weight-4);
 		font-size: var(--font-size-1);
+	}
+
+	.wrapper-subheading {
+		margin: var(--size-4) 0 var(--size-2) 0;
+		padding-bottom: var(--size-1);
+		border-bottom: 1px solid var(--color-border);
+		font-size: var(--font-size-3);
+		font-weight: var(--font-weight-7);
+		color: var(--color-text-secondary);
+		letter-spacing: 0.05em;
+	}
+
+	.wrapper-subheading:first-child {
+		margin-top: 0;
 	}
 
 	.form-input {
