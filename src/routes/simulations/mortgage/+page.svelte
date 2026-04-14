@@ -446,6 +446,7 @@
 		background: var(--surface-1);
 		color: var(--color-text-1);
 		font-size: var(--font-size-1);
+		min-height: var(--tap-target-min);
 	}
 
 	small {

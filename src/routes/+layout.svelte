@@ -41,6 +41,12 @@
 		max-width: 1200px;
 		margin: 0 auto;
 		width: 100%;
+		min-width: 0;
+	}
+
+	:global(html),
+	:global(body) {
+		overflow-x: hidden;
 	}
 
 	@media (min-width: 768px) {
