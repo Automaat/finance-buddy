@@ -8,11 +8,9 @@
 	<title>Nowy Snapshot | Finansowa Forteca</title>
 </svelte:head>
 
-<div class="page-header">
-	<div>
-		<h1 class="page-title">Nowy Snapshot</h1>
-		<p class="page-description">Zaktualizuj wartości wszystkich kont</p>
-	</div>
+<div class="mb-6 space-y-1">
+	<h1 class="h2">Nowy Snapshot</h1>
+	<p class="text-surface-700-300 text-sm">Zaktualizuj wartości wszystkich kont</p>
 </div>
 
 <SnapshotForm
@@ -22,22 +20,3 @@
 	physicalAssets={data.physicalAssets}
 	personas={data.personas}
 />
-
-<style>
-	.page-header {
-		margin-bottom: var(--size-6);
-	}
-
-	.page-title {
-		font-size: var(--font-size-6);
-		font-weight: var(--font-weight-7);
-		color: var(--color-text);
-		margin: 0 0 var(--size-2) 0;
-	}
-
-	.page-description {
-		color: var(--color-text-secondary);
-		font-size: var(--font-size-2);
-		margin: 0;
-	}
-</style>

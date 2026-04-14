@@ -2,20 +2,21 @@
 	import { onMount } from 'svelte';
 	import * as echarts from 'echarts';
 	import type { EChartsOption } from 'echarts';
+	import Modal from '$lib/components/Modal.svelte';
+	import { formatPLN, formatPercent, calculateChange } from '$lib/utils/format';
+	import { isMobile, isTablet } from '$lib/utils/viewport';
 	import {
-		Card,
-		CardHeader,
-		CardTitle,
-		CardContent,
-		Modal,
-		formatPLN,
-		formatPercent,
-		calculateChange,
-		isMobile,
-		isTablet
-	} from '@mskalski/home-ui';
+		Wallet,
+		TrendingUp,
+		TrendingDown,
+		Settings,
+		CheckCircle2,
+		AlertTriangle,
+		PiggyBank
+	} from 'lucide-svelte';
 	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
+	import type { Persona } from '$lib/types/personas';
 
 	export let data;
 
@@ -24,7 +25,6 @@
 	let lineChart: echarts.ECharts;
 	let pieChart: echarts.ECharts;
 
-	// Responsive chart configuration
 	$: gridConfig = $isMobile
 		? { left: '40px', right: '20px' }
 		: $isTablet
@@ -33,25 +33,19 @@
 
 	$: titleFontSize = $isMobile ? 14 : 16;
 
-	import type { Persona } from '$lib/types/personas';
-
 	$: personas = (data.personas || []) as Persona[];
 
-	// Retirement limits modal
 	let showLimitsModal = false;
 	let limitsYear = data.currentYear;
-	// Dynamic limits keyed by "{wrapper}_{owner}" e.g. "IKE_Marcin"
 	let limits: Record<string, number> = {};
 
 	function openLimitsModal() {
-		// Initialize limits from personas x wrappers
 		limits = {};
 		for (const persona of personas) {
 			for (const wrapper of ['IKE', 'IKZE']) {
 				limits[`${wrapper}_${persona.name}`] = 0;
 			}
 		}
-		// Load current values from retirementStats
 		if (data.retirementStats && data.retirementStats.length > 0) {
 			data.retirementStats.forEach((stat: any) => {
 				const key = `${stat.account_wrapper}_${stat.owner}`;
@@ -102,16 +96,13 @@
 	}
 
 	onMount(() => {
-		// Net Worth Line Chart
 		lineChart = echarts.init(chartContainer);
 
 		const lineOption: EChartsOption = {
 			title: {
 				text: 'Wartość Netto w Czasie',
 				left: 'center',
-				textStyle: {
-					fontSize: titleFontSize
-				}
+				textStyle: { fontSize: titleFontSize }
 			},
 			tooltip: {
 				trigger: 'axis',
@@ -121,14 +112,10 @@
 					return `${date}<br/>Wartość: ${value}`;
 				}
 			},
-			xAxis: {
-				type: 'time'
-			},
+			xAxis: { type: 'time' },
 			yAxis: {
 				type: 'value',
-				axisLabel: {
-					formatter: (value: number) => formatPLN(value)
-				}
+				axisLabel: { formatter: (value: number) => formatPLN(value) }
 			},
 			series: [
 				{
@@ -137,14 +124,11 @@
 					smooth: true,
 					areaStyle: {
 						color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-							{ offset: 0, color: 'rgba(94, 129, 172, 0.5)' }, // Nord10 #5E81AC
-							{ offset: 1, color: 'rgba(94, 129, 172, 0.1)' }
+							{ offset: 0, color: 'rgba(225, 29, 72, 0.5)' },
+							{ offset: 1, color: 'rgba(225, 29, 72, 0.1)' }
 						])
 					},
-					lineStyle: {
-						color: '#5E81AC', // Nord10
-						width: 2
-					}
+					lineStyle: { color: '#e11d48', width: 2 }
 				}
 			],
 			grid: gridConfig
@@ -152,30 +136,24 @@
 
 		lineChart.setOption(lineOption);
 
-		// Asset Allocation Pie Chart
 		pieChart = echarts.init(pieChartContainer);
 
 		const pieOption: EChartsOption = {
 			title: {
 				text: 'Alokacja Aktywów',
 				left: 'center',
-				textStyle: {
-					fontSize: titleFontSize
-				}
+				textStyle: { fontSize: titleFontSize }
 			},
-			tooltip: {
-				trigger: 'item',
-				formatter: '{b}: {c} PLN ({d}%)'
-			},
+			tooltip: { trigger: 'item', formatter: '{b}: {c} PLN ({d}%)' },
 			color: [
-				'#5E81AC', // Nord10 - Frost blue
-				'#88C0D0', // Nord8 - Frost cyan
-				'#81A1C1', // Nord9 - Frost light blue
-				'#8FBCBB', // Nord7 - Frost teal
-				'#A3BE8C', // Nord14 - Aurora green
-				'#EBCB8B', // Nord13 - Aurora yellow
-				'#D08770', // Nord12 - Aurora orange
-				'#B48EAD' // Nord15 - Aurora purple
+				'#e11d48',
+				'#f43f5e',
+				'#fb7185',
+				'#fda4af',
+				'#881337',
+				'#9f1239',
+				'#be123c',
+				'#be185d'
 			],
 			series: [
 				{
@@ -198,7 +176,6 @@
 
 		pieChart.setOption(pieOption);
 
-		// Responsive resize
 		const handleResize = () => {
 			lineChart.resize();
 			pieChart.resize();
@@ -206,7 +183,6 @@
 
 		window.addEventListener('resize', handleResize);
 
-		// Cleanup
 		return () => {
 			window.removeEventListener('resize', handleResize);
 		};
@@ -217,7 +193,6 @@
 		data.current_net_worth - data.change_vs_last_month
 	);
 
-	// Update charts when screen size changes
 	$: if (lineChart && gridConfig) {
 		lineChart.setOption({
 			grid: gridConfig,
@@ -236,485 +211,163 @@
 	<title>Dashboard | Finansowa Forteca</title>
 </svelte:head>
 
-<div class="dashboard">
-	<div class="page-header">
-		<h1>Dashboard</h1>
-		<p class="subtitle">Twoja sytuacja finansowa w jednym miejscu</p>
+<div class="space-y-8">
+	<div class="space-y-1">
+		<h1 class="h2">Dashboard</h1>
+		<p class="text-surface-700-300 text-sm">Twoja sytuacja finansowa w jednym miejscu</p>
 	</div>
 
-	<!-- KPI Cards -->
-	<div class="kpi-grid">
-		<Card>
-			<CardHeader>
-				<CardTitle>Wartość Netto</CardTitle>
-			</CardHeader>
-			<CardContent>
-				<div class="kpi-value">{formatPLN(data.current_net_worth)}</div>
-				<p
-					class="kpi-change"
-					class:positive={data.change_vs_last_month >= 0}
-					class:negative={data.change_vs_last_month < 0}
-				>
-					{data.change_vs_last_month >= 0 ? '↑' : '↓'}
-					{formatPLN(Math.abs(data.change_vs_last_month))}
-					({formatPercent(Math.abs(change.percent))})
-					<span class="muted">vs poprzedni miesiąc</span>
-				</p>
-			</CardContent>
-		</Card>
+	<div class="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+		<div class="card preset-filled-surface-100-900 p-4 space-y-2">
+			<header>
+				<h3 class="h4 flex items-center gap-2"><Wallet size={18} /> Wartość Netto</h3>
+			</header>
+			<div class="text-3xl font-bold">{formatPLN(data.current_net_worth)}</div>
+			<p
+				class="text-sm flex items-center gap-1 {data.change_vs_last_month >= 0
+					? 'text-success-600-400'
+					: 'text-error-600-400'}"
+			>
+				{#if data.change_vs_last_month >= 0}
+					<TrendingUp size={14} />
+				{:else}
+					<TrendingDown size={14} />
+				{/if}
+				{formatPLN(Math.abs(data.change_vs_last_month))}
+				({formatPercent(Math.abs(change.percent))})
+				<span class="text-surface-700-300">vs poprzedni miesiąc</span>
+			</p>
+		</div>
 
-		<Card>
-			<CardHeader>
-				<CardTitle>Aktywa</CardTitle>
-			</CardHeader>
-			<CardContent>
-				<div class="kpi-value positive">{formatPLN(data.total_assets)}</div>
-				<p class="kpi-subtitle">Suma wszystkich aktywów</p>
-			</CardContent>
-		</Card>
+		<div class="card preset-filled-surface-100-900 p-4 space-y-2">
+			<header>
+				<h3 class="h4 flex items-center gap-2"><TrendingUp size={18} /> Aktywa</h3>
+			</header>
+			<div class="text-3xl font-bold text-success-600-400">{formatPLN(data.total_assets)}</div>
+			<p class="text-sm text-surface-700-300">Suma wszystkich aktywów</p>
+		</div>
 
-		<Card>
-			<CardHeader>
-				<CardTitle>Zobowiązania</CardTitle>
-			</CardHeader>
-			<CardContent>
-				<div class="kpi-value negative">{formatPLN(data.total_liabilities)}</div>
-				<p class="kpi-subtitle">Suma wszystkich zobowiązań</p>
-			</CardContent>
-		</Card>
+		<div class="card preset-filled-surface-100-900 p-4 space-y-2">
+			<header>
+				<h3 class="h4 flex items-center gap-2"><TrendingDown size={18} /> Zobowiązania</h3>
+			</header>
+			<div class="text-3xl font-bold text-error-600-400">{formatPLN(data.total_liabilities)}</div>
+			<p class="text-sm text-surface-700-300">Suma wszystkich zobowiązań</p>
+		</div>
 	</div>
 
-	<!-- Retirement Limits Widget -->
 	{#if data.retirementStats && data.retirementStats.length > 0}
-		<Card>
-			<CardHeader>
-				<div class="retirement-header">
-					<CardTitle>💰 Limity Emerytalne {data.currentYear}</CardTitle>
-					<button class="settings-btn" on:click={openLimitsModal}>⚙️</button>
-				</div>
-			</CardHeader>
-			<CardContent>
-				<div class="retirement-grid">
-					{#each data.retirementStats as stat}
-						<div class="retirement-stat">
-							<div class="stat-header">
-								<h4>{stat.account_wrapper} ({stat.owner})</h4>
-								<span class="stat-amount">
-									{formatPLN(stat.total_contributed)} / {formatPLN(stat.limit_amount)}
-								</span>
-							</div>
+		<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+			<header class="flex items-center justify-between gap-2">
+				<h3 class="h3 flex items-center gap-2">
+					<PiggyBank size={20} /> Limity Emerytalne {data.currentYear}
+				</h3>
+				<button
+					type="button"
+					class="btn-icon btn-icon-sm"
+					aria-label="Konfiguruj limity"
+					on:click={openLimitsModal}
+				>
+					<Settings size={18} />
+				</button>
+			</header>
 
-							<div
-								class="progress-bar"
-								class:danger={stat.percentage_used < 50}
-								class:warning={stat.percentage_used >= 50 && stat.percentage_used < 100}
-								class:success={stat.percentage_used >= 100}
-							>
-								<div
-									class="progress-fill"
-									style="width: {Math.min(stat.percentage_used, 100)}%"
-								></div>
-							</div>
-
-							<div class="stat-details">
-								<span class="remaining">Pozostało: {formatPLN(stat.remaining)}</span>
-								<span
-									class="percentage"
-									class:danger={stat.percentage_used < 50}
-									class:warning={stat.percentage_used >= 50 && stat.percentage_used < 100}
-									class:success={stat.percentage_used >= 100}
-								>
-									{stat.percentage_used}%
-								</span>
-							</div>
-
-							{#if stat.percentage_used >= 100}
-								<div class="success-banner">✅ Limit osiągnięty</div>
-							{:else if stat.percentage_used >= 50}
-								<div class="warning-banner">⚠️ Zbliżasz się do limitu</div>
-							{/if}
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				{#each data.retirementStats as stat}
+					<div class="card preset-tonal-surface p-4 space-y-2">
+						<div class="flex items-start justify-between gap-2">
+							<h4 class="font-bold">{stat.account_wrapper} ({stat.owner})</h4>
+							<span class="text-sm font-semibold whitespace-nowrap">
+								{formatPLN(stat.total_contributed)} / {formatPLN(stat.limit_amount)}
+							</span>
 						</div>
-					{/each}
-				</div>
-			</CardContent>
-		</Card>
+
+						<div class="h-2 rounded-full bg-surface-200-800 overflow-hidden">
+							<div
+								class="h-full transition-all {stat.percentage_used >= 100
+									? 'bg-success-500'
+									: stat.percentage_used >= 50
+										? 'bg-warning-500'
+										: 'bg-error-500'}"
+								style="width: {Math.min(stat.percentage_used, 100)}%"
+							></div>
+						</div>
+
+						<div class="flex items-center justify-between text-sm">
+							<span class="text-surface-700-300">Pozostało: {formatPLN(stat.remaining)}</span>
+							<span
+								class="font-semibold {stat.percentage_used >= 100
+									? 'text-success-600-400'
+									: stat.percentage_used >= 50
+										? 'text-warning-600-400'
+										: 'text-error-600-400'}"
+							>
+								{stat.percentage_used}%
+							</span>
+						</div>
+
+						{#if stat.percentage_used >= 100}
+							<div
+								class="card preset-filled-success-500 p-2 text-xs text-center flex items-center justify-center gap-1"
+							>
+								<CheckCircle2 size={14} /> Limit osiągnięty
+							</div>
+						{:else if stat.percentage_used >= 50}
+							<div
+								class="card preset-filled-warning-500 p-2 text-xs text-center flex items-center justify-center gap-1"
+							>
+								<AlertTriangle size={14} /> Zbliżasz się do limitu
+							</div>
+						{/if}
+					</div>
+				{/each}
+			</div>
+		</div>
 	{/if}
 
-	<!-- Charts -->
-	<div class="grid grid-cols-1 lg:grid-cols-2">
-		<Card>
-			<CardContent>
-				<div bind:this={chartContainer} class="chart-container"></div>
-			</CardContent>
-		</Card>
+	<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+		<div class="card preset-filled-surface-100-900 p-4">
+			<div bind:this={chartContainer} class="w-full h-[400px]"></div>
+		</div>
 
-		<Card>
-			<CardContent>
-				<div bind:this={pieChartContainer} class="chart-container"></div>
-			</CardContent>
-		</Card>
+		<div class="card preset-filled-surface-100-900 p-4">
+			<div bind:this={pieChartContainer} class="w-full h-[400px]"></div>
+		</div>
 	</div>
 </div>
 
-<!-- Limits Configuration Modal -->
 <Modal
 	open={showLimitsModal}
 	title="Konfiguracja Limitów Emerytalnych"
 	onCancel={() => (showLimitsModal = false)}
-	showActions={false}
+	onConfirm={saveLimits}
+	confirmText="Zapisz"
 >
-	<form on:submit|preventDefault={saveLimits}>
-		<div class="limits-form">
-			<label>
-				Rok
-				<select bind:value={limitsYear}>
-					{#each [data.currentYear, data.currentYear + 1, data.currentYear + 2] as year}
-						<option value={year}>{year}</option>
-					{/each}
-				</select>
-			</label>
-
-			<div class="limit-inputs-grid">
-				{#each ['IKE', 'IKZE'] as wrapper}
-					{#each personas as persona}
-						<label>
-							{wrapper}
-							{persona.name} (PLN)
-							<input
-								type="number"
-								bind:value={limits[`${wrapper}_${persona.name}`]}
-								step="0.01"
-								required
-							/>
-						</label>
-					{/each}
+	<form on:submit|preventDefault={saveLimits} class="space-y-4">
+		<label class="label">
+			<span class="font-semibold text-sm">Rok</span>
+			<select class="select" bind:value={limitsYear}>
+				{#each [data.currentYear, data.currentYear + 1, data.currentYear + 2] as year}
+					<option value={year}>{year}</option>
 				{/each}
-			</div>
-		</div>
+			</select>
+		</label>
 
-		<div class="form-actions">
-			<button type="button" class="btn btn-secondary" on:click={() => (showLimitsModal = false)}>
-				Anuluj
-			</button>
-			<button type="submit" class="btn btn-primary">Zapisz</button>
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+			{#each ['IKE', 'IKZE'] as wrapper}
+				{#each personas as persona}
+					<label class="label">
+						<span class="font-semibold text-sm">{wrapper} {persona.name} (PLN)</span>
+						<input
+							type="number"
+							class="input"
+							bind:value={limits[`${wrapper}_${persona.name}`]}
+							step="0.01"
+							required
+						/>
+					</label>
+				{/each}
+			{/each}
 		</div>
 	</form>
 </Modal>
-
-<style>
-	.dashboard {
-		display: flex;
-		flex-direction: column;
-		gap: var(--size-8);
-	}
-
-	.page-header h1 {
-		font-size: var(--font-size-6);
-		font-weight: var(--font-weight-8);
-		margin: 0 0 var(--size-2) 0;
-	}
-
-	.subtitle {
-		color: var(--color-text-muted);
-		font-size: var(--font-size-2);
-	}
-
-	.kpi-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-		gap: var(--size-6);
-	}
-
-	.kpi-value {
-		font-size: var(--font-size-6);
-		font-weight: var(--font-weight-7);
-		margin-bottom: var(--size-2);
-	}
-
-	.kpi-value.positive {
-		color: var(--color-success);
-	}
-
-	.kpi-value.negative {
-		color: var(--color-error);
-	}
-
-	.kpi-change {
-		font-size: var(--font-size-1);
-		margin: var(--size-2) 0 0 0;
-	}
-
-	.kpi-change.positive {
-		color: var(--color-success);
-	}
-
-	.kpi-change.negative {
-		color: var(--color-error);
-	}
-
-	.kpi-subtitle {
-		font-size: var(--font-size-1);
-		color: var(--color-text-muted);
-		margin: var(--size-2) 0 0 0;
-	}
-
-	.muted {
-		color: var(--color-text-muted);
-	}
-
-	.chart-container {
-		width: 100%;
-		height: 300px;
-	}
-
-	@media (max-width: 640px) {
-		.chart-container {
-			height: 260px;
-		}
-	}
-
-	@media (min-width: 768px) {
-		.chart-container {
-			height: 400px;
-		}
-	}
-
-	/* Retirement Widget */
-	.retirement-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		width: 100%;
-	}
-
-	.settings-btn {
-		background: none;
-		border: none;
-		font-size: var(--font-size-3);
-		cursor: pointer;
-		padding: var(--size-2);
-		transition: transform 0.2s;
-		min-width: var(--tap-target-min);
-		min-height: var(--tap-target-min);
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.settings-btn:hover {
-		transform: scale(1.1);
-	}
-
-	.retirement-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-		gap: var(--size-6);
-	}
-
-	.retirement-stat {
-		display: flex;
-		flex-direction: column;
-		gap: var(--size-3);
-	}
-
-	.stat-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
-
-	.stat-header h4 {
-		font-size: var(--font-size-3);
-		font-weight: var(--font-weight-7);
-		margin: 0;
-	}
-
-	.stat-amount {
-		font-size: var(--font-size-1);
-		color: var(--color-text-muted);
-	}
-
-	.progress-bar {
-		height: 12px;
-		background: var(--color-bg-muted);
-		border-radius: var(--radius-2);
-		overflow: hidden;
-	}
-
-	.progress-bar.danger {
-		background: rgba(191, 97, 106, 0.2);
-	}
-
-	.progress-bar.warning {
-		background: rgba(235, 203, 139, 0.2);
-	}
-
-	.progress-bar.success {
-		background: rgba(163, 190, 140, 0.2);
-	}
-
-	.progress-fill {
-		height: 100%;
-		background: var(--color-success);
-		transition: width 0.3s;
-	}
-
-	.progress-bar.danger .progress-fill {
-		background: #bf616a;
-	}
-
-	.progress-bar.warning .progress-fill {
-		background: #ebcb8b;
-	}
-
-	.progress-bar.success .progress-fill {
-		background: var(--color-success);
-	}
-
-	.stat-details {
-		display: flex;
-		justify-content: space-between;
-		font-size: var(--font-size-1);
-	}
-
-	.remaining {
-		color: var(--color-text-muted);
-	}
-
-	.percentage {
-		font-weight: var(--font-weight-6);
-		color: var(--color-success);
-	}
-
-	.percentage.danger {
-		color: #bf616a;
-	}
-
-	.percentage.warning {
-		color: #ebcb8b;
-	}
-
-	.percentage.success {
-		color: var(--color-success);
-	}
-
-	.warning-banner {
-		background: rgba(208, 135, 112, 0.2);
-		color: var(--color-error);
-		padding: var(--size-2);
-		border-radius: var(--radius-2);
-		text-align: center;
-		font-size: var(--font-size-0);
-		font-weight: var(--font-weight-6);
-	}
-
-	.success-banner {
-		background: rgba(163, 190, 140, 0.2);
-		color: var(--color-success);
-		padding: var(--size-2);
-		border-radius: var(--radius-2);
-		text-align: center;
-		font-size: var(--font-size-0);
-		font-weight: var(--font-weight-6);
-	}
-
-	.limits-form {
-		display: flex;
-		flex-direction: column;
-		gap: var(--size-4);
-	}
-
-	.limit-inputs-grid {
-		display: grid;
-		grid-template-columns: repeat(2, 1fr);
-		gap: var(--size-4);
-	}
-
-	.limits-form label {
-		display: flex;
-		flex-direction: column;
-		gap: var(--size-2);
-		font-size: var(--font-size-1);
-		font-weight: var(--font-weight-6);
-	}
-
-	.limits-form input,
-	.limits-form select {
-		padding: var(--size-2);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-2);
-		font-size: var(--font-size-1);
-		background: var(--color-bg);
-		color: var(--color-text);
-	}
-
-	.form-actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: var(--size-3);
-		margin-top: var(--size-6);
-		padding-top: var(--size-4);
-		border-top: 1px solid var(--color-border);
-	}
-
-	.btn {
-		padding: var(--size-2) var(--size-4);
-		border-radius: var(--radius-2);
-		font-size: var(--font-size-1);
-		font-weight: var(--font-weight-6);
-		cursor: pointer;
-		transition: all 0.2s;
-	}
-
-	.btn-primary {
-		background: var(--color-primary);
-		color: var(--nord6);
-		border: none;
-	}
-
-	.btn-primary:hover {
-		background: var(--nord9);
-	}
-
-	.btn-secondary {
-		background: transparent;
-		color: var(--color-text);
-		border: 1px solid var(--color-border);
-	}
-
-	.btn-secondary:hover {
-		background: var(--color-accent);
-	}
-
-	@media (max-width: 640px) {
-		.kpi-grid {
-			grid-template-columns: 1fr;
-			gap: var(--size-4);
-		}
-
-		.kpi-value {
-			font-size: var(--font-size-5);
-		}
-
-		.page-header h1 {
-			font-size: var(--font-size-5);
-		}
-
-		.retirement-grid {
-			grid-template-columns: 1fr;
-		}
-
-		.limit-inputs-grid {
-			grid-template-columns: 1fr;
-			gap: var(--size-3);
-		}
-
-		.form-actions {
-			flex-direction: column-reverse;
-		}
-
-		.form-actions .btn {
-			width: 100%;
-		}
-	}
-</style>

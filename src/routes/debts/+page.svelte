@@ -1,14 +1,7 @@
 <script lang="ts">
-	import {
-		Card,
-		CardHeader,
-		CardTitle,
-		CardContent,
-		Modal,
-		Table,
-		formatPLN,
-		formatDate
-	} from '@mskalski/home-ui';
+	import Modal from '$lib/components/Modal.svelte';
+	import { formatPLN, formatDate } from '$lib/utils/format';
+	import { ClipboardList, Plus, Pencil, Trash2, Wallet, CircleDollarSign } from 'lucide-svelte';
 	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
@@ -171,9 +164,7 @@
 		if (!debtToDelete) return;
 
 		try {
-			const response = await fetch(`${apiUrl}/api/debts/${debtToDelete}`, {
-				method: 'DELETE'
-			});
+			const response = await fetch(`${apiUrl}/api/debts/${debtToDelete}`, { method: 'DELETE' });
 
 			if (!response.ok) {
 				throw new Error('Failed to delete debt');
@@ -208,11 +199,9 @@
 
 	async function openPayments(debt: Debt) {
 		if (selectedDebt?.id === debt.id) {
-			// Toggle off if clicking same debt
 			selectedDebt = null;
 			paymentsData = null;
 		} else {
-			// Show payments for this debt
 			selectedDebt = debt;
 			await loadPayments();
 		}
@@ -287,9 +276,7 @@
 		try {
 			const response = await fetch(
 				`${apiUrl}/api/accounts/${selectedDebt.account_id}/payments/${paymentToDelete}`,
-				{
-					method: 'DELETE'
-				}
+				{ method: 'DELETE' }
 			);
 
 			if (!response.ok) {
@@ -315,88 +302,204 @@
 	<title>Zobowiązania | Finansowa Forteca</title>
 </svelte:head>
 
-<div class="page-header">
-	<div>
-		<h1 class="page-title">Zobowiązania</h1>
-		<p class="page-description">Zarządzaj długami i wpłatami</p>
+<div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+	<div class="space-y-1">
+		<h1 class="h2">Zobowiązania</h1>
+		<p class="text-surface-700-300 text-sm">Zarządzaj długami i wpłatami</p>
 	</div>
-	<button class="btn btn-primary" on:click={startCreate}>+ Nowe Zobowiązanie</button>
+	<button
+		type="button"
+		class="btn preset-filled-primary-500 w-full sm:w-auto gap-2"
+		on:click={startCreate}
+	>
+		<Plus size={16} />
+		Nowe Zobowiązanie
+	</button>
 </div>
 
-<Card>
-	<CardHeader>
-		<CardTitle>📋 Lista zobowiązań</CardTitle>
-	</CardHeader>
-	<CardContent>
+<div class="space-y-4">
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header>
+			<h3 class="h3 flex items-center gap-2"><ClipboardList size={20} /> Lista zobowiązań</h3>
+		</header>
+
 		{#if data.debts.length === 0}
-			<div class="empty-state">
+			<div class="text-center py-12 text-surface-700-300">
 				<p>Brak zobowiązań</p>
 			</div>
 		{:else}
-			<Table
-				headers={[
-					'Nazwa',
-					'Typ',
-					'Kwota początkowa',
-					'Pozostało do spłaty',
-					'Wpłacono łącznie',
-					'Odsetki',
-					'Oprocentowanie',
-					'Data rozpoczęcia',
-					'Właściciel',
-					'Akcje'
-				]}
-				mobileCardView
-				class="data-table"
-			>
-				{#each data.debts as debt}
-					<tr>
-						<td data-label="Nazwa">{debt.name}</td>
-						<td data-label="Typ">{debtTypeLabels[debt.debt_type] || debt.debt_type}</td>
-						<td data-label="Kwota początkowa" class="value-cell"
-							>{formatPLN(debt.initial_amount)}</td
-						>
-						<td data-label="Pozostało do spłaty" class="value-cell negative">
-							{#if debt.latest_balance !== null}
-								<div>{formatPLN(debt.latest_balance)}</div>
-								{#if debt.latest_balance_date}
-									<div class="amount-detail">na {formatDate(debt.latest_balance_date)}</div>
-								{/if}
-							{:else}
-								<span class="text-muted">brak danych</span>
-							{/if}
-						</td>
-						<td data-label="Wpłacono łącznie" class="value-cell">{formatPLN(debt.total_paid)}</td>
-						<td data-label="Odsetki" class="value-cell negative">{formatPLN(debt.interest_paid)}</td
-						>
-						<td data-label="Oprocentowanie">{debt.interest_rate}%</td>
-						<td data-label="Data rozpoczęcia">{formatDate(debt.start_date)}</td>
-						<td data-label="Właściciel">{debt.account_owner}</td>
-						<td data-label="Akcje" class="actions-cell">
-							<button
-								class="btn-icon tap-target"
-								title="Historia wpłat"
-								on:click={() => openPayments(debt)}
-							>
-								💰 ({paymentCounts[debt.account_id] || 0})
-							</button>
-							<button class="btn-icon tap-target" title="Edytuj" on:click={() => startEdit(debt)}>
-								✏️
-							</button>
-							<button
-								class="btn-icon tap-target"
-								title="Usuń"
-								on:click={() => handleDelete(debt.id)}
-							>
-								🗑️
-							</button>
-						</td>
-					</tr>
-				{/each}
-			</Table>
+			<div class="table-wrap">
+				<table class="table table-hover">
+					<thead>
+						<tr>
+							<th>Nazwa</th>
+							<th>Typ</th>
+							<th>Kwota początkowa</th>
+							<th>Pozostało do spłaty</th>
+							<th>Wpłacono łącznie</th>
+							<th>Odsetki</th>
+							<th>Oprocentowanie</th>
+							<th>Data rozpoczęcia</th>
+							<th>Właściciel</th>
+							<th class="text-right">Akcje</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each data.debts as debt}
+							<tr>
+								<td>{debt.name}</td>
+								<td>{debtTypeLabels[debt.debt_type] || debt.debt_type}</td>
+								<td class="font-semibold">{formatPLN(debt.initial_amount)}</td>
+								<td class="font-semibold text-error-600-400">
+									{#if debt.latest_balance !== null}
+										<div>{formatPLN(debt.latest_balance)}</div>
+										{#if debt.latest_balance_date}
+											<div class="text-xs text-surface-700-300">
+												na {formatDate(debt.latest_balance_date)}
+											</div>
+										{/if}
+									{:else}
+										<span class="text-surface-700-300 italic">brak danych</span>
+									{/if}
+								</td>
+								<td class="font-semibold">{formatPLN(debt.total_paid)}</td>
+								<td class="font-semibold text-error-600-400">{formatPLN(debt.interest_paid)}</td>
+								<td>{debt.interest_rate}%</td>
+								<td>{formatDate(debt.start_date)}</td>
+								<td>{debt.account_owner}</td>
+								<td class="text-right whitespace-nowrap">
+									<button
+										type="button"
+										class="btn preset-tonal-surface btn-sm gap-1"
+										aria-label="Historia wpłat"
+										on:click={() => openPayments(debt)}
+									>
+										<CircleDollarSign size={14} />
+										<span>{paymentCounts[debt.account_id] || 0}</span>
+									</button>
+									<button
+										type="button"
+										class="btn-icon btn-icon-sm"
+										aria-label="Edytuj"
+										on:click={() => startEdit(debt)}
+									>
+										<Pencil size={16} />
+									</button>
+									<button
+										type="button"
+										class="btn-icon btn-icon-sm"
+										aria-label="Usuń"
+										on:click={() => handleDelete(debt.id)}
+									>
+										<Trash2 size={16} />
+									</button>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
 		{/if}
-	</CardContent>
-</Card>
+	</div>
+
+	{#if selectedDebt && paymentsData}
+		<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+			<header>
+				<h3 class="h3 flex items-center gap-2">
+					<Plus size={20} /> Dodaj wpłatę - {selectedDebt.name}
+				</h3>
+			</header>
+
+			<form class="space-y-4" on:submit|preventDefault={addPayment}>
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+					<label class="label">
+						<span class="font-semibold text-sm">Kwota</span>
+						<input
+							type="number"
+							class="input"
+							step="0.01"
+							bind:value={paymentFormData.amount}
+							required
+						/>
+					</label>
+					<label class="label">
+						<span class="font-semibold text-sm">Data wpłaty</span>
+						<input type="date" class="input" bind:value={paymentFormData.date} required />
+					</label>
+					<label class="label">
+						<span class="font-semibold text-sm">Kto wpłacił</span>
+						<select class="select" bind:value={paymentFormData.owner}>
+							{#each personas as persona}
+								<option value={persona.name}>{persona.name}</option>
+							{/each}
+						</select>
+					</label>
+				</div>
+
+				{#if paymentError}
+					<div class="card preset-filled-error-500 p-3 text-sm">{paymentError}</div>
+				{/if}
+
+				<button type="submit" class="btn preset-filled-primary-500" disabled={savingPayment}>
+					{savingPayment ? 'Zapisywanie...' : 'Dodaj wpłatę'}
+				</button>
+			</form>
+		</div>
+
+		<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+			<header>
+				<h3 class="h3 flex items-center gap-2">
+					<Wallet size={20} /> Historia wpłat - {selectedDebt.name}
+				</h3>
+			</header>
+
+			<div class="text-sm text-surface-700-300 space-y-1">
+				<p>
+					Wpłacono łącznie: <strong class="text-surface-950-50"
+						>{formatPLN(paymentsData.total_paid)}</strong
+					>
+				</p>
+				<p>Liczba wpłat: {paymentsData.payment_count}</p>
+			</div>
+
+			{#if paymentsData.payments.length === 0}
+				<div class="text-center py-8 text-surface-700-300">Brak wpłat</div>
+			{:else}
+				<div class="table-wrap">
+					<table class="table table-hover">
+						<thead>
+							<tr>
+								<th>Data wpłaty</th>
+								<th>Kwota</th>
+								<th>Kto wpłacił</th>
+								<th class="text-right">Akcje</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each paymentsData.payments as payment}
+								<tr>
+									<td>{formatDate(payment.date)}</td>
+									<td>{formatPLN(payment.amount)}</td>
+									<td>{payment.owner}</td>
+									<td class="text-right">
+										<button
+											type="button"
+											class="btn-icon btn-icon-sm"
+											aria-label="Usuń wpłatę"
+											on:click={() => handleDeletePayment(payment.id)}
+										>
+											<Trash2 size={16} />
+										</button>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			{/if}
+		</div>
+	{/if}
+</div>
 
 <Modal
 	open={showForm}
@@ -405,62 +508,60 @@
 	onCancel={cancelForm}
 	confirmText={saving ? 'Zapisywanie...' : 'Zapisz'}
 	confirmDisabled={saving}
-	confirmVariant="primary"
-	size="medium"
 >
-	<form on:submit|preventDefault={handleSubmit}>
+	<form on:submit|preventDefault={handleSubmit} class="space-y-4">
 		{#if error}
-			<div class="error-message">{error}</div>
+			<div class="card preset-filled-error-500 p-3 text-sm">{error}</div>
 		{/if}
 
-		<div class="form-group">
-			<label for="name">Nazwa</label>
-			<input id="name" type="text" bind:value={formData.name} required />
-		</div>
+		<label class="label">
+			<span class="font-semibold text-sm">Nazwa</span>
+			<input type="text" class="input" bind:value={formData.name} required />
+		</label>
 
-		<div class="grid grid-cols-1 md:grid-cols-2">
-			<div class="form-group">
-				<label for="debt_type">Typ zobowiązania</label>
-				<select id="debt_type" bind:value={formData.debt_type} required>
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+			<label class="label">
+				<span class="font-semibold text-sm">Typ zobowiązania</span>
+				<select class="select" bind:value={formData.debt_type} required>
 					<option value="mortgage">Hipoteka</option>
 					<option value="installment_0percent">Raty 0%</option>
 				</select>
-			</div>
+			</label>
 
-			<div class="form-group">
-				<label for="start_date">Data rozpoczęcia</label>
-				<input id="start_date" type="date" bind:value={formData.start_date} required />
-			</div>
+			<label class="label">
+				<span class="font-semibold text-sm">Data rozpoczęcia</span>
+				<input type="date" class="input" bind:value={formData.start_date} required />
+			</label>
 		</div>
 
-		<div class="grid grid-cols-1 md:grid-cols-2">
-			<div class="form-group">
-				<label for="initial_amount">Kwota początkowa (główna)</label>
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+			<label class="label">
+				<span class="font-semibold text-sm">Kwota początkowa (główna)</span>
 				<input
-					id="initial_amount"
 					type="number"
+					class="input"
 					step="0.01"
 					bind:value={formData.initial_amount}
 					required
 				/>
-			</div>
+			</label>
 
-			<div class="form-group">
-				<label for="interest_rate">Oprocentowanie (%)</label>
+			<label class="label">
+				<span class="font-semibold text-sm">Oprocentowanie (%)</span>
 				<input
-					id="interest_rate"
 					type="number"
+					class="input"
 					step="0.01"
 					bind:value={formData.interest_rate}
 					required
 				/>
-			</div>
+			</label>
 		</div>
 
-		<div class="form-group">
-			<label for="notes">Notatki</label>
-			<textarea id="notes" bind:value={formData.notes} rows="3"></textarea>
-		</div>
+		<label class="label">
+			<span class="font-semibold text-sm">Notatki</span>
+			<textarea class="textarea" bind:value={formData.notes} rows="3"></textarea>
+		</label>
 	</form>
 </Modal>
 
@@ -470,93 +571,10 @@
 	onConfirm={confirmDelete}
 	onCancel={cancelDelete}
 	confirmText="Usuń"
-	size="small"
+	confirmVariant="danger"
 >
 	<p>Czy na pewno chcesz usunąć to zobowiązanie?</p>
 </Modal>
-
-{#if selectedDebt && paymentsData}
-	<Card>
-		<CardHeader>
-			<CardTitle>➕ Dodaj wpłatę - {selectedDebt.name}</CardTitle>
-		</CardHeader>
-		<CardContent>
-			<form on:submit|preventDefault={addPayment}>
-				<div class="grid grid-cols-1 md:grid-cols-2">
-					<div class="form-group">
-						<label for="payment_amount">Kwota</label>
-						<input
-							id="payment_amount"
-							type="number"
-							step="0.01"
-							bind:value={paymentFormData.amount}
-							required
-						/>
-					</div>
-					<div class="form-group">
-						<label for="payment_date">Data wpłaty</label>
-						<input id="payment_date" type="date" bind:value={paymentFormData.date} required />
-					</div>
-					<div class="form-group">
-						<label for="payment_owner">Kto wpłacił</label>
-						<select id="payment_owner" bind:value={paymentFormData.owner}>
-							{#each personas as persona}
-								<option value={persona.name}>{persona.name}</option>
-							{/each}
-						</select>
-					</div>
-				</div>
-
-				{#if paymentError}
-					<div class="error-message">{paymentError}</div>
-				{/if}
-
-				<button type="submit" class="btn btn-primary" disabled={savingPayment}>
-					{savingPayment ? 'Zapisywanie...' : 'Dodaj wpłatę'}
-				</button>
-			</form>
-		</CardContent>
-	</Card>
-
-	<Card>
-		<CardHeader>
-			<CardTitle>💰 Historia wpłat - {selectedDebt.name}</CardTitle>
-		</CardHeader>
-		<CardContent>
-			<div class="payments-summary">
-				<p>Wpłacono łącznie: <strong>{formatPLN(paymentsData.total_paid)}</strong></p>
-				<p>Liczba wpłat: {paymentsData.payment_count}</p>
-			</div>
-
-			{#if paymentsData.payments.length === 0}
-				<div class="empty-state">Brak wpłat</div>
-			{:else}
-				<Table
-					headers={['Data wpłaty', 'Kwota', 'Kto wpłacił', 'Akcje']}
-					mobileCardView
-					class="data-table"
-				>
-					{#each paymentsData.payments as payment}
-						<tr>
-							<td data-label="Data wpłaty">{formatDate(payment.date)}</td>
-							<td data-label="Kwota">{formatPLN(payment.amount)}</td>
-							<td data-label="Kto wpłacił">{payment.owner}</td>
-							<td data-label="Akcje" class="actions-cell">
-								<button
-									class="btn-icon tap-target"
-									title="Usuń wpłatę"
-									on:click={() => handleDeletePayment(payment.id)}
-								>
-									🗑️
-								</button>
-							</td>
-						</tr>
-					{/each}
-				</Table>
-			{/if}
-		</CardContent>
-	</Card>
-{/if}
 
 <Modal
 	open={showDeletePaymentModal}
@@ -564,255 +582,7 @@
 	onConfirm={confirmDeletePayment}
 	onCancel={cancelDeletePayment}
 	confirmText="Usuń"
-	size="small"
+	confirmVariant="danger"
 >
 	<p>Czy na pewno chcesz usunąć tę wpłatę?</p>
 </Modal>
-
-<style>
-	.page-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		margin-bottom: var(--size-6);
-	}
-
-	.page-title {
-		font-size: var(--font-size-6);
-		font-weight: var(--font-weight-7);
-		color: var(--color-text);
-		margin: 0 0 var(--size-2) 0;
-	}
-
-	.page-description {
-		color: var(--color-text-secondary);
-		font-size: var(--font-size-2);
-		margin: 0;
-	}
-
-	.btn {
-		padding: var(--size-3) var(--size-5);
-		border: none;
-		border-radius: var(--radius-2);
-		font-weight: var(--font-weight-6);
-		font-size: var(--font-size-2);
-		cursor: pointer;
-		transition: all 0.2s;
-	}
-
-	.btn-primary {
-		background: var(--color-primary);
-		color: var(--nord6);
-	}
-
-	.btn-primary:hover:not(:disabled) {
-		background: var(--nord9);
-	}
-
-	.btn-primary:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.btn-secondary {
-		background: transparent;
-		color: var(--color-text);
-		border: 1px solid var(--color-border);
-	}
-
-	.btn-secondary:hover {
-		background: var(--color-accent);
-	}
-
-	.btn-danger {
-		background: var(--nord11);
-		color: var(--nord6);
-	}
-
-	.btn-danger:hover {
-		background: var(--nord12);
-	}
-
-	.btn-icon {
-		background: transparent;
-		border: none;
-		cursor: pointer;
-		font-size: var(--font-size-3);
-		padding: var(--size-2);
-		transition: transform 0.2s;
-		min-width: var(--tap-target-min);
-		min-height: var(--tap-target-min);
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.btn-icon:hover {
-		transform: scale(1.2);
-	}
-
-	.empty-state {
-		text-align: center;
-		padding: var(--size-8) var(--size-4);
-		color: var(--color-text-secondary);
-	}
-
-	.table-container {
-		overflow-x: auto;
-	}
-
-	.data-table {
-		width: 100%;
-		border-collapse: collapse;
-	}
-
-	.data-table thead {
-		border-bottom: 2px solid var(--color-border);
-	}
-
-	.data-table th {
-		text-align: left;
-		padding: var(--size-3) var(--size-4);
-		font-weight: var(--font-weight-6);
-		color: var(--color-text);
-		font-size: var(--font-size-2);
-	}
-
-	.data-table tbody tr {
-		border-bottom: 1px solid var(--color-border);
-		transition: background-color 0.2s;
-	}
-
-	.data-table tbody tr:hover {
-		background-color: var(--color-accent);
-	}
-
-	.data-table td {
-		padding: var(--size-4);
-		font-size: var(--font-size-2);
-	}
-
-	.value-cell {
-		font-weight: var(--font-weight-6);
-		color: var(--color-primary);
-	}
-
-	.value-cell.negative {
-		color: var(--nord11);
-	}
-
-	.text-muted {
-		color: var(--color-text-2);
-		font-style: italic;
-		font-size: var(--font-size-1);
-	}
-
-	.actions-cell {
-		text-align: right;
-	}
-
-	.form-group {
-		display: flex;
-		flex-direction: column;
-		gap: var(--size-2);
-	}
-
-	.form-group label {
-		font-weight: var(--font-weight-6);
-		color: var(--color-text);
-		font-size: var(--font-size-2);
-	}
-
-	.form-group input,
-	.form-group select,
-	.form-group textarea {
-		padding: var(--size-3);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-2);
-		background: var(--color-background);
-		color: var(--color-text);
-		font-size: var(--font-size-2);
-	}
-
-	.form-group textarea {
-		font-family: inherit;
-		resize: vertical;
-	}
-
-	.form-group input:focus,
-	.form-group select:focus,
-	.form-group textarea:focus {
-		outline: none;
-		border-color: var(--color-primary);
-	}
-
-	.error-message {
-		padding: var(--size-3);
-		background: var(--nord11);
-		color: var(--nord6);
-		border-radius: var(--radius-2);
-		font-size: var(--font-size-2);
-	}
-
-	.modal-actions {
-		display: flex;
-		gap: var(--size-3);
-		justify-content: flex-end;
-		margin-top: var(--size-4);
-	}
-
-	.payments-summary {
-		background: var(--color-surface-2);
-		padding: var(--size-4);
-		border-radius: var(--radius-2);
-		margin-bottom: var(--size-4);
-	}
-
-	.payments-summary p {
-		margin: var(--size-2) 0;
-		font-size: var(--font-size-2);
-		color: var(--color-text-secondary);
-	}
-
-	.payments-summary strong {
-		color: var(--color-primary);
-		font-weight: var(--font-weight-7);
-	}
-
-	.payment-form {
-		margin-top: var(--size-6);
-		padding-top: var(--size-4);
-		border-top: 2px solid var(--color-border);
-	}
-
-	.payment-form h3 {
-		margin: 0 0 var(--size-4) 0;
-		font-size: var(--font-size-3);
-		font-weight: var(--font-weight-6);
-		color: var(--color-text);
-	}
-
-	.negative {
-		color: var(--nord11);
-	}
-
-	.amount-detail {
-		font-size: var(--font-size-1);
-		color: var(--color-text-secondary);
-		font-weight: var(--font-weight-4);
-		margin-top: var(--size-1);
-	}
-
-	@media (max-width: 768px) {
-		.page-header {
-			flex-direction: column;
-			gap: var(--size-4);
-		}
-	}
-
-	@media (max-width: 640px) {
-		.page-header .btn {
-			width: 100%;
-		}
-	}
-</style>

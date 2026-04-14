@@ -1,5 +1,16 @@
 <script lang="ts">
-	import { Card, CardHeader, CardTitle, CardContent, formatPLN } from '@mskalski/home-ui';
+	import { formatPLN } from '$lib/utils/format';
+	import {
+		Settings,
+		Umbrella,
+		PieChart,
+		Home,
+		TrendingUp,
+		Info,
+		CheckCircle2,
+		AlertTriangle,
+		Gauge
+	} from 'lucide-svelte';
 	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
 
@@ -7,7 +18,6 @@
 
 	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
 
-	// Default values (Polish retirement)
 	const defaults = {
 		birth_date: '1990-01-01',
 		retirement_age: 67,
@@ -19,7 +29,6 @@
 		allocation_commodities: 3
 	};
 
-	// Form state
 	let birthDate = data.config?.birth_date ?? defaults.birth_date;
 	let retirementAge = data.config?.retirement_age ?? defaults.retirement_age;
 	let retirementMonthlySalary =
@@ -36,11 +45,9 @@
 	let error = '';
 	let saving = false;
 
-	// Reactive validation and calculations
 	$: marketSum = allocationStocks + allocationBonds + allocationGold + allocationCommodities;
 	$: isValidAllocation = marketSum === 100;
 
-	// Calculate current age and years until retirement
 	$: currentAge = birthDate
 		? Math.max(
 				0,
@@ -51,38 +58,28 @@
 		: 0;
 	$: yearsUntilRetirement = Math.max(0, retirementAge - currentAge);
 
-	// Calculate required capital using 4% safe withdrawal rate (25x annual expenses)
 	$: requiredCapital = retirementMonthlySalary * 12 * 25;
 
-	// Simple remaining capital for display (before accounting for growth)
 	$: remainingCapital = Math.max(0, requiredCapital - (data.retirementAccountValue ?? 0));
 
-	// Calculate monthly payment needed to reach future value with investment returns
-	// Using sinking fund formula (FV annuity solved for PMT): PMT = FV × r / [(1 + r)^n - 1]
 	$: monthlySavingsNeeded = (() => {
 		if (yearsUntilRetirement <= 0) return 0;
 
-		const annualReturnRate = 0.07; // 7% annual return (conservative long-term assumption)
+		const annualReturnRate = 0.07;
 		const monthlyRate = annualReturnRate / 12;
 		const months = yearsUntilRetirement * 12;
 
-		// Account for growth of already saved capital
 		const futureValueOfSavings =
 			(data.retirementAccountValue ?? 0) * Math.pow(1 + annualReturnRate, yearsUntilRetirement);
 		const adjustedTarget = Math.max(0, requiredCapital - futureValueOfSavings);
 
 		if (adjustedTarget === 0) return 0;
 
-		// Future Value of Annuity formula solved for PMT
-		const payment = (adjustedTarget * monthlyRate) / (Math.pow(1 + monthlyRate, months) - 1);
-
-		return payment;
+		return (adjustedTarget * monthlyRate) / (Math.pow(1 + monthlyRate, months) - 1);
 	})();
 
 	async function saveConfig() {
-		if (!isValidAllocation) {
-			return;
-		}
+		if (!isValidAllocation) return;
 
 		error = '';
 		saving = true;
@@ -123,377 +120,210 @@
 	}
 </script>
 
-<div class="container">
-	<h1>⚙️ Konfiguracja</h1>
+<div class="max-w-3xl mx-auto space-y-4">
+	<h1 class="h2 flex items-center gap-2"><Settings size={24} /> Konfiguracja</h1>
 
 	{#if data.isFirstTime}
-		<div class="info-banner">
-			ℹ️ Konfiguracja nie istnieje. Poniżej znajdują się wartości domyślne.
+		<div class="card preset-tonal-primary p-3 text-sm flex items-center gap-2">
+			<Info size={16} />
+			Konfiguracja nie istnieje. Poniżej znajdują się wartości domyślne.
 		</div>
 	{/if}
 
-	<Card>
-		<CardHeader>
-			<CardTitle>🏖️ Emerytura</CardTitle>
-		</CardHeader>
-		<CardContent>
-			<div class="form-group">
-				<label for="birth-date">Data urodzenia</label>
-				<input id="birth-date" type="date" bind:value={birthDate} class="input" />
-				{#if currentAge > 0}
-					<div class="field-hint">Obecny wiek: {currentAge} lat</div>
-				{/if}
-			</div>
-			<div class="form-group">
-				<label for="retirement-age">Wiek emerytalny</label>
-				<input
-					id="retirement-age"
-					type="number"
-					min="18"
-					max="100"
-					bind:value={retirementAge}
-					class="input"
-				/>
-				{#if yearsUntilRetirement > 0}
-					<div class="field-hint">Za {yearsUntilRetirement} lat</div>
-				{/if}
-			</div>
-			<div class="form-group">
-				<label for="retirement-salary">Oczekiwany miesięczny dochód emerytalny (PLN)</label>
-				<input
-					id="retirement-salary"
-					type="number"
-					min="0"
-					step="100"
-					bind:value={retirementMonthlySalary}
-					class="input"
-				/>
-			</div>
-			<div class="calculated-info">
-				<div class="info-label">Potrzebny kapitał (reguła 4%):</div>
-				<div class="info-value">{formatPLN(requiredCapital)}</div>
-			</div>
-			{#if data.retirementAccountValue && data.retirementAccountValue > 0}
-				<div class="calculated-info">
-					<div class="info-label">Wartość kont emerytalnych:</div>
-					<div class="info-value">{formatPLN(data.retirementAccountValue)}</div>
-				</div>
-				<div class="calculated-info">
-					<div class="info-label">Pozostało do zgromadzenia:</div>
-					<div class="info-value">{formatPLN(remainingCapital)}</div>
-				</div>
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header>
+			<h3 class="h3 flex items-center gap-2"><Umbrella size={20} /> Emerytura</h3>
+		</header>
+
+		<label class="label">
+			<span class="font-semibold text-sm">Data urodzenia</span>
+			<input id="birth-date" type="date" bind:value={birthDate} class="input" />
+			{#if currentAge > 0}
+				<span class="text-xs italic text-surface-700-300">Obecny wiek: {currentAge} lat</span>
 			{/if}
+		</label>
+
+		<label class="label">
+			<span class="font-semibold text-sm">Wiek emerytalny</span>
+			<input
+				id="retirement-age"
+				type="number"
+				min="18"
+				max="100"
+				bind:value={retirementAge}
+				class="input"
+			/>
 			{#if yearsUntilRetirement > 0}
-				<div class="calculated-info">
-					<div class="info-label">Miesięczne oszczędności potrzebne (przy 7% rocznie):</div>
-					<div class="info-value">{formatPLN(monthlySavingsNeeded)}</div>
-				</div>
-			{:else if currentAge > 0}
-				<div class="calculated-info">
-					<div class="info-label">Już w wieku emerytalnym</div>
-				</div>
+				<span class="text-xs italic text-surface-700-300">Za {yearsUntilRetirement} lat</span>
 			{/if}
-		</CardContent>
-	</Card>
+		</label>
 
-	<Card>
-		<CardHeader>
-			<CardTitle>📊 Docelowa alokacja inwestycyjna</CardTitle>
-		</CardHeader>
-		<CardContent>
-			<div class="allocation-section">
-				<h3 class="section-title">🏡 Nieruchomości</h3>
-				<div class="form-group">
-					<label for="allocation-real-estate">Nieruchomości (%)</label>
-					<input
-						id="allocation-real-estate"
-						type="number"
-						min="0"
-						max="100"
-						bind:value={allocationRealEstate}
-						class="input"
-					/>
-				</div>
+		<label class="label">
+			<span class="font-semibold text-sm">Oczekiwany miesięczny dochód emerytalny (PLN)</span>
+			<input
+				id="retirement-salary"
+				type="number"
+				min="0"
+				step="100"
+				bind:value={retirementMonthlySalary}
+				class="input"
+			/>
+		</label>
+
+		<div class="card preset-tonal-primary p-3 flex justify-between items-center flex-wrap gap-2">
+			<div class="text-sm">Potrzebny kapitał (reguła 4%):</div>
+			<div class="text-lg font-bold">{formatPLN(requiredCapital)}</div>
+		</div>
+		{#if data.retirementAccountValue && data.retirementAccountValue > 0}
+			<div class="card preset-tonal-primary p-3 flex justify-between items-center flex-wrap gap-2">
+				<div class="text-sm">Wartość kont emerytalnych:</div>
+				<div class="text-lg font-bold">{formatPLN(data.retirementAccountValue)}</div>
 			</div>
-
-			<div class="allocation-section">
-				<h3 class="section-title">📈 Część rynkowa</h3>
-				<div class="form-group">
-					<label for="allocation-stocks">Akcje (%)</label>
-					<input
-						id="allocation-stocks"
-						type="number"
-						min="0"
-						max="100"
-						bind:value={allocationStocks}
-						class="input"
-					/>
-				</div>
-				<div class="form-group">
-					<label for="allocation-bonds">Obligacje (%)</label>
-					<input
-						id="allocation-bonds"
-						type="number"
-						min="0"
-						max="100"
-						bind:value={allocationBonds}
-						class="input"
-					/>
-				</div>
-				<div class="form-group">
-					<label for="allocation-gold">Złoto (%)</label>
-					<input
-						id="allocation-gold"
-						type="number"
-						min="0"
-						max="100"
-						bind:value={allocationGold}
-						class="input"
-					/>
-				</div>
-				<div class="form-group">
-					<label for="allocation-commodities">Surowce (%)</label>
-					<input
-						id="allocation-commodities"
-						type="number"
-						min="0"
-						max="100"
-						bind:value={allocationCommodities}
-						class="input"
-					/>
-				</div>
-				<div
-					class="allocation-sum"
-					class:valid={isValidAllocation}
-					class:invalid={!isValidAllocation}
-				>
-					Suma części rynkowej: {marketSum}%
-					{#if isValidAllocation}
-						<span class="check">✓</span>
-					{:else}
-						<span class="warning">⚠️</span>
-					{/if}
-				</div>
+			<div class="card preset-tonal-primary p-3 flex justify-between items-center flex-wrap gap-2">
+				<div class="text-sm">Pozostało do zgromadzenia:</div>
+				<div class="text-lg font-bold">{formatPLN(remainingCapital)}</div>
 			</div>
-		</CardContent>
-	</Card>
+		{/if}
+		{#if yearsUntilRetirement > 0}
+			<div class="card preset-tonal-primary p-3 flex justify-between items-center flex-wrap gap-2">
+				<div class="text-sm">Miesięczne oszczędności potrzebne (przy 7% rocznie):</div>
+				<div class="text-lg font-bold">{formatPLN(monthlySavingsNeeded)}</div>
+			</div>
+		{:else if currentAge > 0}
+			<div class="card preset-tonal-primary p-3 text-sm">Już w wieku emerytalnym</div>
+		{/if}
+	</div>
 
-	<Card>
-		<CardHeader>
-			<CardTitle>📈 Metryki</CardTitle>
-		</CardHeader>
-		<CardContent>
-			<div class="form-group">
-				<label for="monthly-expenses">Miesięczne wydatki (PLN)</label>
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header>
+			<h3 class="h3 flex items-center gap-2">
+				<PieChart size={20} /> Docelowa alokacja inwestycyjna
+			</h3>
+		</header>
+
+		<section class="space-y-3 pb-4 border-b border-surface-200-800">
+			<h4 class="h5 flex items-center gap-2"><Home size={18} /> Nieruchomości</h4>
+			<label class="label">
+				<span class="font-semibold text-sm">Nieruchomości (%)</span>
 				<input
-					id="monthly-expenses"
+					id="allocation-real-estate"
 					type="number"
 					min="0"
-					step="100"
-					bind:value={monthlyExpenses}
+					max="100"
+					bind:value={allocationRealEstate}
 					class="input"
 				/>
-				<div class="field-hint">Używane do obliczenia miesięcy funduszu awaryjnego</div>
-			</div>
-			<div class="form-group">
-				<label for="monthly-mortgage">Miesięczna rata hipoteki (PLN)</label>
+			</label>
+		</section>
+
+		<section class="space-y-3">
+			<h4 class="h5 flex items-center gap-2"><TrendingUp size={18} /> Część rynkowa</h4>
+			<label class="label">
+				<span class="font-semibold text-sm">Akcje (%)</span>
 				<input
-					id="monthly-mortgage"
+					id="allocation-stocks"
 					type="number"
 					min="0"
-					step="100"
-					bind:value={monthlyMortgagePayment}
+					max="100"
+					bind:value={allocationStocks}
 					class="input"
 				/>
-				<div class="field-hint">Używane do obliczenia czasu spłaty hipoteki</div>
+			</label>
+			<label class="label">
+				<span class="font-semibold text-sm">Obligacje (%)</span>
+				<input
+					id="allocation-bonds"
+					type="number"
+					min="0"
+					max="100"
+					bind:value={allocationBonds}
+					class="input"
+				/>
+			</label>
+			<label class="label">
+				<span class="font-semibold text-sm">Złoto (%)</span>
+				<input
+					id="allocation-gold"
+					type="number"
+					min="0"
+					max="100"
+					bind:value={allocationGold}
+					class="input"
+				/>
+			</label>
+			<label class="label">
+				<span class="font-semibold text-sm">Surowce (%)</span>
+				<input
+					id="allocation-commodities"
+					type="number"
+					min="0"
+					max="100"
+					bind:value={allocationCommodities}
+					class="input"
+				/>
+			</label>
+
+			<div
+				class="card p-3 font-semibold flex items-center gap-2 {isValidAllocation
+					? 'preset-filled-success-500'
+					: 'preset-filled-error-500'}"
+			>
+				Suma części rynkowej: {marketSum}%
+				{#if isValidAllocation}
+					<CheckCircle2 size={16} />
+				{:else}
+					<AlertTriangle size={16} />
+				{/if}
 			</div>
-		</CardContent>
-	</Card>
+		</section>
+	</div>
+
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header>
+			<h3 class="h3 flex items-center gap-2"><Gauge size={20} /> Metryki</h3>
+		</header>
+
+		<label class="label">
+			<span class="font-semibold text-sm">Miesięczne wydatki (PLN)</span>
+			<input
+				id="monthly-expenses"
+				type="number"
+				min="0"
+				step="100"
+				bind:value={monthlyExpenses}
+				class="input"
+			/>
+			<span class="text-xs italic text-surface-700-300"
+				>Używane do obliczenia miesięcy funduszu awaryjnego</span
+			>
+		</label>
+
+		<label class="label">
+			<span class="font-semibold text-sm">Miesięczna rata hipoteki (PLN)</span>
+			<input
+				id="monthly-mortgage"
+				type="number"
+				min="0"
+				step="100"
+				bind:value={monthlyMortgagePayment}
+				class="input"
+			/>
+			<span class="text-xs italic text-surface-700-300"
+				>Używane do obliczenia czasu spłaty hipoteki</span
+			>
+		</label>
+	</div>
 
 	{#if error}
-		<div class="error-message">{error}</div>
+		<div class="card preset-filled-error-500 p-3 text-sm">{error}</div>
 	{/if}
 
-	<button class="save-button" on:click={saveConfig} disabled={!isValidAllocation || saving}>
+	<button
+		type="button"
+		class="btn preset-filled-primary-500 w-full sm:w-auto"
+		on:click={saveConfig}
+		disabled={!isValidAllocation || saving}
+	>
 		{saving ? 'Zapisywanie...' : 'Zapisz konfigurację'}
 	</button>
 </div>
-
-<style>
-	.container {
-		max-width: 800px;
-		margin: 0 auto;
-		padding: var(--size-4);
-	}
-
-	h1 {
-		margin-bottom: var(--size-4);
-		font-size: var(--font-size-5);
-		color: var(--color-text);
-	}
-
-	.info-banner {
-		background: rgba(136, 192, 208, 0.1);
-		border: 1px solid var(--nord8);
-		border-radius: var(--radius-2);
-		padding: var(--size-3);
-		margin-bottom: var(--size-4);
-		color: var(--nord10);
-	}
-
-	.form-group {
-		margin-bottom: var(--size-3);
-	}
-
-	label {
-		display: block;
-		margin-bottom: var(--size-2);
-		font-weight: var(--font-weight-6);
-		color: var(--color-text);
-	}
-
-	.input {
-		width: 100%;
-		padding: var(--size-3);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-2);
-		font-size: var(--font-size-2);
-		background: var(--color-bg);
-		color: var(--color-text);
-		font-family: inherit;
-		transition: all 0.2s;
-		min-height: var(--tap-target-min);
-	}
-
-	.input:focus {
-		outline: none;
-		border-color: var(--color-primary);
-		box-shadow: 0 0 0 2px rgba(94, 129, 172, 0.2);
-	}
-
-	.allocation-sum {
-		margin-top: var(--size-4);
-		padding: var(--size-3);
-		border-radius: var(--radius-2);
-		font-weight: var(--font-weight-6);
-		display: flex;
-		align-items: center;
-		gap: var(--size-2);
-	}
-
-	.allocation-sum.valid {
-		background: rgba(163, 190, 140, 0.15);
-		color: var(--color-success);
-		border: 1px solid var(--color-success);
-	}
-
-	.allocation-sum.invalid {
-		background: rgba(191, 97, 106, 0.15);
-		color: var(--color-error);
-		border: 1px solid var(--color-error);
-	}
-
-	.check {
-		color: var(--color-success);
-	}
-
-	.warning {
-		color: var(--color-error);
-	}
-
-	.error-message {
-		background: rgba(191, 97, 106, 0.15);
-		border: 1px solid var(--color-error);
-		border-radius: var(--radius-2);
-		padding: var(--size-3);
-		margin-top: var(--size-4);
-		color: var(--color-error);
-	}
-
-	.save-button {
-		margin-top: var(--size-4);
-		padding: var(--size-3) var(--size-5);
-		background: var(--color-primary);
-		color: var(--nord6);
-		border: none;
-		border-radius: var(--radius-2);
-		font-size: var(--font-size-2);
-		font-weight: var(--font-weight-6);
-		cursor: pointer;
-		transition: all 0.2s;
-		min-height: var(--tap-target-min);
-	}
-
-	.save-button:hover:not(:disabled) {
-		background: var(--nord9);
-	}
-
-	.save-button:disabled {
-		background: var(--nord4);
-		cursor: not-allowed;
-		opacity: 0.6;
-	}
-
-	.calculated-info {
-		margin-top: var(--size-4);
-		padding: var(--size-3);
-		background: rgba(143, 188, 187, 0.1);
-		border: 1px solid var(--nord7);
-		border-radius: var(--radius-2);
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
-
-	.info-label {
-		color: var(--color-text);
-		font-weight: var(--font-weight-5);
-		font-size: var(--font-size-2);
-	}
-
-	.info-value {
-		color: var(--nord10);
-		font-weight: var(--font-weight-7);
-		font-size: var(--font-size-4);
-	}
-
-	.field-hint {
-		margin-top: var(--size-1);
-		font-size: var(--font-size-1);
-		color: var(--color-text-secondary);
-		font-style: italic;
-	}
-
-	.allocation-section {
-		margin-bottom: var(--size-5);
-		padding-bottom: var(--size-4);
-		border-bottom: 1px solid var(--color-border);
-	}
-
-	.allocation-section:last-of-type {
-		border-bottom: none;
-	}
-
-	.section-title {
-		font-size: var(--font-size-3);
-		font-weight: var(--font-weight-6);
-		color: var(--color-text);
-		margin-bottom: var(--size-3);
-	}
-
-	@media (max-width: 640px) {
-		.container {
-			padding: var(--size-3);
-		}
-
-		.save-button {
-			width: 100%;
-		}
-
-		.calculated-info {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: var(--size-2);
-		}
-	}
-</style>

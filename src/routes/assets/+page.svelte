@@ -1,13 +1,7 @@
 <script lang="ts">
-	import {
-		Card,
-		CardHeader,
-		CardTitle,
-		CardContent,
-		Modal,
-		Table,
-		formatPLN
-	} from '@mskalski/home-ui';
+	import Modal from '$lib/components/Modal.svelte';
+	import { formatPLN } from '$lib/utils/format';
+	import { Home, Pencil, Plus, Trash2 } from 'lucide-svelte';
 	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
 	import type { Asset } from './+page';
@@ -36,21 +30,14 @@
 		editingAsset = null;
 	}
 
-	let formData = {
-		name: ''
-	};
-
+	let formData = { name: '' };
 	let error = '';
 	let saving = false;
 
 	$: if (editingAsset) {
-		formData = {
-			name: editingAsset.name
-		};
+		formData = { name: editingAsset.name };
 	} else if (showForm) {
-		formData = {
-			name: ''
-		};
+		formData = { name: '' };
 	}
 
 	async function handleSubmit() {
@@ -99,9 +86,7 @@
 		if (!assetToDelete) return;
 
 		try {
-			const response = await fetch(`${apiUrl}/api/assets/${assetToDelete}`, {
-				method: 'DELETE'
-			});
+			const response = await fetch(`${apiUrl}/api/assets/${assetToDelete}`, { method: 'DELETE' });
 
 			if (!response.ok) {
 				throw new Error('Failed to delete asset');
@@ -124,75 +109,116 @@
 	<title>Majątek | Finansowa Forteca</title>
 </svelte:head>
 
-<div class="page-header">
-	<div>
-		<h1 class="page-title">Majątek</h1>
-		<p class="page-description">Zarządzaj majątkiem fizycznym (nieruchomości, pojazdy, sprzęt)</p>
+<div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+	<div class="space-y-1">
+		<h1 class="h2">Majątek</h1>
+		<p class="text-surface-700-300 text-sm">
+			Zarządzaj majątkiem fizycznym (nieruchomości, pojazdy, sprzęt)
+		</p>
 	</div>
-	<button class="btn btn-primary" on:click={startCreate}>+ Nowy Majątek</button>
+	<button
+		type="button"
+		class="btn preset-filled-primary-500 w-full sm:w-auto gap-2"
+		on:click={startCreate}
+	>
+		<Plus size={16} />
+		Nowy Majątek
+	</button>
 </div>
 
-{#if showForm}
-	<Card>
-		<CardHeader>
-			<CardTitle>{editingAsset ? '✏️ Edytuj Majątek' : '➕ Nowy Majątek'}</CardTitle>
-		</CardHeader>
-		<CardContent>
-			<form on:submit|preventDefault={handleSubmit} class="asset-form">
+<div class="space-y-4">
+	{#if showForm}
+		<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+			<header>
+				<h3 class="h3 flex items-center gap-2">
+					{#if editingAsset}
+						<Pencil size={20} /> Edytuj Majątek
+					{:else}
+						<Plus size={20} /> Nowy Majątek
+					{/if}
+				</h3>
+			</header>
+			<form class="space-y-4" on:submit|preventDefault={handleSubmit}>
 				{#if error}
-					<div class="error-message">{error}</div>
+					<div class="card preset-filled-error-500 p-3 text-sm">{error}</div>
 				{/if}
 
-				<div class="form-group">
-					<label for="name">Nazwa</label>
+				<label class="label">
+					<span class="font-semibold text-sm">Nazwa</span>
 					<input
 						type="text"
-						id="name"
+						class="input"
 						bind:value={formData.name}
 						required
 						placeholder="np. Mieszkanie Poznań, Rower"
 					/>
-				</div>
+				</label>
 
-				<div class="form-actions">
-					<button type="button" class="btn btn-secondary" on:click={cancelForm} disabled={saving}>
-						Anuluj
-					</button>
-					<button type="submit" class="btn btn-primary" disabled={saving}>
+				<div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+					<button
+						type="button"
+						class="btn preset-tonal-surface"
+						on:click={cancelForm}
+						disabled={saving}>Anuluj</button
+					>
+					<button type="submit" class="btn preset-filled-primary-500" disabled={saving}>
 						{saving ? 'Zapisywanie...' : editingAsset ? 'Zapisz zmiany' : 'Utwórz majątek'}
 					</button>
 				</div>
 			</form>
-		</CardContent>
-	</Card>
-{/if}
+		</div>
+	{/if}
 
-<Card>
-	<CardHeader>
-		<CardTitle>🏠 Majątek</CardTitle>
-	</CardHeader>
-	<CardContent>
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header>
+			<h3 class="h3 flex items-center gap-2"><Home size={20} /> Majątek</h3>
+		</header>
+
 		{#if data.assets.length === 0}
-			<div class="empty-state">
+			<div class="text-center py-12 text-surface-700-300">
 				<p>Brak majątku</p>
 			</div>
 		{:else}
-			<Table headers={['Nazwa', 'Wartość', 'Akcje']} mobileCardView class="assets-table">
-				{#each data.assets as asset}
-					<tr>
-						<td data-label="Nazwa" class="name-cell">{asset.name}</td>
-						<td data-label="Wartość" class="value-cell">{formatPLN(asset.current_value)}</td>
-						<td data-label="Akcje" class="actions-cell">
-							<button class="btn-icon tap-target" on:click={() => startEdit(asset)}>✏️</button>
-							<button class="btn-icon tap-target" on:click={() => handleDelete(asset.id)}>🗑️</button
-							>
-						</td>
-					</tr>
-				{/each}
-			</Table>
+			<div class="table-wrap">
+				<table class="table table-hover">
+					<thead>
+						<tr>
+							<th>Nazwa</th>
+							<th>Wartość</th>
+							<th class="text-right">Akcje</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each data.assets as asset}
+							<tr>
+								<td class="font-medium">{asset.name}</td>
+								<td class="font-semibold text-primary-600-400">{formatPLN(asset.current_value)}</td>
+								<td class="text-right whitespace-nowrap">
+									<button
+										type="button"
+										class="btn-icon btn-icon-sm"
+										aria-label="Edytuj"
+										on:click={() => startEdit(asset)}
+									>
+										<Pencil size={16} />
+									</button>
+									<button
+										type="button"
+										class="btn-icon btn-icon-sm"
+										aria-label="Usuń"
+										on:click={() => handleDelete(asset.id)}
+									>
+										<Trash2 size={16} />
+									</button>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
 		{/if}
-	</CardContent>
-</Card>
+	</div>
+</div>
 
 <Modal
 	open={showDeleteModal}
@@ -200,193 +226,8 @@
 	onConfirm={confirmDelete}
 	onCancel={cancelDelete}
 	confirmText="Usuń"
+	confirmVariant="danger"
 >
-	<p>Czy na pewno chcesz usunąć ten majątek?</p>
-	<p>Operacja ta ustawi majątek jako nieaktywny.</p>
+	<p class="mb-2">Czy na pewno chcesz usunąć ten majątek?</p>
+	<p class="text-sm text-surface-700-300">Operacja ta ustawi majątek jako nieaktywny.</p>
 </Modal>
-
-<style>
-	.page-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		margin-bottom: var(--size-6);
-	}
-
-	.page-title {
-		font-size: var(--font-size-6);
-		font-weight: var(--font-weight-7);
-		color: var(--color-text);
-		margin: 0 0 var(--size-2) 0;
-	}
-
-	.page-description {
-		color: var(--color-text-secondary);
-		font-size: var(--font-size-2);
-		margin: 0;
-	}
-
-	.btn {
-		padding: var(--size-3) var(--size-5);
-		border: none;
-		border-radius: var(--radius-2);
-		font-weight: var(--font-weight-6);
-		font-size: var(--font-size-2);
-		cursor: pointer;
-		transition: all 0.2s;
-	}
-
-	.btn-primary {
-		background: var(--color-primary);
-		color: var(--nord6);
-	}
-
-	.btn-primary:hover {
-		background: var(--nord9);
-	}
-
-	.btn-icon {
-		background: transparent;
-		border: none;
-		cursor: pointer;
-		font-size: var(--font-size-3);
-		padding: var(--size-2);
-		transition: transform 0.2s;
-	}
-
-	.btn-icon:hover {
-		transform: scale(1.2);
-	}
-
-	.empty-state {
-		text-align: center;
-		padding: var(--size-8) var(--size-4);
-		color: var(--color-text-secondary);
-	}
-
-	.table-container {
-		overflow-x: auto;
-	}
-
-	.assets-table {
-		width: 100%;
-		border-collapse: collapse;
-	}
-
-	.assets-table thead {
-		border-bottom: 2px solid var(--color-border);
-	}
-
-	.assets-table th {
-		text-align: left;
-		padding: var(--size-3) var(--size-4);
-		font-weight: var(--font-weight-6);
-		color: var(--color-text);
-		font-size: var(--font-size-2);
-	}
-
-	.assets-table tbody tr {
-		border-bottom: 1px solid var(--color-border);
-		transition: background-color 0.2s;
-	}
-
-	.assets-table tbody tr:hover {
-		background-color: var(--color-accent);
-	}
-
-	.assets-table td {
-		padding: var(--size-4);
-		font-size: var(--font-size-2);
-	}
-
-	.name-cell {
-		font-weight: var(--font-weight-6);
-		color: var(--color-text);
-	}
-
-	.value-cell {
-		font-weight: var(--font-weight-6);
-		color: var(--color-primary);
-	}
-
-	.actions-cell {
-		text-align: right;
-	}
-
-	.asset-form {
-		display: flex;
-		flex-direction: column;
-		gap: var(--size-5);
-	}
-
-	.form-group {
-		display: flex;
-		flex-direction: column;
-		gap: var(--size-2);
-	}
-
-	.form-group label {
-		font-weight: var(--font-weight-6);
-		color: var(--color-text);
-		font-size: var(--font-size-2);
-	}
-
-	.form-group input {
-		padding: var(--size-3);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-2);
-		background: var(--color-background);
-		color: var(--color-text);
-		font-size: var(--font-size-2);
-	}
-
-	.form-group input:focus {
-		outline: none;
-		border-color: var(--color-primary);
-	}
-
-	.form-actions {
-		display: flex;
-		gap: var(--size-3);
-		justify-content: flex-end;
-	}
-
-	.btn-secondary {
-		background: transparent;
-		color: var(--color-text);
-		border: 1px solid var(--color-border);
-	}
-
-	.btn-secondary:hover {
-		background: var(--color-accent);
-	}
-
-	.error-message {
-		padding: var(--size-3);
-		background: var(--nord11);
-		color: var(--nord6);
-		border-radius: var(--radius-2);
-		font-size: var(--font-size-2);
-	}
-
-	@media (max-width: 768px) {
-		.page-header {
-			flex-direction: column;
-			gap: var(--size-4);
-		}
-	}
-
-	@media (max-width: 640px) {
-		.page-header .btn {
-			width: 100%;
-		}
-
-		.form-actions {
-			flex-direction: column-reverse;
-		}
-
-		.form-actions .btn {
-			width: 100%;
-		}
-	}
-</style>
