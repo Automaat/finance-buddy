@@ -22,7 +22,7 @@
 		"@testing-library/svelte": "^5.3.1",
 		"@vitest/coverage-v8": "^4.0.17",
 		"jsdom": "^29.0.0",
-		"oxlint": "1.60.0",
+		"oxlint": "1.62.0",
 		"postcss": "^8.4.41",
 		"prettier": "3.8.2",
 		"prettier-plugin-svelte": "3.5.1",
