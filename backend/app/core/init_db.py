@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from decimal import Decimal
 from pathlib import Path
@@ -88,10 +89,20 @@ def _seed_defaults() -> None:
         db.close()
 
 
-def init_db() -> None:
+def _init_db_sync() -> None:
     _run_migrations()
     _seed_defaults()
 
 
+async def init_db() -> None:
+    """Async-first database initialization for the app lifespan.
+
+    Migrations and seeding run on the synchronous SQLAlchemy/Alembic stack,
+    so the blocking work is offloaded to a worker thread to keep the startup
+    event loop responsive.
+    """
+    await asyncio.to_thread(_init_db_sync)
+
+
 if __name__ == "__main__":
-    init_db()
+    asyncio.run(init_db())

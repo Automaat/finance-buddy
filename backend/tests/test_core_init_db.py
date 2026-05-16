@@ -1,3 +1,4 @@
+import asyncio
 from unittest.mock import MagicMock, patch
 
 from app.core.database import Base
@@ -11,7 +12,7 @@ def test_init_db_runs_migrations_then_seeds():
         patch("app.core.init_db._run_migrations") as mock_migrations,
         patch("app.core.init_db._seed_defaults") as mock_seed,
     ):
-        init_db()
+        asyncio.run(init_db())
 
         mock_migrations.assert_called_once_with()
         mock_seed.assert_called_once_with()
