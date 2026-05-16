@@ -3,6 +3,9 @@
 	import { env } from '$env/dynamic/public';
 	import { Wallet, Umbrella, TrendingUp, Home, CreditCard } from 'lucide-svelte';
 	import type { Account, Asset, SnapshotResponse } from '$lib/types';
+	import NewAccountModal from './snapshot/NewAccountModal.svelte';
+	import NewAssetModal from './snapshot/NewAssetModal.svelte';
+	import ValueRow from './snapshot/ValueRow.svelte';
 
 	export let editingSnapshot: SnapshotResponse | null = null;
 	export let assets: Account[];
@@ -367,22 +370,22 @@
 		installment: 'Raty'
 	};
 
-	function closeModalsOnEscape(event: KeyboardEvent) {
-		if (event.key !== 'Escape') return;
+	function accountMeta(account: Account): string {
+		return `(${categoryLabels[account.category] || account.category})`;
+	}
+
+	function liabilityMeta(account: Account): string {
+		return `(${categoryLabels[account.category]})`;
+	}
+
+	function closeNewAccountModal() {
 		showNewAccountForm = false;
+	}
+
+	function closeNewAssetModal() {
 		showNewAssetForm = false;
 	}
-
-	function closeNewAccountModal(event: MouseEvent) {
-		if (event.target === event.currentTarget) showNewAccountForm = false;
-	}
-
-	function closeNewAssetModal(event: MouseEvent) {
-		if (event.target === event.currentTarget) showNewAssetForm = false;
-	}
 </script>
-
-<svelte:window on:keydown={closeModalsOnEscape} />
 
 <form on:submit|preventDefault={handleSubmit} class="snapshot-form">
 	<!-- Date & Notes -->
@@ -416,32 +419,13 @@
 		</header>
 		<div class="space-y-4">
 			{#each financialAccounts.filter((a) => visibleAccountIds.has(a.id)) as account}
-				<div class="form-group-with-remove">
-					<div class="form-group">
-						<label for="account-{account.id}" class="form-label">
-							{account.name}
-							<span class="label-meta"
-								>({categoryLabels[account.category] || account.category})</span
-							>
-						</label>
-						<input
-							id="account-{account.id}"
-							type="number"
-							step="0.01"
-							bind:value={accountValues[account.id]}
-							placeholder="0.00"
-							class="form-input"
-						/>
-					</div>
-					<button
-						type="button"
-						class="btn-remove"
-						on:click={() => removeAccount(account.id)}
-						title="Usuń pole"
-					>
-						×
-					</button>
-				</div>
+				<ValueRow
+					inputId="account-{account.id}"
+					label={account.name}
+					meta={accountMeta(account)}
+					bind:value={accountValues[account.id]}
+					onRemove={() => removeAccount(account.id)}
+				/>
 			{/each}
 
 			<div class="add-account">
@@ -485,32 +469,13 @@
 				{#each retirementByWrapper as group}
 					<h3 class="wrapper-subheading">{group.wrapper}</h3>
 					{#each group.accounts.filter((a) => visibleAccountIds.has(a.id)) as account}
-						<div class="form-group-with-remove">
-							<div class="form-group">
-								<label for="account-{account.id}" class="form-label">
-									{account.name}
-									<span class="label-meta"
-										>({categoryLabels[account.category] || account.category})</span
-									>
-								</label>
-								<input
-									id="account-{account.id}"
-									type="number"
-									step="0.01"
-									bind:value={accountValues[account.id]}
-									placeholder="0.00"
-									class="form-input"
-								/>
-							</div>
-							<button
-								type="button"
-								class="btn-remove"
-								on:click={() => removeAccount(account.id)}
-								title="Usuń pole"
-							>
-								×
-							</button>
-						</div>
+						<ValueRow
+							inputId="account-{account.id}"
+							label={account.name}
+							meta={accountMeta(account)}
+							bind:value={accountValues[account.id]}
+							onRemove={() => removeAccount(account.id)}
+						/>
 					{/each}
 				{/each}
 
@@ -551,32 +516,13 @@
 		</header>
 		<div class="space-y-4">
 			{#each investmentAccounts.filter((a) => visibleAccountIds.has(a.id)) as account}
-				<div class="form-group-with-remove">
-					<div class="form-group">
-						<label for="account-{account.id}" class="form-label">
-							{account.name}
-							<span class="label-meta"
-								>({categoryLabels[account.category] || account.category})</span
-							>
-						</label>
-						<input
-							id="account-{account.id}"
-							type="number"
-							step="0.01"
-							bind:value={accountValues[account.id]}
-							placeholder="0.00"
-							class="form-input"
-						/>
-					</div>
-					<button
-						type="button"
-						class="btn-remove"
-						on:click={() => removeAccount(account.id)}
-						title="Usuń pole"
-					>
-						×
-					</button>
-				</div>
+				<ValueRow
+					inputId="account-{account.id}"
+					label={account.name}
+					meta={accountMeta(account)}
+					bind:value={accountValues[account.id]}
+					onRemove={() => removeAccount(account.id)}
+				/>
 			{/each}
 
 			<div class="add-account">
@@ -617,56 +563,22 @@
 		</header>
 		<div class="space-y-4">
 			{#each majatekAccounts.filter((a) => visibleAccountIds.has(a.id)) as account}
-				<div class="form-group-with-remove">
-					<div class="form-group">
-						<label for="account-{account.id}" class="form-label">
-							{account.name}
-							<span class="label-meta"
-								>({categoryLabels[account.category] || account.category})</span
-							>
-						</label>
-						<input
-							id="account-{account.id}"
-							type="number"
-							step="0.01"
-							bind:value={accountValues[account.id]}
-							placeholder="0.00"
-							class="form-input"
-						/>
-					</div>
-					<button
-						type="button"
-						class="btn-remove"
-						on:click={() => removeAccount(account.id)}
-						title="Usuń pole"
-					>
-						×
-					</button>
-				</div>
+				<ValueRow
+					inputId="account-{account.id}"
+					label={account.name}
+					meta={accountMeta(account)}
+					bind:value={accountValues[account.id]}
+					onRemove={() => removeAccount(account.id)}
+				/>
 			{/each}
 
 			{#each physicalAssets.filter((a) => visibleAssetIds.has(a.id)) as asset}
-				<div class="form-group-with-remove">
-					<div class="form-group">
-						<label for="asset-{asset.id}" class="form-label">{asset.name}</label>
-						<input
-							id="asset-{asset.id}"
-							type="number"
-							step="0.01"
-							bind:value={assetValues[asset.id]}
-							placeholder="0.00"
-							class="form-input"
-						/>
-					</div>
-					<button
-						type="button"
-						class="btn-remove"
-						on:click={() => removeAsset(asset.id)}
-						title="Usuń pole"
-					>
-						×
-					</button>
-				</div>
+				<ValueRow
+					inputId="asset-{asset.id}"
+					label={asset.name}
+					bind:value={assetValues[asset.id]}
+					onRemove={() => removeAsset(asset.id)}
+				/>
 			{/each}
 
 			<div class="add-account">
@@ -716,30 +628,13 @@
 			</header>
 			<div class="space-y-4">
 				{#each liabilities.filter((a) => visibleAccountIds.has(a.id)) as account}
-					<div class="form-group-with-remove">
-						<div class="form-group">
-							<label for="account-{account.id}" class="form-label">
-								{account.name}
-								<span class="label-meta">({categoryLabels[account.category]})</span>
-							</label>
-							<input
-								id="account-{account.id}"
-								type="number"
-								step="0.01"
-								bind:value={accountValues[account.id]}
-								placeholder="0.00"
-								class="form-input"
-							/>
-						</div>
-						<button
-							type="button"
-							class="btn-remove"
-							on:click={() => removeAccount(account.id)}
-							title="Usuń pole"
-						>
-							×
-						</button>
-					</div>
+					<ValueRow
+						inputId="account-{account.id}"
+						label={account.name}
+						meta={liabilityMeta(account)}
+						bind:value={accountValues[account.id]}
+						onRemove={() => removeAccount(account.id)}
+					/>
 				{/each}
 
 				<div class="add-account">
@@ -774,187 +669,29 @@
 
 	<!-- New Account Modal -->
 	{#if showNewAccountForm}
-		<div class="modal-overlay" role="presentation" on:click={closeNewAccountModal}>
-			<div
-				class="modal"
-				role="dialog"
-				aria-modal="true"
-				aria-labelledby="new-account-modal-title"
-				tabindex="-1"
-			>
-				<div class="modal-header">
-					<h2 id="new-account-modal-title">Dodaj nowe konto</h2>
-					<button
-						type="button"
-						class="btn-close"
-						on:click={() => (showNewAccountForm = false)}
-						title="Zamknij"
-					>
-						×
-					</button>
-				</div>
-				<div class="modal-content">
-					<div class="form-group">
-						<label for="newAccountName" class="form-label">Nazwa konta *</label>
-						<input
-							id="newAccountName"
-							type="text"
-							bind:value={newAccountName}
-							placeholder="np. Konto oszczędnościowe"
-							class="form-input"
-							required
-						/>
-					</div>
-
-					<div class="form-group">
-						<label for="newAccountCategory" class="form-label">Kategoria *</label>
-						<select id="newAccountCategory" bind:value={newAccountCategory} class="form-input">
-							{#if newAccountSection === 'financial'}
-								<option value="bank">Konto bankowe</option>
-								<option value="saving_account">Konto oszczędnościowe</option>
-							{:else if newAccountSection === 'retirement'}
-								<option value="stock">Akcje</option>
-								<option value="bond">Obligacje</option>
-								<option value="fund">Fundusz</option>
-								<option value="etf">ETF</option>
-								<option value="ppk">PPK</option>
-							{:else if newAccountSection === 'investment'}
-								<option value="stock">Akcje</option>
-								<option value="bond">Obligacje</option>
-								<option value="fund">Fundusz</option>
-								<option value="etf">ETF</option>
-								<option value="gold">Złoto</option>
-								<option value="other">Inne</option>
-							{:else if newAccountSection === 'majatek'}
-								<option value="real_estate">Nieruchomości</option>
-								<option value="vehicle">Pojazd</option>
-								<option value="other">Inne</option>
-							{:else}
-								<option value="mortgage">Hipoteka</option>
-								<option value="installment">Raty</option>
-								<option value="other">Inne</option>
-							{/if}
-						</select>
-					</div>
-
-					{#if newAccountSection === 'retirement'}
-						<div class="form-group">
-							<label for="newAccountWrapper" class="form-label">Wrapper *</label>
-							<select id="newAccountWrapper" bind:value={newAccountWrapper} class="form-input">
-								<option value="IKE">IKE</option>
-								<option value="IKZE">IKZE</option>
-								<option value="PPK">PPK</option>
-							</select>
-						</div>
-					{/if}
-
-					<div class="form-group">
-						<label for="newAccountOwner" class="form-label">Właściciel</label>
-						<select id="newAccountOwner" bind:value={newAccountOwner} class="form-input">
-							{#each personas as persona}
-								<option value={persona.name}>{persona.name}</option>
-							{/each}
-						</select>
-					</div>
-
-					<div class="form-group">
-						<label for="newAccountValue" class="form-label">Wartość początkowa</label>
-						<input
-							id="newAccountValue"
-							type="number"
-							step="0.01"
-							bind:value={newAccountValue}
-							placeholder="0.00"
-							class="form-input"
-						/>
-					</div>
-				</div>
-				<div class="modal-footer">
-					<button
-						type="button"
-						class="btn btn-secondary"
-						on:click={() => (showNewAccountForm = false)}
-					>
-						Anuluj
-					</button>
-					<button
-						type="button"
-						class="btn btn-primary"
-						disabled={creatingAccount}
-						on:click={createNewAccount}
-					>
-						{creatingAccount ? 'Tworzenie...' : 'Utwórz konto'}
-					</button>
-				</div>
-			</div>
-		</div>
+		<NewAccountModal
+			section={newAccountSection}
+			bind:name={newAccountName}
+			bind:category={newAccountCategory}
+			bind:wrapper={newAccountWrapper}
+			bind:owner={newAccountOwner}
+			bind:value={newAccountValue}
+			creating={creatingAccount}
+			{personas}
+			onCreate={createNewAccount}
+			onClose={closeNewAccountModal}
+		/>
 	{/if}
 
 	<!-- New Asset Modal -->
 	{#if showNewAssetForm}
-		<div class="modal-overlay" role="presentation" on:click={closeNewAssetModal}>
-			<div
-				class="modal"
-				role="dialog"
-				aria-modal="true"
-				aria-labelledby="new-asset-modal-title"
-				tabindex="-1"
-			>
-				<div class="modal-header">
-					<h2 id="new-asset-modal-title">Dodaj nowy majątek</h2>
-					<button
-						type="button"
-						class="btn-close"
-						on:click={() => (showNewAssetForm = false)}
-						title="Zamknij"
-					>
-						×
-					</button>
-				</div>
-				<div class="modal-content">
-					<div class="form-group">
-						<label for="newAssetName" class="form-label">Nazwa *</label>
-						<input
-							id="newAssetName"
-							type="text"
-							bind:value={newAssetName}
-							placeholder="np. Mieszkanie Poznań, Rower"
-							class="form-input"
-							required
-						/>
-					</div>
-
-					<div class="form-group">
-						<label for="newAssetValue" class="form-label">Wartość początkowa</label>
-						<input
-							id="newAssetValue"
-							type="number"
-							step="0.01"
-							bind:value={newAssetValue}
-							placeholder="0.00"
-							class="form-input"
-						/>
-					</div>
-				</div>
-				<div class="modal-footer">
-					<button
-						type="button"
-						class="btn btn-secondary"
-						on:click={() => (showNewAssetForm = false)}
-					>
-						Anuluj
-					</button>
-					<button
-						type="button"
-						class="btn btn-primary"
-						disabled={creatingAsset}
-						on:click={createNewAsset}
-					>
-						{creatingAsset ? 'Tworzenie...' : 'Utwórz majątek'}
-					</button>
-				</div>
-			</div>
-		</div>
+		<NewAssetModal
+			bind:name={newAssetName}
+			bind:value={newAssetValue}
+			creating={creatingAsset}
+			onCreate={createNewAsset}
+			onClose={closeNewAssetModal}
+		/>
 	{/if}
 
 	<!-- Error Message -->
@@ -1081,43 +818,6 @@
 		background: var(--color-accent);
 	}
 
-	.form-group-with-remove {
-		display: flex;
-		gap: var(--size-2);
-		align-items: flex-start;
-		margin-bottom: var(--size-4);
-	}
-
-	.form-group-with-remove .form-group {
-		flex: 1;
-		margin-bottom: 0;
-	}
-
-	.btn-remove {
-		flex-shrink: 0;
-		width: var(--tap-target-min);
-		height: var(--tap-target-min);
-		margin-top: 28px;
-		padding: 0;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-2);
-		background: transparent;
-		color: var(--color-text-secondary);
-		font-size: var(--font-size-4);
-		line-height: 1;
-		cursor: pointer;
-		transition: all 0.2s;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.btn-remove:hover {
-		background: var(--nord11);
-		color: var(--nord6);
-		border-color: var(--nord11);
-	}
-
 	.add-account {
 		margin-top: var(--size-4);
 		padding: var(--size-3);
@@ -1180,78 +880,6 @@
 		color: var(--nord6);
 	}
 
-	.modal-overlay {
-		position: fixed;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background: rgba(0, 0, 0, 0.5);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 1000;
-		padding: var(--size-4);
-	}
-
-	.modal {
-		background: var(--color-bg);
-		border-radius: var(--radius-2);
-		max-width: 500px;
-		width: 100%;
-		box-shadow: var(--shadow-6);
-	}
-
-	.modal-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: var(--size-4);
-		border-bottom: 1px solid var(--color-border);
-	}
-
-	.modal-header h2 {
-		margin: 0;
-		font-size: var(--font-size-4);
-		font-weight: var(--font-weight-7);
-		color: var(--color-text);
-	}
-
-	.btn-close {
-		width: var(--tap-target-min);
-		height: var(--tap-target-min);
-		padding: 0;
-		border: none;
-		background: transparent;
-		color: var(--color-text-secondary);
-		font-size: var(--font-size-5);
-		line-height: 1;
-		cursor: pointer;
-		transition: all 0.2s;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.btn-close:hover {
-		color: var(--nord11);
-	}
-
-	.modal-content {
-		padding: var(--size-4);
-	}
-
-	.modal-footer {
-		display: flex;
-		gap: var(--size-3);
-		padding: var(--size-4);
-		border-top: 1px solid var(--color-border);
-	}
-
-	.modal-footer .btn {
-		flex: 1;
-	}
-
 	@media (max-width: 640px) {
 		.button-group {
 			flex-direction: column-reverse;
@@ -1260,10 +888,6 @@
 		.button-group .btn {
 			width: 100%;
 			flex: none;
-		}
-
-		.btn-remove {
-			margin-top: 32px;
 		}
 	}
 </style>
