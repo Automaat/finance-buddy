@@ -3,5 +3,29 @@
   "extends": [
     "config:recommended"
   ],
-  "reviewers": ["Automaat"]
+  "reviewers": ["Automaat"],
+  "packageRules": [
+    {
+      "description": "Group the Svelte / Vite / Vitest toolchain",
+      "groupName": "svelte toolchain",
+      "matchPackageNames": [
+        "/^svelte/",
+        "/^@sveltejs\\//",
+        "/^vite/",
+        "/^@vitest\\//"
+      ]
+    },
+    {
+      "description": "Group the FastAPI / Pydantic / SQLAlchemy backend stack",
+      "groupName": "fastapi stack",
+      "matchPackageNames": [
+        "fastapi",
+        "starlette",
+        "uvicorn",
+        "alembic",
+        "/^pydantic/",
+        "/^sqlalchemy/"
+      ]
+    }
+  ]
 }
