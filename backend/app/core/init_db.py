@@ -4,6 +4,8 @@ import sys
 from decimal import Decimal
 from pathlib import Path
 
+from sqlalchemy import func, select
+
 from app.core.database import Base, SessionLocal, engine
 from app.core.enums import Wrapper
 
@@ -69,7 +71,7 @@ def init_db() -> None:
     # Seed default personas if none exist
     db = SessionLocal()
     try:
-        if db.query(Persona).count() == 0:
+        if db.scalar(select(func.count()).select_from(Persona)) == 0:
             default_personas = [
                 Persona(
                     name="Marcin",
@@ -86,8 +88,8 @@ def init_db() -> None:
             db.commit()
 
         # Seed default retirement limits if none exist
-        if db.query(RetirementLimit).count() == 0:
-            personas = db.query(Persona).all()
+        if db.scalar(select(func.count()).select_from(RetirementLimit)) == 0:
+            personas = db.execute(select(Persona)).scalars().all()
             defaults = []
             for persona in personas:
                 defaults.append(

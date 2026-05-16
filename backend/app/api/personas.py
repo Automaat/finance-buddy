@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -18,7 +19,7 @@ router = APIRouter(prefix="/api/personas", tags=["personas"])
 
 @router.get("", response_model=list[PersonaResponse])
 def list_personas(db: Annotated[Session, Depends(get_db)]) -> list[PersonaResponse]:
-    personas = db.query(Persona).order_by(Persona.name).all()
+    personas = db.execute(select(Persona).order_by(Persona.name)).scalars().all()
     return [PersonaResponse.model_validate(p, from_attributes=True) for p in personas]
 
 
@@ -43,7 +44,7 @@ def create_persona(data: PersonaCreate, db: Annotated[Session, Depends(get_db)])
 def update_persona(
     persona_id: int, data: PersonaUpdate, db: Annotated[Session, Depends(get_db)]
 ) -> PersonaResponse:
-    persona = db.query(Persona).filter(Persona.id == persona_id).first()
+    persona = db.execute(select(Persona).where(Persona.id == persona_id)).scalar_one_or_none()
     if not persona:
         raise HTTPException(status_code=404, detail="Persona not found")
 
@@ -58,14 +59,20 @@ def update_persona(
 
     try:
         if data.name is not None and data.name != old_name:
-            db.query(Account).filter(Account.owner == old_name).update({"owner": data.name})
-            db.query(Transaction).filter(Transaction.owner == old_name).update({"owner": data.name})
-            db.query(SalaryRecord).filter(SalaryRecord.owner == old_name).update(
-                {"owner": data.name}
+            db.execute(update(Account).where(Account.owner == old_name).values(owner=data.name))
+            db.execute(
+                update(Transaction).where(Transaction.owner == old_name).values(owner=data.name)
             )
-            db.query(DebtPayment).filter(DebtPayment.owner == old_name).update({"owner": data.name})
-            db.query(RetirementLimit).filter(RetirementLimit.owner == old_name).update(
-                {"owner": data.name}
+            db.execute(
+                update(SalaryRecord).where(SalaryRecord.owner == old_name).values(owner=data.name)
+            )
+            db.execute(
+                update(DebtPayment).where(DebtPayment.owner == old_name).values(owner=data.name)
+            )
+            db.execute(
+                update(RetirementLimit)
+                .where(RetirementLimit.owner == old_name)
+                .values(owner=data.name)
             )
         db.commit()
         db.refresh(persona)
@@ -77,25 +84,37 @@ def update_persona(
 
 @router.delete("/{persona_id}", status_code=204)
 def delete_persona(persona_id: int, db: Annotated[Session, Depends(get_db)]) -> None:
-    persona = db.query(Persona).filter(Persona.id == persona_id).first()
+    persona = db.execute(select(Persona).where(Persona.id == persona_id)).scalar_one_or_none()
     if not persona:
         raise HTTPException(status_code=404, detail="Persona not found")
 
     conflicts: list[str] = []
-    account_count = db.query(Account).filter(Account.owner == persona.name).count()
-    if account_count > 0:
+    account_count = db.scalar(
+        select(func.count()).select_from(Account).where(Account.owner == persona.name)
+    )
+    if account_count:
         conflicts.append(f"{account_count} account(s)")
-    transaction_count = db.query(Transaction).filter(Transaction.owner == persona.name).count()
-    if transaction_count > 0:
+    transaction_count = db.scalar(
+        select(func.count()).select_from(Transaction).where(Transaction.owner == persona.name)
+    )
+    if transaction_count:
         conflicts.append(f"{transaction_count} transaction(s)")
-    salary_count = db.query(SalaryRecord).filter(SalaryRecord.owner == persona.name).count()
-    if salary_count > 0:
+    salary_count = db.scalar(
+        select(func.count()).select_from(SalaryRecord).where(SalaryRecord.owner == persona.name)
+    )
+    if salary_count:
         conflicts.append(f"{salary_count} salary record(s)")
-    payment_count = db.query(DebtPayment).filter(DebtPayment.owner == persona.name).count()
-    if payment_count > 0:
+    payment_count = db.scalar(
+        select(func.count()).select_from(DebtPayment).where(DebtPayment.owner == persona.name)
+    )
+    if payment_count:
         conflicts.append(f"{payment_count} debt payment(s)")
-    limit_count = db.query(RetirementLimit).filter(RetirementLimit.owner == persona.name).count()
-    if limit_count > 0:
+    limit_count = db.scalar(
+        select(func.count())
+        .select_from(RetirementLimit)
+        .where(RetirementLimit.owner == persona.name)
+    )
+    if limit_count:
         conflicts.append(f"{limit_count} retirement limit(s)")
 
     if conflicts:
