@@ -1,4 +1,3 @@
-import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -26,8 +25,8 @@ from app.core.init_db import init_db
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    # Startup: Initialize database tables
-    await asyncio.to_thread(init_db)
+    # Startup: initialize the database schema (migrations + seeding)
+    await init_db()
     yield
     # Shutdown: cleanup if needed
 
