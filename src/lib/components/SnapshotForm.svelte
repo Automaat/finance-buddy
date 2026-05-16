@@ -366,7 +366,23 @@
 		mortgage: 'Hipoteka',
 		installment: 'Raty'
 	};
+
+	function closeModalsOnEscape(event: KeyboardEvent) {
+		if (event.key !== 'Escape') return;
+		showNewAccountForm = false;
+		showNewAssetForm = false;
+	}
+
+	function closeNewAccountModal(event: MouseEvent) {
+		if (event.target === event.currentTarget) showNewAccountForm = false;
+	}
+
+	function closeNewAssetModal(event: MouseEvent) {
+		if (event.target === event.currentTarget) showNewAssetForm = false;
+	}
 </script>
+
+<svelte:window on:keydown={closeModalsOnEscape} />
 
 <form on:submit|preventDefault={handleSubmit} class="snapshot-form">
 	<!-- Date & Notes -->
@@ -758,10 +774,16 @@
 
 	<!-- New Account Modal -->
 	{#if showNewAccountForm}
-		<div class="modal-overlay" on:click={() => (showNewAccountForm = false)}>
-			<div class="modal" role="dialog" on:click|stopPropagation>
+		<div class="modal-overlay" role="presentation" on:click={closeNewAccountModal}>
+			<div
+				class="modal"
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="new-account-modal-title"
+				tabindex="-1"
+			>
 				<div class="modal-header">
-					<h2>Dodaj nowe konto</h2>
+					<h2 id="new-account-modal-title">Dodaj nowe konto</h2>
 					<button
 						type="button"
 						class="btn-close"
@@ -870,10 +892,16 @@
 
 	<!-- New Asset Modal -->
 	{#if showNewAssetForm}
-		<div class="modal-overlay" on:click={() => (showNewAssetForm = false)}>
-			<div class="modal" role="dialog" on:click|stopPropagation>
+		<div class="modal-overlay" role="presentation" on:click={closeNewAssetModal}>
+			<div
+				class="modal"
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="new-asset-modal-title"
+				tabindex="-1"
+			>
 				<div class="modal-header">
-					<h2>Dodaj nowy majątek</h2>
+					<h2 id="new-asset-modal-title">Dodaj nowy majątek</h2>
 					<button
 						type="button"
 						class="btn-close"

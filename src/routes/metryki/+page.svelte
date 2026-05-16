@@ -1057,11 +1057,6 @@
 		border-color: var(--green-6);
 	}
 
-	.rebalancing-item.sell {
-		background: rgba(191, 97, 106, 0.1);
-		border-color: var(--red-6);
-	}
-
 	.action-label {
 		font-weight: var(--font-weight-7);
 		min-width: 120px;
@@ -1069,10 +1064,6 @@
 
 	.rebalancing-item.buy .action-label {
 		color: var(--green-6);
-	}
-
-	.rebalancing-item.sell .action-label {
-		color: var(--red-6);
 	}
 
 	.category-name {

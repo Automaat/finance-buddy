@@ -25,12 +25,8 @@
 		children
 	}: Props = $props();
 
-	function handleBackdropClick() {
-		onCancel?.();
-	}
-
-	function handleDialogClick(event: MouseEvent) {
-		event.stopPropagation();
+	function handleBackdropClick(event: MouseEvent) {
+		if (event.target === event.currentTarget) onCancel?.();
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
@@ -56,7 +52,6 @@
 			aria-modal="true"
 			aria-labelledby="modal-title"
 			tabindex="-1"
-			onclick={handleDialogClick}
 		>
 			<header class="flex items-center justify-between px-5 py-4 border-b border-surface-200-800">
 				<h2 id="modal-title" class="h4 font-bold">{title}</h2>
