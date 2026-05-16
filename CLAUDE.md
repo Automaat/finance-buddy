@@ -2,9 +2,11 @@
 
 Self-hosted personal finance dashboard for tracking net worth, goals, and investments. Replaces "Finansowa Forteca.xlsx" spreadsheet with automated tracking and visualizations.
 
-**Tech Stack:** SvelteKit 2.49, TypeScript 5.9, FastAPI, Python 3.14, SQLAlchemy 2.0, pandas 2.3, PostgreSQL 18
+**Tech Stack:** SvelteKit 2.60, Svelte 5 (runes), TypeScript 6, FastAPI, Python 3.14, SQLAlchemy 2.0, pandas 2.3, PostgreSQL 18
 
 **Purpose:** Track Polish personal finance (IKE/IKZE/PPK retirement accounts), monitor net worth trends, manage financial goals, analyze asset allocation.
+
+> Version numbers below are indicative. `package.json` and `backend/pyproject.toml` are the single source of truth - check them when exact versions matter.
 
 ---
 
@@ -64,8 +66,8 @@ Self-hosted personal finance dashboard for tracking net worth, goals, and invest
 
 ### Code Style
 
-- **Formatter:** prettier 3.8.0
-- **Linter:** oxlint 1.39.0
+- **Formatter:** prettier 3.8
+- **Linter:** oxlint 1.65
 - **Naming:** camelCase (variables/functions), PascalCase (components), kebab-case (CSS classes)
 - **Type safety:** Strict TypeScript, no `any` type
 - **Indentation:** Tabs (Svelte convention)
@@ -174,7 +176,7 @@ describe('calculateMonthsRemaining', () => {
 
 - **Formatter:** ruff format
 - **Linter:** ruff check (line-length: 100, target py3.12+)
-- **Type checker:** pyrefly 0.48.1
+- **Type checker:** pyrefly 1.0
 - **Naming:** snake_case (functions/variables), PascalCase (classes)
 - **Type hints:** Required for all functions
 - **Indentation:** 4 spaces
