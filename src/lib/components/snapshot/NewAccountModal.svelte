@@ -1,16 +1,31 @@
 <script lang="ts">
 	type NewAccountSection = 'financial' | 'retirement' | 'investment' | 'majatek' | 'liabilities';
 
-	export let section: NewAccountSection;
-	export let name = '';
-	export let category = '';
-	export let wrapper: '' | 'PPK' | 'IKE' | 'IKZE' = '';
-	export let owner = '';
-	export let value = 0;
-	export let creating = false;
-	export let personas: Array<{ id: number; name: string }> = [];
-	export let onCreate: () => void;
-	export let onClose: () => void;
+	interface Props {
+		section: NewAccountSection;
+		name?: string;
+		category?: string;
+		wrapper?: '' | 'PPK' | 'IKE' | 'IKZE';
+		owner?: string;
+		value?: number;
+		creating?: boolean;
+		personas?: Array<{ id: number; name: string }>;
+		onCreate: () => void;
+		onClose: () => void;
+	}
+
+	let {
+		section,
+		name = $bindable(''),
+		category = $bindable(''),
+		wrapper = $bindable(''),
+		owner = $bindable(''),
+		value = $bindable(0),
+		creating = false,
+		personas = [],
+		onCreate,
+		onClose
+	}: Props = $props();
 
 	function closeOnBackdrop(event: MouseEvent) {
 		if (event.target === event.currentTarget) onClose();
@@ -21,9 +36,9 @@
 	}
 </script>
 
-<svelte:window on:keydown={closeOnEscape} />
+<svelte:window onkeydown={closeOnEscape} />
 
-<div class="modal-overlay" role="presentation" on:click={closeOnBackdrop}>
+<div class="modal-overlay" role="presentation" onclick={closeOnBackdrop}>
 	<div
 		class="modal"
 		role="dialog"
@@ -33,7 +48,7 @@
 	>
 		<div class="modal-header">
 			<h2 id="new-account-modal-title">Dodaj nowe konto</h2>
-			<button type="button" class="btn-close" on:click={onClose} title="Zamknij"> × </button>
+			<button type="button" class="btn-close" onclick={onClose} title="Zamknij"> × </button>
 		</div>
 		<div class="modal-content">
 			<div class="form-group">
@@ -112,8 +127,8 @@
 			</div>
 		</div>
 		<div class="modal-footer">
-			<button type="button" class="btn btn-secondary" on:click={onClose}> Anuluj </button>
-			<button type="button" class="btn btn-primary" disabled={creating} on:click={onCreate}>
+			<button type="button" class="btn btn-secondary" onclick={onClose}> Anuluj </button>
+			<button type="button" class="btn btn-primary" disabled={creating} onclick={onCreate}>
 				{creating ? 'Tworzenie...' : 'Utwórz konto'}
 			</button>
 		</div>

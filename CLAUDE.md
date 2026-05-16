@@ -96,6 +96,17 @@ Self-hosted personal finance dashboard for tracking net worth, goals, and invest
 - OpenProps CSS variables: `var(--size-4)`, `var(--color-text-1)`
 - ECharts for visualizations (see src/routes/+page.svelte)
 
+### Svelte 5 Runes (mandatory — no legacy syntax)
+
+- **Props:** `let { foo, bar = default }: Props = $props()` with typed `interface Props`. Pages: `data: PageData` from `./$types`.
+- **State:** reassigned UI-driving locals use `$state(...)`. Bare `let` only for non-reactive values (e.g. `bind:this` refs read only in `onMount`).
+- **Derived:** `const x = $derived(expr)` for pure computed values; `$derived.by(() => {...})` for multi-statement.
+- **Effects:** `$effect(() => {...})` for side effects. Never read+write the same state inside one effect (infinite loop).
+- **Events:** attributes not directives — `onclick={fn}`, `onsubmit={fn}`. No modifiers: call `event.preventDefault()` inside the handler.
+- **Bindable:** child-written props need `$bindable(default)` (e.g. snapshot modal `bind:` props).
+- **One-time prop reads** in `$state(...)` initializers: wrap in `untrack(() => ...)` to avoid `state_referenced_locally`.
+- `Modal.svelte` and snapshot modals are reference runes implementations.
+
 ### Error Handling
 
 ```typescript

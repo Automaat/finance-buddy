@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import * as echarts from 'echarts';
 	import type { EChartsOption } from 'echarts';
 	import Modal from '$lib/components/Modal.svelte';
@@ -17,27 +17,34 @@
 	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
 	import type { Persona } from '$lib/types/personas';
+	import type { PageData } from './$types';
 
-	export let data;
+	interface Props {
+		data: PageData;
+	}
 
-	let chartContainer: HTMLDivElement;
-	let pieChartContainer: HTMLDivElement;
-	let lineChart: echarts.ECharts;
-	let pieChart: echarts.ECharts;
+	let { data }: Props = $props();
 
-	$: gridConfig = $isMobile
-		? { left: '40px', right: '20px' }
-		: $isTablet
-			? { left: '60px', right: '30px' }
-			: { left: '80px', right: '40px' };
+	let chartContainer: HTMLDivElement | undefined = $state();
+	let pieChartContainer: HTMLDivElement | undefined = $state();
+	let lineChart: echarts.ECharts | undefined = $state();
+	let pieChart: echarts.ECharts | undefined = $state();
 
-	$: titleFontSize = $isMobile ? 14 : 16;
+	const gridConfig = $derived(
+		$isMobile
+			? { left: '40px', right: '20px' }
+			: $isTablet
+				? { left: '60px', right: '30px' }
+				: { left: '80px', right: '40px' }
+	);
 
-	$: personas = (data.personas || []) as Persona[];
+	const titleFontSize = $derived($isMobile ? 14 : 16);
 
-	let showLimitsModal = false;
-	let limitsYear = data.currentYear;
-	let limits: Record<string, number> = {};
+	const personas = $derived((data.personas || []) as Persona[]);
+
+	let showLimitsModal = $state(false);
+	let limitsYear = $state(untrack(() => data.currentYear));
+	let limits: Record<string, number> = $state({});
 
 	function openLimitsModal() {
 		limits = {};
@@ -96,6 +103,7 @@
 	}
 
 	onMount(() => {
+		if (!chartContainer || !pieChartContainer) return;
 		lineChart = echarts.init(chartContainer);
 
 		const lineOption: EChartsOption = {
@@ -177,8 +185,8 @@
 		pieChart.setOption(pieOption);
 
 		const handleResize = () => {
-			lineChart.resize();
-			pieChart.resize();
+			lineChart?.resize();
+			pieChart?.resize();
 		};
 
 		window.addEventListener('resize', handleResize);
@@ -188,23 +196,26 @@
 		};
 	});
 
-	const change = calculateChange(
-		data.current_net_worth,
-		data.current_net_worth - data.change_vs_last_month
+	const change = $derived(
+		calculateChange(data.current_net_worth, data.current_net_worth - data.change_vs_last_month)
 	);
 
-	$: if (lineChart && gridConfig) {
-		lineChart.setOption({
-			grid: gridConfig,
-			title: { textStyle: { fontSize: titleFontSize } }
-		});
-	}
+	$effect(() => {
+		if (lineChart && gridConfig) {
+			lineChart.setOption({
+				grid: gridConfig,
+				title: { textStyle: { fontSize: titleFontSize } }
+			});
+		}
+	});
 
-	$: if (pieChart && titleFontSize) {
-		pieChart.setOption({
-			title: { textStyle: { fontSize: titleFontSize } }
-		});
-	}
+	$effect(() => {
+		if (pieChart && titleFontSize) {
+			pieChart.setOption({
+				title: { textStyle: { fontSize: titleFontSize } }
+			});
+		}
+	});
 </script>
 
 <svelte:head>
@@ -266,7 +277,7 @@
 					type="button"
 					class="btn-icon btn-icon-sm"
 					aria-label="Konfiguruj limity"
-					on:click={openLimitsModal}
+					onclick={openLimitsModal}
 				>
 					<Settings size={18} />
 				</button>
@@ -343,7 +354,13 @@
 	onConfirm={saveLimits}
 	confirmText="Zapisz"
 >
-	<form on:submit|preventDefault={saveLimits} class="space-y-4">
+	<form
+		onsubmit={(event) => {
+			event.preventDefault();
+			saveLimits();
+		}}
+		class="space-y-4"
+	>
 		<label class="label">
 			<span class="font-semibold text-sm">Rok</span>
 			<select class="select" bind:value={limitsYear}>

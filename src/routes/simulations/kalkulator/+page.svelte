@@ -2,7 +2,11 @@
 	import SalaryCalculator from '$lib/components/SalaryCalculator.svelte';
 	import type { SalaryRecord } from '$lib/types/salaries';
 
-	export let data: { latestSalaries: SalaryRecord[] };
+	interface Props {
+		data: { latestSalaries: SalaryRecord[] };
+	}
+
+	let { data }: Props = $props();
 </script>
 
 <SalaryCalculator {data} />

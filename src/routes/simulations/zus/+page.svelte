@@ -1,22 +1,26 @@
 <script lang="ts">
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
 	import { browser } from '$app/environment';
 	import { env } from '$env/dynamic/public';
 	import * as echarts from 'echarts';
 	import type { EChartsOption } from 'echarts';
 
-	export let data: {
-		prefill: {
-			birth_date: string | null;
-			retirement_age: number;
-			gender: string;
-			current_gross_monthly_salary: number | null;
-			owner: string | null;
-			salary_history: { year: number; annual_gross: number }[];
-			work_start_year: number | null;
+	interface Props {
+		data: {
+			prefill: {
+				birth_date: string | null;
+				retirement_age: number;
+				gender: string;
+				current_gross_monthly_salary: number | null;
+				owner: string | null;
+				salary_history: { year: number; annual_gross: number }[];
+				work_start_year: number | null;
+			};
+			personas: { name: string }[];
 		};
-		personas: { name: string }[];
-	};
+	}
+
+	let { data }: Props = $props();
 
 	interface ZusYearlyProjection {
 		year: number;
@@ -54,26 +58,28 @@
 	}
 
 	// Form state
-	let owner = data.prefill.owner ?? data.personas[0]?.name ?? '';
-	let birthDate = data.prefill.birth_date ?? '';
-	let gender = data.prefill.gender ?? 'M';
-	let retirementAge = data.prefill.retirement_age ?? 65;
-	let currentGrossMonthly = data.prefill.current_gross_monthly_salary ?? 10000;
-	let salaryGrowthRate = 3.0;
-	let inflationRate = 3.0;
-	let valorizationKonto = 5.0;
-	let valorizationSubkonto = 4.0;
-	let hasOfe = false;
-	let kapitalPoczatkowy = 0;
-	let workStartYear = data.prefill.work_start_year ?? 2015;
+	let owner = $state(untrack(() => data.prefill.owner ?? data.personas[0]?.name ?? ''));
+	let birthDate = $state(untrack(() => data.prefill.birth_date ?? ''));
+	let gender = $state(untrack(() => data.prefill.gender ?? 'M'));
+	let retirementAge = $state(untrack(() => data.prefill.retirement_age ?? 65));
+	let currentGrossMonthly = $state(
+		untrack(() => data.prefill.current_gross_monthly_salary ?? 10000)
+	);
+	let salaryGrowthRate = $state(3.0);
+	let inflationRate = $state(3.0);
+	let valorizationKonto = $state(5.0);
+	let valorizationSubkonto = $state(4.0);
+	let hasOfe = $state(false);
+	let kapitalPoczatkowy = $state(0);
+	let workStartYear = $state(untrack(() => data.prefill.work_start_year ?? 2015));
 
 	// Results
-	let results: ZusCalculatorResponse | null = null;
-	let loading = false;
-	let error = '';
+	let results: ZusCalculatorResponse | null = $state(null);
+	let loading = $state(false);
+	let error = $state('');
 
 	// Chart
-	let chartContainer: HTMLDivElement;
+	let chartContainer: HTMLDivElement | undefined = $state();
 	let chart: echarts.ECharts | null = null;
 
 	async function runCalculation() {
@@ -295,7 +301,7 @@
 				</details>
 			{/if}
 
-			<button class="primary-button" on:click={runCalculation} disabled={loading}>
+			<button class="primary-button" onclick={runCalculation} disabled={loading}>
 				{loading ? 'Obliczanie...' : 'Oblicz emeryturę'}
 			</button>
 

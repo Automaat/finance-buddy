@@ -5,15 +5,20 @@
 	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
 	import type { Asset } from './+page';
+	import type { PageData } from './$types';
 
-	export let data;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 
 	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
 
-	let showForm = false;
-	let editingAsset: Asset | null = null;
-	let showDeleteModal = false;
-	let assetToDelete: number | null = null;
+	let showForm = $state(false);
+	let editingAsset: Asset | null = $state(null);
+	let showDeleteModal = $state(false);
+	let assetToDelete: number | null = $state(null);
 
 	function startCreate() {
 		editingAsset = null;
@@ -30,15 +35,17 @@
 		editingAsset = null;
 	}
 
-	let formData = { name: '' };
-	let error = '';
-	let saving = false;
+	let formData = $state({ name: '' });
+	let error = $state('');
+	let saving = $state(false);
 
-	$: if (editingAsset) {
-		formData = { name: editingAsset.name };
-	} else if (showForm) {
-		formData = { name: '' };
-	}
+	$effect(() => {
+		if (editingAsset) {
+			formData = { name: editingAsset.name };
+		} else if (showForm) {
+			formData = { name: '' };
+		}
+	});
 
 	async function handleSubmit() {
 		error = '';
@@ -119,7 +126,7 @@
 	<button
 		type="button"
 		class="btn preset-filled-primary-500 w-full sm:w-auto gap-2"
-		on:click={startCreate}
+		onclick={startCreate}
 	>
 		<Plus size={16} />
 		Nowy Majątek
@@ -138,7 +145,13 @@
 					{/if}
 				</h3>
 			</header>
-			<form class="space-y-4" on:submit|preventDefault={handleSubmit}>
+			<form
+				class="space-y-4"
+				onsubmit={(event) => {
+					event.preventDefault();
+					handleSubmit();
+				}}
+			>
 				{#if error}
 					<div class="card preset-filled-error-500 p-3 text-sm">{error}</div>
 				{/if}
@@ -158,7 +171,7 @@
 					<button
 						type="button"
 						class="btn preset-tonal-surface"
-						on:click={cancelForm}
+						onclick={cancelForm}
 						disabled={saving}>Anuluj</button
 					>
 					<button type="submit" class="btn preset-filled-primary-500" disabled={saving}>
@@ -198,7 +211,7 @@
 										type="button"
 										class="btn-icon btn-icon-sm"
 										aria-label="Edytuj"
-										on:click={() => startEdit(asset)}
+										onclick={() => startEdit(asset)}
 									>
 										<Pencil size={16} />
 									</button>
@@ -206,7 +219,7 @@
 										type="button"
 										class="btn-icon btn-icon-sm"
 										aria-label="Usuń"
-										on:click={() => handleDelete(asset.id)}
+										onclick={() => handleDelete(asset.id)}
 									>
 										<Trash2 size={16} />
 									</button>

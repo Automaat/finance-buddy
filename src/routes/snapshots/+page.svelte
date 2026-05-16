@@ -2,8 +2,13 @@
 	import { goto } from '$app/navigation';
 	import { formatPLN } from '$lib/utils/format';
 	import { Plus, Camera, Pencil } from 'lucide-svelte';
+	import type { PageData } from './$types';
 
-	export let data;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 </script>
 
 <svelte:head>
@@ -18,7 +23,7 @@
 	<button
 		type="button"
 		class="btn preset-filled-primary-500 w-full sm:w-auto gap-2"
-		on:click={() => goto('/snapshots/new')}
+		onclick={() => goto('/snapshots/new')}
 	>
 		<Plus size={16} />
 		Nowy Snapshot
@@ -33,11 +38,7 @@
 	{#if data.snapshots.length === 0}
 		<div class="text-center py-12 space-y-4 text-surface-700-300">
 			<p>Brak zapisanych snapshotów</p>
-			<button
-				type="button"
-				class="btn preset-tonal-primary"
-				on:click={() => goto('/snapshots/new')}
-			>
+			<button type="button" class="btn preset-tonal-primary" onclick={() => goto('/snapshots/new')}>
 				Utwórz pierwszy snapshot
 			</button>
 		</div>
@@ -70,7 +71,7 @@
 								<button
 									type="button"
 									class="btn btn-sm preset-tonal-primary gap-1"
-									on:click={() => goto(`/snapshots/${snapshot.id}/edit`)}
+									onclick={() => goto(`/snapshots/${snapshot.id}/edit`)}
 									title="Edytuj snapshot"
 								>
 									<Pencil size={14} />

@@ -1,9 +1,19 @@
 <script lang="ts">
-	export let name = '';
-	export let value = 0;
-	export let creating = false;
-	export let onCreate: () => void;
-	export let onClose: () => void;
+	interface Props {
+		name?: string;
+		value?: number;
+		creating?: boolean;
+		onCreate: () => void;
+		onClose: () => void;
+	}
+
+	let {
+		name = $bindable(''),
+		value = $bindable(0),
+		creating = false,
+		onCreate,
+		onClose
+	}: Props = $props();
 
 	function closeOnBackdrop(event: MouseEvent) {
 		if (event.target === event.currentTarget) onClose();
@@ -14,9 +24,9 @@
 	}
 </script>
 
-<svelte:window on:keydown={closeOnEscape} />
+<svelte:window onkeydown={closeOnEscape} />
 
-<div class="modal-overlay" role="presentation" on:click={closeOnBackdrop}>
+<div class="modal-overlay" role="presentation" onclick={closeOnBackdrop}>
 	<div
 		class="modal"
 		role="dialog"
@@ -26,7 +36,7 @@
 	>
 		<div class="modal-header">
 			<h2 id="new-asset-modal-title">Dodaj nowy majątek</h2>
-			<button type="button" class="btn-close" on:click={onClose} title="Zamknij"> × </button>
+			<button type="button" class="btn-close" onclick={onClose} title="Zamknij"> × </button>
 		</div>
 		<div class="modal-content">
 			<div class="form-group">
@@ -54,8 +64,8 @@
 			</div>
 		</div>
 		<div class="modal-footer">
-			<button type="button" class="btn btn-secondary" on:click={onClose}> Anuluj </button>
-			<button type="button" class="btn btn-primary" disabled={creating} on:click={onCreate}>
+			<button type="button" class="btn btn-secondary" onclick={onClose}> Anuluj </button>
+			<button type="button" class="btn btn-primary" disabled={creating} onclick={onCreate}>
 				{creating ? 'Tworzenie...' : 'Utwórz majątek'}
 			</button>
 		</div>
