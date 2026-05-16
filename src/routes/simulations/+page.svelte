@@ -3,34 +3,11 @@
 	import { browser } from '$app/environment';
 	import { env } from '$env/dynamic/public';
 	import * as echarts from 'echarts';
-	import type { EChartsOption } from 'echarts';
 	import type { PageData } from './$types';
-
-	interface YearlyProjection {
-		year: number;
-		age: number;
-		annual_contribution: number;
-		balance_end_of_year: number;
-		cumulative_contributions: number;
-		cumulative_returns: number;
-		annual_limit: number;
-		limit_utilized_pct: number;
-		tax_savings: number;
-		government_subsidies?: number;
-		monthly_salary?: number;
-		return_rate?: number;
-	}
-
-	interface AccountSimulation {
-		account_name: string;
-		starting_balance: number;
-		total_contributions: number;
-		total_returns: number;
-		total_tax_savings: number;
-		total_subsidies?: number;
-		final_balance: number;
-		yearly_projections: YearlyProjection[];
-	}
+	import {
+		buildRetirementProjectionOption,
+		type AccountSimulation
+	} from '$lib/utils/charts/simulations';
 
 	interface SimulationSummary {
 		total_final_balance: number;
@@ -251,47 +228,7 @@
 			return;
 		}
 
-		const years = results.simulations[0].yearly_projections.map((p) => p.year);
-		const series = results.simulations.map((sim, idx) => {
-			const colors = ['#5E81AC', '#81A1C1', '#88C0D0', '#8FBCBB', '#B48EAD', '#A3BE8C'];
-			return {
-				name: sim.account_name,
-				type: 'line' as const,
-				data: sim.yearly_projections.map((p) => p.balance_end_of_year),
-				smooth: true,
-				itemStyle: { color: colors[idx % colors.length] }
-			};
-		});
-
-		const option: EChartsOption = {
-			title: { text: 'Projekcja wartości kont emerytalnych' },
-			tooltip: {
-				trigger: 'axis',
-				formatter: (params: any) => {
-					let result = `<strong>Rok ${params[0].name}</strong><br/>`;
-					params.forEach((param: any) => {
-						result += `${param.seriesName}: ${param.value.toLocaleString('pl-PL')} PLN<br/>`;
-					});
-					return result;
-				}
-			},
-			legend: {
-				data: results.simulations.map((s) => s.account_name),
-				bottom: 0
-			},
-			grid: { left: '3%', right: '4%', bottom: '15%', containLabel: true },
-			xAxis: { type: 'category', data: years, name: 'Rok' },
-			yAxis: {
-				type: 'value',
-				name: 'Wartość (PLN)',
-				axisLabel: {
-					formatter: (value: number) => `${(value / 1000).toFixed(0)}k`
-				}
-			},
-			series
-		};
-
-		chart.setOption(option);
+		chart.setOption(buildRetirementProjectionOption(results.simulations));
 	}
 
 	onMount(() => {
