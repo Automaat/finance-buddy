@@ -3,7 +3,7 @@ from datetime import date
 from decimal import Decimal
 
 from fastapi import HTTPException
-from sqlalchemy import case, extract, func, or_
+from sqlalchemy import case, extract, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models import Account, RetirementLimit, Snapshot, SnapshotValue, Transaction
@@ -21,15 +21,23 @@ def get_yearly_stats(db: Session, year: int, owner: str | None = None) -> list[Y
     """Calculate yearly contribution stats for IKE/IKZE per owner"""
     stats = []
 
-    owners = [owner] if owner else [p.name for p in db.query(Persona).order_by(Persona.name).all()]
+    owners = (
+        [owner]
+        if owner
+        else [p.name for p in db.execute(select(Persona).order_by(Persona.name)).scalars().all()]
+    )
     wrappers = ["IKE", "IKZE"]
 
     for wrapper in wrappers:
         for owner_name in owners:
             # Get all accounts with this wrapper and owner
             accounts = (
-                db.query(Account)
-                .filter(Account.account_wrapper == wrapper, Account.owner == owner_name)
+                db.execute(
+                    select(Account).where(
+                        Account.account_wrapper == wrapper, Account.owner == owner_name
+                    )
+                )
+                .scalars()
                 .all()
             )
             account_ids = [acc.id for acc in accounts]
@@ -38,8 +46,8 @@ def get_yearly_stats(db: Session, year: int, owner: str | None = None) -> list[Y
                 continue
 
             # Aggregate transactions for this year
-            contributions = (
-                db.query(
+            contributions = db.execute(
+                select(
                     func.coalesce(func.sum(Transaction.amount), 0).label("total"),
                     func.coalesce(
                         func.sum(
@@ -59,14 +67,12 @@ def get_yearly_stats(db: Session, year: int, owner: str | None = None) -> list[Y
                         ),
                         0,
                     ).label("employer"),
-                )
-                .filter(
+                ).where(
                     Transaction.account_id.in_(account_ids),
                     extract("year", Transaction.date) == year,
                     Transaction.is_active.is_(True),
                 )
-                .first()
-            )
+            ).first()
 
             total = float(contributions.total if contributions else 0)
             employee = float(contributions.employee if contributions else 0)
@@ -80,12 +86,14 @@ def get_yearly_stats(db: Session, year: int, owner: str | None = None) -> list[Y
 
             # Get limit for this wrapper and owner
             limit = (
-                db.query(RetirementLimit)
-                .filter(
-                    RetirementLimit.year == year,
-                    RetirementLimit.account_wrapper == wrapper,
-                    RetirementLimit.owner == owner_name,
+                db.execute(
+                    select(RetirementLimit).where(
+                        RetirementLimit.year == year,
+                        RetirementLimit.account_wrapper == wrapper,
+                        RetirementLimit.owner == owner_name,
+                    )
                 )
+                .scalars()
                 .first()
             )
 
@@ -118,12 +126,14 @@ def get_or_create_limit(
 ) -> RetirementLimit:
     """Get existing limit or create new one"""
     limit = (
-        db.query(RetirementLimit)
-        .filter(
-            RetirementLimit.year == year,
-            RetirementLimit.account_wrapper == wrapper,
-            RetirementLimit.owner == owner,
+        db.execute(
+            select(RetirementLimit).where(
+                RetirementLimit.year == year,
+                RetirementLimit.account_wrapper == wrapper,
+                RetirementLimit.owner == owner,
+            )
         )
+        .scalars()
         .first()
     )
 
@@ -148,12 +158,14 @@ def update_limit(
 ) -> RetirementLimit:
     """Update existing limit"""
     limit = (
-        db.query(RetirementLimit)
-        .filter(
-            RetirementLimit.year == year,
-            RetirementLimit.account_wrapper == wrapper,
-            RetirementLimit.owner == owner,
+        db.execute(
+            select(RetirementLimit).where(
+                RetirementLimit.year == year,
+                RetirementLimit.account_wrapper == wrapper,
+                RetirementLimit.owner == owner,
+            )
         )
+        .scalars()
         .first()
     )
 
@@ -171,13 +183,19 @@ def update_limit(
 def get_ppk_stats(db: Session, owner: str | None = None) -> list[PPKStatsResponse]:
     """Calculate PPK contribution breakdown and returns per owner"""
     stats = []
-    owners = [owner] if owner else [p.name for p in db.query(Persona).order_by(Persona.name).all()]
+    owners = (
+        [owner]
+        if owner
+        else [p.name for p in db.execute(select(Persona).order_by(Persona.name)).scalars().all()]
+    )
 
     for owner_name in owners:
         # Get all PPK accounts for this owner
         accounts = (
-            db.query(Account)
-            .filter(Account.account_wrapper == "PPK", Account.owner == owner_name)
+            db.execute(
+                select(Account).where(Account.account_wrapper == "PPK", Account.owner == owner_name)
+            )
+            .scalars()
             .all()
         )
 
@@ -187,8 +205,8 @@ def get_ppk_stats(db: Session, owner: str | None = None) -> list[PPKStatsRespons
         account_ids = [acc.id for acc in accounts]
 
         # Aggregate all-time contributions by type
-        contributions = (
-            db.query(
+        contributions = db.execute(
+            select(
                 func.coalesce(
                     func.sum(
                         case(
@@ -233,10 +251,8 @@ def get_ppk_stats(db: Session, owner: str | None = None) -> list[PPKStatsRespons
                     ),
                     0,
                 ).label("government"),
-            )
-            .filter(Transaction.account_id.in_(account_ids), Transaction.is_active.is_(True))
-            .first()
-        )
+            ).where(Transaction.account_id.in_(account_ids), Transaction.is_active.is_(True))
+        ).first()
 
         employee_contrib = float(contributions.employee if contributions else 0)
         employer_contrib = float(contributions.employer if contributions else 0)
@@ -251,18 +267,17 @@ def get_ppk_stats(db: Session, owner: str | None = None) -> list[PPKStatsRespons
 
         # Get latest snapshot date first (subquery for performance)
         max_date_subquery = (
-            db.query(func.max(Snapshot.date))
+            select(func.max(Snapshot.date))
             .join(SnapshotValue, Snapshot.id == SnapshotValue.snapshot_id)
-            .filter(SnapshotValue.account_id.in_(account_ids))
+            .where(SnapshotValue.account_id.in_(account_ids))
             .scalar_subquery()
         )
 
         # Get sum of values for the latest snapshot
-        latest_snapshot_value = (
-            db.query(func.sum(SnapshotValue.value))
+        latest_snapshot_value = db.scalar(
+            select(func.sum(SnapshotValue.value))
             .join(Snapshot, SnapshotValue.snapshot_id == Snapshot.id)
-            .filter(SnapshotValue.account_id.in_(account_ids), Snapshot.date == max_date_subquery)
-            .scalar()
+            .where(SnapshotValue.account_id.in_(account_ids), Snapshot.date == max_date_subquery)
         )
 
         total_value = float(latest_snapshot_value if latest_snapshot_value else 0)
@@ -302,7 +317,7 @@ def generate_ppk_contributions(
         )
 
     # Get PPK rates from Persona table
-    persona = db.query(Persona).filter(Persona.name == data.owner).first()
+    persona = db.execute(select(Persona).where(Persona.name == data.owner)).scalar_one_or_none()
     if not persona:
         raise HTTPException(status_code=404, detail=f"Persona '{data.owner}' not found")
 
@@ -315,13 +330,15 @@ def generate_ppk_contributions(
 
     # Get active PPK account for this owner (receives contributions)
     ppk_account = (
-        db.query(Account)
-        .filter(
-            Account.account_wrapper == "PPK",
-            Account.owner == data.owner,
-            Account.is_active.is_(True),
-            Account.receives_contributions.is_(True),
+        db.execute(
+            select(Account).where(
+                Account.account_wrapper == "PPK",
+                Account.owner == data.owner,
+                Account.is_active.is_(True),
+                Account.receives_contributions.is_(True),
+            )
         )
+        .scalars()
         .first()
     )
 
@@ -335,18 +352,18 @@ def generate_ppk_contributions(
     # Check if contributions already exist for this month
     # DB unique constraint provides ultimate safeguard against race conditions
     last_day = date(data.year, data.month, calendar.monthrange(data.year, data.month)[1])
-    existing_count = (
-        db.query(Transaction)
-        .filter(
+    existing_count = db.scalar(
+        select(func.count())
+        .select_from(Transaction)
+        .where(
             Transaction.account_id == ppk_account.id,
             Transaction.date == last_day,
             Transaction.transaction_type.in_(["employee", "employer"]),
             Transaction.is_active.is_(True),
         )
-        .count()
     )
 
-    if existing_count > 0:
+    if existing_count and existing_count > 0:
         raise HTTPException(
             status_code=409,
             detail=f"Contributions already exist for {data.month}/{data.year}",

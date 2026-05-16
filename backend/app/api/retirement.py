@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -55,7 +56,7 @@ def get_limits_for_year(
     year: int,
 ) -> list[RetirementLimitResponse]:
     """Get all limits for a specific year"""
-    limits = db.query(RetirementLimit).filter(RetirementLimit.year == year).all()
+    limits = db.execute(select(RetirementLimit).where(RetirementLimit.year == year)).scalars().all()
     return [
         RetirementLimitResponse(
             id=limit.id,

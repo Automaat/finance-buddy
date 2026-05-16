@@ -72,10 +72,13 @@ def _calculate_savings_rate(
 
     # Get last 3 salary records
     salaries = (
-        db.query(SalaryRecord)
-        .filter(SalaryRecord.is_active.is_(True))
-        .order_by(SalaryRecord.date.desc())
-        .limit(3)
+        db.execute(
+            select(SalaryRecord)
+            .where(SalaryRecord.is_active.is_(True))
+            .order_by(SalaryRecord.date.desc())
+            .limit(3)
+        )
+        .scalars()
         .all()
     )
 
@@ -93,9 +96,12 @@ def _calculate_savings_rate(
 def _get_latest_active_salary(db: Session) -> SalaryRecord | None:
     """Get latest active salary record."""
     return (
-        db.query(SalaryRecord)
-        .filter(SalaryRecord.is_active.is_(True))
-        .order_by(SalaryRecord.date.desc())
+        db.execute(
+            select(SalaryRecord)
+            .where(SalaryRecord.is_active.is_(True))
+            .order_by(SalaryRecord.date.desc())
+        )
+        .scalars()
         .first()
     )
 
