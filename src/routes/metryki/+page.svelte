@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import * as echarts from 'echarts';
 	import MetricCard from '$lib/components/MetricCard.svelte';
 	import { TrendingUp, CheckCircle2, Lightbulb } from 'lucide-svelte';
@@ -11,7 +11,13 @@
 		buildYearlyRoiChartOption
 	} from '$lib/utils/charts/metryki';
 
-	export let data;
+	import type { PageData } from './$types';
+
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 
 	const {
 		metricCards,
@@ -19,7 +25,7 @@
 		investmentTimeSeries,
 		wrapperTimeSeries,
 		categoryTimeSeries
-	} = data;
+	} = untrack(() => data);
 
 	let allocationChart: HTMLDivElement;
 	let wrapperChart: HTMLDivElement;

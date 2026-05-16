@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { browser } from '$app/environment';
 	import { env } from '$env/dynamic/public';
 	import * as echarts from 'echarts';
@@ -55,17 +55,21 @@
 
 	const SALARY_THRESHOLD_2026 = 5767;
 
-	export let data: PageData;
+	interface Props {
+		data: PageData;
+	}
 
-	$: personas = (data.personas || []) as Array<{ name: string }>;
+	let { data }: Props = $props();
 
-	let currentAge = data.current_age;
-	let retirementAge = data.retirement_age;
+	const personas = $derived((data.personas || []) as Array<{ name: string }>);
+
+	let currentAge = $state(untrack(() => data.current_age));
+	let retirementAge = $state(untrack(() => data.retirement_age));
 
 	// Dynamic IKE/IKZE accounts - one per persona per wrapper
-	let ikeIkzeAccounts: IkeIkzeConfig[] = [];
-	let ppkAccounts: PpkConfig[] = [];
-	let brokerageAccounts: BrokerageConfig[] = [];
+	let ikeIkzeAccounts: IkeIkzeConfig[] = $state([]);
+	let ppkAccounts: PpkConfig[] = $state([]);
+	let brokerageAccounts: BrokerageConfig[] = $state([]);
 
 	function initAccounts() {
 		ikeIkzeAccounts = [];
@@ -108,23 +112,25 @@
 		}
 	}
 
-	$: if (personas.length > 0 && ikeIkzeAccounts.length === 0) {
-		initAccounts();
-	}
+	$effect(() => {
+		if (personas.length > 0 && ikeIkzeAccounts.length === 0) {
+			initAccounts();
+		}
+	});
 
 	// Assumptions
-	let annualReturnRate = 7.0;
-	let limitGrowthRate = 5.0;
-	let expectedSalaryGrowth = 3.0;
-	let inflationRate = 3.0;
+	let annualReturnRate = $state(7.0);
+	let limitGrowthRate = $state(5.0);
+	let expectedSalaryGrowth = $state(3.0);
+	let inflationRate = $state(3.0);
 
 	// Results
-	let results: SimulationResponse | null = null;
-	let loading = false;
-	let error = '';
+	let results: SimulationResponse | null = $state(null);
+	let loading = $state(false);
+	let error = $state('');
 
 	// Chart
-	let chartContainer: HTMLDivElement;
+	let chartContainer: HTMLDivElement | undefined = $state();
 	let chart: echarts.ECharts | null = null;
 
 	async function runSimulation() {
@@ -420,7 +426,7 @@
 				</label>
 			</div>
 
-			<button class="primary-button" on:click={runSimulation} disabled={loading}>
+			<button class="primary-button" onclick={runSimulation} disabled={loading}>
 				{loading ? 'Obliczanie...' : 'Uruchom symulację'}
 			</button>
 

@@ -5,36 +5,42 @@
 	import { env } from '$env/dynamic/public';
 	import { goto, invalidateAll } from '$app/navigation';
 	import type { Persona } from '$lib/types/personas';
+	import { untrack } from 'svelte';
+	import type { PageData } from './$types';
 
-	export let data;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 
 	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
-	$: personas = data.personas as Persona[];
-	$: defaultOwner = personas.length > 0 ? personas[0].name : 'Marcin';
+	const personas = $derived(data.personas as Persona[]);
+	const defaultOwner = $derived(personas.length > 0 ? personas[0].name : 'Marcin');
 
-	let filterAccountId = data.filters.account_id || '';
-	let filterOwner = data.filters.owner || '';
-	let filterDateFrom = data.filters.date_from || '';
-	let filterDateTo = data.filters.date_to || '';
+	let filterAccountId = $state(untrack(() => data.filters.account_id || ''));
+	let filterOwner = $state(untrack(() => data.filters.owner || ''));
+	let filterDateFrom = $state(untrack(() => data.filters.date_from || ''));
+	let filterDateTo = $state(untrack(() => data.filters.date_to || ''));
 
-	let showNewTransactionModal = false;
-	let newTransactionData = {
+	let showNewTransactionModal = $state(false);
+	let newTransactionData = $state({
 		account_id: '',
 		amount: 0,
 		date: new Date().toISOString().split('T')[0],
-		owner: defaultOwner
-	};
-	let transactionError = '';
-	let savingTransaction = false;
+		owner: untrack(() => defaultOwner)
+	});
+	let transactionError = $state('');
+	let savingTransaction = $state(false);
 
-	let showPPKGenerateModal = false;
-	let ppkGenerateData = {
-		owner: defaultOwner,
+	let showPPKGenerateModal = $state(false);
+	let ppkGenerateData = $state({
+		owner: untrack(() => defaultOwner),
 		month: new Date().getMonth() + 1,
 		year: new Date().getFullYear()
-	};
-	let ppkGenerateError = '';
-	let ppkGenerating = false;
+	});
+	let ppkGenerateError = $state('');
+	let ppkGenerating = $state(false);
 
 	function applyFilters() {
 		const params = new URLSearchParams();
@@ -182,14 +188,14 @@
 		<p class="text-surface-700-300 text-sm">Historia transakcji inwestycyjnych</p>
 	</div>
 	<div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-		<button type="button" class="btn preset-tonal-surface gap-2" on:click={openPPKGenerateModal}>
+		<button type="button" class="btn preset-tonal-surface gap-2" onclick={openPPKGenerateModal}>
 			<Landmark size={16} />
 			Generuj wpłaty PPK
 		</button>
 		<button
 			type="button"
 			class="btn preset-filled-primary-500 gap-2"
-			on:click={openNewTransactionModal}
+			onclick={openNewTransactionModal}
 		>
 			<Plus size={16} />
 			Nowa Transakcja
@@ -202,7 +208,13 @@
 		<header>
 			<h3 class="h3 flex items-center gap-2"><Search size={20} /> Filtry</h3>
 		</header>
-		<form class="space-y-4" on:submit|preventDefault={applyFilters}>
+		<form
+			class="space-y-4"
+			onsubmit={(event) => {
+				event.preventDefault();
+				applyFilters();
+			}}
+		>
 			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 				<label class="label">
 					<span class="font-semibold text-sm">Konto</span>
@@ -237,7 +249,7 @@
 
 			<div class="flex flex-col sm:flex-row gap-2">
 				<button type="submit" class="btn preset-filled-primary-500">Filtruj</button>
-				<button type="button" class="btn preset-tonal-surface" on:click={clearFilters}
+				<button type="button" class="btn preset-tonal-surface" onclick={clearFilters}
 					>Wyczyść filtry</button
 				>
 			</div>
@@ -282,7 +294,7 @@
 										type="button"
 										class="btn-icon btn-icon-sm"
 										aria-label="Usuń"
-										on:click={() => deleteTransaction(transaction.account_id, transaction.id)}
+										onclick={() => deleteTransaction(transaction.account_id, transaction.id)}
 									>
 										<Trash2 size={16} />
 									</button>
@@ -304,7 +316,13 @@
 	confirmText={savingTransaction ? 'Zapisywanie...' : 'Dodaj transakcję'}
 	confirmDisabled={savingTransaction}
 >
-	<form on:submit|preventDefault={createTransaction} class="space-y-4">
+	<form
+		onsubmit={(event) => {
+			event.preventDefault();
+			createTransaction();
+		}}
+		class="space-y-4"
+	>
 		{#if transactionError}
 			<div class="card preset-filled-error-500 p-3 text-sm">{transactionError}</div>
 		{/if}
@@ -362,7 +380,13 @@
 	confirmText={ppkGenerating ? 'Generowanie...' : 'Generuj'}
 	confirmDisabled={ppkGenerating}
 >
-	<form on:submit|preventDefault={generatePPKContributions} class="space-y-4">
+	<form
+		onsubmit={(event) => {
+			event.preventDefault();
+			generatePPKContributions();
+		}}
+		class="space-y-4"
+	>
 		{#if ppkGenerateError}
 			<div class="card preset-filled-error-500 p-3 text-sm">{ppkGenerateError}</div>
 		{/if}

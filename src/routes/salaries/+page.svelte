@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import * as echarts from 'echarts';
 	import type { EChartsOption } from 'echarts';
 	import Modal from '$lib/components/Modal.svelte';
@@ -9,30 +9,35 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import type { SalaryRecord } from '$lib/types/salaries';
 	import type { Persona } from '$lib/types/personas';
+	import type { PageData } from './$types';
 
-	export let data;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 
 	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
-	$: personas = data.personas as Persona[];
-	$: defaultOwner = personas.length > 0 ? personas[0].name : 'Marcin';
+	const personas = $derived(data.personas as Persona[]);
+	const defaultOwner = $derived(personas.length > 0 ? personas[0].name : 'Marcin');
 
 	let chartContainer: HTMLDivElement;
 
-	let filterOwner = data.filters.owner || '';
-	let filterDateFrom = data.filters.date_from || '';
-	let filterDateTo = data.filters.date_to || '';
+	let filterOwner = $state(untrack(() => data.filters.owner || ''));
+	let filterDateFrom = $state(untrack(() => data.filters.date_from || ''));
+	let filterDateTo = $state(untrack(() => data.filters.date_to || ''));
 
-	let showNewSalaryModal = false;
-	let editingSalary: SalaryRecord | null = null;
-	let salaryFormData = {
+	let showNewSalaryModal = $state(false);
+	let editingSalary: SalaryRecord | null = $state(null);
+	let salaryFormData = $state({
 		date: new Date().toISOString().split('T')[0],
 		gross_amount: 0,
 		contract_type: 'UOP',
 		company: '',
-		owner: defaultOwner
-	};
-	let salaryError = '';
-	let savingSalary = false;
+		owner: untrack(() => defaultOwner)
+	});
+	let salaryError = $state('');
+	let savingSalary = $state(false);
 
 	function applyFilters() {
 		const params = new URLSearchParams();
@@ -226,7 +231,7 @@
 	<button
 		type="button"
 		class="btn preset-filled-primary-500 w-full sm:w-auto gap-2"
-		on:click={openNewSalaryModal}
+		onclick={openNewSalaryModal}
 	>
 		<Plus size={16} />
 		Nowe Wynagrodzenie
@@ -261,7 +266,13 @@
 		<header>
 			<h3 class="h3 flex items-center gap-2"><Search size={20} /> Filtry</h3>
 		</header>
-		<form class="space-y-4" on:submit|preventDefault={applyFilters}>
+		<form
+			class="space-y-4"
+			onsubmit={(event) => {
+				event.preventDefault();
+				applyFilters();
+			}}
+		>
 			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 				<label class="label">
 					<span class="font-semibold text-sm">Właściciel</span>
@@ -286,7 +297,7 @@
 
 			<div class="flex flex-col sm:flex-row gap-2">
 				<button type="submit" class="btn preset-filled-primary-500">Filtruj</button>
-				<button type="button" class="btn preset-tonal-surface" on:click={clearFilters}
+				<button type="button" class="btn preset-tonal-surface" onclick={clearFilters}
 					>Wyczyść filtry</button
 				>
 			</div>
@@ -327,7 +338,7 @@
 										type="button"
 										class="btn-icon btn-icon-sm"
 										aria-label="Edytuj"
-										on:click={() => openEditSalaryModal(record)}
+										onclick={() => openEditSalaryModal(record)}
 									>
 										<Pencil size={16} />
 									</button>
@@ -335,7 +346,7 @@
 										type="button"
 										class="btn-icon btn-icon-sm"
 										aria-label="Usuń"
-										on:click={() => deleteSalary(record.id)}
+										onclick={() => deleteSalary(record.id)}
 									>
 										<Trash2 size={16} />
 									</button>
@@ -357,7 +368,13 @@
 	confirmText={savingSalary ? 'Zapisywanie...' : 'Zapisz'}
 	confirmDisabled={savingSalary}
 >
-	<form on:submit|preventDefault={saveSalary} class="space-y-4">
+	<form
+		onsubmit={(event) => {
+			event.preventDefault();
+			saveSalary();
+		}}
+		class="space-y-4"
+	>
 		{#if salaryError}
 			<div class="card preset-filled-error-500 p-3 text-sm">{salaryError}</div>
 		{/if}

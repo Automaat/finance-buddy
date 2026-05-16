@@ -13,8 +13,14 @@
 	} from 'lucide-svelte';
 	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
+	import { untrack } from 'svelte';
+	import type { PageData } from './$types';
 
-	export let data;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 
 	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
 
@@ -29,40 +35,51 @@
 		allocation_commodities: 3
 	};
 
-	let birthDate = data.config?.birth_date ?? defaults.birth_date;
-	let retirementAge = data.config?.retirement_age ?? defaults.retirement_age;
-	let retirementMonthlySalary =
-		data.config?.retirement_monthly_salary ?? defaults.retirement_monthly_salary;
-	let allocationRealEstate = data.config?.allocation_real_estate ?? defaults.allocation_real_estate;
-	let allocationStocks = data.config?.allocation_stocks ?? defaults.allocation_stocks;
-	let allocationBonds = data.config?.allocation_bonds ?? defaults.allocation_bonds;
-	let allocationGold = data.config?.allocation_gold ?? defaults.allocation_gold;
-	let allocationCommodities =
-		data.config?.allocation_commodities ?? defaults.allocation_commodities;
-	let monthlyExpenses = data.config?.monthly_expenses ?? 0;
-	let monthlyMortgagePayment = data.config?.monthly_mortgage_payment ?? 0;
+	const config = untrack(() => data.config);
+	let birthDate = $state(config?.birth_date ?? defaults.birth_date);
+	let retirementAge = $state(config?.retirement_age ?? defaults.retirement_age);
+	let retirementMonthlySalary = $state(
+		config?.retirement_monthly_salary ?? defaults.retirement_monthly_salary
+	);
+	let allocationRealEstate = $state(
+		config?.allocation_real_estate ?? defaults.allocation_real_estate
+	);
+	let allocationStocks = $state(config?.allocation_stocks ?? defaults.allocation_stocks);
+	let allocationBonds = $state(config?.allocation_bonds ?? defaults.allocation_bonds);
+	let allocationGold = $state(config?.allocation_gold ?? defaults.allocation_gold);
+	let allocationCommodities = $state(
+		config?.allocation_commodities ?? defaults.allocation_commodities
+	);
+	let monthlyExpenses = $state(config?.monthly_expenses ?? 0);
+	let monthlyMortgagePayment = $state(config?.monthly_mortgage_payment ?? 0);
 
-	let error = '';
-	let saving = false;
+	let error = $state('');
+	let saving = $state(false);
 
-	$: marketSum = allocationStocks + allocationBonds + allocationGold + allocationCommodities;
-	$: isValidAllocation = marketSum === 100;
+	const marketSum = $derived(
+		allocationStocks + allocationBonds + allocationGold + allocationCommodities
+	);
+	const isValidAllocation = $derived(marketSum === 100);
 
-	$: currentAge = birthDate
-		? Math.max(
-				0,
-				Math.floor(
-					(new Date().getTime() - new Date(birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
+	const currentAge = $derived(
+		birthDate
+			? Math.max(
+					0,
+					Math.floor(
+						(new Date().getTime() - new Date(birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
+					)
 				)
-			)
-		: 0;
-	$: yearsUntilRetirement = Math.max(0, retirementAge - currentAge);
+			: 0
+	);
+	const yearsUntilRetirement = $derived(Math.max(0, retirementAge - currentAge));
 
-	$: requiredCapital = retirementMonthlySalary * 12 * 25;
+	const requiredCapital = $derived(retirementMonthlySalary * 12 * 25);
 
-	$: remainingCapital = Math.max(0, requiredCapital - (data.retirementAccountValue ?? 0));
+	const remainingCapital = $derived(
+		Math.max(0, requiredCapital - (data.retirementAccountValue ?? 0))
+	);
 
-	$: monthlySavingsNeeded = (() => {
+	const monthlySavingsNeeded = $derived.by(() => {
 		if (yearsUntilRetirement <= 0) return 0;
 
 		const annualReturnRate = 0.07;
@@ -76,7 +93,7 @@
 		if (adjustedTarget === 0) return 0;
 
 		return (adjustedTarget * monthlyRate) / (Math.pow(1 + monthlyRate, months) - 1);
-	})();
+	});
 
 	async function saveConfig() {
 		if (!isValidAllocation) return;
@@ -321,7 +338,7 @@
 	<button
 		type="button"
 		class="btn preset-filled-primary-500 w-full sm:w-auto"
-		on:click={saveConfig}
+		onclick={saveConfig}
 		disabled={!isValidAllocation || saving}
 	>
 		{saving ? 'Zapisywanie...' : 'Zapisz konfigurację'}

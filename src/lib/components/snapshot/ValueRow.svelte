@@ -1,9 +1,13 @@
 <script lang="ts">
-	export let inputId: string;
-	export let label: string;
-	export let meta = '';
-	export let value: number;
-	export let onRemove: () => void;
+	interface Props {
+		inputId: string;
+		label: string;
+		meta?: string;
+		value: number;
+		onRemove: () => void;
+	}
+
+	let { inputId, label, meta = '', value = $bindable(), onRemove }: Props = $props();
 </script>
 
 <div class="form-group-with-remove">
@@ -23,7 +27,7 @@
 			class="form-input"
 		/>
 	</div>
-	<button type="button" class="btn-remove" on:click={onRemove} title="Usuń pole"> × </button>
+	<button type="button" class="btn-remove" onclick={onRemove} title="Usuń pole"> × </button>
 </div>
 
 <style>

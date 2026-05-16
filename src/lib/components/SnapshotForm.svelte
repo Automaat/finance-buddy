@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { env } from '$env/dynamic/public';
 	import { Wallet, Umbrella, TrendingUp, Home, CreditCard } from 'lucide-svelte';
@@ -7,17 +8,36 @@
 	import NewAssetModal from './snapshot/NewAssetModal.svelte';
 	import ValueRow from './snapshot/ValueRow.svelte';
 
-	export let editingSnapshot: SnapshotResponse | null = null;
-	export let assets: Account[];
-	export let liabilities: Account[];
-	export let physicalAssets: Asset[];
-	export let personas: Array<{ id: number; name: string }> = [];
+	interface Props {
+		editingSnapshot?: SnapshotResponse | null;
+		assets: Account[];
+		liabilities: Account[];
+		physicalAssets: Asset[];
+		personas?: Array<{ id: number; name: string }>;
+	}
+
+	let {
+		editingSnapshot = null,
+		assets: assetsProp,
+		liabilities: liabilitiesProp,
+		physicalAssets: physicalAssetsProp,
+		personas = []
+	}: Props = $props();
+
+	// Accounts/assets created in-component, merged with the prop-provided ones
+	let addedAccounts = $state<Account[]>([]);
+	let addedLiabilities = $state<Account[]>([]);
+	let addedAssets = $state<Asset[]>([]);
+
+	const assets = $derived([...assetsProp, ...addedAccounts]);
+	const liabilities = $derived([...liabilitiesProp, ...addedLiabilities]);
+	const physicalAssets = $derived([...physicalAssetsProp, ...addedAssets]);
 
 	// Initialize form state
-	let snapshotDate = new Date().toISOString().split('T')[0];
-	let notes = '';
-	let loading = false;
-	let error = '';
+	let snapshotDate = $state(new Date().toISOString().split('T')[0]);
+	let notes = $state('');
+	let loading = $state(false);
+	let error = $state('');
 
 	// Section grouping
 	const RETIREMENT_WRAPPERS = ['PPK', 'IKE', 'IKZE'] as const;
@@ -25,75 +45,78 @@
 	const FINANCIAL_CATEGORIES = ['bank', 'saving_account'];
 	const MAJATEK_CATEGORIES = ['real_estate', 'vehicle', 'other'];
 
-	$: retirementAccounts = assets.filter((a) => a.account_wrapper);
-	$: investmentAccounts = assets.filter(
-		(a) => !a.account_wrapper && INVESTMENT_CATEGORIES.includes(a.category)
+	const retirementAccounts = $derived(assets.filter((a) => a.account_wrapper));
+	const investmentAccounts = $derived(
+		assets.filter((a) => !a.account_wrapper && INVESTMENT_CATEGORIES.includes(a.category))
 	);
-	$: financialAccounts = assets.filter(
-		(a) => !a.account_wrapper && FINANCIAL_CATEGORIES.includes(a.category)
+	const financialAccounts = $derived(
+		assets.filter((a) => !a.account_wrapper && FINANCIAL_CATEGORIES.includes(a.category))
 	);
-	$: majatekAccounts = assets.filter(
-		(a) => !a.account_wrapper && MAJATEK_CATEGORIES.includes(a.category)
+	const majatekAccounts = $derived(
+		assets.filter((a) => !a.account_wrapper && MAJATEK_CATEGORIES.includes(a.category))
 	);
 
-	$: retirementByWrapper = RETIREMENT_WRAPPERS.map((w) => ({
-		wrapper: w,
-		accounts: retirementAccounts.filter((a) => a.account_wrapper === w)
-	})).filter((g) => g.accounts.length > 0);
+	const retirementByWrapper = $derived(
+		RETIREMENT_WRAPPERS.map((w) => ({
+			wrapper: w,
+			accounts: retirementAccounts.filter((a) => a.account_wrapper === w)
+		})).filter((g) => g.accounts.length > 0)
+	);
 
 	// Track visible accounts and assets
-	let visibleAccountIds = new Set<number>();
-	let visibleAssetIds = new Set<number>();
+	let visibleAccountIds = $state(new Set<number>());
+	let visibleAssetIds = $state(new Set<number>());
 
 	// Initialize values
-	let accountValues: Record<number, number> = {};
-	let assetValues: Record<number, number> = {};
+	let accountValues: Record<number, number> = $state({});
+	let assetValues: Record<number, number> = $state({});
 
 	// Populate form from editingSnapshot or defaults
 	function populateForm() {
+		const nextAccountValues: Record<number, number> = {};
+		const nextAssetValues: Record<number, number> = {};
+		const nextVisibleAccountIds = new Set<number>();
+		const nextVisibleAssetIds = new Set<number>();
+
 		if (editingSnapshot) {
 			snapshotDate = editingSnapshot.date;
 			notes = editingSnapshot.notes || '';
 
-			// Reset values
-			accountValues = {};
-			assetValues = {};
-			visibleAccountIds = new Set();
-			visibleAssetIds = new Set();
-
 			// Populate from snapshot values
 			editingSnapshot.values.forEach((v) => {
 				if (v.account_id !== null && v.account_id !== undefined) {
-					accountValues[v.account_id] = v.value;
-					visibleAccountIds.add(v.account_id);
+					nextAccountValues[v.account_id] = v.value;
+					nextVisibleAccountIds.add(v.account_id);
 				}
 				if (v.asset_id !== null && v.asset_id !== undefined) {
-					assetValues[v.asset_id] = v.value;
-					visibleAssetIds.add(v.asset_id);
+					nextAssetValues[v.asset_id] = v.value;
+					nextVisibleAssetIds.add(v.asset_id);
 				}
 			});
-			visibleAccountIds = new Set(visibleAccountIds);
-			visibleAssetIds = new Set(visibleAssetIds);
 		} else {
 			// Create mode - initialize from current values
-			visibleAccountIds = new Set(
-				[...assets, ...liabilities].filter((a) => a.current_value > 0).map((a) => a.id)
-			);
-			visibleAssetIds = new Set(physicalAssets.filter((a) => a.current_value > 0).map((a) => a.id));
-
 			[...assets, ...liabilities].forEach((account) => {
-				accountValues[account.id] = account.current_value;
+				nextAccountValues[account.id] = account.current_value;
+				if (account.current_value > 0) nextVisibleAccountIds.add(account.id);
 			});
 			physicalAssets.forEach((asset) => {
-				assetValues[asset.id] = asset.current_value;
+				nextAssetValues[asset.id] = asset.current_value;
+				if (asset.current_value > 0) nextVisibleAssetIds.add(asset.id);
 			});
 		}
+
+		accountValues = nextAccountValues;
+		assetValues = nextAssetValues;
+		visibleAccountIds = nextVisibleAccountIds;
+		visibleAssetIds = nextVisibleAssetIds;
 	}
 
 	// Reactive population
-	$: if (editingSnapshot || assets || liabilities || physicalAssets) {
-		populateForm();
-	}
+	$effect(() => {
+		if (editingSnapshot || assets || liabilities || physicalAssets) {
+			populateForm();
+		}
+	});
 
 	function removeAccount(accountId: number) {
 		visibleAccountIds.delete(accountId);
@@ -118,18 +141,18 @@
 	type NewAccountSection = 'financial' | 'retirement' | 'investment' | 'majatek' | 'liabilities';
 
 	// New item creation state
-	let showNewAccountForm = false;
-	let showNewAssetForm = false;
-	let newAccountSection: NewAccountSection = 'financial';
-	let newAccountName = '';
-	let newAccountCategory = '';
-	let newAccountWrapper: '' | 'PPK' | 'IKE' | 'IKZE' = '';
-	let newAccountOwner = personas.length > 0 ? personas[0].name : '';
-	let newAccountValue = 0;
-	let creatingAccount = false;
-	let newAssetName = '';
-	let newAssetValue = 0;
-	let creatingAsset = false;
+	let showNewAccountForm = $state(false);
+	let showNewAssetForm = $state(false);
+	let newAccountSection: NewAccountSection = $state('financial');
+	let newAccountName = $state('');
+	let newAccountCategory = $state('');
+	let newAccountWrapper: '' | 'PPK' | 'IKE' | 'IKZE' = $state('');
+	let newAccountOwner = $state(untrack(() => (personas.length > 0 ? personas[0].name : '')));
+	let newAccountValue = $state(0);
+	let creatingAccount = $state(false);
+	let newAssetName = $state('');
+	let newAssetValue = $state(0);
+	let creatingAsset = $state(false);
 
 	async function createNewAccount() {
 		if (!newAccountName.trim()) {
@@ -175,9 +198,9 @@
 			const newAccount: Account = await response.json();
 
 			if (newAccountSection === 'liabilities') {
-				liabilities = [...liabilities, newAccount];
+				addedLiabilities = [...addedLiabilities, newAccount];
 			} else {
-				assets = [...assets, newAccount];
+				addedAccounts = [...addedAccounts, newAccount];
 			}
 
 			// Set initial value and mark as visible
@@ -248,7 +271,7 @@
 
 			const newAsset: Asset = await response.json();
 
-			physicalAssets = [...physicalAssets, newAsset];
+			addedAssets = [...addedAssets, newAsset];
 
 			assetValues[newAsset.id] = newAssetValue;
 			visibleAssetIds.add(newAsset.id);
@@ -264,7 +287,8 @@
 		}
 	}
 
-	async function handleSubmit() {
+	async function handleSubmit(event: SubmitEvent) {
+		event.preventDefault();
 		loading = true;
 		error = '';
 
@@ -387,7 +411,7 @@
 	}
 </script>
 
-<form on:submit|preventDefault={handleSubmit} class="snapshot-form">
+<form onsubmit={handleSubmit} class="snapshot-form">
 	<!-- Date & Notes -->
 	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
 		<header class="space-y-1">
@@ -437,7 +461,7 @@
 								<button
 									type="button"
 									class="btn-add-account"
-									on:click={() => addAccount(account.id)}
+									onclick={() => addAccount(account.id)}
 								>
 									{account.name}
 									<span class="label-meta"
@@ -451,7 +475,7 @@
 				<button
 					type="button"
 					class="btn-new-account"
-					on:click={() => openNewAccountForm('financial')}
+					onclick={() => openNewAccountForm('financial')}
 				>
 					+ Dodaj nowe konto
 				</button>
@@ -488,7 +512,7 @@
 									<button
 										type="button"
 										class="btn-add-account"
-										on:click={() => addAccount(account.id)}
+										onclick={() => addAccount(account.id)}
 									>
 										{account.name}
 										<span class="label-meta">({account.account_wrapper})</span>
@@ -500,7 +524,7 @@
 					<button
 						type="button"
 						class="btn-new-account"
-						on:click={() => openNewAccountForm('retirement')}
+						onclick={() => openNewAccountForm('retirement')}
 					>
 						+ Dodaj nowe konto
 					</button>
@@ -534,7 +558,7 @@
 								<button
 									type="button"
 									class="btn-add-account"
-									on:click={() => addAccount(account.id)}
+									onclick={() => addAccount(account.id)}
 								>
 									{account.name}
 									<span class="label-meta"
@@ -548,7 +572,7 @@
 				<button
 					type="button"
 					class="btn-new-account"
-					on:click={() => openNewAccountForm('investment')}
+					onclick={() => openNewAccountForm('investment')}
 				>
 					+ Dodaj nowe konto
 				</button>
@@ -590,7 +614,7 @@
 								<button
 									type="button"
 									class="btn-add-account"
-									on:click={() => addAccount(account.id)}
+									onclick={() => addAccount(account.id)}
 								>
 									{account.name}
 									<span class="label-meta"
@@ -599,21 +623,17 @@
 								</button>
 							{/each}
 							{#each physicalAssets.filter((a) => !visibleAssetIds.has(a.id)) as asset}
-								<button type="button" class="btn-add-account" on:click={() => addAsset(asset.id)}>
+								<button type="button" class="btn-add-account" onclick={() => addAsset(asset.id)}>
 									{asset.name}
 								</button>
 							{/each}
 						</div>
 					</details>
 				{/if}
-				<button
-					type="button"
-					class="btn-new-account"
-					on:click={() => openNewAccountForm('majatek')}
-				>
+				<button type="button" class="btn-new-account" onclick={() => openNewAccountForm('majatek')}>
 					+ Dodaj nowe konto
 				</button>
-				<button type="button" class="btn-new-account" on:click={() => (showNewAssetForm = true)}>
+				<button type="button" class="btn-new-account" onclick={() => (showNewAssetForm = true)}>
 					+ Dodaj nowy majątek
 				</button>
 			</div>
@@ -646,7 +666,7 @@
 									<button
 										type="button"
 										class="btn-add-account"
-										on:click={() => addAccount(account.id)}
+										onclick={() => addAccount(account.id)}
 									>
 										{account.name}
 										<span class="label-meta">({categoryLabels[account.category]})</span>
@@ -658,7 +678,7 @@
 					<button
 						type="button"
 						class="btn-new-account"
-						on:click={() => openNewAccountForm('liabilities')}
+						onclick={() => openNewAccountForm('liabilities')}
 					>
 						+ Dodaj nowe konto
 					</button>
@@ -704,7 +724,7 @@
 		<button type="submit" disabled={loading} class="btn btn-primary">
 			{loading ? 'Zapisywanie...' : '💾 Zapisz Snapshot'}
 		</button>
-		<button type="button" on:click={() => goto('/')} class="btn btn-secondary"> Anuluj </button>
+		<button type="button" onclick={() => goto('/')} class="btn btn-secondary"> Anuluj </button>
 	</div>
 </form>
 

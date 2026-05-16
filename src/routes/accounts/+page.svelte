@@ -4,36 +4,41 @@
 	import { Wallet, TrendingDown, Pencil, Trash2, Plus, BarChart3 } from 'lucide-svelte';
 	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { INVESTMENT_CATEGORIES } from '$lib/constants';
 	import type { Account, TransactionsData } from './+page';
 	import type { Persona } from '$lib/types/personas';
+	import type { PageData } from './$types';
 
-	export let data;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 
 	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
-	$: personas = data.personas as Persona[];
-	$: defaultOwner = personas.length > 0 ? personas[0].name : 'Marcin';
+	const personas = $derived(data.personas as Persona[]);
+	const defaultOwner = $derived(personas.length > 0 ? personas[0].name : 'Marcin');
 
-	let showForm = false;
-	let editingAccount: Account | null = null;
-	let showDeleteModal = false;
-	let accountToDelete: number | null = null;
-	let transactionCounts: Record<number, number> = {};
+	let showForm = $state(false);
+	let editingAccount: Account | null = $state(null);
+	let showDeleteModal = $state(false);
+	let accountToDelete: number | null = $state(null);
+	let transactionCounts: Record<number, number> = $state({});
 
-	let showTransactionsModal = false;
-	let selectedAccountId: number | null = null;
-	let selectedAccountName = '';
-	let selectedAccountWrapper: string | null = null;
-	let transactionsData: TransactionsData | null = null;
-	let transactionFormData = {
+	let showTransactionsModal = $state(false);
+	let selectedAccountId: number | null = $state(null);
+	let selectedAccountName = $state('');
+	let selectedAccountWrapper: string | null = $state(null);
+	let transactionsData: TransactionsData | null = $state(null);
+	let transactionFormData = $state({
 		amount: 0,
 		date: new Date().toISOString().split('T')[0],
-		owner: defaultOwner,
+		owner: untrack(() => defaultOwner),
 		transaction_type: null as string | null
-	};
-	let transactionError = '';
-	let savingTransaction = false;
+	});
+	let transactionError = $state('');
+	let savingTransaction = $state(false);
 
 	const categoryLabels: Record<string, string> = {
 		bank: 'Konto bankowe',
@@ -66,46 +71,48 @@
 		editingAccount = null;
 	}
 
-	let formData = {
+	let formData = $state({
 		name: '',
 		type: 'asset',
 		category: 'bank',
-		owner: defaultOwner,
+		owner: untrack(() => defaultOwner),
 		currency: 'PLN',
 		account_wrapper: null as string | null,
 		purpose: 'general',
 		receives_contributions: true,
 		square_meters: null as number | null
-	};
+	});
 
-	let error = '';
-	let saving = false;
+	let error = $state('');
+	let saving = $state(false);
 
-	$: if (editingAccount) {
-		formData = {
-			name: editingAccount.name,
-			type: editingAccount.type,
-			category: editingAccount.category,
-			owner: editingAccount.owner,
-			currency: editingAccount.currency,
-			account_wrapper: editingAccount.account_wrapper,
-			purpose: editingAccount.purpose,
-			receives_contributions: editingAccount.receives_contributions,
-			square_meters: editingAccount.square_meters
-		};
-	} else if (showForm) {
-		formData = {
-			name: '',
-			type: 'asset',
-			category: 'bank',
-			owner: defaultOwner,
-			currency: 'PLN',
-			account_wrapper: null,
-			purpose: 'general',
-			receives_contributions: true,
-			square_meters: null
-		};
-	}
+	$effect(() => {
+		if (editingAccount) {
+			formData = {
+				name: editingAccount.name,
+				type: editingAccount.type,
+				category: editingAccount.category,
+				owner: editingAccount.owner,
+				currency: editingAccount.currency,
+				account_wrapper: editingAccount.account_wrapper,
+				purpose: editingAccount.purpose,
+				receives_contributions: editingAccount.receives_contributions,
+				square_meters: editingAccount.square_meters
+			};
+		} else if (showForm) {
+			formData = {
+				name: '',
+				type: 'asset',
+				category: 'bank',
+				owner: defaultOwner,
+				currency: 'PLN',
+				account_wrapper: null,
+				purpose: 'general',
+				receives_contributions: true,
+				square_meters: null
+			};
+		}
+	});
 
 	async function handleSubmit() {
 		error = '';
@@ -308,7 +315,7 @@
 	<button
 		type="button"
 		class="btn preset-filled-primary-500 w-full sm:w-auto gap-2"
-		on:click={startCreate}
+		onclick={startCreate}
 	>
 		<Plus size={16} />
 		Nowe Konto
@@ -348,7 +355,7 @@
 										type="button"
 										class="btn-icon btn-icon-sm"
 										aria-label="Edytuj"
-										on:click={() => startEdit(account)}
+										onclick={() => startEdit(account)}
 									>
 										<Pencil size={16} />
 									</button>
@@ -357,7 +364,7 @@
 											type="button"
 											class="btn preset-tonal-surface btn-sm gap-1"
 											aria-label="Transakcje"
-											on:click={() =>
+											onclick={() =>
 												openTransactions(account.id, account.name, account.account_wrapper)}
 										>
 											<BarChart3 size={14} />
@@ -368,7 +375,7 @@
 										type="button"
 										class="btn-icon btn-icon-sm"
 										aria-label="Usuń"
-										on:click={() => handleDelete(account.id)}
+										onclick={() => handleDelete(account.id)}
 									>
 										<Trash2 size={16} />
 									</button>
@@ -411,7 +418,7 @@
 										type="button"
 										class="btn-icon btn-icon-sm"
 										aria-label="Edytuj"
-										on:click={() => startEdit(account)}
+										onclick={() => startEdit(account)}
 									>
 										<Pencil size={16} />
 									</button>
@@ -419,7 +426,7 @@
 										type="button"
 										class="btn-icon btn-icon-sm"
 										aria-label="Usuń"
-										on:click={() => handleDelete(account.id)}
+										onclick={() => handleDelete(account.id)}
 									>
 										<Trash2 size={16} />
 									</button>
@@ -441,7 +448,13 @@
 	confirmText={saving ? 'Zapisywanie...' : editingAccount ? 'Zapisz zmiany' : 'Utwórz konto'}
 	confirmDisabled={saving}
 >
-	<form on:submit|preventDefault={handleSubmit} class="space-y-4">
+	<form
+		onsubmit={(event) => {
+			event.preventDefault();
+			handleSubmit();
+		}}
+		class="space-y-4"
+	>
 		{#if error}
 			<div class="card preset-filled-error-500 p-3 text-sm">{error}</div>
 		{/if}
@@ -614,7 +627,7 @@
 											type="button"
 											class="btn-icon btn-icon-sm"
 											aria-label="Usuń"
-											on:click={() => deleteTransaction(transaction.id)}
+											onclick={() => deleteTransaction(transaction.id)}
 										>
 											<Trash2 size={16} />
 										</button>
@@ -628,7 +641,13 @@
 
 			<div class="space-y-3 pt-4 border-t border-surface-200-800">
 				<h3 class="h4">Dodaj transakcję</h3>
-				<form on:submit|preventDefault={addTransaction} class="space-y-4">
+				<form
+					onsubmit={(event) => {
+						event.preventDefault();
+						addTransaction();
+					}}
+					class="space-y-4"
+				>
 					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<label class="label">
 							<span class="font-semibold text-sm">Kwota (PLN)</span>

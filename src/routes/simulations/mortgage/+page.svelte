@@ -46,21 +46,21 @@
 	}
 
 	// Form state
-	let remainingPrincipal = 300000;
-	let annualInterestRate = 6.5;
-	let remainingMonths = 240;
-	let totalMonthlyBudget = 3500;
-	let expectedAnnualReturn = 7.0;
-	let inflationRate = 3.0;
-	let enableVariableRate = false;
+	let remainingPrincipal = $state(300000);
+	let annualInterestRate = $state(6.5);
+	let remainingMonths = $state(240);
+	let totalMonthlyBudget = $state(3500);
+	let expectedAnnualReturn = $state(7.0);
+	let inflationRate = $state(3.0);
+	let enableVariableRate = $state(false);
 
 	// Results
-	let results: MortgageVsInvestResponse | null = null;
-	let loading = false;
-	let error = '';
+	let results: MortgageVsInvestResponse | null = $state(null);
+	let loading = $state(false);
+	let error = $state('');
 
 	// Chart
-	let chartContainer: HTMLDivElement;
+	let chartContainer: HTMLDivElement | undefined = $state();
 	let chart: echarts.ECharts | null = null;
 
 	async function runSimulation() {
@@ -251,7 +251,7 @@
 				</label>
 			</div>
 
-			<button class="primary-button" on:click={runSimulation} disabled={loading}>
+			<button class="primary-button" onclick={runSimulation} disabled={loading}>
 				{loading ? 'Obliczanie...' : 'Oblicz'}
 			</button>
 

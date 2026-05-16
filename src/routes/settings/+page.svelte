@@ -5,22 +5,26 @@
 	import { invalidateAll } from '$app/navigation';
 	import type { Persona } from '$lib/types/personas';
 
-	export let data: { personas: Persona[] };
+	interface Props {
+		data: { personas: Persona[] };
+	}
+
+	let { data }: Props = $props();
 
 	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
 
-	let showForm = false;
-	let editingPersona: Persona | null = null;
-	let showDeleteModal = false;
-	let personaToDelete: Persona | null = null;
-	let error = '';
-	let saving = false;
+	let showForm = $state(false);
+	let editingPersona: Persona | null = $state(null);
+	let showDeleteModal = $state(false);
+	let personaToDelete: Persona | null = $state(null);
+	let error = $state('');
+	let saving = $state(false);
 
-	let formData = {
+	let formData = $state({
 		name: '',
 		ppk_employee_rate: 2.0,
 		ppk_employer_rate: 1.5
-	};
+	});
 
 	function startCreate() {
 		editingPersona = null;
@@ -118,7 +122,7 @@
 <div class="card preset-filled-surface-100-900 p-4 space-y-4">
 	<header class="flex items-center justify-between flex-wrap gap-3">
 		<h3 class="h3">Persony</h3>
-		<button type="button" class="btn preset-filled-primary-500 gap-2" on:click={startCreate}>
+		<button type="button" class="btn preset-filled-primary-500 gap-2" onclick={startCreate}>
 			<Plus size={16} />
 			Nowa Persona
 		</button>
@@ -154,7 +158,7 @@
 									type="button"
 									class="btn-icon btn-icon-sm"
 									aria-label="Edytuj"
-									on:click={() => startEdit(persona)}
+									onclick={() => startEdit(persona)}
 								>
 									<Pencil size={16} />
 								</button>
@@ -162,7 +166,7 @@
 									type="button"
 									class="btn-icon btn-icon-sm"
 									aria-label="Usuń"
-									on:click={() => handleDelete(persona)}
+									onclick={() => handleDelete(persona)}
 								>
 									<Trash2 size={16} />
 								</button>
@@ -183,7 +187,13 @@
 	confirmText={saving ? 'Zapisywanie...' : editingPersona ? 'Zapisz zmiany' : 'Utwórz'}
 	confirmDisabled={saving}
 >
-	<form on:submit|preventDefault={handleSubmit} class="space-y-4">
+	<form
+		onsubmit={(event) => {
+			event.preventDefault();
+			handleSubmit();
+		}}
+		class="space-y-4"
+	>
 		{#if error}
 			<div class="card preset-filled-error-500 p-3 text-sm">{error}</div>
 		{/if}

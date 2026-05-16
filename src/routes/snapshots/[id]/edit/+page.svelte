@@ -1,7 +1,12 @@
 <script lang="ts">
 	import SnapshotForm from '$lib/components/SnapshotForm.svelte';
+	import type { PageData } from './$types';
 
-	export let data;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 </script>
 
 <svelte:head>

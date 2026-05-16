@@ -4,37 +4,42 @@
 	import { ClipboardList, Plus, Pencil, Trash2, Wallet, CircleDollarSign } from 'lucide-svelte';
 	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import type { Debt, DebtPayment } from './+page';
 	import type { Persona } from '$lib/types/personas';
+	import type { PageData } from './$types';
 
-	export let data;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 
 	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
-	$: personas = data.personas as Persona[];
-	$: defaultOwner = personas.length > 0 ? personas[0].name : 'Marcin';
+	const personas = $derived(data.personas as Persona[]);
+	const defaultOwner = $derived(personas.length > 0 ? personas[0].name : 'Marcin');
 
-	let showForm = false;
-	let editingDebt: Debt | null = null;
-	let showDeleteModal = false;
-	let debtToDelete: number | null = null;
-	let paymentCounts: Record<number, number> = {};
+	let showForm = $state(false);
+	let editingDebt: Debt | null = $state(null);
+	let showDeleteModal = $state(false);
+	let debtToDelete: number | null = $state(null);
+	let paymentCounts: Record<number, number> = $state({});
 
-	let selectedDebt: Debt | null = null;
+	let selectedDebt: Debt | null = $state(null);
 	let paymentsData: {
 		payments: DebtPayment[];
 		total_paid: number;
 		payment_count: number;
-	} | null = null;
-	let paymentFormData = {
+	} | null = $state(null);
+	let paymentFormData = $state({
 		amount: 0,
 		date: new Date().toISOString().split('T')[0],
-		owner: defaultOwner
-	};
-	let paymentError = '';
-	let savingPayment = false;
-	let showDeletePaymentModal = false;
-	let paymentToDelete: number | null = null;
+		owner: untrack(() => defaultOwner)
+	});
+	let paymentError = $state('');
+	let savingPayment = $state(false);
+	let showDeletePaymentModal = $state(false);
+	let paymentToDelete: number | null = $state(null);
 
 	const debtTypeLabels: Record<string, string> = {
 		mortgage: 'Hipoteka',
@@ -56,7 +61,7 @@
 		editingDebt = null;
 	}
 
-	let formData = {
+	let formData = $state({
 		name: '',
 		debt_type: 'mortgage',
 		start_date: new Date().toISOString().split('T')[0],
@@ -64,32 +69,34 @@
 		interest_rate: 0,
 		currency: 'PLN',
 		notes: null as string | null
-	};
+	});
 
-	let error = '';
-	let saving = false;
+	let error = $state('');
+	let saving = $state(false);
 
-	$: if (editingDebt) {
-		formData = {
-			name: editingDebt.name,
-			debt_type: editingDebt.debt_type,
-			start_date: editingDebt.start_date,
-			initial_amount: editingDebt.initial_amount,
-			interest_rate: editingDebt.interest_rate,
-			currency: editingDebt.currency,
-			notes: editingDebt.notes
-		};
-	} else if (showForm) {
-		formData = {
-			name: '',
-			debt_type: 'mortgage',
-			start_date: new Date().toISOString().split('T')[0],
-			initial_amount: 0,
-			interest_rate: 0,
-			currency: 'PLN',
-			notes: null
-		};
-	}
+	$effect(() => {
+		if (editingDebt) {
+			formData = {
+				name: editingDebt.name,
+				debt_type: editingDebt.debt_type,
+				start_date: editingDebt.start_date,
+				initial_amount: editingDebt.initial_amount,
+				interest_rate: editingDebt.interest_rate,
+				currency: editingDebt.currency,
+				notes: editingDebt.notes
+			};
+		} else if (showForm) {
+			formData = {
+				name: '',
+				debt_type: 'mortgage',
+				start_date: new Date().toISOString().split('T')[0],
+				initial_amount: 0,
+				interest_rate: 0,
+				currency: 'PLN',
+				notes: null
+			};
+		}
+	});
 
 	async function handleSubmit() {
 		error = '';
@@ -310,7 +317,7 @@
 	<button
 		type="button"
 		class="btn preset-filled-primary-500 w-full sm:w-auto gap-2"
-		on:click={startCreate}
+		onclick={startCreate}
 	>
 		<Plus size={16} />
 		Nowe Zobowiązanie
@@ -372,7 +379,7 @@
 										type="button"
 										class="btn preset-tonal-surface btn-sm gap-1"
 										aria-label="Historia wpłat"
-										on:click={() => openPayments(debt)}
+										onclick={() => openPayments(debt)}
 									>
 										<CircleDollarSign size={14} />
 										<span>{paymentCounts[debt.account_id] || 0}</span>
@@ -381,7 +388,7 @@
 										type="button"
 										class="btn-icon btn-icon-sm"
 										aria-label="Edytuj"
-										on:click={() => startEdit(debt)}
+										onclick={() => startEdit(debt)}
 									>
 										<Pencil size={16} />
 									</button>
@@ -389,7 +396,7 @@
 										type="button"
 										class="btn-icon btn-icon-sm"
 										aria-label="Usuń"
-										on:click={() => handleDelete(debt.id)}
+										onclick={() => handleDelete(debt.id)}
 									>
 										<Trash2 size={16} />
 									</button>
@@ -410,7 +417,13 @@
 				</h3>
 			</header>
 
-			<form class="space-y-4" on:submit|preventDefault={addPayment}>
+			<form
+				class="space-y-4"
+				onsubmit={(event) => {
+					event.preventDefault();
+					addPayment();
+				}}
+			>
 				<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 					<label class="label">
 						<span class="font-semibold text-sm">Kwota</span>
@@ -486,7 +499,7 @@
 											type="button"
 											class="btn-icon btn-icon-sm"
 											aria-label="Usuń wpłatę"
-											on:click={() => handleDeletePayment(payment.id)}
+											onclick={() => handleDeletePayment(payment.id)}
 										>
 											<Trash2 size={16} />
 										</button>
@@ -509,7 +522,13 @@
 	confirmText={saving ? 'Zapisywanie...' : 'Zapisz'}
 	confirmDisabled={saving}
 >
-	<form on:submit|preventDefault={handleSubmit} class="space-y-4">
+	<form
+		onsubmit={(event) => {
+			event.preventDefault();
+			handleSubmit();
+		}}
+		class="space-y-4"
+	>
 		{#if error}
 			<div class="card preset-filled-error-500 p-3 text-sm">{error}</div>
 		{/if}

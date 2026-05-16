@@ -14,7 +14,11 @@
 		findBreakEvenAmount
 	} from '$lib/utils/compensation';
 
-	export let data: { latestSalaries: SalaryRecord[] };
+	interface Props {
+		data: { latestSalaries: SalaryRecord[] };
+	}
+
+	let { data }: Props = $props();
 
 	function mapContractType(dbType: string): ContractType | null {
 		if (dbType === 'B2B') return ContractType.B2B_MONTHLY;
@@ -67,12 +71,12 @@
 		offers = [...offers];
 	}
 
-	let offers: OfferInput[] = [emptyOffer('Oferta 1'), emptyOffer('Oferta 2')];
-	let results: OfferBreakdown[] | null = null;
-	let winner: OfferBreakdown | null = null;
-	let breakEvens: Map<number, number> = new Map();
+	let offers = $state<OfferInput[]>([emptyOffer('Oferta 1'), emptyOffer('Oferta 2')]);
+	let results = $state<OfferBreakdown[] | null>(null);
+	let winner = $state<OfferBreakdown | null>(null);
+	let breakEvens = $state<Map<number, number>>(new Map());
 
-	let chartContainer: HTMLDivElement;
+	let chartContainer: HTMLDivElement | undefined = $state();
 	let chart: echarts.ECharts | null = null;
 
 	function addOffer() {
@@ -157,7 +161,7 @@
 		{ label: 'Ekwiwalent urlopowy', value: (b) => fmt(b.vacationEquivalent) }
 	];
 
-	$: baseline = results?.find((r) => r.isCurrentJob) ?? null;
+	const baseline = $derived(results?.find((r) => r.isCurrentJob) ?? null);
 
 	function fmt(v: number): string {
 		return v.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -250,7 +254,7 @@
 							placeholder="Nazwa oferty"
 						/>
 						{#if offers.length > 1}
-							<button class="remove-btn" on:click={() => removeOffer(i)}>✕</button>
+							<button class="remove-btn" onclick={() => removeOffer(i)}>✕</button>
 						{/if}
 					</div>
 
@@ -321,7 +325,7 @@
 							<input
 								type="checkbox"
 								checked={offer.isCurrentJob}
-								on:change={() => toggleCurrentJob(i)}
+								onchange={() => toggleCurrentJob(i)}
 							/>
 							Obecna praca
 							{#if data.latestSalaries.length === 0}
@@ -332,7 +336,7 @@
 							<label>
 								Źródło danych
 								<select
-									on:change={(e) => {
+									onchange={(e) => {
 										const sal = data.latestSalaries[Number(e.currentTarget.value)];
 										const contractType = mapContractType(sal.contract_type);
 										if (contractType === null) return;
@@ -357,8 +361,8 @@
 			{/each}
 
 			<div class="form-actions">
-				<button class="secondary-button" on:click={addOffer}>+ Dodaj ofertę</button>
-				<button class="primary-button" on:click={compare}>Porównaj</button>
+				<button class="secondary-button" onclick={addOffer}>+ Dodaj ofertę</button>
+				<button class="primary-button" onclick={compare}>Porównaj</button>
 			</div>
 		</div>
 
