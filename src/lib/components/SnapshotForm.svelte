@@ -2,12 +2,12 @@
 	import { goto } from '$app/navigation';
 	import { env } from '$env/dynamic/public';
 	import { Wallet, Umbrella, TrendingUp, Home, CreditCard } from 'lucide-svelte';
-	import type { SnapshotResponse } from '$lib/types';
+	import type { Account, Asset, SnapshotResponse } from '$lib/types';
 
 	export let editingSnapshot: SnapshotResponse | null = null;
-	export let assets: any[];
-	export let liabilities: any[];
-	export let physicalAssets: any[];
+	export let assets: Account[];
+	export let liabilities: Account[];
+	export let physicalAssets: Asset[];
 	export let personas: Array<{ id: number; name: string }> = [];
 
 	// Initialize form state
@@ -22,20 +22,20 @@
 	const FINANCIAL_CATEGORIES = ['bank', 'saving_account'];
 	const MAJATEK_CATEGORIES = ['real_estate', 'vehicle', 'other'];
 
-	$: retirementAccounts = assets.filter((a: any) => a.account_wrapper);
+	$: retirementAccounts = assets.filter((a) => a.account_wrapper);
 	$: investmentAccounts = assets.filter(
-		(a: any) => !a.account_wrapper && INVESTMENT_CATEGORIES.includes(a.category)
+		(a) => !a.account_wrapper && INVESTMENT_CATEGORIES.includes(a.category)
 	);
 	$: financialAccounts = assets.filter(
-		(a: any) => !a.account_wrapper && FINANCIAL_CATEGORIES.includes(a.category)
+		(a) => !a.account_wrapper && FINANCIAL_CATEGORIES.includes(a.category)
 	);
 	$: majatekAccounts = assets.filter(
-		(a: any) => !a.account_wrapper && MAJATEK_CATEGORIES.includes(a.category)
+		(a) => !a.account_wrapper && MAJATEK_CATEGORIES.includes(a.category)
 	);
 
 	$: retirementByWrapper = RETIREMENT_WRAPPERS.map((w) => ({
 		wrapper: w,
-		accounts: retirementAccounts.filter((a: any) => a.account_wrapper === w)
+		accounts: retirementAccounts.filter((a) => a.account_wrapper === w)
 	})).filter((g) => g.accounts.length > 0);
 
 	// Track visible accounts and assets
@@ -74,16 +74,14 @@
 		} else {
 			// Create mode - initialize from current values
 			visibleAccountIds = new Set(
-				[...assets, ...liabilities].filter((a: any) => a.current_value > 0).map((a: any) => a.id)
+				[...assets, ...liabilities].filter((a) => a.current_value > 0).map((a) => a.id)
 			);
-			visibleAssetIds = new Set(
-				physicalAssets.filter((a: any) => a.current_value > 0).map((a: any) => a.id)
-			);
+			visibleAssetIds = new Set(physicalAssets.filter((a) => a.current_value > 0).map((a) => a.id));
 
 			[...assets, ...liabilities].forEach((account) => {
 				accountValues[account.id] = account.current_value;
 			});
-			physicalAssets.forEach((asset: any) => {
+			physicalAssets.forEach((asset) => {
 				assetValues[asset.id] = asset.current_value;
 			});
 		}
@@ -171,7 +169,7 @@
 				throw new Error(String(message));
 			}
 
-			const newAccount = await response.json();
+			const newAccount: Account = await response.json();
 
 			if (newAccountSection === 'liabilities') {
 				liabilities = [...liabilities, newAccount];
@@ -245,7 +243,7 @@
 				throw new Error(String(message));
 			}
 
-			const newAsset = await response.json();
+			const newAsset: Asset = await response.json();
 
 			physicalAssets = [...physicalAssets, newAsset];
 
@@ -298,8 +296,8 @@
 
 			const assetPayloads = editingSnapshot
 				? physicalAssets
-						.filter((asset: any) => visibleAssetIds.has(asset.id))
-						.map((asset: any) => {
+						.filter((asset) => visibleAssetIds.has(asset.id))
+						.map((asset) => {
 							const value = assetValues[asset.id];
 							const parsedValue = parseFloat(value.toString());
 							if (Number.isNaN(parsedValue)) {
@@ -310,7 +308,7 @@
 								value: parsedValue
 							};
 						})
-				: physicalAssets.map((asset: any) => {
+				: physicalAssets.map((asset) => {
 						const isVisible = visibleAssetIds.has(asset.id);
 						const value = isVisible ? assetValues[asset.id] : 0;
 						const parsedValue = parseFloat(value.toString());
@@ -401,7 +399,7 @@
 			<h3 class="h3 flex items-center gap-2"><Wallet size={20} /> Konta finansowe</h3>
 		</header>
 		<div class="space-y-4">
-			{#each financialAccounts.filter((a: any) => visibleAccountIds.has(a.id)) as account}
+			{#each financialAccounts.filter((a) => visibleAccountIds.has(a.id)) as account}
 				<div class="form-group-with-remove">
 					<div class="form-group">
 						<label for="account-{account.id}" class="form-label">
@@ -431,11 +429,11 @@
 			{/each}
 
 			<div class="add-account">
-				{#if financialAccounts.filter((a: any) => !visibleAccountIds.has(a.id)).length > 0}
+				{#if financialAccounts.filter((a) => !visibleAccountIds.has(a.id)).length > 0}
 					<details>
 						<summary>+ Pokaż ukryte konta</summary>
 						<div class="add-account-list">
-							{#each financialAccounts.filter((a: any) => !visibleAccountIds.has(a.id)) as account}
+							{#each financialAccounts.filter((a) => !visibleAccountIds.has(a.id)) as account}
 								<button
 									type="button"
 									class="btn-add-account"
@@ -470,7 +468,7 @@
 			<div class="space-y-4">
 				{#each retirementByWrapper as group}
 					<h3 class="wrapper-subheading">{group.wrapper}</h3>
-					{#each group.accounts.filter((a: any) => visibleAccountIds.has(a.id)) as account}
+					{#each group.accounts.filter((a) => visibleAccountIds.has(a.id)) as account}
 						<div class="form-group-with-remove">
 							<div class="form-group">
 								<label for="account-{account.id}" class="form-label">
@@ -501,11 +499,11 @@
 				{/each}
 
 				<div class="add-account">
-					{#if retirementAccounts.filter((a: any) => !visibleAccountIds.has(a.id)).length > 0}
+					{#if retirementAccounts.filter((a) => !visibleAccountIds.has(a.id)).length > 0}
 						<details>
 							<summary>+ Pokaż ukryte konta</summary>
 							<div class="add-account-list">
-								{#each retirementAccounts.filter((a: any) => !visibleAccountIds.has(a.id)) as account}
+								{#each retirementAccounts.filter((a) => !visibleAccountIds.has(a.id)) as account}
 									<button
 										type="button"
 										class="btn-add-account"
@@ -536,7 +534,7 @@
 			<h3 class="h3 flex items-center gap-2"><TrendingUp size={20} /> Inwestycje</h3>
 		</header>
 		<div class="space-y-4">
-			{#each investmentAccounts.filter((a: any) => visibleAccountIds.has(a.id)) as account}
+			{#each investmentAccounts.filter((a) => visibleAccountIds.has(a.id)) as account}
 				<div class="form-group-with-remove">
 					<div class="form-group">
 						<label for="account-{account.id}" class="form-label">
@@ -566,11 +564,11 @@
 			{/each}
 
 			<div class="add-account">
-				{#if investmentAccounts.filter((a: any) => !visibleAccountIds.has(a.id)).length > 0}
+				{#if investmentAccounts.filter((a) => !visibleAccountIds.has(a.id)).length > 0}
 					<details>
 						<summary>+ Pokaż ukryte konta</summary>
 						<div class="add-account-list">
-							{#each investmentAccounts.filter((a: any) => !visibleAccountIds.has(a.id)) as account}
+							{#each investmentAccounts.filter((a) => !visibleAccountIds.has(a.id)) as account}
 								<button
 									type="button"
 									class="btn-add-account"
@@ -602,7 +600,7 @@
 			<h3 class="h3 flex items-center gap-2"><Home size={20} /> Majątek</h3>
 		</header>
 		<div class="space-y-4">
-			{#each majatekAccounts.filter((a: any) => visibleAccountIds.has(a.id)) as account}
+			{#each majatekAccounts.filter((a) => visibleAccountIds.has(a.id)) as account}
 				<div class="form-group-with-remove">
 					<div class="form-group">
 						<label for="account-{account.id}" class="form-label">
@@ -631,7 +629,7 @@
 				</div>
 			{/each}
 
-			{#each physicalAssets.filter((a: any) => visibleAssetIds.has(a.id)) as asset}
+			{#each physicalAssets.filter((a) => visibleAssetIds.has(a.id)) as asset}
 				<div class="form-group-with-remove">
 					<div class="form-group">
 						<label for="asset-{asset.id}" class="form-label">{asset.name}</label>
@@ -656,11 +654,11 @@
 			{/each}
 
 			<div class="add-account">
-				{#if majatekAccounts.filter((a: any) => !visibleAccountIds.has(a.id)).length > 0 || physicalAssets.filter((a: any) => !visibleAssetIds.has(a.id)).length > 0}
+				{#if majatekAccounts.filter((a) => !visibleAccountIds.has(a.id)).length > 0 || physicalAssets.filter((a) => !visibleAssetIds.has(a.id)).length > 0}
 					<details>
 						<summary>+ Pokaż ukryty majątek</summary>
 						<div class="add-account-list">
-							{#each majatekAccounts.filter((a: any) => !visibleAccountIds.has(a.id)) as account}
+							{#each majatekAccounts.filter((a) => !visibleAccountIds.has(a.id)) as account}
 								<button
 									type="button"
 									class="btn-add-account"
@@ -672,7 +670,7 @@
 									>
 								</button>
 							{/each}
-							{#each physicalAssets.filter((a: any) => !visibleAssetIds.has(a.id)) as asset}
+							{#each physicalAssets.filter((a) => !visibleAssetIds.has(a.id)) as asset}
 								<button type="button" class="btn-add-account" on:click={() => addAsset(asset.id)}>
 									{asset.name}
 								</button>
@@ -701,7 +699,7 @@
 				<h3 class="h3 flex items-center gap-2"><CreditCard size={20} /> Zobowiązania</h3>
 			</header>
 			<div class="space-y-4">
-				{#each liabilities.filter((a: any) => visibleAccountIds.has(a.id)) as account}
+				{#each liabilities.filter((a) => visibleAccountIds.has(a.id)) as account}
 					<div class="form-group-with-remove">
 						<div class="form-group">
 							<label for="account-{account.id}" class="form-label">
@@ -729,11 +727,11 @@
 				{/each}
 
 				<div class="add-account">
-					{#if liabilities.filter((a: any) => !visibleAccountIds.has(a.id)).length > 0}
+					{#if liabilities.filter((a) => !visibleAccountIds.has(a.id)).length > 0}
 						<details>
 							<summary>+ Pokaż ukryte konta</summary>
 							<div class="add-account-list">
-								{#each liabilities.filter((a: any) => !visibleAccountIds.has(a.id)) as account}
+								{#each liabilities.filter((a) => !visibleAccountIds.has(a.id)) as account}
 									<button
 										type="button"
 										class="btn-add-account"
