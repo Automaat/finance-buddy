@@ -426,7 +426,7 @@ docker-compose -f docker-compose.dev.yml down        # Stop
 
 ### Known Issues & Gotchas
 
-- **Database migrations:** Auto-initialized from SQLAlchemy models (backend/app/core/init_db.py) - no Alembic, keep simple until needed
+- **Database migrations:** Alembic (backend/alembic/) with versioned, reversible revisions. `init_db` (backend/app/core/init_db.py) runs `alembic upgrade head` on startup; pre-Alembic databases are auto-stamped at the `0001` baseline. New schema changes: `uv run alembic revision --autogenerate -m "..."`
 - **Polish labels:** All UI labels in Polish - no i18n/internationalization needed
 - **testcontainers:** PostgreSQL integration tests slower due to container startup (acceptable trade-off)
 - **pandas iterrows():** Acceptable for small datasets (monthly snapshots) - readability > performance

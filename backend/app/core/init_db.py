@@ -1,74 +1,47 @@
-import importlib
 import logging
-import sys
 from decimal import Decimal
 from pathlib import Path
 
-from sqlalchemy import func, select
+from alembic.config import Config
+from sqlalchemy import func, inspect, select
 
-from app.core.database import Base, SessionLocal, engine
+from alembic import command
+from app.core.database import SessionLocal, engine
 from app.core.enums import Wrapper
-
-# Import models to register them with SQLAlchemy Base.metadata
-# These imports are required for Base.metadata.create_all() to work
-from app.models import (
-    Account,
-    AppConfig,
-    Asset,
-    Debt,
-    DebtPayment,
-    Goal,
-    Persona,
-    RetirementLimit,
-    SalaryRecord,
-    Snapshot,
-    SnapshotValue,
-    Transaction,
-)
+from app.models import Persona, RetirementLimit
 
 logger = logging.getLogger(__name__)
 
-# Reference imports to satisfy linter (models are registered via import side effect)
-_ = (
-    Account,
-    AppConfig,
-    Asset,
-    Debt,
-    DebtPayment,
-    Goal,
-    Persona,
-    RetirementLimit,
-    SalaryRecord,
-    Snapshot,
-    SnapshotValue,
-    Transaction,
-)
+# Pre-Alembic databases are stamped at this revision, then upgraded forward
+# through any newer revisions.
+BASELINE_REVISION = "0001"
 
-MIGRATION_MODULES = [
-    "add_account_purpose",
-    "add_metric_fields",
-    "add_ppk_rates",
-    "add_receives_contributions",
-    "add_transaction_unique_constraint",
-]
+_BACKEND_ROOT = Path(__file__).resolve().parents[2]
 
 
-def init_db() -> None:
-    Base.metadata.create_all(bind=engine)
+def _alembic_config() -> Config:
+    config = Config(str(_BACKEND_ROOT / "alembic.ini"))
+    config.set_main_option("script_location", str(_BACKEND_ROOT / "alembic"))
+    return config
 
-    # Run migrations
-    try:
-        migrations_dir = Path(__file__).parent.parent.parent / "migrations"
-        sys.path.insert(0, str(migrations_dir))
 
-        for module_name in MIGRATION_MODULES:
-            mod = importlib.import_module(module_name)
-            mod.migrate()
-    except Exception as e:
-        # Migrations may have already run or columns may already exist
-        logger.warning("Migration warning (may be expected if already applied): %s", e)
+def _run_migrations() -> None:
+    """Bring the schema to head, handling databases created before Alembic.
 
-    # Seed default personas if none exist
+    A pre-Alembic database already has every table but no ``alembic_version``
+    row. It is stamped at the baseline so the baseline migration is not
+    re-applied, then upgraded through any newer revisions.
+    """
+    config = _alembic_config()
+    existing_tables = set(inspect(engine).get_table_names())
+    if existing_tables and "alembic_version" not in existing_tables:
+        logger.info("Pre-Alembic database detected; stamping baseline %s", BASELINE_REVISION)
+        command.stamp(config, BASELINE_REVISION)
+    command.upgrade(config, "head")
+
+
+def _seed_defaults() -> None:
+    """Seed default personas and retirement limits when the tables are empty."""
     db = SessionLocal()
     try:
         if db.scalar(select(func.count()).select_from(Persona)) == 0:
@@ -87,7 +60,6 @@ def init_db() -> None:
             db.add_all(default_personas)
             db.commit()
 
-        # Seed default retirement limits if none exist
         if db.scalar(select(func.count()).select_from(RetirementLimit)) == 0:
             personas = db.execute(select(Persona)).scalars().all()
             defaults = []
@@ -114,6 +86,11 @@ def init_db() -> None:
             db.commit()
     finally:
         db.close()
+
+
+def init_db() -> None:
+    _run_migrations()
+    _seed_defaults()
 
 
 if __name__ == "__main__":
