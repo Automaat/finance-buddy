@@ -38,7 +38,13 @@ Thumbs.db
 Finansowa Forteca.xlsx
 *.db
 *.sqlite
+*.csv
+*.sql
+*.bak
 data/
+
+# Python build artifacts
+*.egg-info/
 
 # Testing
 coverage
