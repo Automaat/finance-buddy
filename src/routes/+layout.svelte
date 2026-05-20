@@ -12,6 +12,7 @@
 		Camera,
 		Banknote,
 		Settings,
+		Target,
 		User,
 		ShieldCheck
 	} from 'lucide-svelte';
@@ -24,6 +25,7 @@
 		{ href: '/transactions', label: 'Transakcje', icon: ArrowRightLeft },
 		{ href: '/assets', label: 'Majątek', icon: Home },
 		{ href: '/debts', label: 'Zobowiązania', icon: ClipboardList },
+		{ href: '/goals', label: 'Cele', icon: Target },
 		{ href: '/snapshots', label: 'Snapshoty', icon: Camera },
 		{ href: '/salaries', label: 'Wynagrodzenia', icon: Banknote },
 		{ href: '/config', label: 'Konfiguracja', icon: Settings },
