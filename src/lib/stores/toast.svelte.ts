@@ -35,7 +35,7 @@ function push(kind: ToastKind, message: string, durationMs = DEFAULT_DURATION_MS
 }
 
 export const toast = {
-	get items(): Toast[] {
+	get items(): ReadonlyArray<Toast> {
 		return items;
 	},
 	error(message: string, durationMs?: number): number {

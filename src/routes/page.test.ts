@@ -167,5 +167,6 @@ describe('Dashboard retirement limits save flow', () => {
 		await waitFor(() => expect(errorSpy).toHaveBeenCalled());
 		expect(errorSpy.mock.calls[0][0]).toContain('Nie udało się zapisać limitów');
 		expect(invalidateAll).not.toHaveBeenCalled();
+		errorSpy.mockRestore();
 	});
 });
