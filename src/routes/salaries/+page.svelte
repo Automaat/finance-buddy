@@ -87,7 +87,20 @@
 		salaryError = '';
 	}
 
+	const today = $derived(new Date().toISOString().split('T')[0]);
+
 	async function saveSalary() {
+		if (!salaryFormData.date) {
+			salaryError = 'Data jest wymagana';
+			return;
+		}
+
+		const todayNow = new Date().toISOString().split('T')[0];
+		if (salaryFormData.date > todayNow) {
+			salaryError = 'Data nie może być z przyszłości';
+			return;
+		}
+
 		if (!salaryFormData.gross_amount || salaryFormData.gross_amount <= 0) {
 			salaryError = 'Pensja brutto musi być większa niż 0';
 			return;
@@ -115,7 +128,21 @@
 
 			if (!response.ok) {
 				const errorData = await response.json();
-				throw new Error(errorData.detail || 'Failed to save salary record');
+				const detail = errorData.detail;
+				const fallback = 'Failed to save salary record';
+				let message: string;
+				if (Array.isArray(detail)) {
+					const joined = detail
+						.map((d: { msg?: string }) => (typeof d?.msg === 'string' ? d.msg : ''))
+						.filter(Boolean)
+						.join('; ');
+					message = joined || fallback;
+				} else if (typeof detail === 'string' && detail) {
+					message = detail;
+				} else {
+					message = fallback;
+				}
+				throw new Error(message);
 			}
 
 			await invalidateAll();
@@ -381,7 +408,7 @@
 
 		<label class="label">
 			<span class="font-semibold text-sm">Data zmiany*</span>
-			<input type="date" class="input" bind:value={salaryFormData.date} required />
+			<input type="date" class="input" bind:value={salaryFormData.date} max={today} required />
 		</label>
 
 		<label class="label">
