@@ -11,6 +11,7 @@ from app.api import (
     dashboard,
     debt_payments,
     debts,
+    goals,
     investment,
     personas,
     retirement,
@@ -52,6 +53,7 @@ app.include_router(config.router)
 app.include_router(cpi.router)
 app.include_router(debts.router)
 app.include_router(debt_payments.router)
+app.include_router(goals.router)
 app.include_router(investment.router)
 app.include_router(personas.router)
 app.include_router(retirement.router)
