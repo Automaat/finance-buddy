@@ -1,5 +1,6 @@
 """Metric-card calculations for the dashboard (savings rate, ratios, hourly costs)."""
 
+import numpy as np
 import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -24,34 +25,26 @@ def _calculate_savings_rate(
     if len(snapshots_df) < 4:
         return None
 
-    # Get last 4 snapshots
-    last_4_snapshots = snapshots_df.tail(4).copy()
+    # Vectorized signed-value (recompute defensively — direct callers may pass a raw df)
+    last_4_ids = snapshots_df.tail(4)["id"].tolist()
+    sub = df[df["snapshot_id"].isin(last_4_ids)].copy()
+    if "signed_value" not in sub.columns:
+        has_name = sub["name"] if "name" in sub.columns else pd.Series(False, index=sub.index)
+        asset_mask = sub["asset_id"].notna() & has_name.notna()
+        account_mask = sub["account_id"].notna() & sub["type"].notna()
+        sign = np.where(
+            account_mask,
+            np.where(sub["type"] == "asset", 1, -1),
+            np.where(asset_mask, 1, 0),
+        )
+        sub["signed_value"] = sub["value"].astype(float) * sign
 
-    # Calculate signed value (same logic as main function)
-    def calculate_signed_value(row):
-        if pd.notna(row["asset_id"]) and pd.notna(row.get("name")):
-            return row["value"]
-        if pd.notna(row["account_id"]) and pd.notna(row.get("type")):
-            return row["value"] if row["type"] == "asset" else -row["value"]
-        return 0
+    nw_by_snap = sub.groupby("snapshot_id")["signed_value"].sum()
+    net_worth_values = [float(nw_by_snap.get(sid, 0.0)) for sid in last_4_ids]
 
-    # Calculate net worth for each snapshot
-    net_worth_values = []
-    for _, snapshot_row in last_4_snapshots.iterrows():
-        snapshot_id = snapshot_row["id"]
-        snapshot_df = df[df["snapshot_id"] == snapshot_id]
-
-        snapshot_df = snapshot_df.copy()
-        snapshot_df["signed_value"] = snapshot_df.apply(calculate_signed_value, axis=1)
-        net_worth = snapshot_df["signed_value"].sum()
-        net_worth_values.append(net_worth)
-
-    # Calculate deltas between consecutive months
     deltas = [
         net_worth_values[i] - net_worth_values[i - 1] for i in range(1, len(net_worth_values))
     ]
-
-    # Average the last 3 deltas
     avg_delta = sum(deltas) / len(deltas)
 
     # Get last 3 salary records

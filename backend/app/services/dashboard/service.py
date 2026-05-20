@@ -3,6 +3,7 @@ Dashboard service using pandas for financial calculations.
 Demonstrates: groupby, pivot, merge, aggregations, time series
 """
 
+import numpy as np
 import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -100,21 +101,18 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
             category_time_series=CategoryTimeSeries(stock=[], bond=[]),
         )
 
-    # Calculate net worth per snapshot
-    # pandas: Calculate signed value based on whether it's an asset or liability
-    # Assets (from Asset table) contribute positively
-    # Accounts depend on account.type (asset=+, liability=-)
-    # Note: Inactive accounts/assets will have NaN in name/type after LEFT JOIN, exclude them
-    def calculate_signed_value(row):
-        if pd.notna(row["asset_id"]) and pd.notna(row.get("name")):
-            # From Asset table - always positive (only if asset was in the join)
-            return row["value"]
-        if pd.notna(row["account_id"]) and pd.notna(row.get("type")):
-            # From Account table - assets positive, liabilities negative
-            return row["value"] if row["type"] == "asset" else -row["value"]
-        return 0
-
-    df["signed_value"] = df.apply(calculate_signed_value, axis=1)
+    # Vectorized signed value:
+    # - Asset table rows (asset_id + name from join) → +value
+    # - Account rows (account_id + type from join): asset → +value, liability → -value
+    # - LEFT-JOIN rows with no match (inactive) → 0
+    asset_mask = df["asset_id"].notna() & df["name"].notna()
+    account_mask = df["account_id"].notna() & df["type"].notna()
+    sign = np.where(
+        account_mask,
+        np.where(df["type"] == "asset", 1, -1),
+        np.where(asset_mask, 1, 0),
+    )
+    df["signed_value"] = df["value"].astype(float) * sign
 
     # pandas: groupby() + sum() - Aggregate net worth by date
     net_worth_by_date = df.groupby("date")["signed_value"].sum().reset_index()
@@ -123,10 +121,9 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
     # pandas: sort_values() - Order by date
     net_worth_by_date = net_worth_by_date.sort_values("date")
 
-    # Convert to response format
     net_worth_history = [
-        NetWorthPoint(date=row["date"], value=row["net_worth"])
-        for _, row in net_worth_by_date.iterrows()
+        NetWorthPoint(date=d, value=v)
+        for d, v in zip(net_worth_by_date["date"], net_worth_by_date["net_worth"], strict=True)
     ]
 
     # Current metrics (latest snapshot)
@@ -181,8 +178,13 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
         )
 
         allocation = [
-            AllocationItem(category=row["category"], owner=row["owner"], value=float(row["value"]))
-            for _, row in allocation_df.iterrows()
+            AllocationItem(category=c, owner=o, value=float(v))
+            for c, o, v in zip(
+                allocation_df["category"],
+                allocation_df["owner"],
+                allocation_df["value"],
+                strict=True,
+            )
         ]
 
         # Calculate retirement account value (accounts with purpose='retirement')
@@ -284,14 +286,9 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
             investment_trans = trans_with_accounts[
                 (trans_with_accounts["purpose"] == "retirement")
                 & (trans_with_accounts["date"] <= latest_snapshot["date"])
-            ]
-            investment_trans = investment_trans.copy()
-            investment_trans["signed_amount"] = investment_trans.apply(
-                lambda row: -row["amount"]
-                if row["transaction_type"] == "withdrawal"
-                else row["amount"],
-                axis=1,
-            )
+            ].copy()
+            sign = np.where(investment_trans["transaction_type"] == "withdrawal", -1.0, 1.0)
+            investment_trans["signed_amount"] = investment_trans["amount"].astype(float) * sign
             investment_contributions = float(investment_trans["signed_amount"].sum())
 
             # Reuse already-calculated retirement account value for consistency
@@ -362,11 +359,9 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
             "gold": "gold",
         }
 
-        # Calculate current allocation by category
-        allocation_by_cat = {}
-        for _, row in investment_df.iterrows():
-            alloc_group = category_map.get(row["category"], "other")
-            allocation_by_cat[alloc_group] = allocation_by_cat.get(alloc_group, 0) + row["value"]
+        # Calculate current allocation by category (vectorized groupby)
+        alloc_groups = investment_df["category"].map(category_map).fillna("other")
+        allocation_by_cat = investment_df["value"].groupby(alloc_groups).sum().to_dict()
 
         # Calculate allocation breakdown
         allocation_breakdown = []
@@ -401,10 +396,8 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
             & (latest_df["category"].isin(all_investment_categories))
         ]
 
-        wrapper_breakdown = {}
-        for _, row in all_investment_df.iterrows():
-            wrapper = row["account_wrapper"] if pd.notna(row["account_wrapper"]) else "Regular"
-            wrapper_breakdown[wrapper] = wrapper_breakdown.get(wrapper, 0) + row["value"]
+        wrappers = all_investment_df["account_wrapper"].fillna("Regular")
+        wrapper_breakdown = all_investment_df["value"].groupby(wrappers).sum().to_dict()
 
         # Calculate total for percentage (includes PPK, unlike total_investment_value)
         all_investment_total = sum(wrapper_breakdown.values())
@@ -468,11 +461,11 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
             accounts_df, left_on="account_id", right_on="id", how="left"
         )
         # Withdrawals reduce cumulative contributions — negate their amount
-        transactions_with_accounts_df["signed_amount"] = transactions_with_accounts_df.apply(
-            lambda row: -row["amount"]
-            if row["transaction_type"] == "withdrawal"
-            else row["amount"],
-            axis=1,
+        sign = np.where(
+            transactions_with_accounts_df["transaction_type"] == "withdrawal", -1.0, 1.0
+        )
+        transactions_with_accounts_df["signed_amount"] = (
+            transactions_with_accounts_df["amount"].astype(float) * sign
         )
     else:
         transactions_with_accounts_df = pd.DataFrame()

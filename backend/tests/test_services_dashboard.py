@@ -1779,3 +1779,93 @@ def test_calculate_hour_of_life_cost_zero_salary(test_db_session):
     result = _calculate_hour_of_life_cost(test_db_session)
 
     assert result is None
+
+
+def test_dashboard_performance_60_snapshots(test_db_session):
+    """Dashboard must compute in < 200 ms with 60 snapshots (vectorized pandas).
+
+    Guards against accidental reintroduction of iterrows()-driven O(N·M) scaling.
+    """
+    import time
+
+    # Mix of account categories/wrappers to exercise allocation + per-wrapper +
+    # per-category time series — the per-snapshot hot paths.
+    accounts = [
+        create_test_account(test_db_session, name="Checking", category="bank", owner="Marcin"),
+        create_test_account(
+            test_db_session,
+            name="Emergency",
+            category="bank",
+            owner="Marcin",
+            purpose="emergency_fund",
+        ),
+        create_test_account(
+            test_db_session,
+            name="IKE Stocks",
+            category="stock",
+            owner="Marcin",
+            account_wrapper="IKE",
+            purpose="retirement",
+        ),
+        create_test_account(
+            test_db_session,
+            name="IKZE Bonds",
+            category="bond",
+            owner="Marcin",
+            account_wrapper="IKZE",
+            purpose="retirement",
+        ),
+        create_test_account(
+            test_db_session,
+            name="PPK",
+            category="ppk",
+            owner="Marcin",
+            account_wrapper="PPK",
+            purpose="retirement",
+        ),
+        create_test_account(test_db_session, name="Regular ETF", category="etf", owner="Marcin"),
+        create_test_account(
+            test_db_session,
+            name="Mortgage",
+            account_type="liability",
+            category="mortgage",
+            owner="Shared",
+        ),
+    ]
+
+    # 60 monthly snapshots ≈ 5 years of data
+    snapshots = []
+    for i in range(60):
+        year = 2020 + i // 12
+        month = (i % 12) + 1
+        snapshots.append(create_test_snapshot(test_db_session, snapshot_date=date(year, month, 1)))
+
+    # ~420 SnapshotValues = 60 snapshots × 7 accounts
+    for i, snap in enumerate(snapshots):
+        for j, account in enumerate(accounts):
+            create_test_snapshot_value(
+                test_db_session, snap.id, account.id, Decimal(str(1000 * (i + 1) + 100 * j))
+            )
+
+    # Some transactions across the period to exercise cumulative contributions
+    from tests.factories import create_test_transaction
+
+    investment_accounts = [a for a in accounts if a.category in {"stock", "bond", "ppk", "etf"}]
+    for i in range(60):
+        year = 2020 + i // 12
+        month = (i % 12) + 1
+        for account in investment_accounts:
+            create_test_transaction(
+                test_db_session,
+                account.id,
+                amount=500.0,
+                transaction_date=date(year, month, 5),
+            )
+
+    # Warm-up + measure (single timed call is fine — threshold is generous vs target)
+    start = time.perf_counter()
+    result = get_dashboard_data(test_db_session)
+    elapsed_ms = (time.perf_counter() - start) * 1000
+
+    assert len(result.net_worth_history) == 60
+    assert elapsed_ms < 200, f"Dashboard took {elapsed_ms:.1f} ms (limit: 200 ms)"
