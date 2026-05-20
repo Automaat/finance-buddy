@@ -4,11 +4,22 @@
 	import type { EChartsOption } from 'echarts';
 	import Modal from '$lib/components/Modal.svelte';
 	import { formatPLN } from '$lib/utils/format';
-	import { Plus, Banknote, TrendingUp, Search, BarChart3, Pencil, Trash2 } from 'lucide-svelte';
+	import { inflationAdjust } from '$lib/utils/inflation';
+	import {
+		Plus,
+		Banknote,
+		TrendingUp,
+		Search,
+		BarChart3,
+		Pencil,
+		Trash2,
+		Scale
+	} from 'lucide-svelte';
 	import { env } from '$env/dynamic/public';
 	import { goto, invalidateAll } from '$app/navigation';
 	import type { SalaryRecord } from '$lib/types/salaries';
 	import type { Persona } from '$lib/types/personas';
+	import type { CpiSeries } from '$lib/types/cpi';
 	import type { PageData } from './$types';
 
 	interface Props {
@@ -20,6 +31,36 @@
 	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
 	const personas = $derived(data.personas as Persona[]);
 	const defaultOwner = $derived(personas.length > 0 ? personas[0].name : 'Marcin');
+	const cpiSeries = $derived(data.cpiSeries as CpiSeries);
+	const inflationContext = $derived(data.salaries.inflation_context ?? {});
+	const inflationEntries = $derived(Object.values(inflationContext));
+
+	const monthNamesPL = [
+		'styczeń',
+		'luty',
+		'marzec',
+		'kwiecień',
+		'maj',
+		'czerwiec',
+		'lipiec',
+		'sierpień',
+		'wrzesień',
+		'październik',
+		'listopad',
+		'grudzień'
+	];
+
+	function formatPctSigned(value: number | null): string {
+		if (value == null || Number.isNaN(value)) return '—';
+		const sign = value >= 0 ? '+' : '';
+		return `${sign}${value.toFixed(1)}%`;
+	}
+
+	function formatPlnSigned(value: number | null): string {
+		if (value == null || Number.isNaN(value)) return '—';
+		const sign = value >= 0 ? '+' : '−';
+		return `${sign}${formatPLN(Math.abs(value))}`;
+	}
 
 	let chartContainer: HTMLDivElement;
 
@@ -195,47 +236,78 @@
 		});
 
 		const colors = ['#5E81AC', '#88C0D0', '#A3BE8C', '#EBCB8B', '#D08770', '#B48EAD', '#BF616A'];
+		const today = new Date();
+		const hasCpi = cpiSeries.points.length > 0;
 
-		const series: Array<{
+		type LineSeries = {
 			name: string;
 			data: Array<[string, number]>;
 			type: 'line';
 			smooth: boolean;
-			lineStyle: { color: string; width: number };
-		}> = [];
+			lineStyle: { color: string; width: number; type?: 'dashed' | 'solid'; opacity?: number };
+			itemStyle?: { color: string };
+		};
+		const series: LineSeries[] = [];
 		let colorIndex = 0;
+
 		companyMap.forEach((salaryData, company) => {
+			const color = colors[colorIndex % colors.length];
 			series.push({
 				name: company,
 				data: salaryData,
-				type: 'line' as const,
+				type: 'line',
 				smooth: true,
-				lineStyle: { color: colors[colorIndex % colors.length], width: 2 }
+				lineStyle: { color, width: 2 },
+				itemStyle: { color }
 			});
+
+			if (hasCpi) {
+				const realData: Array<[string, number]> = [];
+				for (const [dateStr, nominal] of salaryData) {
+					const adjusted = inflationAdjust(nominal, new Date(dateStr), today, cpiSeries);
+					if (adjusted != null) realData.push([dateStr, adjusted]);
+				}
+				if (realData.length > 0) {
+					series.push({
+						name: `${company} (realna wartość)`,
+						data: realData,
+						type: 'line',
+						smooth: true,
+						lineStyle: { color, width: 2, type: 'dashed', opacity: 0.7 },
+						itemStyle: { color }
+					});
+				}
+			}
 			colorIndex++;
 		});
 
 		const option: EChartsOption = {
-			title: { text: 'Progresja wynagrodzenia', left: 'center' },
+			title: { text: 'Progresja wynagrodzenia', left: 'center', top: 8 },
 			tooltip: {
 				trigger: 'axis',
-				formatter: (params: any) => {
+				formatter: (params: unknown) => {
 					if (!params || !Array.isArray(params) || params.length === 0) return '';
-					let result = `${new Date(params[0].value[0]).toLocaleDateString('pl-PL')}<br/>`;
-					params.forEach((p: any) => {
+					const rows = params as Array<{ value: [string, number]; seriesName: string }>;
+					let result = `${new Date(rows[0].value[0]).toLocaleDateString('pl-PL')}<br/>`;
+					rows.forEach((p) => {
 						result += `${p.seriesName}: ${formatPLN(p.value[1])}<br/>`;
 					});
 					return result;
 				}
 			},
-			legend: { top: 30, data: series.map((s) => s.name) },
+			legend: {
+				top: 44,
+				left: 'center',
+				type: 'scroll',
+				data: series.map((s) => s.name)
+			},
 			xAxis: { type: 'time' },
 			yAxis: {
 				type: 'value',
 				axisLabel: { formatter: (value: number) => formatPLN(value) }
 			},
 			series,
-			grid: { left: '80px', right: '40px', top: '80px' }
+			grid: { left: '80px', right: '40px', top: 90, bottom: 40 }
 		};
 
 		chart.setOption(option);
@@ -284,7 +356,74 @@
 
 	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
 		<header>
+			<h3 class="h3 flex items-center gap-2">
+				<Scale size={20} /> Wpływ inflacji (od ostatniej podwyżki)
+			</h3>
+			<p class="text-xs text-surface-700-300">
+				Źródło danych CPI: GUS (Wskaźnik cen towarów i usług konsumpcyjnych — ogółem)
+			</p>
+		</header>
+		{#if inflationEntries.length === 0}
+			<p class="text-sm text-surface-700-300">
+				Za mało danych — dodaj kolejną zmianę pensji lub poczekaj na świeże dane CPI, aby zobaczyć
+				realny wpływ inflacji.
+			</p>
+		{:else}
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				{#each inflationEntries as ctx (ctx.owner)}
+					{@const realPositive = (ctx.real_change_pln ?? 0) >= 0}
+					{@const previousRecord = data.salaries.salary_records.find(
+						(r) => r.owner === ctx.owner && r.date === ctx.previous_change_date
+					)}
+					<div class="card preset-tonal-surface p-4 space-y-2">
+						<div class="flex items-baseline justify-between flex-wrap gap-2">
+							<strong class="text-lg">{ctx.owner}</strong>
+							<span class="text-xs text-surface-700-300">
+								od {new Date(ctx.last_change_date).toLocaleDateString('pl-PL')}
+								{#if previousRecord?.company}
+									· {previousRecord.company}
+								{/if}
+							</span>
+						</div>
+						<dl class="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-sm">
+							<dt class="text-surface-700-300">Poprzednia pensja:</dt>
+							<dd class="text-right font-semibold">{formatPLN(ctx.previous_salary)}</dd>
+
+							<dt class="text-surface-700-300">W dzisiejszych PLN:</dt>
+							<dd class="text-right font-semibold">
+								{formatPLN(ctx.previous_salary_in_today_pln)}
+							</dd>
+
+							<dt class="text-surface-700-300">Obecna pensja:</dt>
+							<dd class="text-right font-semibold">{formatPLN(ctx.current_salary)}</dd>
+
+							<dt class="font-semibold pt-1">Realna podwyżka:</dt>
+							<dd
+								class="text-right font-bold pt-1"
+								class:text-success-500={realPositive}
+								class:text-error-500={!realPositive}
+							>
+								{formatPlnSigned(ctx.real_change_pln)}
+								<span class="text-xs font-normal">
+									({formatPctSigned(ctx.real_change_pct)})
+								</span>
+							</dd>
+						</dl>
+						<p class="text-xs text-surface-700-300">
+							CPI na koniec: {ctx.cpi_as_of_year}
+						</p>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</div>
+
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header>
 			<h3 class="h3 flex items-center gap-2"><TrendingUp size={20} /> Progresja wynagrodzenia</h3>
+			<p class="text-xs text-surface-700-300">
+				Linia przerywana: nominalna pensja przeliczona na dzisiejsze PLN wg CPI GUS.
+			</p>
 		</header>
 		<div bind:this={chartContainer} style="width: 100%; height: 400px;"></div>
 	</div>

@@ -7,6 +7,7 @@ from app.api import (
     accounts,
     assets,
     config,
+    cpi,
     dashboard,
     debt_payments,
     debts,
@@ -21,13 +22,15 @@ from app.api import (
 )
 from app.core.config import settings
 from app.core.init_db import init_db
+from app.services.scheduler import scheduler_lifespan
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     # Startup: initialize the database schema (migrations + seeding)
     await init_db()
-    yield
+    async with scheduler_lifespan():
+        yield
     # Shutdown: cleanup if needed
 
 
@@ -46,6 +49,7 @@ app.include_router(dashboard.router)
 app.include_router(accounts.router)
 app.include_router(assets.router)
 app.include_router(config.router)
+app.include_router(cpi.router)
 app.include_router(debts.router)
 app.include_router(debt_payments.router)
 app.include_router(investment.router)

@@ -1,6 +1,7 @@
 from app.models.account import Account
 from app.models.app_config import AppConfig
 from app.models.asset import Asset
+from app.models.cpi_index import CpiIndex
 from app.models.debt import Debt
 from app.models.debt_payment import DebtPayment
 from app.models.goal import Goal
@@ -14,6 +15,7 @@ __all__ = [
     "Account",
     "AppConfig",
     "Asset",
+    "CpiIndex",
     "Debt",
     "DebtPayment",
     "Goal",

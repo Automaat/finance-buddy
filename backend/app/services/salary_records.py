@@ -8,11 +8,13 @@ from sqlalchemy.orm import Session
 
 from app.models import Persona, SalaryRecord
 from app.schemas.salary_records import (
+    InflationContext,
     SalaryRecordCreate,
     SalaryRecordResponse,
     SalaryRecordsListResponse,
     SalaryRecordUpdate,
 )
+from app.services import inflation
 from app.utils.db_helpers import get_or_404, soft_delete
 
 
@@ -52,12 +54,72 @@ def get_all_salary_records(
     today = datetime.now(UTC).date()
     personas = db.execute(select(Persona).order_by(Persona.name)).scalars().all()
     current_salaries = {p.name: _get_current_salary(db, p.name, today) for p in personas}
+    inflation_context = _build_inflation_context(db, [p.name for p in personas], today)
 
     return SalaryRecordsListResponse(
         salary_records=salary_list,
         total_count=len(salary_list),
         current_salaries=current_salaries,
+        inflation_context=inflation_context,
     )
+
+
+def _build_inflation_context(
+    db: Session, persona_names: list[str], today: date
+) -> dict[str, InflationContext]:
+    """For each persona, compute real-terms change since the previous salary record.
+
+    Skips personas without two salary records or when CPI data is unavailable.
+    """
+    as_of_year = inflation.latest_known_year(db)
+    if as_of_year is None:
+        return {}
+
+    result: dict[str, InflationContext] = {}
+    for owner in persona_names:
+        recent = (
+            db.execute(
+                select(SalaryRecord)
+                .where(
+                    SalaryRecord.owner == owner,
+                    SalaryRecord.is_active.is_(True),
+                    SalaryRecord.date <= today,
+                )
+                .order_by(desc(SalaryRecord.date))
+                .limit(2)
+            )
+            .scalars()
+            .all()
+        )
+        if len(recent) < 2:
+            continue
+        current_record, previous_record = recent[0], recent[1]
+        try:
+            prev_in_today = inflation.adjust(
+                db,
+                float(previous_record.gross_amount),
+                previous_record.date,
+                today,
+            )
+        except inflation.InflationDataMissingError:
+            continue
+
+        current_amount = float(current_record.gross_amount)
+        real_change_pln = current_amount - prev_in_today
+        real_change_pct = (real_change_pln / prev_in_today * 100) if prev_in_today else None
+
+        result[owner] = InflationContext(
+            owner=owner,
+            last_change_date=current_record.date,
+            previous_change_date=previous_record.date,
+            previous_salary=float(previous_record.gross_amount),
+            previous_salary_in_today_pln=prev_in_today,
+            current_salary=current_amount,
+            real_change_pln=real_change_pln,
+            real_change_pct=real_change_pct,
+            cpi_as_of_year=as_of_year,
+        )
+    return result
 
 
 def _get_current_salary(db: Session, owner: str, as_of_date: date) -> float | None:

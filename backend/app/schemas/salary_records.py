@@ -72,7 +72,20 @@ class SalaryRecordResponse(BaseModel):
     created_at: datetime
 
 
+class InflationContext(BaseModel):
+    owner: str
+    last_change_date: date_type
+    previous_change_date: date_type | None
+    previous_salary: float | None
+    previous_salary_in_today_pln: float | None
+    current_salary: float
+    real_change_pln: float | None
+    real_change_pct: float | None
+    cpi_as_of_year: int
+
+
 class SalaryRecordsListResponse(BaseModel):
     salary_records: list[SalaryRecordResponse]
     total_count: int
     current_salaries: dict[str, float | None] = {}
+    inflation_context: dict[str, InflationContext] = {}
