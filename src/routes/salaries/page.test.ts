@@ -138,6 +138,43 @@ describe('Salaries page — saveSalary validation & error display', () => {
 		expect(invalidateAll).not.toHaveBeenCalled();
 	});
 
+	it('falls back to default message when 422 detail array has no usable msg fields', async () => {
+		const fetchMock = vi.fn().mockResolvedValue({
+			ok: false,
+			json: async () => ({ detail: [{ loc: ['body', 'date'] }, { loc: ['body', 'gross_amount'] }] })
+		});
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(Page, { props: { data: baseData } });
+		await openNewSalaryModalAndFill({
+			date: '2026-05-20',
+			gross_amount: '5000',
+			company: 'ACME'
+		});
+
+		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+
+		await waitFor(() => expect(screen.getByText('Failed to save salary record')).toBeTruthy());
+	});
+
+	it('rejects future date evaluated at submit time, not page load', async () => {
+		const fetchMock = vi.fn();
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(Page, { props: { data: baseData } });
+		await openNewSalaryModalAndFill({
+			date: '2026-05-21',
+			gross_amount: '5000',
+			company: 'ACME'
+		});
+
+		vi.setSystemTime(new Date('2026-05-20T23:59:00Z'));
+		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+
+		await waitFor(() => expect(screen.getByText('Data nie może być z przyszłości')).toBeTruthy());
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
 	it('renders string detail unchanged on 409 conflict', async () => {
 		const fetchMock = vi.fn().mockResolvedValue({
 			ok: false,

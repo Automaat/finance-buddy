@@ -87,7 +87,7 @@
 		salaryError = '';
 	}
 
-	const today = new Date().toISOString().split('T')[0];
+	const today = $derived(new Date().toISOString().split('T')[0]);
 
 	async function saveSalary() {
 		if (!salaryFormData.date) {
@@ -95,7 +95,8 @@
 			return;
 		}
 
-		if (salaryFormData.date > today) {
+		const todayNow = new Date().toISOString().split('T')[0];
+		if (salaryFormData.date > todayNow) {
 			salaryError = 'Data nie może być z przyszłości';
 			return;
 		}
@@ -128,14 +129,19 @@
 			if (!response.ok) {
 				const errorData = await response.json();
 				const detail = errorData.detail;
-				const message = Array.isArray(detail)
-					? detail
-							.map((d: { msg?: string }) => d.msg ?? '')
-							.filter(Boolean)
-							.join('; ')
-					: typeof detail === 'string'
-						? detail
-						: 'Failed to save salary record';
+				const fallback = 'Failed to save salary record';
+				let message: string;
+				if (Array.isArray(detail)) {
+					const joined = detail
+						.map((d: { msg?: string }) => (typeof d?.msg === 'string' ? d.msg : ''))
+						.filter(Boolean)
+						.join('; ');
+					message = joined || fallback;
+				} else if (typeof detail === 'string' && detail) {
+					message = detail;
+				} else {
+					message = fallback;
+				}
 				throw new Error(message);
 			}
 
