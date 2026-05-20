@@ -245,6 +245,7 @@ def test_get_all_goals_counts(test_client):
 
 def test_create_goal_target_already_reached(test_client):
     """Goal where current >= target should have projected_hit_date set to today."""
+    today_before = datetime.now(UTC).date()
     response = test_client.post(
         "/api/goals",
         json={
@@ -255,8 +256,10 @@ def test_create_goal_target_already_reached(test_client):
             "target_date": "2027-01-01",
         },
     )
+    today_after = datetime.now(UTC).date()
     assert response.status_code == 201
     data = response.json()
     assert data["progress_percent"] == 100
     assert data["remaining_amount"] == 0
-    assert data["projected_hit_date"] == datetime.now(UTC).date().isoformat()
+    # Accept either side of a UTC midnight crossover during the request
+    assert data["projected_hit_date"] in {today_before.isoformat(), today_after.isoformat()}

@@ -1,5 +1,6 @@
-from datetime import UTC, date, datetime, timedelta
-from decimal import Decimal
+import calendar
+from datetime import UTC, date, datetime
+from decimal import ROUND_CEILING, Decimal
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -15,6 +16,15 @@ from app.schemas.goals import (
 from app.utils.db_helpers import get_or_404
 
 
+def _add_months(d: date, months: int) -> date:
+    """Add calendar months to a date, clamping day to last day of target month."""
+    month_index = d.month - 1 + months
+    year = d.year + month_index // 12
+    month = month_index % 12 + 1
+    day = min(d.day, calendar.monthrange(year, month)[1])
+    return date(year, month, day)
+
+
 def _project_hit_date(
     target_amount: Decimal,
     current_amount: Decimal,
@@ -23,7 +33,8 @@ def _project_hit_date(
 ) -> date | None:
     """Project the date when a goal will be hit at current contribution rate.
 
-    Returns None if already completed, target already reached, or no contribution.
+    Returns today if already completed or target already reached.
+    Returns None if there is no positive monthly contribution to project from.
     """
     today = datetime.now(UTC).date()
     if is_completed or current_amount >= target_amount:
@@ -32,10 +43,9 @@ def _project_hit_date(
         return None
 
     remaining = target_amount - current_amount
-    # Ceil division for whole months needed
-    months_needed = int((remaining + monthly_contribution - Decimal("0.01")) / monthly_contribution)
-    # Approximate days per month (30.44) for projected calendar date
-    return today + timedelta(days=int(months_needed * 30.44))
+    months_decimal = remaining / monthly_contribution
+    months_needed = int(months_decimal.to_integral_value(rounding=ROUND_CEILING))
+    return _add_months(today, months_needed)
 
 
 def _to_response(goal: Goal, account_name: str | None) -> GoalResponse:

@@ -145,6 +145,18 @@
 		if (percent >= 33) return 'bg-warning-500';
 		return 'bg-surface-400-600';
 	}
+
+	function polishPlural(n: number, one: string, few: string, many: string): string {
+		const mod10 = n % 10;
+		const mod100 = n % 100;
+		if (n === 1) return one;
+		if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+		return many;
+	}
+
+	const completedLabel = $derived(
+		`${polishPlural(completedCount, 'cel ukończony', 'cele ukończone', 'celów ukończonych')}`
+	);
 </script>
 
 <div class="space-y-6">
@@ -155,7 +167,7 @@
 				<h1 class="h2 font-bold">Cele finansowe</h1>
 				<p class="text-sm text-surface-700-300">
 					{completedCount} z {totalCount}
-					{totalCount === 1 ? 'cel ukończony' : 'celów ukończonych'}
+					{completedLabel}
 				</p>
 			</div>
 		</div>
