@@ -4,7 +4,9 @@ const PORT = Number(process.env.E2E_FRONTEND_PORT ?? 4173);
 const BASE_URL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${PORT}`;
 const API_URL = process.env.E2E_API_URL ?? 'http://127.0.0.1:8000';
 const DATABASE_URL =
-	process.env.DATABASE_URL ?? 'postgresql://finance:password@localhost:5432/finance';
+	process.env.E2E_DATABASE_URL ??
+	process.env.DATABASE_URL ??
+	'postgresql://finance:password@localhost:5433/finance';
 
 const skipWebServer = process.env.E2E_SKIP_WEBSERVER === '1';
 

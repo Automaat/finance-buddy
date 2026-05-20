@@ -1,9 +1,5 @@
 import { test, expect } from '@playwright/test';
-
-function uniqueName(prefix: string): string {
-	const stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-	return `${prefix}-${stamp}`;
-}
+import { uniqueName } from './utils';
 
 test.describe('goals CRUD', () => {
 	test('create, verify, then delete a goal', async ({ page }) => {

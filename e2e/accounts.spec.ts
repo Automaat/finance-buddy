@@ -1,9 +1,5 @@
 import { test, expect } from '@playwright/test';
-
-function uniqueName(prefix: string): string {
-	const stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-	return `${prefix}-${stamp}`;
-}
+import { uniqueName } from './utils';
 
 test.describe('accounts CRUD', () => {
 	test('create asset account then soft-delete it', async ({ page }) => {
