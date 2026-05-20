@@ -10,10 +10,14 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test": "vitest",
 		"test:coverage": "vitest run --coverage",
+		"test:e2e": "playwright test",
+		"test:e2e:ui": "playwright test --ui",
+		"test:e2e:report": "playwright show-report",
 		"lint": "oxlint && prettier --check .",
 		"format": "prettier --write ."
 	},
 	"devDependencies": {
+		"@playwright/test": "^1.60.0",
 		"@sveltejs/adapter-node": "5.5.4",
 		"@sveltejs/kit": "2.60.1",
 		"@sveltejs/vite-plugin-svelte": "7.1.2",

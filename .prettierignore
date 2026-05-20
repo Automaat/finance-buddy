@@ -34,3 +34,9 @@ backend/README.md
 
 # Klaudiush tooling
 .klaudiush
+
+# Playwright artifacts
+playwright-report
+test-results
+blob-report
+playwright/.cache
