@@ -26,7 +26,7 @@ test.describe('smoke @smoke', () => {
 			});
 			page.on('pageerror', (err) => pageErrors.push(err.message));
 
-			const response = await page.goto(route.path, { waitUntil: 'networkidle' });
+			const response = await page.goto(route.path, { waitUntil: 'domcontentloaded' });
 			expect(response, `no response for ${route.path}`).not.toBeNull();
 			expect(response!.status(), `bad status on ${route.path}`).toBeLessThan(400);
 

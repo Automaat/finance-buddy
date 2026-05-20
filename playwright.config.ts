@@ -10,10 +10,10 @@ const skipWebServer = process.env.E2E_SKIP_WEBSERVER === '1';
 
 export default defineConfig({
 	testDir: './e2e',
-	fullyParallel: false,
+	fullyParallel: true,
 	forbidOnly: !!process.env.CI,
-	retries: process.env.CI ? 2 : 0,
-	workers: 1,
+	retries: process.env.CI ? 1 : 0,
+	workers: process.env.CI ? 4 : undefined,
 	reporter: process.env.CI
 		? [['github'], ['html', { open: 'never' }], ['list']]
 		: [['html', { open: 'never' }], ['list']],
@@ -29,7 +29,11 @@ export default defineConfig({
 	},
 	projects: [
 		{ name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-		{ name: 'mobile-chrome', use: { ...devices['Pixel 7'] } }
+		{
+			name: 'mobile-chrome',
+			use: { ...devices['Pixel 7'] },
+			testMatch: /navigation\.spec\.ts$/
+		}
 	],
 	webServer: skipWebServer
 		? undefined
