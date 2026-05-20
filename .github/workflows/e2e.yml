@@ -99,11 +99,12 @@ jobs:
 
       - name: Start frontend
         env:
+          NODE_ENV: production
           PORT: '4173'
           HOST: 127.0.0.1
           ORIGIN: http://127.0.0.1:4173
         run: |
-          node build > "${GITHUB_WORKSPACE}/frontend.log" 2>&1 &
+          NODE_ENV=production node build > "${GITHUB_WORKSPACE}/frontend.log" 2>&1 &
           echo $! > "${GITHUB_WORKSPACE}/frontend.pid"
 
       - name: Wait for frontend
