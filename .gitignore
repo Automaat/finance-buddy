@@ -53,6 +53,12 @@ coverage.xml
 htmlcov/
 .pytest_cache/
 
+# Playwright
+playwright-report/
+test-results/
+playwright/.cache/
+blob-report/
+
 # Misc
 .vercel
 .netlify
