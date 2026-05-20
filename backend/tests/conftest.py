@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from contextlib import asynccontextmanager
 from unittest.mock import patch
 
 import pytest
@@ -10,11 +11,29 @@ from testcontainers.postgres import PostgresContainer
 from app.core.database import Base, get_db
 from app.main import app
 
-# Import models BEFORE app to register them with SQLAlchemy Base.metadata
-from app.models import (  # noqa: F401
+# Import models BEFORE app to register them with SQLAlchemy Base.metadata.
+# The tuple reference below keeps linters from flagging the side-effect imports.
+from app.models import (
     Account,
     AppConfig,
     Asset,
+    CpiIndex,
+    Debt,
+    DebtPayment,
+    Goal,
+    Persona,
+    RetirementLimit,
+    SalaryRecord,
+    Snapshot,
+    SnapshotValue,
+    Transaction,
+)
+
+_REGISTERED_MODELS = (
+    Account,
+    AppConfig,
+    Asset,
+    CpiIndex,
     Debt,
     DebtPayment,
     Goal,
@@ -112,10 +131,19 @@ def test_client(test_db_engine) -> Generator[TestClient]:
 
     app.dependency_overrides[get_db] = override_get_db
 
-    # Patch init_db to use test engine during lifespan
-    with patch("app.core.init_db.init_db", side_effect=mock_init_db):
+    # Patch init_db to use test engine during lifespan; suppress real scheduler
+    # so tests don't hit GUS BDL or schedule background jobs.
+    with (
+        patch("app.core.init_db.init_db", side_effect=mock_init_db),
+        patch("app.main.scheduler_lifespan", _noop_lifespan),
+    ):
         client = TestClient(app, raise_server_exceptions=True)
         try:
             yield client
         finally:
             app.dependency_overrides.clear()
+
+
+@asynccontextmanager
+async def _noop_lifespan():
+    yield

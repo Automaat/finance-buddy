@@ -3,6 +3,9 @@ import { env } from '$env/dynamic/public';
 import { browser } from '$app/environment';
 import type { PageLoad } from './$types';
 import type { SalariesData } from '$lib/types/salaries';
+import type { CpiSeries } from '$lib/types/cpi';
+
+const EMPTY_CPI: CpiSeries = { points: [], base_year: null, latest_year: null, source: '' };
 
 export const load: PageLoad = async ({ fetch, url }) => {
 	try {
@@ -11,7 +14,6 @@ export const load: PageLoad = async ({ fetch, url }) => {
 			throw error(500, 'API URL is not configured');
 		}
 
-		// Build query params from URL
 		const owner = url.searchParams.get('owner');
 		const dateFrom = url.searchParams.get('date_from');
 		const dateTo = url.searchParams.get('date_to');
@@ -21,17 +23,19 @@ export const load: PageLoad = async ({ fetch, url }) => {
 		if (dateFrom) params.set('date_from', dateFrom);
 		if (dateTo) params.set('date_to', dateTo);
 
-		// Fetch salaries with filters
-		const response = await fetch(`${apiUrl}/api/salaries?${params.toString()}`);
+		const [salariesResponse, personasResponse, cpiResponse] = await Promise.all([
+			fetch(`${apiUrl}/api/salaries?${params.toString()}`),
+			fetch(`${apiUrl}/api/personas`),
+			fetch(`${apiUrl}/api/cpi/series`)
+		]);
 
-		if (!response.ok) {
-			throw error(response.status, 'Failed to load salary records');
+		if (!salariesResponse.ok) {
+			throw error(salariesResponse.status, 'Failed to load salary records');
 		}
 
-		const data: SalariesData = await response.json();
-
-		const personasResponse = await fetch(`${apiUrl}/api/personas`);
+		const data: SalariesData = await salariesResponse.json();
 		const personas = personasResponse.ok ? await personasResponse.json() : [];
+		const cpiSeries: CpiSeries = cpiResponse.ok ? await cpiResponse.json() : EMPTY_CPI;
 
 		return {
 			salaries: data,
@@ -40,7 +44,8 @@ export const load: PageLoad = async ({ fetch, url }) => {
 				date_from: dateFrom,
 				date_to: dateTo
 			},
-			personas
+			personas,
+			cpiSeries
 		};
 	} catch (err) {
 		if (err instanceof Error && 'status' in err) {

@@ -2,17 +2,19 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from fastapi import HTTPException
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import Persona, SalaryRecord
 from app.schemas.salary_records import (
+    InflationContext,
     SalaryRecordCreate,
     SalaryRecordResponse,
     SalaryRecordsListResponse,
     SalaryRecordUpdate,
 )
+from app.services import inflation
 from app.utils.db_helpers import get_or_404, soft_delete
 
 
@@ -52,12 +54,92 @@ def get_all_salary_records(
     today = datetime.now(UTC).date()
     personas = db.execute(select(Persona).order_by(Persona.name)).scalars().all()
     current_salaries = {p.name: _get_current_salary(db, p.name, today) for p in personas}
+    inflation_context = _build_inflation_context(db, [p.name for p in personas], today)
 
     return SalaryRecordsListResponse(
         salary_records=salary_list,
         total_count=len(salary_list),
         current_salaries=current_salaries,
+        inflation_context=inflation_context,
     )
+
+
+def _build_inflation_context(
+    db: Session, persona_names: list[str], today: date
+) -> dict[str, InflationContext]:
+    """For each persona, compute real-terms change since the previous salary record.
+
+    Skips personas without two salary records or when CPI data is unavailable.
+    Loads the CPI index map and latest salaries in single queries.
+    """
+    as_of_year = inflation.latest_known_year(db)
+    index_by_year = inflation.load_index(db)
+    if as_of_year is None or not index_by_year:
+        return {}
+
+    # Fetch the two most recent salary records per owner in a single query
+    # using a window function. Window functions are supported by both
+    # SQLite (3.25+) and PostgreSQL, the engines this project targets.
+    rn = (
+        func.row_number()
+        .over(partition_by=SalaryRecord.owner, order_by=desc(SalaryRecord.date))
+        .label("rn")
+    )
+    ranked = (
+        select(SalaryRecord, rn)
+        .where(
+            SalaryRecord.owner.in_(persona_names),
+            SalaryRecord.is_active.is_(True),
+            SalaryRecord.date <= today,
+        )
+        .subquery()
+    )
+    rows = (
+        db.execute(
+            select(SalaryRecord)
+            .join(ranked, SalaryRecord.id == ranked.c.id)
+            .where(ranked.c.rn <= 2)
+            .order_by(SalaryRecord.owner, desc(SalaryRecord.date))
+        )
+        .scalars()
+        .all()
+    )
+
+    by_owner: dict[str, list[SalaryRecord]] = {}
+    for row in rows:
+        by_owner.setdefault(row.owner, []).append(row)
+
+    result: dict[str, InflationContext] = {}
+    for owner, recent in by_owner.items():
+        if len(recent) < 2:
+            continue
+        current_record, previous_record = recent[0], recent[1]
+        try:
+            prev_in_today = inflation.adjust_with_index(
+                index_by_year,
+                float(previous_record.gross_amount),
+                previous_record.date,
+                today,
+            )
+        except inflation.InflationDataMissingError:
+            continue
+
+        current_amount = float(current_record.gross_amount)
+        real_change_pln = current_amount - prev_in_today
+        real_change_pct = (real_change_pln / prev_in_today * 100) if prev_in_today else None
+
+        result[owner] = InflationContext(
+            owner=owner,
+            last_change_date=current_record.date,
+            previous_change_date=previous_record.date,
+            previous_salary=float(previous_record.gross_amount),
+            previous_salary_in_today_pln=prev_in_today,
+            current_salary=current_amount,
+            real_change_pln=real_change_pln,
+            real_change_pct=real_change_pct,
+            cpi_as_of_year=as_of_year,
+        )
+    return result
 
 
 def _get_current_salary(db: Session, owner: str, as_of_date: date) -> float | None:

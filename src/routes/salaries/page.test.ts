@@ -39,10 +39,12 @@ const baseData = {
 	salaries: {
 		salary_records: [],
 		total_count: 0,
-		current_salaries: { Marcin: null }
+		current_salaries: { Marcin: null },
+		inflation_context: {}
 	},
 	filters: { owner: null, date_from: null, date_to: null },
-	personas: [{ id: 1, name: 'Marcin', ppk_employee_rate: 2, ppk_employer_rate: 1.5 }]
+	personas: [{ id: 1, name: 'Marcin', ppk_employee_rate: 2, ppk_employer_rate: 1.5 }],
+	cpiSeries: { points: [], base_year: null, latest_year: null, source: '' }
 };
 
 async function openNewSalaryModalAndFill(opts: {
