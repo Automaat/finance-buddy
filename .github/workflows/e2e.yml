@@ -73,7 +73,9 @@ jobs:
         run: npx playwright install-deps chromium
 
       - name: Build frontend
-        run: npm run build
+        env:
+          NODE_ENV: production
+        run: NODE_ENV=production npm run build
 
       - name: Start backend
         run: |
