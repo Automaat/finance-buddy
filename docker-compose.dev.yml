@@ -29,6 +29,7 @@ services:
       - DATABASE_URL=postgresql://finance:${POSTGRES_PASSWORD:-password}@postgres:5432/finance
       - APP_PASSWORD=${APP_PASSWORD:-changeme}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5174,http://localhost:3000}
+      - SEED_DEV_DATA=${SEED_DEV_DATA:-true}
     depends_on:
       postgres:
         condition: service_healthy
