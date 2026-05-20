@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from sqlalchemy import Numeric, String
+from sqlalchemy import DateTime, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -22,4 +22,6 @@ class CpiIndex(Base):
     year: Mapped[int] = mapped_column(primary_key=True)
     yoy_rate: Mapped[Decimal] = mapped_column(Numeric(8, 4))
     source: Mapped[str] = mapped_column(String(64), default="GUS-BDL-217230")
-    fetched_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(UTC))
+    fetched_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )

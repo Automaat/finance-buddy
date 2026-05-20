@@ -1,4 +1,11 @@
-"""Background scheduler for periodic CPI refreshes."""
+"""Background scheduler for periodic CPI refreshes.
+
+Assumes a single-instance deployment (one backend process). The scheduler
+runs in-process, so if the backend is scaled horizontally (multiple
+uvicorn workers or replicas) each one would perform its own refresh.
+Finance-buddy is a self-hosted single-user app; if that changes, replace
+this with an external cron, a leader-elected job, or a DB advisory lock.
+"""
 
 import logging
 from collections.abc import AsyncIterator

@@ -54,7 +54,15 @@ def adjust_amount(payload: AdjustRequest, db: Session = Depends(get_db)) -> Adju
 
 @router.post("/refresh", response_model=RefreshResponse)
 async def refresh_cpi(db: Session = Depends(get_db)) -> RefreshResponse:
-    """Pull fresh CPI from GUS BDL and upsert into the database."""
+    """Pull fresh CPI from GUS BDL and upsert into the database.
+
+    Intended for development and manual recovery. In normal operation the
+    in-process scheduler refreshes monthly (and on startup if stale). This
+    endpoint is reachable to anyone who can hit the backend — finance-buddy
+    is a single-user self-hosted app, so the worst case is an unsolicited
+    network call to a public GUS endpoint. Gate it behind auth before
+    exposing the backend to untrusted networks.
+    """
     try:
         written = await inflation.refresh_cpi(db)
     except Exception as exc:

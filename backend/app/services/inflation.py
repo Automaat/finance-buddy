@@ -161,14 +161,22 @@ def latest_known_year(db: Session) -> int | None:
     ).scalar_one_or_none()
 
 
-def adjust(db: Session, amount: float, from_date: date, to_date: date) -> float:
-    """Adjust ``amount`` from purchasing power on ``from_date`` to ``to_date``.
+def load_index(db: Session) -> dict[int, Decimal]:
+    """Load and cache the fixed-base index map. Empty dict if no CPI rows.
 
-    Returns the equivalent amount today (or on ``to_date``). Raises
-    ``InflationDataMissingError`` if no CPI rows exist.
+    Callers that need to adjust many amounts should call this once and then
+    use :func:`adjust_with_index` in a loop to avoid reloading the table.
     """
-    yoy_map = _load_yoy_map(db)
-    index_by_year = _cumulative_index(yoy_map)
+    return _cumulative_index(_load_yoy_map(db))
+
+
+def adjust_with_index(
+    index_by_year: dict[int, Decimal],
+    amount: float,
+    from_date: date,
+    to_date: date,
+) -> float:
+    """Adjust ``amount`` using a pre-loaded index map (see :func:`load_index`)."""
     if not index_by_year:
         raise InflationDataMissingError("CPI table is empty")
 
@@ -178,6 +186,16 @@ def adjust(db: Session, amount: float, from_date: date, to_date: date) -> float:
         raise InflationDataMissingError("Source index is zero")
     factor = to_index / from_index
     return float(Decimal(str(amount)) * factor)
+
+
+def adjust(db: Session, amount: float, from_date: date, to_date: date) -> float:
+    """Adjust ``amount`` from purchasing power on ``from_date`` to ``to_date``.
+
+    Returns the equivalent amount today (or on ``to_date``). Raises
+    ``InflationDataMissingError`` if no CPI rows exist. For loops, prefer
+    :func:`load_index` + :func:`adjust_with_index` to avoid repeated reads.
+    """
+    return adjust_with_index(load_index(db), amount, from_date, to_date)
 
 
 def cpi_series(db: Session) -> list[tuple[int, Decimal, Decimal]]:

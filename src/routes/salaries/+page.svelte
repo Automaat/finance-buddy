@@ -4,7 +4,7 @@
 	import type { EChartsOption } from 'echarts';
 	import Modal from '$lib/components/Modal.svelte';
 	import { formatPLN } from '$lib/utils/format';
-	import { inflationAdjust } from '$lib/utils/inflation';
+	import { buildCpiLookup, inflationAdjust, parseIsoDate } from '$lib/utils/inflation';
 	import {
 		Plus,
 		Banknote,
@@ -236,8 +236,12 @@
 		});
 
 		const colors = ['#5E81AC', '#88C0D0', '#A3BE8C', '#EBCB8B', '#D08770', '#B48EAD', '#BF616A'];
-		const today = new Date();
-		const hasCpi = cpiSeries.points.length > 0;
+		// Use date-only `today` so adjustments are consistent across the
+		// browsing session and match the backend (which is date-only).
+		const now = new Date();
+		const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+		const cpiLookup = buildCpiLookup(cpiSeries);
+		const hasCpi = cpiLookup !== null;
 
 		type LineSeries = {
 			name: string;
@@ -264,7 +268,7 @@
 			if (hasCpi) {
 				const realData: Array<[string, number]> = [];
 				for (const [dateStr, nominal] of salaryData) {
-					const adjusted = inflationAdjust(nominal, new Date(dateStr), today, cpiSeries);
+					const adjusted = inflationAdjust(nominal, parseIsoDate(dateStr), today, cpiLookup);
 					if (adjusted != null) realData.push([dateStr, adjusted]);
 				}
 				if (realData.length > 0) {

@@ -2,7 +2,7 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from fastapi import HTTPException
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -70,33 +70,53 @@ def _build_inflation_context(
     """For each persona, compute real-terms change since the previous salary record.
 
     Skips personas without two salary records or when CPI data is unavailable.
+    Loads the CPI index map and latest salaries in single queries.
     """
     as_of_year = inflation.latest_known_year(db)
-    if as_of_year is None:
+    index_by_year = inflation.load_index(db)
+    if as_of_year is None or not index_by_year:
         return {}
 
-    result: dict[str, InflationContext] = {}
-    for owner in persona_names:
-        recent = (
-            db.execute(
-                select(SalaryRecord)
-                .where(
-                    SalaryRecord.owner == owner,
-                    SalaryRecord.is_active.is_(True),
-                    SalaryRecord.date <= today,
-                )
-                .order_by(desc(SalaryRecord.date))
-                .limit(2)
-            )
-            .scalars()
-            .all()
+    # Fetch the two most recent salary records per owner in a single query
+    # using a window function. Window functions are supported by both
+    # SQLite (3.25+) and PostgreSQL, the engines this project targets.
+    rn = (
+        func.row_number()
+        .over(partition_by=SalaryRecord.owner, order_by=desc(SalaryRecord.date))
+        .label("rn")
+    )
+    ranked = (
+        select(SalaryRecord, rn)
+        .where(
+            SalaryRecord.owner.in_(persona_names),
+            SalaryRecord.is_active.is_(True),
+            SalaryRecord.date <= today,
         )
+        .subquery()
+    )
+    rows = (
+        db.execute(
+            select(SalaryRecord)
+            .join(ranked, SalaryRecord.id == ranked.c.id)
+            .where(ranked.c.rn <= 2)
+            .order_by(SalaryRecord.owner, desc(SalaryRecord.date))
+        )
+        .scalars()
+        .all()
+    )
+
+    by_owner: dict[str, list[SalaryRecord]] = {}
+    for row in rows:
+        by_owner.setdefault(row.owner, []).append(row)
+
+    result: dict[str, InflationContext] = {}
+    for owner, recent in by_owner.items():
         if len(recent) < 2:
             continue
         current_record, previous_record = recent[0], recent[1]
         try:
-            prev_in_today = inflation.adjust(
-                db,
+            prev_in_today = inflation.adjust_with_index(
+                index_by_year,
                 float(previous_record.gross_amount),
                 previous_record.date,
                 today,
