@@ -9,6 +9,7 @@ from sqlalchemy import func, inspect, select
 from alembic import command
 from app.core.database import SessionLocal, engine
 from app.core.enums import Wrapper
+from app.core.seed_dev import seed_dev_data, should_seed
 from app.models import Persona, RetirementLimit
 
 logger = logging.getLogger(__name__)
@@ -92,6 +93,8 @@ def _seed_defaults() -> None:
 def _init_db_sync() -> None:
     _run_migrations()
     _seed_defaults()
+    if should_seed():
+        seed_dev_data()
 
 
 async def init_db() -> None:
