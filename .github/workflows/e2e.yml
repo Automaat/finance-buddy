@@ -80,6 +80,15 @@ jobs:
           NODE_ENV: production
         run: NODE_ENV=production npm run build
 
+      - name: Verify production build mode
+        run: |
+          echo "NODE_ENV=$NODE_ENV"
+          grep -E 'get_global_name|__sveltekit_dev' build/server/index.js | head -3
+          if grep -q '"__sveltekit_dev"' build/server/index.js; then
+            echo "::error::SK built in DEV mode despite NODE_ENV=production"
+            exit 1
+          fi
+
       - name: Start backend
         run: |
           uv run uvicorn app.main:app \
