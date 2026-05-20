@@ -29,8 +29,12 @@ def _calculate_savings_rate(
     last_4_ids = snapshots_df.tail(4)["id"].tolist()
     sub = df[df["snapshot_id"].isin(last_4_ids)].copy()
     if "signed_value" not in sub.columns:
-        has_name = sub["name"] if "name" in sub.columns else pd.Series(False, index=sub.index)
-        asset_mask = sub["asset_id"].notna() & has_name.notna()
+        # Asset-table rows require both asset_id and a joined name; with no name
+        # column the join never happened, so no row qualifies as asset-table.
+        if "name" in sub.columns:
+            asset_mask = sub["asset_id"].notna() & sub["name"].notna()
+        else:
+            asset_mask = pd.Series(False, index=sub.index)
         account_mask = sub["account_id"].notna() & sub["type"].notna()
         sign = np.where(
             account_mask,

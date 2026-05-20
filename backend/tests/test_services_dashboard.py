@@ -1788,84 +1788,85 @@ def test_dashboard_performance_60_snapshots(test_db_session):
     """
     import time
 
+    from app.models import Transaction
+
     # Mix of account categories/wrappers to exercise allocation + per-wrapper +
     # per-category time series — the per-snapshot hot paths.
-    accounts = [
-        create_test_account(test_db_session, name="Checking", category="bank", owner="Marcin"),
-        create_test_account(
-            test_db_session,
-            name="Emergency",
-            category="bank",
-            owner="Marcin",
-            purpose="emergency_fund",
-        ),
-        create_test_account(
-            test_db_session,
-            name="IKE Stocks",
-            category="stock",
-            owner="Marcin",
-            account_wrapper="IKE",
-            purpose="retirement",
-        ),
-        create_test_account(
-            test_db_session,
-            name="IKZE Bonds",
-            category="bond",
-            owner="Marcin",
-            account_wrapper="IKZE",
-            purpose="retirement",
-        ),
-        create_test_account(
-            test_db_session,
-            name="PPK",
-            category="ppk",
-            owner="Marcin",
-            account_wrapper="PPK",
-            purpose="retirement",
-        ),
-        create_test_account(test_db_session, name="Regular ETF", category="etf", owner="Marcin"),
-        create_test_account(
-            test_db_session,
-            name="Mortgage",
-            account_type="liability",
-            category="mortgage",
-            owner="Shared",
-        ),
+    account_specs = [
+        {"name": "Checking", "category": "bank", "owner": "Marcin"},
+        {"name": "Emergency", "category": "bank", "owner": "Marcin", "purpose": "emergency_fund"},
+        {
+            "name": "IKE Stocks",
+            "category": "stock",
+            "owner": "Marcin",
+            "account_wrapper": "IKE",
+            "purpose": "retirement",
+        },
+        {
+            "name": "IKZE Bonds",
+            "category": "bond",
+            "owner": "Marcin",
+            "account_wrapper": "IKZE",
+            "purpose": "retirement",
+        },
+        {
+            "name": "PPK",
+            "category": "ppk",
+            "owner": "Marcin",
+            "account_wrapper": "PPK",
+            "purpose": "retirement",
+        },
+        {"name": "Regular ETF", "category": "etf", "owner": "Marcin"},
+        {"name": "Mortgage", "type": "liability", "category": "mortgage", "owner": "Shared"},
     ]
+    defaults = {"currency": "PLN", "purpose": "general", "is_active": True, "type": "asset"}
+    accounts = [Account(**{**defaults, **spec}) for spec in account_specs]
+    test_db_session.add_all(accounts)
+    test_db_session.commit()
 
-    # 60 monthly snapshots ≈ 5 years of data
-    snapshots = []
-    for i in range(60):
-        year = 2020 + i // 12
-        month = (i % 12) + 1
-        snapshots.append(create_test_snapshot(test_db_session, snapshot_date=date(year, month, 1)))
+    # Bulk-insert 60 snapshots + 420 values + 240 transactions in one commit each
+    # — factory helpers commit per row, which dominates wall-clock cost.
+    snapshots = [Snapshot(date=date(2020 + i // 12, (i % 12) + 1, 1)) for i in range(60)]
+    test_db_session.add_all(snapshots)
+    test_db_session.commit()
 
-    # ~420 SnapshotValues = 60 snapshots × 7 accounts
-    for i, snap in enumerate(snapshots):
-        for j, account in enumerate(accounts):
-            create_test_snapshot_value(
-                test_db_session, snap.id, account.id, Decimal(str(1000 * (i + 1) + 100 * j))
-            )
-
-    # Some transactions across the period to exercise cumulative contributions
-    from tests.factories import create_test_transaction
+    values = [
+        SnapshotValue(
+            snapshot_id=snap.id,
+            account_id=acct.id,
+            value=Decimal(str(1000 * (i + 1) + 100 * j)),
+        )
+        for i, snap in enumerate(snapshots)
+        for j, acct in enumerate(accounts)
+    ]
+    test_db_session.add_all(values)
 
     investment_accounts = [a for a in accounts if a.category in {"stock", "bond", "ppk", "etf"}]
-    for i in range(60):
-        year = 2020 + i // 12
-        month = (i % 12) + 1
-        for account in investment_accounts:
-            create_test_transaction(
-                test_db_session,
-                account.id,
-                amount=500.0,
-                transaction_date=date(year, month, 5),
-            )
+    transactions = [
+        Transaction(
+            account_id=acct.id,
+            amount=Decimal("500.00"),
+            date=date(2020 + i // 12, (i % 12) + 1, 5),
+            owner="Marcin",
+            is_active=True,
+        )
+        for i in range(60)
+        for acct in investment_accounts
+    ]
+    test_db_session.add_all(transactions)
+    test_db_session.commit()
 
-    # Warm-up + measure (single timed call is fine — threshold is generous vs target)
-    start = time.perf_counter()
-    result = get_dashboard_data(test_db_session)
-    elapsed_ms = (time.perf_counter() - start) * 1000
+    # Warm-up (prime pandas / sqlalchemy machinery), then time the median of 3 runs
+    # so a single GC pause or CI hiccup doesn't fail the assertion.
+    get_dashboard_data(test_db_session)
+    timings_ms = []
+    for _ in range(3):
+        start = time.perf_counter()
+        result = get_dashboard_data(test_db_session)
+        timings_ms.append((time.perf_counter() - start) * 1000)
+    median_ms = sorted(timings_ms)[1]
 
     assert len(result.net_worth_history) == 60
-    assert elapsed_ms < 200, f"Dashboard took {elapsed_ms:.1f} ms (limit: 200 ms)"
+    assert median_ms < 200, (
+        f"Dashboard median {median_ms:.1f} ms (limit: 200 ms; runs: {timings_ms})"
+    )
