@@ -17,6 +17,7 @@
 	} from 'lucide-svelte';
 	import { env } from '$env/dynamic/public';
 	import { goto, invalidateAll } from '$app/navigation';
+	import { toast } from '$lib/stores/toast.svelte';
 	import type { SalaryRecord } from '$lib/types/salaries';
 	import type { Persona } from '$lib/types/personas';
 	import type { CpiSeries } from '$lib/types/cpi';
@@ -222,7 +223,7 @@
 			await invalidateAll();
 		} catch (err) {
 			console.error('Failed to delete salary record:', err);
-			alert('Nie udało się usunąć rekordu wynagrodzenia');
+			toast.error('Nie udało się usunąć rekordu wynagrodzenia');
 		}
 	}
 

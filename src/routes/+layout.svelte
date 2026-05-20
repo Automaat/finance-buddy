@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import { page } from '$app/stores';
+	import Toast from '$lib/components/Toast.svelte';
 	import {
 		LayoutDashboard,
 		TrendingUp,
@@ -34,6 +35,8 @@
 
 	let { children } = $props();
 </script>
+
+<Toast />
 
 <div class="flex min-h-screen bg-surface-50-950 text-surface-950-50">
 	<aside
