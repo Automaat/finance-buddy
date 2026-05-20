@@ -2,7 +2,9 @@ import type { CpiPoint, CpiSeries } from '$lib/types/cpi';
 
 /**
  * Linearly interpolate a fixed-base CPI index at a calendar date.
- * Mirrors backend logic in app/services/inflation.py for consistency.
+ * Mirrors backend logic in app/services/inflation.py: `index[Y]` is the
+ * end-of-year-Y price level, so a date inside year Y interpolates between
+ * `index[Y-1]` (start of Y) and `index[Y]` (end of Y).
  * Returns null if the series is empty.
  */
 export function indexAtDate(series: CpiSeries, when: Date): number | null {
@@ -14,19 +16,22 @@ export function indexAtDate(series: CpiSeries, when: Date): number | null {
 	const last = sorted[sorted.length - 1];
 
 	if (when.getFullYear() < first.year) return first.cumulative_index;
-	if (when.getFullYear() >= last.year) return last.cumulative_index;
+	if (when.getFullYear() > last.year) return last.cumulative_index;
 
 	const byYear = new Map<number, CpiPoint>();
 	for (const p of sorted) byYear.set(p.year, p);
 
-	const yearStart = new Date(when.getFullYear(), 0, 1);
-	const nextYearStart = new Date(when.getFullYear() + 1, 0, 1);
+	const year = when.getFullYear();
+	const end = byYear.get(year);
+	if (!end) return null;
+	const prev = byYear.get(year - 1);
+	const start = prev ?? first;
+
+	const yearStart = new Date(year, 0, 1);
+	const nextYearStart = new Date(year + 1, 0, 1);
 	const span = nextYearStart.getTime() - yearStart.getTime();
 	const fraction = (when.getTime() - yearStart.getTime()) / span;
 
-	const start = byYear.get(when.getFullYear());
-	const end = byYear.get(when.getFullYear() + 1);
-	if (!start || !end) return null;
 	return start.cumulative_index + (end.cumulative_index - start.cumulative_index) * fraction;
 }
 

@@ -6,13 +6,13 @@ helpers to adjust amounts between arbitrary dates.
 
 Educational notes:
 - ``yoy_rate`` from GUS is stored as published (e.g. 114.4 = +14.4% vs prior
-  year). A fixed-base cumulative index is derived from these on the fly.
-- Within a single year the index is interpolated linearly between Jan 1 of
-  year N and Jan 1 of year N+1. The error vs true monthly CPI is well under
-  1 percentage point per year, which is below the noise from comparing
-  national CPI to HICP anyway.
-- Today is rarely available from GUS (lag ~15 days after month end). We fall
-  back to the latest year we have and surface the ``as_of_year`` in the API.
+  year). A fixed-base cumulative ``index[Y]`` is derived on the fly and
+  represents the end-of-year-Y price level (i.e. yoy[Y] has been applied).
+- Within a year the index interpolates linearly between ``index[Y-1]``
+  (start of Y) and ``index[Y]`` (end of Y) pro-rata by day-of-year.
+- For the latest available year there is no successor, so any date in or
+  after that year clamps to the latest known index — the API surfaces the
+  ``as_of_year`` so callers can label the comparison precisely.
 """
 
 import logging
@@ -107,10 +107,11 @@ def _load_yoy_map(db: Session) -> dict[int, Decimal]:
 
 
 def _cumulative_index(yoy_by_year: dict[int, Decimal]) -> dict[int, Decimal]:
-    """Build a fixed-base index keyed by Jan 1 of each year.
+    """Build a fixed-base index. ``index[Y]`` represents the end-of-year-Y price level.
 
     Anchored at the earliest available year with index = 100. Each subsequent
-    year compounds: ``index[y] = index[y-1] * yoy[y] / 100``.
+    year compounds with the inflation that occurred during it:
+    ``index[y] = index[y-1] * yoy[y] / 100``.
     """
     if not yoy_by_year:
         return {}
@@ -124,8 +125,10 @@ def _cumulative_index(yoy_by_year: dict[int, Decimal]) -> dict[int, Decimal]:
 def _index_at_date(index_by_year: dict[int, Decimal], when: date) -> Decimal:
     """Interpolate the fixed-base index at an arbitrary calendar date.
 
-    Linear between Jan 1 of consecutive years. Before the earliest year, clamp
-    to the earliest index; after the latest year, clamp to the latest.
+    Since ``index[Y]`` is the end-of-year-Y level, a date inside year Y
+    interpolates linearly between ``index[Y-1]`` (start of Y) and
+    ``index[Y]`` (end of Y) pro-rata by day-of-year. Outside the known
+    range we clamp to the earliest or latest known year.
     """
     if not index_by_year:
         raise InflationDataMissingError("CPI table is empty")
@@ -133,8 +136,14 @@ def _index_at_date(index_by_year: dict[int, Decimal], when: date) -> Decimal:
     years = sorted(index_by_year.keys())
     if when.year < years[0]:
         return index_by_year[years[0]]
-    if when.year >= years[-1]:
+    if when.year > years[-1]:
         return index_by_year[years[-1]]
+
+    # Start of year Y = end of year Y-1. If we don't have Y-1, clamp to base.
+    start_index = (
+        index_by_year[when.year - 1] if when.year - 1 in index_by_year else index_by_year[years[0]]
+    )
+    end_index = index_by_year[when.year]
 
     year_start = date(when.year, 1, 1)
     next_year_start = date(when.year + 1, 1, 1)
@@ -142,8 +151,6 @@ def _index_at_date(index_by_year: dict[int, Decimal], when: date) -> Decimal:
     elapsed_days = (when - year_start).days
     fraction = Decimal(elapsed_days) / Decimal(span_days)
 
-    start_index = index_by_year[when.year]
-    end_index = index_by_year[when.year + 1]
     return start_index + (end_index - start_index) * fraction
 
 

@@ -14,13 +14,14 @@ const series: CpiSeries = {
 };
 
 describe('indexAtDate', () => {
-	it('returns Jan 1 anchor for first day of year', () => {
-		expect(indexAtDate(series, new Date(2021, 0, 1))).toBeCloseTo(110, 5);
+	it('returns idx[Y-1] (start of Y) for Jan 1 of year Y', () => {
+		// Jan 1 2022 = end of 2021 prices = idx[2021] = 110.
+		expect(indexAtDate(series, new Date(2022, 0, 1))).toBeCloseTo(110, 5);
 	});
 
 	it('interpolates linearly mid-year', () => {
-		// Mid 2020 should be ~halfway between 100 and 110.
-		const result = indexAtDate(series, new Date(2020, 6, 2));
+		// Mid 2021 should be ~halfway between idx[2020]=100 and idx[2021]=110.
+		const result = indexAtDate(series, new Date(2021, 6, 2));
 		expect(result).toBeGreaterThan(104);
 		expect(result).toBeLessThan(106);
 	});
@@ -40,19 +41,20 @@ describe('indexAtDate', () => {
 
 describe('inflationAdjust', () => {
 	it('compounds across full years', () => {
-		const result = inflationAdjust(1000, new Date(2020, 0, 1), new Date(2022, 0, 1), series);
+		// Start of 2021 (= end of 2020) -> past end of 2022 (clamped): 110 -> 132 -> factor 1.32.
+		const result = inflationAdjust(1000, new Date(2021, 0, 1), new Date(2023, 0, 1), series);
 		expect(result).toBeCloseTo(1320, 5);
 	});
 
 	it('returns null when series is empty', () => {
 		const empty = { ...series, points: [] };
-		expect(inflationAdjust(1000, new Date(2020, 0, 1), new Date(2022, 0, 1), empty)).toBeNull();
+		expect(inflationAdjust(1000, new Date(2021, 0, 1), new Date(2023, 0, 1), empty)).toBeNull();
 	});
 });
 
 describe('realChange', () => {
 	it('flags a raise that fails to beat inflation', () => {
-		const result = realChange(1000, new Date(2020, 0, 1), 1100, new Date(2022, 0, 1), series);
+		const result = realChange(1000, new Date(2021, 0, 1), 1100, new Date(2023, 0, 1), series);
 		expect(result).not.toBeNull();
 		expect(result!.nominalChangePln).toBe(100);
 		expect(result!.previousInTodayPln).toBeCloseTo(1320, 5);
@@ -61,7 +63,7 @@ describe('realChange', () => {
 	});
 
 	it('confirms a raise that beats inflation', () => {
-		const result = realChange(1000, new Date(2020, 0, 1), 1500, new Date(2022, 0, 1), series);
+		const result = realChange(1000, new Date(2021, 0, 1), 1500, new Date(2023, 0, 1), series);
 		expect(result).not.toBeNull();
 		expect(result!.realChangePln).toBeCloseTo(180, 5);
 		expect(result!.realChangePct).toBeGreaterThan(0);

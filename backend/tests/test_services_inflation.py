@@ -23,37 +23,39 @@ def _seed(db, rows):
 
 
 def test_adjust_compounds_full_years(test_db_session):
+    # yoy[2021]=110 means +10% during 2021; yoy[2022]=120 means +20% during 2022.
+    # Start of 2021 (= end of 2020) -> after 2022's inflation: factor 1.10 * 1.20 = 1.32.
     _seed(
         test_db_session,
         [(2020, "100.0"), (2021, "110.0"), (2022, "120.0")],
     )
-    # 2020 -> 2022: factor = 1.10 * 1.20 = 1.32
-    result = inflation.adjust(test_db_session, 1000.0, date(2020, 1, 1), date(2022, 1, 1))
+    result = inflation.adjust(test_db_session, 1000.0, date(2021, 1, 1), date(2023, 1, 1))
     assert result == pytest.approx(1320.0, rel=1e-6)
 
 
 def test_adjust_interpolates_within_year(test_db_session):
-    _seed(test_db_session, [(2020, "100.0"), (2021, "120.0")])
-    # Mid-2020 to mid-2021 should be ~half a year of the 20% raise, applied
-    # linearly between Jan 1 anchors.
+    _seed(test_db_session, [(2019, "100.0"), (2020, "100.0"), (2021, "120.0")])
+    # Mid-2020 (no inflation during 2020) -> mid-2021 (mid of the 20% year):
+    # roughly half of the 20% raise = ~+10%.
     result = inflation.adjust(test_db_session, 1000.0, date(2020, 7, 1), date(2021, 7, 1))
-    assert 1080 < result < 1120  # should be near +10%, well-bounded
+    assert 1080 < result < 1120
 
 
-def test_adjust_clamps_to_latest_known_year(test_db_session):
+def test_adjust_clamps_above_latest_known_year(test_db_session):
     _seed(test_db_session, [(2020, "100.0"), (2021, "110.0")])
-    # Date after last known year clamps to that year's index.
-    factor_2021 = inflation.adjust(test_db_session, 1.0, date(2020, 1, 1), date(2021, 1, 1))
-    factor_2099 = inflation.adjust(test_db_session, 1.0, date(2020, 1, 1), date(2099, 1, 1))
-    assert factor_2099 == pytest.approx(factor_2021, rel=1e-9)
+    # Any date past 2021 clamps to idx[2021] = end of 2021 prices.
+    a = inflation.adjust(test_db_session, 1.0, date(2021, 1, 1), date(2099, 1, 1))
+    b = inflation.adjust(test_db_session, 1.0, date(2021, 1, 1), date(2050, 1, 1))
+    assert a == pytest.approx(b, rel=1e-9)
 
 
-def test_adjust_clamps_to_earliest_known_year(test_db_session):
+def test_adjust_clamps_below_earliest_known_year(test_db_session):
     _seed(test_db_session, [(2020, "100.0"), (2021, "110.0")])
-    # Date before first known year clamps to that year's index.
-    factor_2020 = inflation.adjust(test_db_session, 1.0, date(2020, 1, 1), date(2021, 1, 1))
-    factor_1900 = inflation.adjust(test_db_session, 1.0, date(1900, 1, 1), date(2021, 1, 1))
-    assert factor_1900 == pytest.approx(factor_2020, rel=1e-9)
+    # Any date before 2020 clamps to idx[2020]; date(2020,1,1) also clamps
+    # because 2019 is not in the data.
+    a = inflation.adjust(test_db_session, 1.0, date(2020, 1, 1), date(2021, 1, 1))
+    b = inflation.adjust(test_db_session, 1.0, date(1900, 1, 1), date(2021, 1, 1))
+    assert a == pytest.approx(b, rel=1e-9)
 
 
 def test_adjust_raises_when_empty(test_db_session):
