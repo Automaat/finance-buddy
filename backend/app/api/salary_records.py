@@ -22,9 +22,10 @@ def get_all_salary_records(
     owner: str | None = Query(None),
     date_from: date | None = Query(None),
     date_to: date | None = Query(None),
+    company: str | None = Query(None),
 ) -> SalaryRecordsListResponse:
     """Get all active salary records with optional filters"""
-    return salary_records.get_all_salary_records(db, owner, date_from, date_to)
+    return salary_records.get_all_salary_records(db, owner, date_from, date_to, company)
 
 
 @router.get("/salaries/{salary_id}", response_model=SalaryRecordResponse)

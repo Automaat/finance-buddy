@@ -89,3 +89,4 @@ class SalaryRecordsListResponse(BaseModel):
     total_count: int
     current_salaries: dict[str, float | None] = {}
     inflation_context: dict[str, InflationContext] = {}
+    available_companies: list[str] = []

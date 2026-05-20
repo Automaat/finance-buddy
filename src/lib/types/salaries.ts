@@ -26,4 +26,5 @@ export interface SalariesData {
 	total_count: number;
 	current_salaries: Record<string, number | null>;
 	inflation_context: Record<string, InflationContext>;
+	available_companies: string[];
 }

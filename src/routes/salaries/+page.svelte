@@ -35,6 +35,10 @@
 	const inflationContext = $derived(data.salaries.inflation_context ?? {});
 	const inflationEntries = $derived(Object.values(inflationContext));
 
+	let showNominal = $state(true);
+	let showReal = $state(false);
+	let showInflationTracked = $state(false);
+
 	const monthNamesPL = [
 		'styczeń',
 		'luty',
@@ -63,10 +67,12 @@
 	}
 
 	let chartContainer: HTMLDivElement;
+	let chart: echarts.ECharts | undefined;
 
 	let filterOwner = $state(untrack(() => data.filters.owner || ''));
 	let filterDateFrom = $state(untrack(() => data.filters.date_from || ''));
 	let filterDateTo = $state(untrack(() => data.filters.date_to || ''));
+	let filterCompany = $state(untrack(() => data.filters.company || ''));
 
 	let showNewSalaryModal = $state(false);
 	let editingSalary: SalaryRecord | null = $state(null);
@@ -85,6 +91,7 @@
 		if (filterOwner) params.set('owner', filterOwner);
 		if (filterDateFrom) params.set('date_from', filterDateFrom);
 		if (filterDateTo) params.set('date_to', filterDateTo);
+		if (filterCompany) params.set('company', filterCompany);
 
 		goto(`/salaries?${params.toString()}`);
 	}
@@ -93,6 +100,7 @@
 		filterOwner = '';
 		filterDateFrom = '';
 		filterDateTo = '';
+		filterCompany = '';
 		goto('/salaries');
 	}
 
@@ -218,57 +226,62 @@
 		}
 	}
 
-	onMount(() => {
-		const chart = echarts.init(chartContainer);
+	type LineSeries = {
+		name: string;
+		data: Array<[string, number]>;
+		type: 'line';
+		smooth: boolean;
+		lineStyle: {
+			color: string;
+			width: number;
+			type?: 'dashed' | 'solid' | 'dotted';
+			opacity?: number;
+		};
+		itemStyle?: { color: string };
+	};
 
+	function buildSeries(): LineSeries[] {
 		const companyMap = new Map<string, Array<[string, number]>>();
 
 		data.salaries.salary_records.forEach((r) => {
 			const companyName = (r.company ?? '').trim() || 'Nieokreślona firma';
-			if (!companyMap.has(companyName)) {
-				companyMap.set(companyName, []);
-			}
+			if (!companyMap.has(companyName)) companyMap.set(companyName, []);
 			companyMap.get(companyName)!.push([r.date, r.gross_amount]);
 		});
 
-		companyMap.forEach((salaryData) => {
-			salaryData.sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime());
-		});
+		companyMap.forEach((rows) =>
+			rows.sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
+		);
 
 		const colors = ['#5E81AC', '#88C0D0', '#A3BE8C', '#EBCB8B', '#D08770', '#B48EAD', '#BF616A'];
-		// Use date-only `today` so adjustments are consistent across the
-		// browsing session and match the backend (which is date-only).
+		// Date-only `today` matches the backend (which is also date-only).
 		const now = new Date();
-		const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+		const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 		const cpiLookup = buildCpiLookup(cpiSeries);
 		const hasCpi = cpiLookup !== null;
 
-		type LineSeries = {
-			name: string;
-			data: Array<[string, number]>;
-			type: 'line';
-			smooth: boolean;
-			lineStyle: { color: string; width: number; type?: 'dashed' | 'solid'; opacity?: number };
-			itemStyle?: { color: string };
-		};
 		const series: LineSeries[] = [];
 		let colorIndex = 0;
 
 		companyMap.forEach((salaryData, company) => {
 			const color = colors[colorIndex % colors.length];
-			series.push({
-				name: company,
-				data: salaryData,
-				type: 'line',
-				smooth: true,
-				lineStyle: { color, width: 2 },
-				itemStyle: { color }
-			});
+			colorIndex++;
 
-			if (hasCpi) {
+			if (showNominal) {
+				series.push({
+					name: company,
+					data: salaryData,
+					type: 'line',
+					smooth: true,
+					lineStyle: { color, width: 2 },
+					itemStyle: { color }
+				});
+			}
+
+			if (hasCpi && showReal) {
 				const realData: Array<[string, number]> = [];
 				for (const [dateStr, nominal] of salaryData) {
-					const adjusted = inflationAdjust(nominal, parseIsoDate(dateStr), today, cpiLookup);
+					const adjusted = inflationAdjust(nominal, parseIsoDate(dateStr), todayDate, cpiLookup);
 					if (adjusted != null) realData.push([dateStr, adjusted]);
 				}
 				if (realData.length > 0) {
@@ -282,9 +295,39 @@
 					});
 				}
 			}
-			colorIndex++;
+
+			if (hasCpi && showInflationTracked && salaryData.length > 0) {
+				const [firstDateStr, firstAmount] = salaryData[0];
+				const firstDate = parseIsoDate(firstDateStr);
+				const trackedData: Array<[string, number]> = [];
+				for (const [dateStr] of salaryData) {
+					const projected = inflationAdjust(
+						firstAmount,
+						firstDate,
+						parseIsoDate(dateStr),
+						cpiLookup
+					);
+					if (projected != null) trackedData.push([dateStr, projected]);
+				}
+				if (trackedData.length > 0) {
+					series.push({
+						name: `${company} (indeksowana inflacją)`,
+						data: trackedData,
+						type: 'line',
+						smooth: true,
+						lineStyle: { color, width: 2, type: 'dotted', opacity: 0.8 },
+						itemStyle: { color }
+					});
+				}
+			}
 		});
 
+		return series;
+	}
+
+	function applyChart() {
+		if (!chart) return;
+		const series = buildSeries();
 		const option: EChartsOption = {
 			title: { text: 'Progresja wynagrodzenia', left: 'center', top: 8 },
 			tooltip: {
@@ -303,6 +346,7 @@
 				top: 44,
 				left: 'center',
 				type: 'scroll',
+				selectedMode: false,
 				data: series.map((s) => s.name)
 			},
 			xAxis: { type: 'time' },
@@ -313,12 +357,21 @@
 			series,
 			grid: { left: '80px', right: '40px', top: 90, bottom: 40 }
 		};
+		chart.setOption(option, { notMerge: true });
+	}
 
-		chart.setOption(option);
+	$effect(() => {
+		// Touch reactive dependencies so chart redraws on data + toggle changes.
+		void [data.salaries.salary_records, cpiSeries, showNominal, showReal, showInflationTracked];
 
-		return () => {
-			chart.dispose();
-		};
+		if (!chartContainer) return;
+		if (!chart) chart = echarts.init(chartContainer);
+		applyChart();
+	});
+
+	onMount(() => () => {
+		chart?.dispose();
+		chart = undefined;
 	});
 </script>
 
@@ -426,9 +479,25 @@
 		<header>
 			<h3 class="h3 flex items-center gap-2"><TrendingUp size={20} /> Progresja wynagrodzenia</h3>
 			<p class="text-xs text-surface-700-300">
-				Linia przerywana: nominalna pensja przeliczona na dzisiejsze PLN wg CPI GUS.
+				Linia ciągła: pensja nominalna. Linia przerywana: nominalna przeliczona na dzisiejsze PLN wg
+				CPI GUS. Linia kropkowana: hipotetyczna pensja, gdyby od pierwszej zmiany rosła tylko o
+				inflację.
 			</p>
 		</header>
+		<div class="flex flex-wrap gap-4 text-sm">
+			<label class="flex items-center gap-2 cursor-pointer">
+				<input type="checkbox" class="checkbox" bind:checked={showNominal} />
+				<span>Pensja nominalna</span>
+			</label>
+			<label class="flex items-center gap-2 cursor-pointer">
+				<input type="checkbox" class="checkbox" bind:checked={showReal} />
+				<span>Realna wartość (dzisiejsze PLN)</span>
+			</label>
+			<label class="flex items-center gap-2 cursor-pointer">
+				<input type="checkbox" class="checkbox" bind:checked={showInflationTracked} />
+				<span>Indeksowana inflacją</span>
+			</label>
+		</div>
 		<div bind:this={chartContainer} style="width: 100%; height: 400px;"></div>
 	</div>
 
@@ -443,13 +512,23 @@
 				applyFilters();
 			}}
 		>
-			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 				<label class="label">
 					<span class="font-semibold text-sm">Właściciel</span>
 					<select class="select" bind:value={filterOwner}>
 						<option value="">Wszystkie</option>
 						{#each personas as persona}
 							<option value={persona.name}>{persona.name}</option>
+						{/each}
+					</select>
+				</label>
+
+				<label class="label">
+					<span class="font-semibold text-sm">Firma</span>
+					<select class="select" bind:value={filterCompany}>
+						<option value="">Wszystkie</option>
+						{#each data.salaries.available_companies as company}
+							<option value={company}>{company}</option>
 						{/each}
 					</select>
 				</label>
