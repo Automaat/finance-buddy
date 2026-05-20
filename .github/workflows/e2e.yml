@@ -48,6 +48,9 @@ jobs:
         env:
           MISE_PYTHON_COMPILE: '0'
 
+      - name: Override mise NODE_ENV
+        run: echo "NODE_ENV=production" >> "$GITHUB_ENV"
+
       - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
 
       - name: Install frontend dependencies
