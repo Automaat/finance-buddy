@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
 import { vi } from 'vitest';
 import { invalidateAll } from '$app/navigation';
 import Page from './+page.svelte';
+import { toast } from '$lib/stores/toast.svelte';
 
 // Mock window.matchMedia for media query tests
 beforeAll(() => {
@@ -154,17 +155,17 @@ describe('Dashboard retirement limits save flow', () => {
 		expect(ikeInput.value).toBe('23000');
 	});
 
-	it('alerts when a limit save request fails', async () => {
+	it('shows an error toast when a limit save request fails', async () => {
 		const fetchMock = vi.fn().mockResolvedValue({ ok: false });
 		vi.stubGlobal('fetch', fetchMock);
-		const alertMock = vi.fn();
-		vi.stubGlobal('alert', alertMock);
+		const errorSpy = vi.spyOn(toast, 'error');
 
 		render(Page, { props: { data: dataWithStats } });
 		await fireEvent.click(screen.getByLabelText('Konfiguruj limity'));
 		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
 
-		await waitFor(() => expect(alertMock).toHaveBeenCalled());
+		await waitFor(() => expect(errorSpy).toHaveBeenCalled());
+		expect(errorSpy.mock.calls[0][0]).toContain('Nie udało się zapisać limitów');
 		expect(invalidateAll).not.toHaveBeenCalled();
 	});
 });

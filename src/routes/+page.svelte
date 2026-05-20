@@ -16,6 +16,7 @@
 	} from 'lucide-svelte';
 	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
+	import { toast } from '$lib/stores/toast.svelte';
 	import type { Persona } from '$lib/types/personas';
 	import type { PageData } from './$types';
 
@@ -98,7 +99,7 @@
 			await invalidateAll();
 		} catch (err) {
 			console.error('Failed to save limits:', err);
-			alert('Nie udało się zapisać limitów. Spróbuj ponownie później.');
+			toast.error('Nie udało się zapisać limitów. Spróbuj ponownie później.');
 		}
 	}
 

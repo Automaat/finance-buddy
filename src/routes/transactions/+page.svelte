@@ -4,6 +4,7 @@
 	import { Plus, Landmark, Search, BarChart3, Trash2 } from 'lucide-svelte';
 	import { env } from '$env/dynamic/public';
 	import { goto, invalidateAll } from '$app/navigation';
+	import { toast } from '$lib/stores/toast.svelte';
 	import type { Persona } from '$lib/types/personas';
 	import { untrack } from 'svelte';
 	import type { PageData } from './$types';
@@ -76,7 +77,7 @@
 			await invalidateAll();
 		} catch (err) {
 			console.error('Failed to delete transaction:', err);
-			alert('Nie udało się usunąć transakcji');
+			toast.error('Nie udało się usunąć transakcji');
 		}
 	}
 
