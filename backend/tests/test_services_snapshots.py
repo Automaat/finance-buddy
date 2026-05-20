@@ -116,6 +116,31 @@ def test_get_all_snapshots(test_db_session):
     assert result[1].total_net_worth == 8000.0  # 10000 - 2000
 
 
+def test_get_all_snapshots_excludes_inactive_assets_and_accounts(test_db_session):
+    """get_all_snapshots must skip inactive Asset/Account values in net-worth aggregate"""
+    active_asset = create_test_account(test_db_session, name="Bank", category="bank")
+    inactive_asset = create_test_account(
+        test_db_session, name="Closed Bank", category="bank", is_active=False
+    )
+    inactive_liability = create_test_account(
+        test_db_session,
+        name="Closed Mortgage",
+        account_type="liability",
+        category="mortgage",
+        is_active=False,
+    )
+
+    snapshot = create_test_snapshot(test_db_session, snapshot_date=date(2024, 1, 31))
+    create_test_snapshot_value(test_db_session, snapshot.id, active_asset.id, Decimal("10000"))
+    create_test_snapshot_value(test_db_session, snapshot.id, inactive_asset.id, Decimal("500"))
+    create_test_snapshot_value(test_db_session, snapshot.id, inactive_liability.id, Decimal("9999"))
+
+    result = get_all_snapshots(test_db_session)
+
+    assert len(result) == 1
+    assert result[0].total_net_worth == 10000.0  # inactive rows ignored
+
+
 def test_get_snapshot_by_id(test_db_session):
     """Test getting single snapshot by ID"""
     account = create_test_account(test_db_session, name="Test Bank", category="bank")

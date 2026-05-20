@@ -1,11 +1,14 @@
 from datetime import date
 
+from app.models.persona import Persona
 from app.schemas.zus import SalaryHistoryEntry, ZusCalculatorInputs
 from app.services.zus_calculator import (
     apply_pension_tax,
     calculate_zus_pension,
     get_life_expectancy,
+    get_zus_prefill,
 )
+from tests.factories import create_test_salary_record
 
 
 def _make_inputs(**overrides) -> ZusCalculatorInputs:
@@ -231,3 +234,32 @@ class TestKapitalPoczatkowy:
 
         assert result_with.total_capital > result_no.total_capital
         assert result_with.kapital_poczatkowy_valorized > 100000.0  # Should grow with valorization
+
+
+class TestGetZusPrefillInactiveFiltering:
+    """Regression: prefill must ignore soft-deleted salary records."""
+
+    def test_prefill_excludes_inactive_salary_history(self, test_db_session):
+        test_db_session.add(Persona(name="Marcin"))
+        test_db_session.commit()
+
+        create_test_salary_record(
+            test_db_session,
+            salary_date=date(2022, 6, 1),
+            gross_amount=8000.0,
+            owner="Marcin",
+        )
+        create_test_salary_record(
+            test_db_session,
+            salary_date=date(2023, 6, 1),
+            gross_amount=99999.0,
+            owner="Marcin",
+            is_active=False,
+        )
+
+        result = get_zus_prefill(test_db_session, owner="Marcin")
+
+        years = {entry.year for entry in result.salary_history}
+        assert years == {2022}
+        assert all(entry.annual_gross != 99999.0 * 12 for entry in result.salary_history)
+        assert result.work_start_year == 2022

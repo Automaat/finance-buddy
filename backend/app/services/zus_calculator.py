@@ -336,7 +336,9 @@ def get_zus_prefill(db: Session, owner: str | None = None) -> ZusPrefillResponse
     # Get salary history — all records for the owner grouped by year
     all_salaries = (
         db.execute(
-            select(SalaryRecord).where(SalaryRecord.owner == owner).order_by(SalaryRecord.date)
+            select(SalaryRecord)
+            .where(SalaryRecord.owner == owner, SalaryRecord.is_active.is_(True))
+            .order_by(SalaryRecord.date)
         )
         .scalars()
         .all()

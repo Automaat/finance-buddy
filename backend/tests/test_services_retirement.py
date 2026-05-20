@@ -264,6 +264,53 @@ class TestGetYearlyStats:
         assert len(result) == 1
         assert result[0].owner == "Marcin"
 
+    def test_get_yearly_stats_inactive_accounts_excluded(self, test_db_session):
+        """Inactive IKE/IKZE accounts must not contribute to yearly totals"""
+        test_db_session.add(Persona(name="Marcin"))
+        test_db_session.commit()
+
+        active_account = create_test_account(
+            test_db_session,
+            name="IKE Active",
+            category="stock",
+            account_wrapper="IKE",
+        )
+        inactive_account = create_test_account(
+            test_db_session,
+            name="IKE Closed",
+            category="stock",
+            account_wrapper="IKE",
+            is_active=False,
+        )
+
+        limit = RetirementLimit(
+            year=2024,
+            account_wrapper="IKE",
+            owner="Marcin",
+            limit_amount=Decimal("10000.0"),
+        )
+        test_db_session.add(limit)
+        test_db_session.commit()
+
+        create_test_transaction(
+            test_db_session,
+            account_id=active_account.id,
+            amount=2000.0,
+            transaction_type="employee",
+        )
+        create_test_transaction(
+            test_db_session,
+            account_id=inactive_account.id,
+            amount=8000.0,
+            transaction_date=date(2024, 2, 10),
+            transaction_type="employee",
+        )
+
+        result = get_yearly_stats(test_db_session, 2024)
+
+        assert len(result) == 1
+        assert result[0].total_contributed == 2000.0  # inactive account excluded
+
     def test_get_yearly_stats_inactive_transactions_excluded(self, test_db_session):
         """Test that inactive transactions are excluded from calculations"""
         test_db_session.add(Persona(name="Marcin"))
@@ -580,6 +627,54 @@ class TestGetPPKStats:
         assert result[0].employer_contributed == 1500.0
         assert result[0].total_value == 2200.0
         assert result[0].returns == -300.0  # 2200 - 2500
+
+    def test_get_ppk_stats_inactive_accounts_excluded(self, test_db_session):
+        """Inactive PPK accounts must not contribute to stats totals"""
+        test_db_session.add(Persona(name="Marcin"))
+        test_db_session.commit()
+
+        active_account = create_test_account(
+            test_db_session,
+            name="PPK Active",
+            category="stock",
+            account_wrapper="PPK",
+        )
+        inactive_account = create_test_account(
+            test_db_session,
+            name="PPK Closed",
+            category="stock",
+            account_wrapper="PPK",
+            is_active=False,
+        )
+
+        create_test_transaction(
+            test_db_session,
+            account_id=active_account.id,
+            amount=1000.0,
+            transaction_date=date(2024, 1, 31),
+            transaction_type="employee",
+        )
+        create_test_transaction(
+            test_db_session,
+            account_id=inactive_account.id,
+            amount=9999.0,
+            transaction_date=date(2024, 1, 31),
+            transaction_type="employee",
+        )
+
+        snapshot = create_test_snapshot(test_db_session, snapshot_date=date(2024, 12, 31))
+        create_test_snapshot_value(
+            test_db_session, snapshot_id=snapshot.id, account_id=active_account.id, value=1200.0
+        )
+        create_test_snapshot_value(
+            test_db_session, snapshot_id=snapshot.id, account_id=inactive_account.id, value=9000.0
+        )
+
+        result = get_ppk_stats(test_db_session, owner="Marcin")
+
+        assert len(result) == 1
+        assert result[0].total_contributed == 1000.0  # inactive account excluded
+        assert result[0].total_value == 1200.0
 
     def test_get_ppk_stats_filters_by_owner(self, test_db_session):
         """Test filtering PPK stats by owner"""
