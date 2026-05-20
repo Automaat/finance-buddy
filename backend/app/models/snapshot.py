@@ -1,7 +1,15 @@
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, Date, ForeignKey, Numeric, Text, UniqueConstraint
+from sqlalchemy import (
+    CheckConstraint,
+    Date,
+    ForeignKey,
+    Index,
+    Numeric,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -26,6 +34,7 @@ class SnapshotValue(Base):
         ),
         UniqueConstraint("snapshot_id", "asset_id", name="uix_snapshot_asset"),
         UniqueConstraint("snapshot_id", "account_id", name="uix_snapshot_account"),
+        Index("ix_snapshot_values_asset_id", "asset_id"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
