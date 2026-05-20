@@ -110,11 +110,15 @@ def get_all_snapshots(db: Session) -> list[SnapshotListItem]:
     result = []
     for snapshot in snapshots:
         # Calculate net worth for this snapshot
-        # LEFT JOIN both Asset and Account tables
+        # LEFT JOIN both Asset and Account tables, only matching active rows so
+        # inactive (soft-deleted) Assets/Accounts contribute 0 — keeps the list
+        # totals consistent with the dashboard aggregate.
         values = db.execute(
             select(SnapshotValue, Asset, Account)
-            .outerjoin(Asset, SnapshotValue.asset_id == Asset.id)
-            .outerjoin(Account, SnapshotValue.account_id == Account.id)
+            .outerjoin(Asset, (SnapshotValue.asset_id == Asset.id) & Asset.is_active.is_(True))
+            .outerjoin(
+                Account, (SnapshotValue.account_id == Account.id) & Account.is_active.is_(True)
+            )
             .where(SnapshotValue.snapshot_id == snapshot.id)
         ).all()
 

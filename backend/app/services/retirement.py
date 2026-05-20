@@ -34,7 +34,9 @@ def get_yearly_stats(db: Session, year: int, owner: str | None = None) -> list[Y
             accounts = (
                 db.execute(
                     select(Account).where(
-                        Account.account_wrapper == wrapper, Account.owner == owner_name
+                        Account.account_wrapper == wrapper,
+                        Account.owner == owner_name,
+                        Account.is_active.is_(True),
                     )
                 )
                 .scalars()
@@ -193,7 +195,11 @@ def get_ppk_stats(db: Session, owner: str | None = None) -> list[PPKStatsRespons
         # Get all PPK accounts for this owner
         accounts = (
             db.execute(
-                select(Account).where(Account.account_wrapper == "PPK", Account.owner == owner_name)
+                select(Account).where(
+                    Account.account_wrapper == "PPK",
+                    Account.owner == owner_name,
+                    Account.is_active.is_(True),
+                )
             )
             .scalars()
             .all()
