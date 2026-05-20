@@ -96,6 +96,48 @@ def test_get_all_salary_records_with_filters(test_db_session):
     assert result.salary_records[0].owner == "Marcin"
 
 
+def test_get_all_salary_records_company_filter(test_db_session):
+    """Filtering by company returns only matching records"""
+    test_db_session.add(Persona(name="Marcin"))
+    test_db_session.commit()
+
+    create_test_salary_record(test_db_session, company="Kong")
+    create_test_salary_record(
+        test_db_session,
+        salary_date=date(2024, 6, 1),
+        gross_amount=8000.0,
+        company="Acme",
+    )
+
+    result = get_all_salary_records(test_db_session, company="Kong")
+
+    assert result.total_count == 1
+    assert result.salary_records[0].company == "Kong"
+
+
+def test_get_all_salary_records_available_companies(test_db_session):
+    """available_companies returns distinct sorted companies across all active records"""
+    test_db_session.add(Persona(name="Marcin"))
+    test_db_session.commit()
+
+    create_test_salary_record(test_db_session, company="Kong")
+    create_test_salary_record(
+        test_db_session,
+        salary_date=date(2024, 3, 1),
+        company="Acme",
+    )
+    create_test_salary_record(
+        test_db_session,
+        salary_date=date(2024, 6, 1),
+        company="Kong",
+    )
+
+    # Filtering by one company must not shrink available_companies.
+    result = get_all_salary_records(test_db_session, company="Kong")
+
+    assert result.available_companies == ["Acme", "Kong"]
+
+
 def test_get_salary_record(test_db_session):
     """Test getting a single salary record"""
     record = create_test_salary_record(test_db_session, company="Test Company")

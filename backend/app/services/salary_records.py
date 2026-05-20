@@ -23,6 +23,7 @@ def get_all_salary_records(
     owner: str | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
+    company: str | None = None,
 ) -> SalaryRecordsListResponse:
     """Get all active salary records with optional filters"""
     query = select(SalaryRecord).where(SalaryRecord.is_active.is_(True))
@@ -33,6 +34,8 @@ def get_all_salary_records(
         query = query.where(SalaryRecord.date >= date_from)
     if date_to is not None:
         query = query.where(SalaryRecord.date <= date_to)
+    if company is not None:
+        query = query.where(SalaryRecord.company == company)
 
     results = db.execute(query.order_by(desc(SalaryRecord.date))).scalars().all()
 
@@ -50,6 +53,19 @@ def get_all_salary_records(
         for record in results
     ]
 
+    # Distinct companies across all active records (unfiltered) so the filter
+    # dropdown stays usable even when the current filter narrows results.
+    available_companies = list(
+        db.execute(
+            select(SalaryRecord.company)
+            .where(SalaryRecord.is_active.is_(True))
+            .distinct()
+            .order_by(SalaryRecord.company)
+        )
+        .scalars()
+        .all()
+    )
+
     # Get current salaries for all personas
     today = datetime.now(UTC).date()
     personas = db.execute(select(Persona).order_by(Persona.name)).scalars().all()
@@ -61,6 +77,7 @@ def get_all_salary_records(
         total_count=len(salary_list),
         current_salaries=current_salaries,
         inflation_context=inflation_context,
+        available_companies=available_companies,
     )
 
 

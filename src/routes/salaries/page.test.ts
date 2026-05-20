@@ -40,9 +40,10 @@ const baseData = {
 		salary_records: [],
 		total_count: 0,
 		current_salaries: { Marcin: null },
-		inflation_context: {}
+		inflation_context: {},
+		available_companies: []
 	},
-	filters: { owner: null, date_from: null, date_to: null },
+	filters: { owner: null, date_from: null, date_to: null, company: null },
 	personas: [{ id: 1, name: 'Marcin', ppk_employee_rate: 2, ppk_employer_rate: 1.5 }],
 	cpiSeries: { points: [], base_year: null, latest_year: null, source: '' }
 };
@@ -56,7 +57,7 @@ async function openNewSalaryModalAndFill(opts: {
 
 	const dateInput = screen.getByLabelText(/Data zmiany/) as HTMLInputElement;
 	const amountInput = screen.getByLabelText(/Pensja brutto/) as HTMLInputElement;
-	const companyInput = screen.getByLabelText(/^Firma/) as HTMLInputElement;
+	const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
 
 	if (opts.date !== undefined) await fireEvent.input(dateInput, { target: { value: opts.date } });
 	if (opts.gross_amount !== undefined)

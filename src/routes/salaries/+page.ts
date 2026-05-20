@@ -17,11 +17,13 @@ export const load: PageLoad = async ({ fetch, url }) => {
 		const owner = url.searchParams.get('owner');
 		const dateFrom = url.searchParams.get('date_from');
 		const dateTo = url.searchParams.get('date_to');
+		const company = url.searchParams.get('company');
 
 		const params = new URLSearchParams();
 		if (owner) params.set('owner', owner);
 		if (dateFrom) params.set('date_from', dateFrom);
 		if (dateTo) params.set('date_to', dateTo);
+		if (company) params.set('company', company);
 
 		const [salariesResponse, personasResponse, cpiResponse] = await Promise.all([
 			fetch(`${apiUrl}/api/salaries?${params.toString()}`),
@@ -42,7 +44,8 @@ export const load: PageLoad = async ({ fetch, url }) => {
 			filters: {
 				owner,
 				date_from: dateFrom,
-				date_to: dateTo
+				date_to: dateTo,
+				company
 			},
 			personas,
 			cpiSeries
