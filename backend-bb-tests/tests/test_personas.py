@@ -14,8 +14,9 @@ def test_list_personas_includes_seeded(client: httpx.Client) -> None:
 
 def test_persona_response_shape(client: httpx.Client) -> None:
     response = client.get("/api/personas")
-    assert response.status_code == 200
-    persona = response.json()[0]
+    assert response.status_code == 200, response.text
+    personas = response.json()
+    assert personas, "Seeded personas list is empty — seed did not run"
     required = {"id", "name", "ppk_employee_rate", "ppk_employer_rate", "created_at"}
-    missing = required - persona.keys()
+    missing = required - personas[0].keys()
     assert not missing, f"Persona response is missing fields: {sorted(missing)}"

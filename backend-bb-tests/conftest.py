@@ -49,14 +49,16 @@ def _truthy(value: str | None) -> bool:
 def _wait_for_http(url: str, timeout_s: float) -> None:
     deadline = time.monotonic() + timeout_s
     last_err: Exception | None = None
-    while time.monotonic() < deadline:
-        try:
-            response = httpx.get(url, timeout=2.0)
-            if response.status_code == 200:
-                return
-        except (httpx.HTTPError, OSError) as err:
-            last_err = err
-        time.sleep(0.25)
+    with httpx.Client(timeout=2.0) as probe:
+        while time.monotonic() < deadline:
+            try:
+                response = probe.get(url)
+                response.close()
+                if response.status_code == 200:
+                    return
+            except (httpx.HTTPError, OSError) as err:
+                last_err = err
+            time.sleep(0.25)
     raise RuntimeError(f"Timed out waiting for {url} after {timeout_s}s (last error: {last_err!r})")
 
 

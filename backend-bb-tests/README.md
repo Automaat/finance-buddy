@@ -69,4 +69,4 @@ Current status is intentionally minimal — the goal of the initial harness PR i
 
 ## CI
 
-Runs as a separate `bb-tests` job in `.github/workflows/ci.yml`. Uses the same Docker-backed runner as the rest of CI; testcontainers spins up Postgres in-job.
+Runs as a separate `bb-tests` job in `.github/workflows/ci.yml`. Postgres is provided by a GitHub Actions `services:` container (not testcontainers — testcontainers is used only for local runs), and the harness honors `BB_DATABASE_URL` to talk to it directly.

@@ -15,15 +15,20 @@ def _path_for(name: str) -> Path:
     return GOLDEN_DIR / f"{name}.json"
 
 
+def _normalize(payload: Any) -> str:
+    return json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+
+
 def assert_matches_golden(name: str, actual: Any, update: bool = False) -> None:
     """Compare ``actual`` against golden/<name>.json or write it when ``update`` is true.
 
-    Both sides are normalized via json.dumps(sort_keys=True) so key-order differences
+    Both sides are normalized through the same json.dumps(sort_keys=True, indent=2)
+    pipeline before comparison so key-order, whitespace, or float-repr differences
     don't fail the assertion. Numeric tolerance, if needed, must be handled in the
     test by normalizing the payload before calling this helper.
     """
     path = _path_for(name)
-    serialized = json.dumps(actual, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+    serialized = _normalize(actual)
 
     if update or not path.exists():
         GOLDEN_DIR.mkdir(parents=True, exist_ok=True)
@@ -35,7 +40,8 @@ def assert_matches_golden(name: str, actual: Any, update: bool = False) -> None:
             )
         return
 
-    expected = path.read_text(encoding="utf-8")
+    expected_raw = path.read_text(encoding="utf-8")
+    expected = _normalize(json.loads(expected_raw))
     if serialized != expected:
         raise AssertionError(
             f"Response for {name!r} diverged from golden {path}.\n"

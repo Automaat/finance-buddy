@@ -8,10 +8,12 @@ after themselves.
 
 from __future__ import annotations
 
+import os
 from contextlib import contextmanager
 from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
+from urllib.parse import urlparse
 
 import psycopg2
 
@@ -28,6 +30,34 @@ CONFIG_RETIREMENT_MONTHLY_SALARY = Decimal("8000.00")
 CONFIG_MONTHLY_EXPENSES = Decimal("5000.00")
 CONFIG_MONTHLY_MORTGAGE_PAYMENT = Decimal("2000.00")
 
+# Allow-list of tables the seed manages. _truncate_all refuses to wipe anything
+# outside this set — protects against a stray BB_DATABASE_URL pointed at a
+# non-test database.
+SEEDED_TABLES: frozenset[str] = frozenset(
+    {
+        "accounts",
+        "app_config",
+        "assets",
+        "bonus_events",
+        "company_valuations",
+        "cpi_index",
+        "debt_payments",
+        "debts",
+        "equity_grants",
+        "fx_rates",
+        "goals",
+        "personas",
+        "retirement_limits",
+        "salary_records",
+        "snapshot_aggregates",
+        "snapshot_values",
+        "snapshots",
+        "transactions",
+    }
+)
+
+LOCAL_HOSTS: frozenset[str] = frozenset({"localhost", "127.0.0.1", "::1", "postgres", "bb"})
+
 
 @contextmanager
 def _connect(dsn: str) -> Iterator[psycopg2.extensions.connection]:
@@ -42,19 +72,41 @@ def _connect(dsn: str) -> Iterator[psycopg2.extensions.connection]:
         conn.close()
 
 
-def _truncate_all(cur: psycopg2.extensions.cursor) -> None:
-    """Reset every table the bb-tests touch. Keeps seed idempotent across runs."""
+def _assert_safe_to_truncate(dsn: str) -> None:
+    """Refuse to truncate against anything that doesn't look like a throwaway DB.
+
+    Trips when:
+    - the DSN's host isn't in LOCAL_HOSTS, and
+    - BB_ALLOW_DESTRUCTIVE_SEED isn't set truthy.
+
+    Use the env var only when you know the target DB is disposable (e.g. CI).
+    """
+    host = (urlparse(dsn).hostname or "").lower()
+    if host in LOCAL_HOSTS:
+        return
+    if os.environ.get("BB_ALLOW_DESTRUCTIVE_SEED", "").lower() in {"1", "true", "yes", "on"}:
+        return
+    raise RuntimeError(
+        f"Refusing to truncate against host {host!r}. "
+        "Point BB_DATABASE_URL at a local/throwaway DB, or set "
+        "BB_ALLOW_DESTRUCTIVE_SEED=1 if you accept the risk."
+    )
+
+
+def _truncate_seeded(cur: psycopg2.extensions.cursor) -> None:
+    """Truncate only tables on the seed's allow-list. Keeps seed idempotent."""
     cur.execute(
         """
         SELECT tablename
         FROM pg_tables
-        WHERE schemaname = 'public' AND tablename <> 'alembic_version'
+        WHERE schemaname = 'public'
         """
     )
-    tables = [row[0] for row in cur.fetchall()]
-    if not tables:
+    existing = {row[0] for row in cur.fetchall()}
+    to_truncate = sorted(SEEDED_TABLES & existing)
+    if not to_truncate:
         return
-    quoted = ", ".join(f'"{name}"' for name in tables)
+    quoted = ", ".join(f'"{name}"' for name in to_truncate)
     cur.execute(f"TRUNCATE {quoted} RESTART IDENTITY CASCADE")
 
 
@@ -95,7 +147,8 @@ def _seed_config(cur: psycopg2.extensions.cursor) -> None:
 
 def seed(dsn: str) -> None:
     """Apply the deterministic seed. Idempotent — truncates first."""
+    _assert_safe_to_truncate(dsn)
     with _connect(dsn) as conn, conn.cursor() as cur:
-        _truncate_all(cur)
+        _truncate_seeded(cur)
         _seed_personas(cur)
         _seed_config(cur)
