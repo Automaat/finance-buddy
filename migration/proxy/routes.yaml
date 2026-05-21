@@ -69,3 +69,16 @@ rules:
   - method: DELETE
     path_prefix: /api/bonuses
     upstream: http://backend-go:8000
+  # Group 4c — /api/equity-grants cut over to Go (vesting math + paper-value + FX).
+  - method: GET
+    path_prefix: /api/equity-grants
+    upstream: http://backend-go:8000
+  - method: POST
+    path_prefix: /api/equity-grants
+    upstream: http://backend-go:8000
+  - method: PATCH
+    path_prefix: /api/equity-grants
+    upstream: http://backend-go:8000
+  - method: DELETE
+    path_prefix: /api/equity-grants
+    upstream: http://backend-go:8000
