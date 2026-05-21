@@ -49,16 +49,21 @@ type listResponse struct {
 	AvailableCompanies []string   `json:"available_companies"`
 }
 
+// createRequest captures parsed-and-validated input ready for Store.Create.
+// The JSON body is read into a raw map first so we can detect missing
+// required fields and preserve Numeric column precision by feeding JSON
+// number tokens directly into decimal.NewFromString — going through float64
+// introduces IEEE754 rounding that diverges from Python's Decimal(str(...)).
 type createRequest struct {
-	Company                string   `json:"company"`
-	Date                   isoDate  `json:"date"`
-	Currency               string   `json:"currency"`
-	FMVPerShare            float64  `json:"fmv_per_share"`
-	FMVLow                 *float64 `json:"fmv_low"`
-	FMVHigh                *float64 `json:"fmv_high"`
-	Source                 string   `json:"source"`
-	CommonStockDiscountPct *float64 `json:"common_stock_discount_pct"`
-	Notes                  *string  `json:"notes"`
+	Company                string
+	Date                   time.Time
+	Currency               string
+	FMVPerShare            decimal.Decimal
+	FMVLow                 *decimal.Decimal
+	FMVHigh                *decimal.Decimal
+	Source                 string
+	CommonStockDiscountPct *decimal.Decimal
+	Notes                  *string
 }
 
 // Handler is the HTTP boundary for /api/company-valuations.
@@ -145,16 +150,17 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 // Create serves POST /api/company-valuations.
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	var req createRequest
-	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&req); err != nil {
+	raw := map[string]json.RawMessage{}
+	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
 		writeValidationError(w, "body", "Invalid JSON body", err.Error())
 		return
 	}
-	if vErr := validateCreate(&req); vErr != nil {
+	req, vErr := buildCreateRequest(raw)
+	if vErr != nil {
 		writePydanticError(w, vErr)
 		return
 	}
-	v := requestToValuation(&req)
+	v := requestToValuation(req)
 	created, err := h.store.Create(r.Context(), v)
 	if err != nil {
 		h.logger.Error("create valuation", "err", err)
@@ -217,27 +223,17 @@ func (h *Handler) writeStoreError(w http.ResponseWriter, err error, id int) {
 }
 
 func requestToValuation(req *createRequest) *Valuation {
-	v := &Valuation{
-		Company:     req.Company,
-		Date:        time.Time(req.Date),
-		Currency:    strings.ToUpper(strings.TrimSpace(req.Currency)),
-		FMVPerShare: decimal.NewFromFloat(req.FMVPerShare),
-		Source:      req.Source,
-		Notes:       req.Notes,
+	return &Valuation{
+		Company:                req.Company,
+		Date:                   req.Date,
+		Currency:               req.Currency,
+		FMVPerShare:            req.FMVPerShare,
+		FMVLow:                 req.FMVLow,
+		FMVHigh:                req.FMVHigh,
+		Source:                 req.Source,
+		CommonStockDiscountPct: req.CommonStockDiscountPct,
+		Notes:                  req.Notes,
 	}
-	if req.FMVLow != nil {
-		d := decimal.NewFromFloat(*req.FMVLow)
-		v.FMVLow = &d
-	}
-	if req.FMVHigh != nil {
-		d := decimal.NewFromFloat(*req.FMVHigh)
-		v.FMVHigh = &d
-	}
-	if req.CommonStockDiscountPct != nil {
-		d := decimal.NewFromFloat(*req.CommonStockDiscountPct)
-		v.CommonStockDiscountPct = &d
-	}
-	return v
 }
 
 func parseIDParam(w http.ResponseWriter, r *http.Request) (int, bool) {
