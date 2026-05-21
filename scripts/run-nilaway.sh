@@ -21,13 +21,21 @@ fi
 MODULE_DIR=$1
 INCLUDE_PKGS=${2:-}
 
+# Pin the Go toolchain to whatever's on PATH so installing nilaway doesn't
+# auto-download an older toolchain (its go.mod has a "go 1.25" directive, and
+# without this Go will silently switch to 1.25.x and then fail to analyze our
+# 1.26 code).
+export GOTOOLCHAIN=local
+
 go install "go.uber.org/nilaway/cmd/nilaway@${NILAWAY_VERSION}"
 
 # Resolve the install location: GOBIN wins if set, else first entry of GOPATH/bin.
 # (GOPATH can be a colon-separated list; go install uses its first entry.)
 NILAWAY_BIN="$(go env GOBIN)"
 if [[ -z "$NILAWAY_BIN" ]]; then
-    GOPATH_FIRST="${GOPATH%%:*}"
+    # ${GOPATH-} avoids tripping `set -u` when GOPATH isn't exported (e.g. CI).
+    GOPATH_FIRST="${GOPATH-}"
+    GOPATH_FIRST="${GOPATH_FIRST%%:*}"
     if [[ -z "$GOPATH_FIRST" ]]; then
         GOPATH_FIRST="$(go env GOPATH | cut -d: -f1)"
     fi
