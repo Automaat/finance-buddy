@@ -16,8 +16,10 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	bonusevents "github.com/Automaat/finance-buddy/backend-go/internal/bonus_events"
 	companyvaluations "github.com/Automaat/finance-buddy/backend-go/internal/company_valuations"
 	"github.com/Automaat/finance-buddy/backend-go/internal/config"
+	"github.com/Automaat/finance-buddy/backend-go/internal/fx"
 	"github.com/Automaat/finance-buddy/backend-go/internal/goals"
 	"github.com/Automaat/finance-buddy/backend-go/internal/personas"
 )
@@ -96,6 +98,18 @@ func New(cfg Config, logger *slog.Logger, deps Deps) http.Handler {
 			r.Get("/{id}", valuationsHandler.Get)
 			r.Patch("/{id}", valuationsHandler.Update)
 			r.Delete("/{id}", valuationsHandler.Delete)
+		})
+
+		fxSvc := fx.NewService(deps.Pool, logger)
+		bonusesHandler := bonusevents.NewHandler(
+			bonusevents.NewStore(deps.Pool), fxSvc, logger,
+		)
+		r.Route("/api/bonuses", func(r chi.Router) {
+			r.Get("/", bonusesHandler.List)
+			r.Post("/", bonusesHandler.Create)
+			r.Get("/{id}", bonusesHandler.Get)
+			r.Patch("/{id}", bonusesHandler.Update)
+			r.Delete("/{id}", bonusesHandler.Delete)
 		})
 	}
 
