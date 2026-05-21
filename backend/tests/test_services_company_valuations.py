@@ -1,6 +1,7 @@
 """Tests for company valuation service + paper value computation."""
 
 from datetime import date
+from decimal import Decimal
 
 import pytest
 from fastapi import HTTPException
@@ -235,6 +236,38 @@ class TestPaperValueOnGrant:
         result = get_equity_grant(test_db_session, grant.id)
         assert result.vested_shares_today == 0
         assert result.paper_value_base is None
+
+    def test_fx_lookup_uses_valuation_date(self, test_db_session):
+        """paper_value_*_pln should use FX at valuation_date, not today."""
+        from app.models import FxRate
+
+        grant = create_test_equity_grant(
+            test_db_session,
+            company="Co X",
+            currency="USD",
+            grant_type="rsu",
+            total_shares=1000,
+            vest_start_date=date(2020, 1, 1),
+            vest_cliff_months=12,
+            vest_total_months=48,
+        )
+        create_test_company_valuation(
+            test_db_session,
+            company="Co X",
+            currency="USD",
+            valuation_date=date(2024, 6, 1),
+            fmv_per_share=10,
+        )
+        # Seed only a 2024-06-01 rate. If service uses "today" instead of the
+        # valuation date it would miss this and report no PLN value.
+        test_db_session.add(
+            FxRate(date=date(2024, 6, 1), currency="USD", rate_pln=Decimal("4.0"))
+        )
+        test_db_session.commit()
+
+        result = get_equity_grant(test_db_session, grant.id)
+        # 1000 vested * 10 USD/share * 4.0 PLN/USD = 40_000 PLN
+        assert result.paper_value_base_pln == 40_000.0
 
     def test_currency_mismatch_leaves_value_none(self, test_db_session):
         """Grant USD vs valuation EUR — paper value blank until FX (Phase 5)."""

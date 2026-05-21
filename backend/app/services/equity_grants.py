@@ -82,7 +82,11 @@ def _to_response(record: EquityGrant, db: Session) -> EquityGrantResponse:
     progress = vesting_progress_pct(schedule, today)
     pv_base, pv_low, pv_high, pv_currency, pv_date, pv_source = _paper_values(record, vested, db)
 
-    fx_rate = get_fx_rate_to_pln(db, pv_currency) if pv_currency is not None else None
+    # Use the valuation date for FX so paper_value_*_pln matches valuation_date —
+    # otherwise a 2-year-old valuation would be reported in today's PLN.
+    fx_rate = (
+        get_fx_rate_to_pln(db, pv_currency, pv_date) if pv_currency is not None else None
+    )
     pv_base_pln = to_pln(pv_base, pv_currency, fx_rate) if pv_currency else None
     pv_low_pln = to_pln(pv_low, pv_currency, fx_rate) if pv_currency else None
     pv_high_pln = to_pln(pv_high, pv_currency, fx_rate) if pv_currency else None
@@ -247,6 +251,17 @@ def update_equity_grant(db: Session, grant_id: int, data: EquityGrantUpdate) -> 
         raise HTTPException(
             status_code=422, detail="Cliff months cannot exceed total vesting months"
         )
+
+    # Post-merge type/strike consistency: type changed to option without strike
+    # would persist an invalid grant. Switching to RSU clears the now-irrelevant
+    # strike so the record stays self-consistent.
+    if record.type == EquityGrantType.OPTION.value and record.strike_price is None:
+        db.rollback()
+        raise HTTPException(
+            status_code=422, detail="Stock options require a strike price"
+        )
+    if record.type == EquityGrantType.RSU.value:
+        record.strike_price = None
 
     try:
         db.commit()

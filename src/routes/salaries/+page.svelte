@@ -143,17 +143,35 @@
 		baseAnnualGross: number;
 		baseAnnualNet: number;
 		bonusesPln: number;
+		bonusesNetPln: number;
 		equityPaperPln: number;
 		equityPaperLowPln: number;
 		equityPaperHighPln: number;
+		equityNetPln: number;
 		hasEquityWithoutFx: boolean;
 	};
+
+	// Capital gains rate for equity sold under art. 24 ust. 11 PIT — the default
+	// tax treatment for foreign-parent ESOPs. Applied to paper value for the
+	// "net" estimate only; real net depends on actual sale and tax_treatment.
+	const EQUITY_CAPITAL_GAINS_RATE = 0.19;
+
+	function pad2(n: number): string {
+		return n.toString().padStart(2, '0');
+	}
+
+	function isoDateLocal(d: Date): string {
+		// toISOString() converts to UTC and shifts the day for TZ > UTC (e.g. PL
+		// in winter: 2026-12-31 00:00 local → 2026-12-30T23:00Z). Build YYYY-MM-DD
+		// from the local components to keep comparisons consistent with date-only
+		// values returned by the API.
+		return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+	}
 
 	const compSummary = $derived.by<OwnerCompSummary | null>(() => {
 		if (!totalCompOwner) return null;
 		const owner = totalCompOwner;
-		const yearEnd = new Date(totalCompYear, 11, 31);
-		const yearEndIso = yearEnd.toISOString().split('T')[0];
+		const yearEndIso = isoDateLocal(new Date(totalCompYear, 11, 31));
 
 		const latestSalary = data.salaries.salary_records.find(
 			(r) => r.owner === owner && r.date <= yearEndIso
@@ -163,14 +181,23 @@
 
 		const ct = latestSalary?.contract_type;
 		const allowed: PlContractType[] = ['UOP', 'B2B', 'UZ', 'UoD'];
-		const baseAnnualNet =
-			ct && allowed.includes(ct as PlContractType)
-				? grossToNet(baseMonthly, ct as PlContractType, totalCompYear).netAnnual
-				: 0;
+		const useTaxCalc = ct && allowed.includes(ct as PlContractType);
+
+		const baseAnnualNet = useTaxCalc
+			? grossToNet(baseMonthly, ct as PlContractType, totalCompYear).netAnnual
+			: 0;
 
 		const bonusesPln = (data.bonuses?.bonus_events ?? [])
 			.filter((b) => b.owner === owner && new Date(b.date).getFullYear() === totalCompYear)
 			.reduce((s, b) => s + (b.amount_pln ?? (b.currency === 'PLN' ? b.amount : 0)), 0);
+
+		// Net for bonuses: treat as additional gross in the same year and take the
+		// marginal delta from gross_to_net. This applies progressive PIT + ZUS
+		// correctly when bonuses push the year over the 120k threshold.
+		const bonusesNetPln = useTaxCalc
+			? grossToNet((baseAnnualGross + bonusesPln) / 12, ct as PlContractType, totalCompYear)
+					.netAnnual - baseAnnualNet
+			: 0;
 
 		let equityPaperPln = 0;
 		let equityPaperLowPln = 0;
@@ -188,15 +215,20 @@
 				equityPaperHighPln += g.paper_value_high_pln ?? g.paper_value_base_pln;
 			}
 		}
+		// Equity "net" assumes capital-gains treatment on realization; grants on
+		// employment_income would be ~12/32% + ZUS instead. Rough estimate only.
+		const equityNetPln = equityPaperPln * (1 - EQUITY_CAPITAL_GAINS_RATE);
 
 		return {
 			owner,
 			baseAnnualGross,
 			baseAnnualNet,
 			bonusesPln,
+			bonusesNetPln,
 			equityPaperPln,
 			equityPaperLowPln,
 			equityPaperHighPln,
+			equityNetPln,
 			hasEquityWithoutFx
 		};
 	});
@@ -1172,8 +1204,8 @@
 				(includeEquityInTotal ? compSummary.equityPaperPln : 0)}
 			{@const totalNet =
 				compSummary.baseAnnualNet +
-				compSummary.bonusesPln +
-				(includeEquityInTotal ? compSummary.equityPaperPln : 0)}
+				compSummary.bonusesNetPln +
+				(includeEquityInTotal ? compSummary.equityNetPln : 0)}
 			<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
 				<div class="card preset-tonal-surface p-3">
 					<div class="text-xs text-surface-700-300">Pensja podstawowa (gross)</div>
@@ -1185,13 +1217,23 @@
 				<div class="card preset-tonal-surface p-3">
 					<div class="text-xs text-surface-700-300">Bonusy w {totalCompYear}</div>
 					<div class="text-lg font-semibold">{formatPLN(compSummary.bonusesPln)}</div>
+					{#if compSummary.bonusesPln > 0}
+						<div class="text-xs text-surface-700-300">
+							netto (szac.): {formatPLN(compSummary.bonusesNetPln)}
+						</div>
+					{/if}
 				</div>
 				<div class="card preset-tonal-surface p-3">
-					<div class="text-xs text-surface-700-300">Equity (paper)</div>
+					<div class="text-xs text-surface-700-300">Equity (paper, dziś)</div>
 					<div class="text-lg font-semibold">{formatPLN(compSummary.equityPaperPln)}</div>
 					{#if compSummary.equityPaperLowPln !== compSummary.equityPaperHighPln}
 						<div class="text-xs text-surface-700-300">
 							{formatPLN(compSummary.equityPaperLowPln)}–{formatPLN(compSummary.equityPaperHighPln)}
+						</div>
+					{/if}
+					{#if compSummary.equityPaperPln > 0}
+						<div class="text-xs text-surface-700-300">
+							po podatku 19% (szac.): {formatPLN(compSummary.equityNetPln)}
 						</div>
 					{/if}
 					{#if compSummary.hasEquityWithoutFx}
@@ -1203,8 +1245,14 @@
 						Total {includeEquityInTotal ? '(z equity)' : '(bez equity)'}
 					</div>
 					<div class="text-xl font-bold text-primary-600-400">{formatPLN(totalGross)}</div>
-					<div class="text-xs text-surface-700-300">netto: {formatPLN(totalNet)}</div>
+					<div class="text-xs text-surface-700-300">
+						po podatku (szac.): {formatPLN(totalNet)}
+					</div>
 				</div>
+			</div>
+			<div class="text-xs text-surface-700-300">
+				Pensja + bonusy filtrowane po roku. Equity zawsze jako wartość dzisiejsza (bieżący vested ×
+				najnowsza wycena), niezależnie od wybranego roku.
 			</div>
 			<label class="flex items-center gap-2 text-sm cursor-pointer">
 				<input type="checkbox" class="checkbox" bind:checked={includeEquityInTotal} />

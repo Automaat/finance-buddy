@@ -45,13 +45,9 @@ export const load: PageLoad = async ({ fetch, url }) => {
 		if (dateTo) params.set('date_to', dateTo);
 		if (company) params.set('company', company);
 
-		const equityParams = new URLSearchParams();
-		if (owner) equityParams.set('owner', owner);
-		if (company) equityParams.set('company', company);
-
-		const valuationParams = new URLSearchParams();
-		if (company) valuationParams.set('company', company);
-
+		// Bonuses, equity and valuations are fetched unfiltered: the total comp
+		// summary has its own owner selector independent of the URL salary filter,
+		// so it needs the full dataset to switch personas without re-loading.
 		const [
 			salariesResponse,
 			personasResponse,
@@ -63,9 +59,9 @@ export const load: PageLoad = async ({ fetch, url }) => {
 			fetch(`${apiUrl}/api/salaries?${params.toString()}`),
 			fetch(`${apiUrl}/api/personas`),
 			fetch(`${apiUrl}/api/cpi/series`),
-			fetch(`${apiUrl}/api/bonuses?${params.toString()}`),
-			fetch(`${apiUrl}/api/equity-grants?${equityParams.toString()}`),
-			fetch(`${apiUrl}/api/company-valuations?${valuationParams.toString()}`)
+			fetch(`${apiUrl}/api/bonuses`),
+			fetch(`${apiUrl}/api/equity-grants`),
+			fetch(`${apiUrl}/api/company-valuations`)
 		]);
 
 		if (!salariesResponse.ok) {
