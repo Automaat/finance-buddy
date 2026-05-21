@@ -100,8 +100,11 @@ func readMisc(raw map[string]json.RawMessage, in *Inputs) *validationError {
 func readSalaryHistory(raw map[string]json.RawMessage, in *Inputs) *validationError {
 	in.SalaryHistory = map[int]float64{}
 	v, ok := raw["salary_history"]
-	if !ok || isNull(v) {
+	if !ok {
 		return nil
+	}
+	if isNull(v) {
+		return &validationError{Field: "salary_history", Msg: "must be an array"}
 	}
 	var entries []map[string]any
 	if err := json.Unmarshal(v, &entries); err != nil {
@@ -205,10 +208,15 @@ func requireNonNegativeFloat(raw map[string]json.RawMessage, key, msg string) (f
 	return f, nil
 }
 
+// optionalNonNegativeFloat: omitted -> fallback. Present-as-null -> 422
+// (Pydantic rejects null on non-Optional typed defaults).
 func optionalNonNegativeFloat(raw map[string]json.RawMessage, key string, fallback float64, msg string) (float64, *validationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok {
 		return fallback, nil
+	}
+	if isNull(v) {
+		return 0, &validationError{Field: key, Msg: "must be a number"}
 	}
 	var f float64
 	if err := json.Unmarshal(v, &f); err != nil {
@@ -222,8 +230,11 @@ func optionalNonNegativeFloat(raw map[string]json.RawMessage, key string, fallba
 
 func optionalFloatRange(raw map[string]json.RawMessage, key string, fallback, lo, hi float64, msg string) (float64, *validationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok {
 		return fallback, nil
+	}
+	if isNull(v) {
+		return 0, &validationError{Field: key, Msg: "must be a number"}
 	}
 	var f float64
 	if err := json.Unmarshal(v, &f); err != nil {
@@ -237,8 +248,11 @@ func optionalFloatRange(raw map[string]json.RawMessage, key string, fallback, lo
 
 func optionalIntRange(raw map[string]json.RawMessage, key string, fallback, lo, hi int, msg string) (int, *validationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok {
 		return fallback, nil
+	}
+	if isNull(v) {
+		return 0, &validationError{Field: key, Msg: "must be an integer"}
 	}
 	var n int
 	if err := json.Unmarshal(v, &n); err != nil {
@@ -267,8 +281,11 @@ func requireIntRange(raw map[string]json.RawMessage, key string, lo, hi int, msg
 
 func optionalBool(raw map[string]json.RawMessage, key string, fallback bool) (bool, *validationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok {
 		return fallback, nil
+	}
+	if isNull(v) {
+		return false, &validationError{Field: key, Msg: "must be a boolean"}
 	}
 	var b bool
 	if err := json.Unmarshal(v, &b); err != nil {

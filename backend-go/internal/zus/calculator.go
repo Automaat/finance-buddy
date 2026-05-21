@@ -272,8 +272,11 @@ func lifeExpectancy(retirementAge int) float64 {
 	if retirementAge > 70 {
 		return lifeExpectancyMonths[70]
 	}
-	// Linear interpolation between two nearest ages.
-	lower, upper := retirementAge, retirementAge
+	// Linear interpolation between the two nearest known ages.
+	// Initialize lower below the floor and upper above the ceiling so any
+	// matching key in the table will displace the sentinel.
+	lower := -1
+	upper := 1 << 30
 	for k := range lifeExpectancyMonths {
 		if k <= retirementAge && k > lower {
 			lower = k

@@ -10,9 +10,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// ErrNoSalary marks the absence of any active salary record for a given
+// errNoSalary marks the absence of any active salary record for a given
 // owner. Lets latestSalary return a sentinel error instead of (nil, nil)
-// which the nilnil lint forbids.
+// which the nilnil lint forbids. Unexported — internal package signal,
+// not part of the package API.
 var errNoSalary = errors.New("no salary record for owner")
 
 // Store reads salary records + persona + app_config for prefill.

@@ -166,10 +166,15 @@ func (h *Handler) Calculate(w http.ResponseWriter, r *http.Request) {
 
 // Prefill serves GET /api/zus/prefill.
 func (h *Handler) Prefill(w http.ResponseWriter, r *http.Request) {
+	// Mirror Python's `if not owner` semantics: empty string from the query
+	// param falls through to the first-persona fallback exactly like Python's
+	// `Query(None)` default. Don't TrimSpace — Python doesn't.
 	var ownerHint *string
-	if v := strings.TrimSpace(r.URL.Query().Get("owner")); v != "" {
-		o := v
-		ownerHint = &o
+	if r.URL.Query().Has("owner") {
+		v := r.URL.Query().Get("owner")
+		if v != "" {
+			ownerHint = &v
+		}
 	}
 	data, err := h.store.LoadPrefill(r.Context(), ownerHint)
 	if err != nil {
