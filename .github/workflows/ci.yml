@@ -158,6 +158,102 @@ jobs:
         env:
           BB_DATABASE_URL: postgresql://bb:bb@localhost:5432/bb
 
+  bb-tests-go:
+    # Black-box parity gate: runs only the endpoints that have been cut over
+    # to backend-go. Expand the test list in this job with each cutover PR.
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: bb
+          POSTGRES_PASSWORD: bb
+          POSTGRES_DB: bb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      BB_DSN: postgresql://bb:bb@localhost:5432/bb
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+        with:
+          experimental: true
+        env:
+          MISE_PYTHON_COMPILE: '0'
+
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: backend-go/go.mod
+          cache-dependency-path: backend-go/go.sum
+
+      - name: Install backend deps (for alembic)
+        run: uv sync
+        working-directory: backend
+
+      - name: Install bb-tests deps
+        run: uv sync
+        working-directory: backend-bb-tests
+
+      - name: Run alembic upgrade head
+        run: uv run alembic upgrade head
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ env.BB_DSN }}
+          APP_PASSWORD: bb
+          CORS_ORIGINS: http://localhost:3000
+
+      - name: Seed bb fixtures
+        run: |
+          uv run python -c "
+          import sys
+          sys.path.insert(0, '.')
+          from fixtures.seed import seed
+          seed('${{ env.BB_DSN }}')
+          "
+        working-directory: backend-bb-tests
+        env:
+          BB_ALLOW_DESTRUCTIVE_SEED: '1'
+
+      - name: Build backend-go
+        run: go build -o /tmp/backend-go ./cmd/api
+        working-directory: backend-go
+
+      - name: Start backend-go
+        run: |
+          /tmp/backend-go &
+          echo $! > /tmp/backend-go.pid
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:8000/health && break
+            sleep 1
+          done
+        env:
+          DATABASE_URL: ${{ env.BB_DSN }}
+          CORS_ORIGINS: http://localhost:3000
+          FB_ADDR: ':8000'
+
+      - name: Run parity tests against backend-go
+        # Expand this list with each cutover group that lands.
+        run: |
+          uv run pytest -v \
+            tests/test_health.py \
+            tests/test_config.py
+        working-directory: backend-bb-tests
+        env:
+          BB_BASE_URL: http://127.0.0.1:8000
+          BB_DATABASE_URL: ${{ env.BB_DSN }}
+
+      - name: Stop backend-go
+        if: always()
+        run: kill "$(cat /tmp/backend-go.pid)" 2>/dev/null || true
+
   go-tests:
     runs-on: ubuntu-24.04
     strategy:
@@ -228,7 +324,7 @@ jobs:
 
   docker-publish:
     runs-on: ubuntu-24.04
-    needs: [frontend, backend, bb-tests, go-tests, lint-go, lint-nilaway]
+    needs: [frontend, backend, bb-tests, bb-tests-go, go-tests, lint-go, lint-nilaway]
     if: |
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
@@ -236,6 +332,7 @@ jobs:
       needs.frontend.result == 'success' &&
       (needs.backend.result == 'success' || needs.backend.result == 'skipped') &&
       needs.bb-tests.result == 'success' &&
+      needs.bb-tests-go.result == 'success' &&
       needs.go-tests.result == 'success' &&
       needs.lint-go.result == 'success' &&
       needs.lint-nilaway.result == 'success'

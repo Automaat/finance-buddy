@@ -14,6 +14,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/config"
 )
 
 // Config holds the runtime knobs the server reads at startup.
@@ -31,9 +34,16 @@ type Config struct {
 	CORSOrigins string
 }
 
-// New returns a chi router with the shared middleware stack and the only
-// endpoint this skeleton ships: GET /health.
-func New(cfg Config, logger *slog.Logger) http.Handler {
+// Deps bundles the runtime dependencies the router needs to construct
+// handlers (DB pool, etc). Optional fields default to no-op behavior so
+// existing /health-only tests don't need a real pool.
+type Deps struct {
+	Pool *pgxpool.Pool
+}
+
+// New returns a chi router with the shared middleware stack and the endpoints
+// cut over so far.
+func New(cfg Config, logger *slog.Logger, deps Deps) http.Handler {
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -49,6 +59,14 @@ func New(cfg Config, logger *slog.Logger) http.Handler {
 	}))
 
 	r.Get("/health", healthHandler(logger))
+
+	if deps.Pool != nil {
+		cfgHandler := config.NewHandler(config.NewStore(deps.Pool), logger)
+		r.Route("/api/config", func(r chi.Router) {
+			r.Get("/", cfgHandler.Get)
+			r.Put("/", cfgHandler.Put)
+		})
+	}
 
 	return r
 }

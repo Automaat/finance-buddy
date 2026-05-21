@@ -1,8 +1,7 @@
-// Finance Buddy Go backend — Phase 5 skeleton.
+// Finance Buddy Go backend.
 //
-// Ships only the /health endpoint and the HTTP plumbing the rest of the
-// migration will reuse. Endpoints are cut over from the Python backend one
-// at a time, each gated on the backend-bb-tests/ parity suite.
+// Endpoints are cut over from the Python backend one at a time, each gated
+// on the backend-bb-tests/ parity suite. See migration/CUTOVER.md.
 package main
 
 import (
@@ -15,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Automaat/finance-buddy/backend-go/internal/db"
 	"github.com/Automaat/finance-buddy/backend-go/internal/server"
 )
 
@@ -31,16 +31,28 @@ func run() int {
 		CORSOrigins: envOrPresent("CORS_ORIGINS", "http://localhost:3000"),
 	}
 
-	handler := server.New(cfg, logger)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	deps := server.Deps{}
+	if dsn := os.Getenv("DATABASE_URL"); dsn != "" {
+		pool, err := db.New(ctx, dsn)
+		if err != nil {
+			logger.Error("open db pool", "err", err)
+			return 2
+		}
+		defer pool.Close()
+		deps.Pool = pool
+		logger.Info("db pool ready")
+	} else {
+		logger.Warn("DATABASE_URL not set — DB-backed endpoints will 404")
+	}
 
 	srv := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           handler,
+		Handler:           server.New(cfg, logger, deps),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.ListenAndServe() }()
