@@ -6,11 +6,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import (
     accounts,
     assets,
+    bonus_events,
+    company_valuations,
     config,
     cpi,
     dashboard,
     debt_payments,
     debts,
+    equity_grants,
     goals,
     investment,
     personas,
@@ -49,10 +52,13 @@ app.add_middleware(
 app.include_router(dashboard.router)
 app.include_router(accounts.router)
 app.include_router(assets.router)
+app.include_router(bonus_events.router)
+app.include_router(company_valuations.router)
 app.include_router(config.router)
 app.include_router(cpi.router)
 app.include_router(debts.router)
 app.include_router(debt_payments.router)
+app.include_router(equity_grants.router)
 app.include_router(goals.router)
 app.include_router(investment.router)
 app.include_router(personas.router)

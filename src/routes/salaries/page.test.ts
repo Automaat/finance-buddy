@@ -45,7 +45,10 @@ const baseData = {
 	},
 	filters: { owner: null, date_from: null, date_to: null, company: null },
 	personas: [{ id: 1, name: 'Marcin', ppk_employee_rate: 2, ppk_employer_rate: 1.5 }],
-	cpiSeries: { points: [], base_year: null, latest_year: null, source: '' }
+	cpiSeries: { points: [], base_year: null, latest_year: null, source: '' },
+	bonuses: { bonus_events: [], total_count: 0, available_companies: [] },
+	equity: { equity_grants: [], total_count: 0, available_companies: [] },
+	valuations: { company_valuations: [], total_count: 0, available_companies: [] }
 };
 
 async function openNewSalaryModalAndFill(opts: {

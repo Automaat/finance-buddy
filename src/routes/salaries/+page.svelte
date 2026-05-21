@@ -5,6 +5,7 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import { formatPLN } from '$lib/utils/format';
 	import { buildCpiLookup, inflationAdjust, parseIsoDate } from '$lib/utils/inflation';
+	import { grossToNet, type PlContractType } from '$lib/utils/pl_tax';
 	import {
 		Plus,
 		Banknote,
@@ -13,12 +14,27 @@
 		BarChart3,
 		Pencil,
 		Trash2,
-		Scale
+		Scale,
+		Gift,
+		Award,
+		Building2,
+		Wallet
 	} from 'lucide-svelte';
 	import { env } from '$env/dynamic/public';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { toast } from '$lib/stores/toast.svelte';
-	import type { SalaryRecord } from '$lib/types/salaries';
+	import type {
+		BonusEvent,
+		BonusType,
+		CompanyValuation,
+		CustomVestingEvent,
+		EquityGrant,
+		EquityGrantType,
+		EquityTaxTreatment,
+		SalaryRecord,
+		ValuationSource,
+		VestingFrequency
+	} from '$lib/types/salaries';
 	import type { Persona } from '$lib/types/personas';
 	import type { CpiSeries } from '$lib/types/cpi';
 	import type { PageData } from './$types';
@@ -86,6 +102,717 @@
 	});
 	let salaryError = $state('');
 	let savingSalary = $state(false);
+
+	const currentYear = new Date().getFullYear();
+
+	const latestContractByOwner = $derived.by(() => {
+		const map = new Map<string, string>();
+		for (const r of data.salaries.salary_records) {
+			if (!map.has(r.owner)) map.set(r.owner, r.contract_type);
+		}
+		return map;
+	});
+
+	function netMonthlyForOwner(owner: string, grossMonthly: number): number | null {
+		const ct = latestContractByOwner.get(owner);
+		if (!ct) return null;
+		const allowed: PlContractType[] = ['UOP', 'B2B', 'UZ', 'UoD'];
+		if (!allowed.includes(ct as PlContractType)) return null;
+		const breakdown = grossToNet(grossMonthly, ct as PlContractType, currentYear);
+		return breakdown.netAnnual / 12;
+	}
+
+	const allYears = $derived.by(() => {
+		const years = new Set<number>();
+		years.add(currentYear);
+		for (const r of data.salaries.salary_records) years.add(new Date(r.date).getFullYear());
+		for (const b of data.bonuses?.bonus_events ?? []) years.add(new Date(b.date).getFullYear());
+		return [...years].sort((a, b) => b - a);
+	});
+
+	let totalCompYear = $state(new Date().getFullYear());
+	let totalCompOwner = $state(untrack(() => defaultOwner));
+	let includeEquityInTotal = $state(false);
+
+	type OwnerCompSummary = {
+		owner: string;
+		baseAnnualGross: number;
+		baseAnnualNet: number;
+		bonusesPln: number;
+		equityPaperPln: number;
+		equityPaperLowPln: number;
+		equityPaperHighPln: number;
+		hasEquityWithoutFx: boolean;
+	};
+
+	const compSummary = $derived.by<OwnerCompSummary | null>(() => {
+		if (!totalCompOwner) return null;
+		const owner = totalCompOwner;
+		const yearEnd = new Date(totalCompYear, 11, 31);
+		const yearEndIso = yearEnd.toISOString().split('T')[0];
+
+		const latestSalary = data.salaries.salary_records.find(
+			(r) => r.owner === owner && r.date <= yearEndIso
+		);
+		const baseMonthly = latestSalary?.gross_amount ?? 0;
+		const baseAnnualGross = baseMonthly * 12;
+
+		const ct = latestSalary?.contract_type;
+		const allowed: PlContractType[] = ['UOP', 'B2B', 'UZ', 'UoD'];
+		const baseAnnualNet =
+			ct && allowed.includes(ct as PlContractType)
+				? grossToNet(baseMonthly, ct as PlContractType, totalCompYear).netAnnual
+				: 0;
+
+		const bonusesPln = (data.bonuses?.bonus_events ?? [])
+			.filter((b) => b.owner === owner && new Date(b.date).getFullYear() === totalCompYear)
+			.reduce((s, b) => s + (b.amount_pln ?? (b.currency === 'PLN' ? b.amount : 0)), 0);
+
+		let equityPaperPln = 0;
+		let equityPaperLowPln = 0;
+		let equityPaperHighPln = 0;
+		let hasEquityWithoutFx = false;
+		for (const g of data.equity?.equity_grants ?? []) {
+			if (g.owner !== owner) continue;
+			if (g.paper_value_base_pln === null && g.paper_value_base !== null) {
+				hasEquityWithoutFx = true;
+				continue;
+			}
+			if (g.paper_value_base_pln !== null) {
+				equityPaperPln += g.paper_value_base_pln;
+				equityPaperLowPln += g.paper_value_low_pln ?? g.paper_value_base_pln;
+				equityPaperHighPln += g.paper_value_high_pln ?? g.paper_value_base_pln;
+			}
+		}
+
+		return {
+			owner,
+			baseAnnualGross,
+			baseAnnualNet,
+			bonusesPln,
+			equityPaperPln,
+			equityPaperLowPln,
+			equityPaperHighPln,
+			hasEquityWithoutFx
+		};
+	});
+
+	const bonusEvents = $derived(data.bonuses?.bonus_events ?? []);
+	const bonusGroupedByCompany = $derived(
+		bonusEvents.reduce<Map<string, BonusEvent[]>>((acc, b) => {
+			const key = b.company || 'Nieokreślona firma';
+			if (!acc.has(key)) acc.set(key, []);
+			acc.get(key)!.push(b);
+			return acc;
+		}, new Map())
+	);
+
+	const bonusTypeLabels: Record<BonusType, string> = {
+		annual: 'Roczny',
+		signon: 'Powitalny',
+		spot: 'Uznaniowy',
+		retention: 'Retencyjny'
+	};
+
+	let showBonusModal = $state(false);
+	let editingBonus: BonusEvent | null = $state(null);
+	let bonusFormData = $state({
+		date: new Date().toISOString().split('T')[0],
+		amount: 0,
+		currency: 'PLN',
+		type: 'annual' as BonusType,
+		company: '',
+		owner: untrack(() => defaultOwner),
+		contract_type: 'UOP',
+		notes: ''
+	});
+	let bonusError = $state('');
+	let savingBonus = $state(false);
+
+	function formatBonusAmount(amount: number, currency: string): string {
+		if (currency === 'PLN') return formatPLN(amount);
+		return `${amount.toLocaleString('pl-PL', { maximumFractionDigits: 2 })} ${currency}`;
+	}
+
+	function openNewBonusModal() {
+		editingBonus = null;
+		bonusFormData = {
+			date: new Date().toISOString().split('T')[0],
+			amount: 0,
+			currency: 'PLN',
+			type: 'annual',
+			company: '',
+			owner: defaultOwner,
+			contract_type: 'UOP',
+			notes: ''
+		};
+		bonusError = '';
+		showBonusModal = true;
+	}
+
+	function openEditBonusModal(bonus: BonusEvent) {
+		editingBonus = bonus;
+		bonusFormData = {
+			date: bonus.date,
+			amount: bonus.amount,
+			currency: bonus.currency,
+			type: bonus.type,
+			company: bonus.company,
+			owner: bonus.owner,
+			contract_type: bonus.contract_type,
+			notes: bonus.notes ?? ''
+		};
+		bonusError = '';
+		showBonusModal = true;
+	}
+
+	function closeBonusModal() {
+		showBonusModal = false;
+		editingBonus = null;
+		bonusError = '';
+	}
+
+	async function saveBonus() {
+		if (!bonusFormData.date) {
+			bonusError = 'Data jest wymagana';
+			return;
+		}
+		const todayNow = new Date().toISOString().split('T')[0];
+		if (bonusFormData.date > todayNow) {
+			bonusError = 'Data nie może być z przyszłości';
+			return;
+		}
+		if (!bonusFormData.amount || bonusFormData.amount <= 0) {
+			bonusError = 'Kwota musi być większa niż 0';
+			return;
+		}
+		if (!bonusFormData.company || !bonusFormData.company.trim()) {
+			bonusError = 'Firma nie może być pusta';
+			return;
+		}
+
+		bonusError = '';
+		savingBonus = true;
+
+		try {
+			const method = editingBonus ? 'PATCH' : 'POST';
+			const url = editingBonus
+				? `${apiUrl}/api/bonuses/${editingBonus.id}`
+				: `${apiUrl}/api/bonuses`;
+
+			const payload = {
+				...bonusFormData,
+				notes: bonusFormData.notes.trim() || null
+			};
+
+			const response = await fetch(url, {
+				method,
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload)
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				const detail = errorData.detail;
+				const fallback = 'Failed to save bonus';
+				let message: string;
+				if (Array.isArray(detail)) {
+					const joined = detail
+						.map((d: { msg?: string }) => (typeof d?.msg === 'string' ? d.msg : ''))
+						.filter(Boolean)
+						.join('; ');
+					message = joined || fallback;
+				} else if (typeof detail === 'string' && detail) {
+					message = detail;
+				} else {
+					message = fallback;
+				}
+				throw new Error(message);
+			}
+
+			await invalidateAll();
+			closeBonusModal();
+		} catch (err) {
+			if (err instanceof Error) {
+				bonusError = err.message;
+			}
+		} finally {
+			savingBonus = false;
+		}
+	}
+
+	async function deleteBonus(id: number) {
+		if (!confirm('Czy na pewno chcesz usunąć ten bonus?')) {
+			return;
+		}
+
+		try {
+			const response = await fetch(`${apiUrl}/api/bonuses/${id}`, { method: 'DELETE' });
+			if (!response.ok) {
+				throw new Error('Failed to delete bonus');
+			}
+			await invalidateAll();
+		} catch (err) {
+			console.error('Failed to delete bonus:', err);
+			toast.error('Nie udało się usunąć bonusu');
+		}
+	}
+
+	const equityGrants = $derived(data.equity?.equity_grants ?? []);
+	const equityGroupedByCompany = $derived(
+		equityGrants.reduce<Map<string, EquityGrant[]>>((acc, g) => {
+			const key = g.company || 'Nieokreślona firma';
+			if (!acc.has(key)) acc.set(key, []);
+			acc.get(key)!.push(g);
+			return acc;
+		}, new Map())
+	);
+
+	const equityTypeLabels: Record<EquityGrantType, string> = {
+		option: 'Opcje',
+		rsu: 'RSU'
+	};
+
+	const vestingFrequencyLabels: Record<VestingFrequency, string> = {
+		monthly: 'miesięczny',
+		quarterly: 'kwartalny',
+		yearly: 'roczny'
+	};
+
+	const taxTreatmentLabels: Record<EquityTaxTreatment, string> = {
+		capital_gains_19: 'Kapitałowy 19% (art. 24 ust. 11)',
+		employment_income: 'Przychód ze stosunku pracy (12/32%)'
+	};
+
+	type VestingPresetKey = 'standard_4_1_monthly' | '4_1_quarterly' | '3_0_monthly' | 'custom';
+
+	const vestingPresets: Record<
+		VestingPresetKey,
+		{
+			label: string;
+			cliff: number;
+			total: number;
+			frequency: VestingFrequency;
+			custom: CustomVestingEvent[] | null;
+		}
+	> = {
+		standard_4_1_monthly: {
+			label: '4 lata / 1 rok cliff / miesięczny',
+			cliff: 12,
+			total: 48,
+			frequency: 'monthly',
+			custom: null
+		},
+		'4_1_quarterly': {
+			label: '4 lata / 1 rok cliff / kwartalny',
+			cliff: 12,
+			total: 48,
+			frequency: 'quarterly',
+			custom: null
+		},
+		'3_0_monthly': {
+			label: '3 lata / bez cliffu / miesięczny',
+			cliff: 0,
+			total: 36,
+			frequency: 'monthly',
+			custom: null
+		},
+		custom: {
+			label: 'Niestandardowy',
+			cliff: 12,
+			total: 48,
+			frequency: 'yearly',
+			custom: [
+				{ month: 12, pct: 10 },
+				{ month: 24, pct: 20 },
+				{ month: 36, pct: 30 },
+				{ month: 48, pct: 40 }
+			]
+		}
+	};
+
+	let showEquityModal = $state(false);
+	let editingGrant: EquityGrant | null = $state(null);
+	let equityFormData = $state({
+		grant_date: new Date().toISOString().split('T')[0],
+		type: 'rsu' as EquityGrantType,
+		company: '',
+		owner: untrack(() => defaultOwner),
+		total_shares: 0,
+		strike_price: null as number | null,
+		currency: 'USD',
+		vest_start_date: new Date().toISOString().split('T')[0],
+		vest_cliff_months: 12,
+		vest_total_months: 48,
+		vest_frequency: 'monthly' as VestingFrequency,
+		preset: 'standard_4_1_monthly' as VestingPresetKey,
+		vest_custom_schedule: null as CustomVestingEvent[] | null,
+		requires_liquidity_event: false,
+		liquidity_event_date: null as string | null,
+		tax_treatment: 'capital_gains_19' as EquityTaxTreatment,
+		notes: ''
+	});
+	let equityError = $state('');
+	let savingEquity = $state(false);
+
+	function applyPreset(key: VestingPresetKey) {
+		const preset = vestingPresets[key];
+		equityFormData.vest_cliff_months = preset.cliff;
+		equityFormData.vest_total_months = preset.total;
+		equityFormData.vest_frequency = preset.frequency;
+		equityFormData.vest_custom_schedule = preset.custom ? [...preset.custom] : null;
+	}
+
+	function formatShares(n: number): string {
+		return n.toLocaleString('pl-PL', { maximumFractionDigits: 0 });
+	}
+
+	function formatCurrency(amount: number, currency: string): string {
+		if (currency === 'PLN') return formatPLN(amount);
+		return `${amount.toLocaleString('pl-PL', { maximumFractionDigits: 2 })} ${currency}`;
+	}
+
+	function openNewEquityModal() {
+		editingGrant = null;
+		equityFormData = {
+			grant_date: new Date().toISOString().split('T')[0],
+			type: 'rsu',
+			company: '',
+			owner: defaultOwner,
+			total_shares: 0,
+			strike_price: null,
+			currency: 'USD',
+			vest_start_date: new Date().toISOString().split('T')[0],
+			vest_cliff_months: 12,
+			vest_total_months: 48,
+			vest_frequency: 'monthly',
+			preset: 'standard_4_1_monthly',
+			vest_custom_schedule: null,
+			requires_liquidity_event: false,
+			liquidity_event_date: null,
+			tax_treatment: 'capital_gains_19',
+			notes: ''
+		};
+		equityError = '';
+		showEquityModal = true;
+	}
+
+	function detectPreset(grant: EquityGrant): VestingPresetKey {
+		if (grant.vest_custom_schedule) return 'custom';
+		if (
+			grant.vest_cliff_months === 12 &&
+			grant.vest_total_months === 48 &&
+			grant.vest_frequency === 'monthly'
+		)
+			return 'standard_4_1_monthly';
+		if (
+			grant.vest_cliff_months === 12 &&
+			grant.vest_total_months === 48 &&
+			grant.vest_frequency === 'quarterly'
+		)
+			return '4_1_quarterly';
+		if (
+			grant.vest_cliff_months === 0 &&
+			grant.vest_total_months === 36 &&
+			grant.vest_frequency === 'monthly'
+		)
+			return '3_0_monthly';
+		return 'custom';
+	}
+
+	function openEditEquityModal(grant: EquityGrant) {
+		editingGrant = grant;
+		equityFormData = {
+			grant_date: grant.grant_date,
+			type: grant.type,
+			company: grant.company,
+			owner: grant.owner,
+			total_shares: grant.total_shares,
+			strike_price: grant.strike_price,
+			currency: grant.currency,
+			vest_start_date: grant.vest_start_date,
+			vest_cliff_months: grant.vest_cliff_months,
+			vest_total_months: grant.vest_total_months,
+			vest_frequency: grant.vest_frequency,
+			preset: detectPreset(grant),
+			vest_custom_schedule: grant.vest_custom_schedule ? [...grant.vest_custom_schedule] : null,
+			requires_liquidity_event: grant.requires_liquidity_event,
+			liquidity_event_date: grant.liquidity_event_date,
+			tax_treatment: grant.tax_treatment,
+			notes: grant.notes ?? ''
+		};
+		equityError = '';
+		showEquityModal = true;
+	}
+
+	function closeEquityModal() {
+		showEquityModal = false;
+		editingGrant = null;
+		equityError = '';
+	}
+
+	async function saveEquityGrant() {
+		if (!equityFormData.company.trim()) {
+			equityError = 'Firma nie może być pusta';
+			return;
+		}
+		if (equityFormData.total_shares <= 0) {
+			equityError = 'Liczba akcji musi być większa niż 0';
+			return;
+		}
+		if (equityFormData.type === 'option' && (equityFormData.strike_price ?? 0) <= 0) {
+			equityError = 'Opcje wymagają ceny wykonania (strike price)';
+			return;
+		}
+		if (equityFormData.vest_cliff_months > equityFormData.vest_total_months) {
+			equityError = 'Cliff nie może przekraczać całkowitego okresu vestingu';
+			return;
+		}
+
+		equityError = '';
+		savingEquity = true;
+
+		try {
+			const method = editingGrant ? 'PATCH' : 'POST';
+			const url = editingGrant
+				? `${apiUrl}/api/equity-grants/${editingGrant.id}`
+				: `${apiUrl}/api/equity-grants`;
+
+			const payload = {
+				grant_date: equityFormData.grant_date,
+				type: equityFormData.type,
+				company: equityFormData.company,
+				owner: equityFormData.owner,
+				total_shares: equityFormData.total_shares,
+				strike_price: equityFormData.type === 'option' ? equityFormData.strike_price : null,
+				currency: equityFormData.currency,
+				vest_start_date: equityFormData.vest_start_date,
+				vest_cliff_months: equityFormData.vest_cliff_months,
+				vest_total_months: equityFormData.vest_total_months,
+				vest_frequency: equityFormData.vest_frequency,
+				vest_custom_schedule:
+					equityFormData.preset === 'custom' ? equityFormData.vest_custom_schedule : null,
+				requires_liquidity_event: equityFormData.requires_liquidity_event,
+				liquidity_event_date: equityFormData.liquidity_event_date || null,
+				tax_treatment: equityFormData.tax_treatment,
+				notes: equityFormData.notes.trim() || null
+			};
+
+			const response = await fetch(url, {
+				method,
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload)
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				const detail = errorData.detail;
+				const fallback = 'Failed to save grant';
+				let message: string;
+				if (Array.isArray(detail)) {
+					const joined = detail
+						.map((d: { msg?: string }) => (typeof d?.msg === 'string' ? d.msg : ''))
+						.filter(Boolean)
+						.join('; ');
+					message = joined || fallback;
+				} else if (typeof detail === 'string' && detail) {
+					message = detail;
+				} else {
+					message = fallback;
+				}
+				throw new Error(message);
+			}
+
+			await invalidateAll();
+			closeEquityModal();
+		} catch (err) {
+			if (err instanceof Error) {
+				equityError = err.message;
+			}
+		} finally {
+			savingEquity = false;
+		}
+	}
+
+	async function deleteEquityGrant(id: number) {
+		if (!confirm('Czy na pewno chcesz usunąć ten grant?')) return;
+		try {
+			const response = await fetch(`${apiUrl}/api/equity-grants/${id}`, { method: 'DELETE' });
+			if (!response.ok) throw new Error('Failed to delete grant');
+			await invalidateAll();
+		} catch (err) {
+			console.error('Failed to delete grant:', err);
+			toast.error('Nie udało się usunąć grantu');
+		}
+	}
+
+	const valuations = $derived(data.valuations?.company_valuations ?? []);
+
+	const valuationSourceLabels: Record<ValuationSource, string> = {
+		'409a': '409A',
+		preferred_round: 'Runda preferred',
+		tender: 'Tender / wykup',
+		estimate: 'Estymacja'
+	};
+
+	let showValuationModal = $state(false);
+	let editingValuation: CompanyValuation | null = $state(null);
+	let valuationFormData = $state({
+		company: '',
+		date: new Date().toISOString().split('T')[0],
+		currency: 'USD',
+		fmv_per_share: 0,
+		fmv_low: null as number | null,
+		fmv_high: null as number | null,
+		source: '409a' as ValuationSource,
+		common_stock_discount_pct: null as number | null,
+		notes: ''
+	});
+	let valuationError = $state('');
+	let savingValuation = $state(false);
+
+	function formatRange(grant: EquityGrant): string {
+		if (grant.paper_value_base === null) {
+			if (grant.valuation_date) return 'brak FX';
+			return '—';
+		}
+		const currency = grant.paper_value_currency ?? grant.currency;
+		const base = formatCurrency(grant.paper_value_base, currency);
+		if (
+			grant.paper_value_low !== null &&
+			grant.paper_value_high !== null &&
+			grant.paper_value_low !== grant.paper_value_base
+		) {
+			return `${base} (${formatCurrency(grant.paper_value_low, currency)}–${formatCurrency(grant.paper_value_high, currency)})`;
+		}
+		return base;
+	}
+
+	function openNewValuationModal() {
+		editingValuation = null;
+		valuationFormData = {
+			company: '',
+			date: new Date().toISOString().split('T')[0],
+			currency: 'USD',
+			fmv_per_share: 0,
+			fmv_low: null,
+			fmv_high: null,
+			source: '409a',
+			common_stock_discount_pct: null,
+			notes: ''
+		};
+		valuationError = '';
+		showValuationModal = true;
+	}
+
+	function openEditValuationModal(valuation: CompanyValuation) {
+		editingValuation = valuation;
+		valuationFormData = {
+			company: valuation.company,
+			date: valuation.date,
+			currency: valuation.currency,
+			fmv_per_share: valuation.fmv_per_share,
+			fmv_low: valuation.fmv_low,
+			fmv_high: valuation.fmv_high,
+			source: valuation.source,
+			common_stock_discount_pct: valuation.common_stock_discount_pct,
+			notes: valuation.notes ?? ''
+		};
+		valuationError = '';
+		showValuationModal = true;
+	}
+
+	function closeValuationModal() {
+		showValuationModal = false;
+		editingValuation = null;
+		valuationError = '';
+	}
+
+	async function saveValuation() {
+		if (!valuationFormData.company.trim()) {
+			valuationError = 'Firma nie może być pusta';
+			return;
+		}
+		if (valuationFormData.fmv_per_share < 0) {
+			valuationError = 'FMV musi być nieujemne';
+			return;
+		}
+		if (
+			valuationFormData.fmv_low !== null &&
+			valuationFormData.fmv_low > valuationFormData.fmv_per_share
+		) {
+			valuationError = 'fmv_low nie może być większe niż fmv_per_share';
+			return;
+		}
+		if (
+			valuationFormData.fmv_high !== null &&
+			valuationFormData.fmv_high < valuationFormData.fmv_per_share
+		) {
+			valuationError = 'fmv_high nie może być mniejsze niż fmv_per_share';
+			return;
+		}
+
+		valuationError = '';
+		savingValuation = true;
+
+		try {
+			const method = editingValuation ? 'PATCH' : 'POST';
+			const url = editingValuation
+				? `${apiUrl}/api/company-valuations/${editingValuation.id}`
+				: `${apiUrl}/api/company-valuations`;
+
+			const payload = {
+				...valuationFormData,
+				notes: valuationFormData.notes.trim() || null
+			};
+
+			const response = await fetch(url, {
+				method,
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload)
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				const detail = errorData.detail;
+				const fallback = 'Failed to save valuation';
+				let message: string;
+				if (Array.isArray(detail)) {
+					const joined = detail
+						.map((d: { msg?: string }) => (typeof d?.msg === 'string' ? d.msg : ''))
+						.filter(Boolean)
+						.join('; ');
+					message = joined || fallback;
+				} else if (typeof detail === 'string' && detail) {
+					message = detail;
+				} else {
+					message = fallback;
+				}
+				throw new Error(message);
+			}
+
+			await invalidateAll();
+			closeValuationModal();
+		} catch (err) {
+			if (err instanceof Error) valuationError = err.message;
+		} finally {
+			savingValuation = false;
+		}
+	}
+
+	async function deleteValuation(id: number) {
+		if (!confirm('Czy na pewno chcesz usunąć tę wycenę?')) return;
+		try {
+			const response = await fetch(`${apiUrl}/api/company-valuations/${id}`, {
+				method: 'DELETE'
+			});
+			if (!response.ok) throw new Error('Failed to delete valuation');
+			await invalidateAll();
+		} catch (err) {
+			console.error('Failed to delete valuation:', err);
+			toast.error('Nie udało się usunąć wyceny');
+		}
+	}
 
 	function applyFilters() {
 		const params = new URLSearchParams();
@@ -397,16 +1124,105 @@
 
 <div class="space-y-4">
 	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+			<div>
+				<h3 class="h3 flex items-center gap-2">
+					<Wallet size={20} /> Total compensation
+				</h3>
+				<p class="text-xs text-surface-700-300">
+					Roczna pensja podstawowa + bonusy + equity (opcjonalnie). Wszystko w PLN.
+				</p>
+			</div>
+			<div class="flex flex-wrap gap-2">
+				<label class="label">
+					<span class="text-xs">Rok</span>
+					<select class="select" bind:value={totalCompYear}>
+						{#each allYears as y (y)}
+							<option value={y}>{y}</option>
+						{/each}
+					</select>
+				</label>
+				<label class="label">
+					<span class="text-xs">Właściciel</span>
+					<select class="select" bind:value={totalCompOwner}>
+						{#each personas as persona}
+							<option value={persona.name}>{persona.name}</option>
+						{/each}
+					</select>
+				</label>
+			</div>
+		</header>
+
+		{#if compSummary}
+			{@const totalGross =
+				compSummary.baseAnnualGross +
+				compSummary.bonusesPln +
+				(includeEquityInTotal ? compSummary.equityPaperPln : 0)}
+			{@const totalNet =
+				compSummary.baseAnnualNet +
+				compSummary.bonusesPln +
+				(includeEquityInTotal ? compSummary.equityPaperPln : 0)}
+			<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+				<div class="card preset-tonal-surface p-3">
+					<div class="text-xs text-surface-700-300">Pensja podstawowa (gross)</div>
+					<div class="text-lg font-semibold">{formatPLN(compSummary.baseAnnualGross)}</div>
+					<div class="text-xs text-surface-700-300">
+						netto: {formatPLN(compSummary.baseAnnualNet)}
+					</div>
+				</div>
+				<div class="card preset-tonal-surface p-3">
+					<div class="text-xs text-surface-700-300">Bonusy w {totalCompYear}</div>
+					<div class="text-lg font-semibold">{formatPLN(compSummary.bonusesPln)}</div>
+				</div>
+				<div class="card preset-tonal-surface p-3">
+					<div class="text-xs text-surface-700-300">Equity (paper)</div>
+					<div class="text-lg font-semibold">{formatPLN(compSummary.equityPaperPln)}</div>
+					{#if compSummary.equityPaperLowPln !== compSummary.equityPaperHighPln}
+						<div class="text-xs text-surface-700-300">
+							{formatPLN(compSummary.equityPaperLowPln)}–{formatPLN(compSummary.equityPaperHighPln)}
+						</div>
+					{/if}
+					{#if compSummary.hasEquityWithoutFx}
+						<div class="text-xs text-warning-500">część grantów bez FX</div>
+					{/if}
+				</div>
+				<div class="card preset-tonal-surface p-3">
+					<div class="text-xs text-surface-700-300">
+						Total {includeEquityInTotal ? '(z equity)' : '(bez equity)'}
+					</div>
+					<div class="text-xl font-bold text-primary-600-400">{formatPLN(totalGross)}</div>
+					<div class="text-xs text-surface-700-300">netto: {formatPLN(totalNet)}</div>
+				</div>
+			</div>
+			<label class="flex items-center gap-2 text-sm cursor-pointer">
+				<input type="checkbox" class="checkbox" bind:checked={includeEquityInTotal} />
+				<span>Wlicz equity paper value do total (uwaga: nie zrealizowane do sprzedaży)</span>
+			</label>
+		{:else}
+			<p class="text-sm text-surface-700-300">Wybierz właściciela aby zobaczyć podsumowanie.</p>
+		{/if}
+	</div>
+
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
 		<header>
 			<h3 class="h3 flex items-center gap-2"><Banknote size={20} /> Aktualne wynagrodzenia</h3>
 		</header>
 		<div class="flex flex-wrap gap-6">
 			{#each Object.entries(data.salaries.current_salaries) as [name, salary]}
-				<div class="flex items-center gap-2">
-					<span class="text-sm text-surface-700-300">{name}:</span>
+				{@const net = salary !== null ? netMonthlyForOwner(name, salary) : null}
+				<div class="flex flex-col gap-1">
+					<span class="text-sm text-surface-700-300">{name}</span>
 					<strong class="text-lg">
 						{salary !== null ? formatPLN(salary) : 'Brak danych'}
+						{#if salary !== null}
+							<span class="text-xs font-normal text-surface-700-300">brutto</span>
+						{/if}
 					</strong>
+					{#if net !== null}
+						<span class="text-sm text-success-500 font-semibold">
+							≈ {formatPLN(net)} <span class="text-xs font-normal">netto/mc</span>
+						</span>
+					{/if}
 				</div>
 			{/each}
 		</div>
@@ -608,6 +1424,331 @@
 			</div>
 		{/if}
 	</div>
+
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+			<div>
+				<h3 class="h3 flex items-center gap-2"><Gift size={20} /> Premie i bonusy</h3>
+				<p class="text-xs text-surface-700-300">
+					Roczne, powitalne, uznaniowe i retencyjne. Pokazywane w oryginalnej walucie.
+				</p>
+			</div>
+			<button type="button" class="btn preset-filled-primary-500 gap-2" onclick={openNewBonusModal}>
+				<Plus size={16} />
+				Nowy bonus
+			</button>
+		</header>
+
+		{#if bonusEvents.length === 0}
+			<div class="text-center py-8 text-surface-700-300">
+				<p>Brak zarejestrowanych bonusów</p>
+			</div>
+		{:else}
+			<div class="space-y-4">
+				{#each [...bonusGroupedByCompany.entries()] as [company, bonuses] (company)}
+					<div class="card preset-tonal-surface p-3 space-y-2">
+						<header class="flex items-baseline justify-between flex-wrap gap-2">
+							<strong class="text-base">{company}</strong>
+							<span class="text-xs text-surface-700-300">
+								{bonuses.length}
+								{bonuses.length === 1 ? 'bonus' : 'bonusów'}
+							</span>
+						</header>
+						<div class="table-wrap">
+							<table class="table table-hover">
+								<thead>
+									<tr>
+										<th>Data</th>
+										<th>Typ</th>
+										<th>Właściciel</th>
+										<th>Kwota</th>
+										<th>Notatki</th>
+										<th class="text-right">Akcje</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each bonuses as bonus (bonus.id)}
+										<tr>
+											<td>{new Date(bonus.date).toLocaleDateString('pl-PL')}</td>
+											<td>{bonusTypeLabels[bonus.type]}</td>
+											<td>{bonus.owner}</td>
+											<td class="font-semibold text-primary-600-400">
+												{formatBonusAmount(bonus.amount, bonus.currency)}
+												{#if bonus.currency !== 'PLN' && bonus.amount_pln !== null}
+													<br /><span class="text-xs font-normal text-surface-700-300">
+														≈ {formatPLN(bonus.amount_pln)}
+														{#if bonus.fx_rate}@ {bonus.fx_rate.toFixed(4)}{/if}
+													</span>
+												{/if}
+											</td>
+											<td class="text-sm text-surface-700-300">{bonus.notes ?? ''}</td>
+											<td class="text-right whitespace-nowrap">
+												<button
+													type="button"
+													class="btn-icon btn-icon-sm"
+													aria-label="Edytuj"
+													onclick={() => openEditBonusModal(bonus)}
+												>
+													<Pencil size={16} />
+												</button>
+												<button
+													type="button"
+													class="btn-icon btn-icon-sm"
+													aria-label="Usuń"
+													onclick={() => deleteBonus(bonus.id)}
+												>
+													<Trash2 size={16} />
+												</button>
+											</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</div>
+
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+			<div>
+				<h3 class="h3 flex items-center gap-2"><Award size={20} /> Equity (opcje + RSU)</h3>
+				<p class="text-xs text-surface-700-300">
+					Grupy po firmie. Vested = ile akcji już Ci się odblokowało dziś. Dla RSU z double-trigger
+					pokazane jest 0 dopóki nie wystąpi liquidity event.
+				</p>
+			</div>
+			<button
+				type="button"
+				class="btn preset-filled-primary-500 gap-2"
+				onclick={openNewEquityModal}
+			>
+				<Plus size={16} />
+				Nowy grant
+			</button>
+		</header>
+
+		{#if equityGrants.length === 0}
+			<div class="text-center py-8 text-surface-700-300">
+				<p>Brak zarejestrowanych grantów</p>
+			</div>
+		{:else}
+			<div class="space-y-4">
+				{#each [...equityGroupedByCompany.entries()] as [company, grants] (company)}
+					{@const totalShares = grants.reduce((s, g) => s + g.total_shares, 0)}
+					{@const vestedShares = grants.reduce((s, g) => s + g.vested_shares_today, 0)}
+					{@const paperBase = grants.reduce((s, g) => s + (g.paper_value_base ?? 0), 0)}
+					{@const paperBasePln = grants.reduce((s, g) => s + (g.paper_value_base_pln ?? 0), 0)}
+					{@const groupCurrency =
+						grants.find((g) => g.paper_value_currency)?.paper_value_currency ?? null}
+					<div class="card preset-tonal-surface p-3 space-y-2">
+						<header class="flex items-baseline justify-between flex-wrap gap-2">
+							<strong class="text-base">{company}</strong>
+							<span class="text-xs text-surface-700-300">
+								{grants.length}
+								{grants.length === 1 ? 'grant' : 'grantów'} ·
+								{formatShares(vestedShares)} / {formatShares(totalShares)} vested
+								{#if groupCurrency && paperBase > 0}
+									· paper {formatCurrency(paperBase, groupCurrency)}
+									{#if groupCurrency !== 'PLN' && paperBasePln > 0}
+										(≈ {formatPLN(paperBasePln)})
+									{/if}
+								{/if}
+							</span>
+						</header>
+						<div class="table-wrap">
+							<table class="table table-hover">
+								<thead>
+									<tr>
+										<th>Data grantu</th>
+										<th>Typ</th>
+										<th>Właściciel</th>
+										<th>Akcje (vested / total)</th>
+										<th>Strike</th>
+										<th>Paper value</th>
+										<th>Vesting</th>
+										<th>Status</th>
+										<th class="text-right">Akcje</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each grants as grant (grant.id)}
+										<tr>
+											<td>{new Date(grant.grant_date).toLocaleDateString('pl-PL')}</td>
+											<td>{equityTypeLabels[grant.type]}</td>
+											<td>{grant.owner}</td>
+											<td class="font-semibold">
+												{formatShares(grant.vested_shares_today)} /
+												{formatShares(grant.total_shares)}
+												<span class="text-xs text-surface-700-300">
+													({grant.vesting_progress_pct.toFixed(1)}%)
+												</span>
+											</td>
+											<td>
+												{#if grant.strike_price !== null}
+													{formatCurrency(grant.strike_price, grant.currency)}
+												{:else}
+													—
+												{/if}
+											</td>
+											<td class="text-xs">
+												{#if grant.paper_value_base !== null}
+													<span class="font-semibold">{formatRange(grant)}</span>
+													{#if grant.paper_value_base_pln !== null && grant.paper_value_currency !== 'PLN'}
+														<br /><span class="text-surface-700-300">
+															≈ {formatPLN(grant.paper_value_base_pln)}
+															{#if grant.fx_rate}@ {grant.fx_rate.toFixed(4)}{/if}
+														</span>
+													{/if}
+													{#if grant.valuation_date}
+														<br /><span class="text-surface-700-300"
+															>wg {new Date(grant.valuation_date).toLocaleDateString('pl-PL')}</span
+														>
+													{/if}
+												{:else if grant.valuation_date}
+													<span class="text-warning-500">{formatRange(grant)}</span>
+												{:else}
+													<span class="text-surface-700-300">brak wyceny</span>
+												{/if}
+											</td>
+											<td class="text-xs">
+												{grant.vest_cliff_months}m cliff · {grant.vest_total_months}m · {vestingFrequencyLabels[
+													grant.vest_frequency
+												]}
+												{#if grant.vest_custom_schedule}
+													<br /><span class="text-surface-700-300">niestandardowy harmonogram</span>
+												{/if}
+											</td>
+											<td class="text-xs">
+												{#if grant.requires_liquidity_event && !grant.liquidity_event_date}
+													<span class="text-warning-500">double-trigger: oczekuje</span>
+												{:else if grant.requires_liquidity_event}
+													<span class="text-success-500">trigger uruchomiony</span>
+												{:else}
+													<span class="text-surface-700-300">single-trigger</span>
+												{/if}
+											</td>
+											<td class="text-right whitespace-nowrap">
+												<button
+													type="button"
+													class="btn-icon btn-icon-sm"
+													aria-label="Edytuj"
+													onclick={() => openEditEquityModal(grant)}
+												>
+													<Pencil size={16} />
+												</button>
+												<button
+													type="button"
+													class="btn-icon btn-icon-sm"
+													aria-label="Usuń"
+													onclick={() => deleteEquityGrant(grant.id)}
+												>
+													<Trash2 size={16} />
+												</button>
+											</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</div>
+
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+			<div>
+				<h3 class="h3 flex items-center gap-2"><Building2 size={20} /> Wycena spółek</h3>
+				<p class="text-xs text-surface-700-300">
+					FMV per share dla spółek prywatnych (i publicznych). Range low/high pokazuje niepewność.
+				</p>
+			</div>
+			<button
+				type="button"
+				class="btn preset-filled-primary-500 gap-2"
+				onclick={openNewValuationModal}
+			>
+				<Plus size={16} />
+				Nowa wycena
+			</button>
+		</header>
+
+		{#if valuations.length === 0}
+			<div class="text-center py-8 text-surface-700-300">
+				<p>Brak wycen — dodaj wycenę, aby zobaczyć paper value grantów</p>
+			</div>
+		{:else}
+			<div class="table-wrap">
+				<table class="table table-hover">
+					<thead>
+						<tr>
+							<th>Firma</th>
+							<th>Data</th>
+							<th>FMV / akcję</th>
+							<th>Zakres (low–high)</th>
+							<th>Źródło</th>
+							<th>Discount</th>
+							<th>Notatki</th>
+							<th class="text-right">Akcje</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each valuations as valuation (valuation.id)}
+							<tr>
+								<td class="font-semibold">{valuation.company}</td>
+								<td>{new Date(valuation.date).toLocaleDateString('pl-PL')}</td>
+								<td>{formatCurrency(valuation.fmv_per_share, valuation.currency)}</td>
+								<td class="text-xs">
+									{#if valuation.fmv_low !== null || valuation.fmv_high !== null}
+										{valuation.fmv_low !== null
+											? formatCurrency(valuation.fmv_low, valuation.currency)
+											: '—'}
+										–
+										{valuation.fmv_high !== null
+											? formatCurrency(valuation.fmv_high, valuation.currency)
+											: '—'}
+									{:else}
+										<span class="text-surface-700-300">—</span>
+									{/if}
+								</td>
+								<td class="text-xs">{valuationSourceLabels[valuation.source]}</td>
+								<td class="text-xs">
+									{#if valuation.common_stock_discount_pct !== null}
+										{valuation.common_stock_discount_pct}%
+									{:else}
+										<span class="text-surface-700-300">—</span>
+									{/if}
+								</td>
+								<td class="text-sm text-surface-700-300">{valuation.notes ?? ''}</td>
+								<td class="text-right whitespace-nowrap">
+									<button
+										type="button"
+										class="btn-icon btn-icon-sm"
+										aria-label="Edytuj"
+										onclick={() => openEditValuationModal(valuation)}
+									>
+										<Pencil size={16} />
+									</button>
+									<button
+										type="button"
+										class="btn-icon btn-icon-sm"
+										aria-label="Usuń"
+										onclick={() => deleteValuation(valuation.id)}
+									>
+										<Trash2 size={16} />
+									</button>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
+	</div>
 </div>
 
 <Modal
@@ -674,6 +1815,458 @@
 					<option value={persona.name}>{persona.name}</option>
 				{/each}
 			</select>
+		</label>
+	</form>
+</Modal>
+
+<Modal
+	open={showBonusModal}
+	title={editingBonus ? 'Edytuj bonus' : 'Nowy bonus'}
+	onConfirm={saveBonus}
+	onCancel={closeBonusModal}
+	confirmText={savingBonus ? 'Zapisywanie...' : 'Zapisz'}
+	confirmDisabled={savingBonus}
+>
+	<form
+		onsubmit={(event) => {
+			event.preventDefault();
+			saveBonus();
+		}}
+		class="space-y-4"
+	>
+		{#if bonusError}
+			<div class="card preset-filled-error-500 p-3 text-sm">{bonusError}</div>
+		{/if}
+
+		<label class="label">
+			<span class="font-semibold text-sm">Data wypłaty*</span>
+			<input type="date" class="input" bind:value={bonusFormData.date} max={today} required />
+		</label>
+
+		<div class="grid grid-cols-3 gap-2">
+			<label class="label col-span-2">
+				<span class="font-semibold text-sm">Kwota*</span>
+				<input
+					type="number"
+					class="input"
+					bind:value={bonusFormData.amount}
+					min="0"
+					step="0.01"
+					required
+				/>
+			</label>
+			<label class="label">
+				<span class="font-semibold text-sm">Waluta*</span>
+				<select class="select" bind:value={bonusFormData.currency} required>
+					<option value="PLN">PLN</option>
+					<option value="USD">USD</option>
+					<option value="EUR">EUR</option>
+					<option value="GBP">GBP</option>
+					<option value="CHF">CHF</option>
+				</select>
+			</label>
+		</div>
+
+		<label class="label">
+			<span class="font-semibold text-sm">Typ*</span>
+			<select class="select" bind:value={bonusFormData.type} required>
+				<option value="annual">Roczny</option>
+				<option value="signon">Powitalny</option>
+				<option value="spot">Uznaniowy</option>
+				<option value="retention">Retencyjny</option>
+			</select>
+		</label>
+
+		<label class="label">
+			<span class="font-semibold text-sm">Firma*</span>
+			<input
+				type="text"
+				class="input"
+				bind:value={bonusFormData.company}
+				placeholder="Nazwa firmy"
+				required
+			/>
+		</label>
+
+		<label class="label">
+			<span class="font-semibold text-sm">Właściciel*</span>
+			<select class="select" bind:value={bonusFormData.owner} required>
+				{#each personas as persona}
+					<option value={persona.name}>{persona.name}</option>
+				{/each}
+			</select>
+		</label>
+
+		<label class="label">
+			<span class="font-semibold text-sm">Rodzaj umowy*</span>
+			<select class="select" bind:value={bonusFormData.contract_type} required>
+				<option value="UOP">UOP</option>
+				<option value="UZ">UZ</option>
+				<option value="UoD">UoD</option>
+				<option value="B2B">B2B</option>
+			</select>
+		</label>
+
+		<label class="label">
+			<span class="font-semibold text-sm">Notatki</span>
+			<input
+				type="text"
+				class="input"
+				bind:value={bonusFormData.notes}
+				placeholder="np. Q4 performance bonus"
+			/>
+		</label>
+	</form>
+</Modal>
+
+<Modal
+	open={showEquityModal}
+	title={editingGrant ? 'Edytuj grant' : 'Nowy grant'}
+	onConfirm={saveEquityGrant}
+	onCancel={closeEquityModal}
+	confirmText={savingEquity ? 'Zapisywanie...' : 'Zapisz'}
+	confirmDisabled={savingEquity}
+>
+	<form
+		onsubmit={(event) => {
+			event.preventDefault();
+			saveEquityGrant();
+		}}
+		class="space-y-4"
+	>
+		{#if equityError}
+			<div class="card preset-filled-error-500 p-3 text-sm">{equityError}</div>
+		{/if}
+
+		<div class="grid grid-cols-2 gap-2">
+			<label class="label">
+				<span class="font-semibold text-sm">Typ*</span>
+				<select class="select" bind:value={equityFormData.type} required>
+					<option value="rsu">RSU</option>
+					<option value="option">Opcje</option>
+				</select>
+			</label>
+			<label class="label">
+				<span class="font-semibold text-sm">Data grantu*</span>
+				<input
+					type="date"
+					class="input"
+					bind:value={equityFormData.grant_date}
+					max={today}
+					required
+				/>
+			</label>
+		</div>
+
+		<label class="label">
+			<span class="font-semibold text-sm">Firma*</span>
+			<input
+				type="text"
+				class="input"
+				bind:value={equityFormData.company}
+				placeholder="Nazwa firmy"
+				required
+			/>
+		</label>
+
+		<label class="label">
+			<span class="font-semibold text-sm">Właściciel*</span>
+			<select class="select" bind:value={equityFormData.owner} required>
+				{#each personas as persona}
+					<option value={persona.name}>{persona.name}</option>
+				{/each}
+			</select>
+		</label>
+
+		<div class="grid grid-cols-2 gap-2">
+			<label class="label">
+				<span class="font-semibold text-sm">Liczba akcji*</span>
+				<input
+					type="number"
+					class="input"
+					bind:value={equityFormData.total_shares}
+					min="1"
+					step="1"
+					required
+				/>
+			</label>
+			<label class="label">
+				<span class="font-semibold text-sm">Waluta*</span>
+				<select class="select" bind:value={equityFormData.currency} required>
+					<option value="USD">USD</option>
+					<option value="EUR">EUR</option>
+					<option value="PLN">PLN</option>
+					<option value="GBP">GBP</option>
+					<option value="CHF">CHF</option>
+				</select>
+			</label>
+		</div>
+
+		{#if equityFormData.type === 'option'}
+			<label class="label">
+				<span class="font-semibold text-sm">Strike price (cena wykonania)*</span>
+				<input
+					type="number"
+					class="input"
+					bind:value={equityFormData.strike_price}
+					min="0"
+					step="0.0001"
+					required
+				/>
+			</label>
+		{/if}
+
+		<fieldset class="card preset-tonal-surface p-3 space-y-3">
+			<legend class="font-semibold text-sm px-1">Harmonogram vestingu</legend>
+
+			<label class="label">
+				<span class="font-semibold text-sm">Schemat</span>
+				<select
+					class="select"
+					bind:value={equityFormData.preset}
+					onchange={() => applyPreset(equityFormData.preset)}
+				>
+					{#each Object.entries(vestingPresets) as [key, preset]}
+						<option value={key}>{preset.label}</option>
+					{/each}
+				</select>
+			</label>
+
+			<label class="label">
+				<span class="font-semibold text-sm">Data startu vestingu*</span>
+				<input type="date" class="input" bind:value={equityFormData.vest_start_date} required />
+			</label>
+
+			<div class="grid grid-cols-3 gap-2">
+				<label class="label">
+					<span class="font-semibold text-sm">Cliff (msc)</span>
+					<input
+						type="number"
+						class="input"
+						bind:value={equityFormData.vest_cliff_months}
+						min="0"
+						step="1"
+					/>
+				</label>
+				<label class="label">
+					<span class="font-semibold text-sm">Całość (msc)*</span>
+					<input
+						type="number"
+						class="input"
+						bind:value={equityFormData.vest_total_months}
+						min="1"
+						step="1"
+						required
+					/>
+				</label>
+				<label class="label">
+					<span class="font-semibold text-sm">Częstotliwość</span>
+					<select class="select" bind:value={equityFormData.vest_frequency}>
+						<option value="monthly">Miesięczna</option>
+						<option value="quarterly">Kwartalna</option>
+						<option value="yearly">Roczna</option>
+					</select>
+				</label>
+			</div>
+
+			{#if equityFormData.preset === 'custom'}
+				<div class="text-xs text-surface-700-300">
+					Niestandardowy harmonogram: lista zdarzeń (miesiąc + % od całości).
+				</div>
+				{#each equityFormData.vest_custom_schedule ?? [] as event, idx (idx)}
+					<div class="grid grid-cols-[1fr,1fr,auto] gap-2 items-end">
+						<label class="label">
+							<span class="text-xs">Miesiąc</span>
+							<input type="number" class="input" bind:value={event.month} min="0" step="1" />
+						</label>
+						<label class="label">
+							<span class="text-xs">% od całości</span>
+							<input type="number" class="input" bind:value={event.pct} min="0" step="0.1" />
+						</label>
+						<button
+							type="button"
+							class="btn-icon btn-icon-sm"
+							aria-label="Usuń wiersz"
+							onclick={() => {
+								equityFormData.vest_custom_schedule =
+									equityFormData.vest_custom_schedule?.filter((_, i) => i !== idx) ?? null;
+							}}
+						>
+							<Trash2 size={14} />
+						</button>
+					</div>
+				{/each}
+				<button
+					type="button"
+					class="btn preset-tonal-surface btn-sm"
+					onclick={() => {
+						const next = [...(equityFormData.vest_custom_schedule ?? []), { month: 0, pct: 0 }];
+						equityFormData.vest_custom_schedule = next;
+					}}
+				>
+					<Plus size={14} /> Dodaj zdarzenie
+				</button>
+			{/if}
+		</fieldset>
+
+		<fieldset class="card preset-tonal-surface p-3 space-y-3">
+			<legend class="font-semibold text-sm px-1">Liquidity event (double-trigger)</legend>
+			<label class="flex items-center gap-2 cursor-pointer">
+				<input
+					type="checkbox"
+					class="checkbox"
+					bind:checked={equityFormData.requires_liquidity_event}
+				/>
+				<span class="text-sm">Wymaga liquidity event (IPO / akwizycja)</span>
+			</label>
+			{#if equityFormData.requires_liquidity_event}
+				<label class="label">
+					<span class="font-semibold text-sm">Data liquidity event</span>
+					<input type="date" class="input" bind:value={equityFormData.liquidity_event_date} />
+					<span class="text-xs text-surface-700-300"
+						>Puste = jeszcze nie wystąpiło. Vested = 0 dopóki nie wystąpi.</span
+					>
+				</label>
+			{/if}
+		</fieldset>
+
+		<label class="label">
+			<span class="font-semibold text-sm">Traktowanie podatkowe (PL)</span>
+			<select class="select" bind:value={equityFormData.tax_treatment}>
+				{#each Object.entries(taxTreatmentLabels) as [key, label]}
+					<option value={key}>{label}</option>
+				{/each}
+			</select>
+		</label>
+
+		<label class="label">
+			<span class="font-semibold text-sm">Notatki</span>
+			<input
+				type="text"
+				class="input"
+				bind:value={equityFormData.notes}
+				placeholder="np. ESOP 2024, double-trigger RSU"
+			/>
+		</label>
+	</form>
+</Modal>
+
+<Modal
+	open={showValuationModal}
+	title={editingValuation ? 'Edytuj wycenę' : 'Nowa wycena'}
+	onConfirm={saveValuation}
+	onCancel={closeValuationModal}
+	confirmText={savingValuation ? 'Zapisywanie...' : 'Zapisz'}
+	confirmDisabled={savingValuation}
+>
+	<form
+		onsubmit={(event) => {
+			event.preventDefault();
+			saveValuation();
+		}}
+		class="space-y-4"
+	>
+		{#if valuationError}
+			<div class="card preset-filled-error-500 p-3 text-sm">{valuationError}</div>
+		{/if}
+
+		<label class="label">
+			<span class="font-semibold text-sm">Firma*</span>
+			<input
+				type="text"
+				class="input"
+				bind:value={valuationFormData.company}
+				placeholder="Nazwa firmy"
+				required
+			/>
+		</label>
+
+		<div class="grid grid-cols-2 gap-2">
+			<label class="label">
+				<span class="font-semibold text-sm">Data wyceny*</span>
+				<input type="date" class="input" bind:value={valuationFormData.date} required />
+			</label>
+			<label class="label">
+				<span class="font-semibold text-sm">Waluta*</span>
+				<select class="select" bind:value={valuationFormData.currency} required>
+					<option value="USD">USD</option>
+					<option value="EUR">EUR</option>
+					<option value="PLN">PLN</option>
+					<option value="GBP">GBP</option>
+					<option value="CHF">CHF</option>
+				</select>
+			</label>
+		</div>
+
+		<label class="label">
+			<span class="font-semibold text-sm">FMV per share (bazowa)*</span>
+			<input
+				type="number"
+				class="input"
+				bind:value={valuationFormData.fmv_per_share}
+				min="0"
+				step="0.0001"
+				required
+			/>
+		</label>
+
+		<div class="grid grid-cols-2 gap-2">
+			<label class="label">
+				<span class="font-semibold text-sm">FMV low (opcjonalna)</span>
+				<input
+					type="number"
+					class="input"
+					bind:value={valuationFormData.fmv_low}
+					min="0"
+					step="0.0001"
+				/>
+			</label>
+			<label class="label">
+				<span class="font-semibold text-sm">FMV high (opcjonalna)</span>
+				<input
+					type="number"
+					class="input"
+					bind:value={valuationFormData.fmv_high}
+					min="0"
+					step="0.0001"
+				/>
+			</label>
+		</div>
+
+		<label class="label">
+			<span class="font-semibold text-sm">Źródło*</span>
+			<select class="select" bind:value={valuationFormData.source} required>
+				<option value="409a">409A</option>
+				<option value="preferred_round">Runda preferred</option>
+				<option value="tender">Tender / wykup</option>
+				<option value="estimate">Estymacja</option>
+			</select>
+		</label>
+
+		<label class="label">
+			<span class="font-semibold text-sm">Common stock discount (%) — opcjonalne</span>
+			<input
+				type="number"
+				class="input"
+				bind:value={valuationFormData.common_stock_discount_pct}
+				min="0"
+				max="100"
+				step="0.1"
+				placeholder="np. 30"
+			/>
+			<span class="text-xs text-surface-700-300"
+				>Stosowane przy wycenie preferred → common (zwykle 20–40%)</span
+			>
+		</label>
+
+		<label class="label">
+			<span class="font-semibold text-sm">Notatki</span>
+			<input
+				type="text"
+				class="input"
+				bind:value={valuationFormData.notes}
+				placeholder="np. Series C post-money"
+			/>
 		</label>
 	</form>
 </Modal>
