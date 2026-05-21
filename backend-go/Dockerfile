@@ -11,4 +11,6 @@ FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=build /out/api /usr/local/bin/api
 EXPOSE 8000
 USER nonroot:nonroot
+HEALTHCHECK --interval=5s --timeout=3s --start-period=10s --retries=5 \
+    CMD ["/usr/local/bin/api", "healthcheck"]
 ENTRYPOINT ["/usr/local/bin/api"]

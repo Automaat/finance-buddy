@@ -24,6 +24,8 @@ services:
   proxy:
     image: ghcr.io/automaat/finance-buddy-proxy:latest
     container_name: finance-proxy
+    ports:
+      - '8080:8080'
     restart: unless-stopped
     depends_on:
       - backend

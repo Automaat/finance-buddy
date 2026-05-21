@@ -7,10 +7,13 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -19,7 +22,39 @@ import (
 )
 
 func main() {
+	if len(os.Args) >= 2 && os.Args[1] == "healthcheck" {
+		os.Exit(healthcheck())
+	}
 	os.Exit(run())
+}
+
+// healthcheck probes our own /health endpoint via HTTP.
+//
+// Designed for Docker HEALTHCHECK on the distroless image, which has no shell
+// or curl. Reads FB_ADDR for the port (default :8000) and pings on localhost.
+// Exits 0 on a 200 response, 1 otherwise.
+func healthcheck() int {
+	addr := envOr("FB_ADDR", ":8000")
+	host, port, ok := strings.Cut(addr, ":")
+	if !ok {
+		port = addr
+	}
+	if host == "" {
+		host = "127.0.0.1"
+	}
+	url := "http://" + net.JoinHostPort(host, port) + "/health"
+	client := &http.Client{Timeout: 3 * time.Second}
+	resp, err := client.Get(url)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "healthcheck:", err)
+		return 1
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		fmt.Fprintln(os.Stderr, "healthcheck: status", resp.StatusCode)
+		return 1
+	}
+	return 0
 }
 
 func run() int {
