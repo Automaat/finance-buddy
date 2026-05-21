@@ -23,12 +23,15 @@ import (
 	companyvaluations "github.com/Automaat/finance-buddy/backend-go/internal/company_valuations"
 	"github.com/Automaat/finance-buddy/backend-go/internal/config"
 	"github.com/Automaat/finance-buddy/backend-go/internal/cpi"
+	debtpayments "github.com/Automaat/finance-buddy/backend-go/internal/debt_payments"
+	"github.com/Automaat/finance-buddy/backend-go/internal/debts"
 	equitygrants "github.com/Automaat/finance-buddy/backend-go/internal/equity_grants"
 	"github.com/Automaat/finance-buddy/backend-go/internal/fx"
 	"github.com/Automaat/finance-buddy/backend-go/internal/goals"
 	"github.com/Automaat/finance-buddy/backend-go/internal/personas"
 	"github.com/Automaat/finance-buddy/backend-go/internal/salaries"
 	"github.com/Automaat/finance-buddy/backend-go/internal/snapshots"
+	"github.com/Automaat/finance-buddy/backend-go/internal/transactions"
 	"github.com/Automaat/finance-buddy/backend-go/internal/zus"
 )
 
@@ -85,6 +88,33 @@ func registerAPIRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
 	registerEquityRoutes(r, pool, logger)
 	registerCPIAndPayrollRoutes(r, pool, logger)
 	registerPortfolioRoutes(r, pool, logger)
+	registerLedgerRoutes(r, pool, logger)
+}
+
+func registerLedgerRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
+	txStore := transactions.NewStore(pool)
+	txHandler := transactions.NewHandler(txStore, logger)
+	r.Get("/api/accounts/{account_id}/transactions", txHandler.ListForAccount)
+	r.Post("/api/accounts/{account_id}/transactions", txHandler.Create)
+	r.Delete("/api/accounts/{account_id}/transactions/{transaction_id}", txHandler.Delete)
+	r.Get("/api/transactions", txHandler.ListAll)
+	r.Get("/api/transactions/counts", txHandler.Counts)
+
+	dpStore := debtpayments.NewStore(pool)
+	dpHandler := debtpayments.NewHandler(dpStore, logger)
+	r.Get("/api/accounts/{account_id}/payments", dpHandler.ListForAccount)
+	r.Post("/api/accounts/{account_id}/payments", dpHandler.Create)
+	r.Delete("/api/accounts/{account_id}/payments/{payment_id}", dpHandler.Delete)
+	r.Get("/api/payments", dpHandler.ListAll)
+	r.Get("/api/payments/counts", dpHandler.Counts)
+
+	debtsStore := debts.NewStore(pool)
+	debtsHandler := debts.NewHandler(debtsStore, logger)
+	r.Get("/api/debts", debtsHandler.List)
+	r.Post("/api/accounts/{account_id}/debts", debtsHandler.Create)
+	r.Get("/api/debts/{id}", debtsHandler.Get)
+	r.Put("/api/debts/{id}", debtsHandler.Update)
+	r.Delete("/api/debts/{id}", debtsHandler.Delete)
 }
 
 func registerCoreRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {

@@ -145,3 +145,25 @@ rules:
   - method: PUT
     path_prefix: /api/snapshots
     upstream: http://backend-go:8000
+  # Group 8 — transactions / debt_payments / debts cut over to Go.
+  # Sub-routes under /api/accounts/{id}/(transactions|payments|debts) already
+  # match the /api/accounts prefix above; landing these here also covers the
+  # top-level /api/transactions, /api/payments, /api/debts collections.
+  - method: GET
+    path_prefix: /api/transactions
+    upstream: http://backend-go:8000
+  - method: GET
+    path_prefix: /api/payments
+    upstream: http://backend-go:8000
+  - method: GET
+    path_prefix: /api/debts
+    upstream: http://backend-go:8000
+  - method: POST
+    path_prefix: /api/debts
+    upstream: http://backend-go:8000
+  - method: PUT
+    path_prefix: /api/debts
+    upstream: http://backend-go:8000
+  - method: DELETE
+    path_prefix: /api/debts
+    upstream: http://backend-go:8000
