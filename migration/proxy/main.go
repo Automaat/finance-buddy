@@ -4,8 +4,9 @@
 // against its rules, and reverse-proxies to the configured upstream. Anything
 // that doesn't match an explicit rule falls back to the default upstream.
 //
-// Flip a single endpoint to the Go backend by editing routes.yaml and either
-// SIGHUP'ing the process (reload) or restarting it.
+// Flip a single endpoint to the Go backend by editing routes.yaml and
+// restarting the process. SIGHUP-driven reload isn't implemented yet — see
+// migration/proxy/README.md for the deferred-extension list.
 //
 // Wire format and behavior parity is enforced upstream by backend-bb-tests/.
 // Run that suite against the Go backend before flipping any route.

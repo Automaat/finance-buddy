@@ -22,9 +22,30 @@ MODULE_DIR=$1
 INCLUDE_PKGS=${2:-}
 
 go install "go.uber.org/nilaway/cmd/nilaway@${NILAWAY_VERSION}"
-NILAWAY_BIN="$(go env GOPATH)/bin/nilaway"
 
-cd "$MODULE_DIR"
+# Resolve the install location: GOBIN wins if set, else first entry of GOPATH/bin.
+# (GOPATH can be a colon-separated list; go install uses its first entry.)
+NILAWAY_BIN="$(go env GOBIN)"
+if [[ -z "$NILAWAY_BIN" ]]; then
+    GOPATH_FIRST="${GOPATH%%:*}"
+    if [[ -z "$GOPATH_FIRST" ]]; then
+        GOPATH_FIRST="$(go env GOPATH | cut -d: -f1)"
+    fi
+    NILAWAY_BIN="${GOPATH_FIRST}/bin"
+fi
+NILAWAY_BIN="${NILAWAY_BIN}/nilaway"
+
+if [[ ! -x "$NILAWAY_BIN" ]]; then
+    # Fall back to PATH lookup if the computed path doesn't exist (e.g. when
+    # GOBIN points at a directory go install routes elsewhere).
+    NILAWAY_BIN="$(command -v nilaway || true)"
+    if [[ -z "$NILAWAY_BIN" ]]; then
+        echo "Could not locate the nilaway binary after install" >&2
+        exit 1
+    fi
+fi
+
+cd "$MODULE_DIR" || exit 1
 
 if [[ -n "$INCLUDE_PKGS" ]]; then
     "$NILAWAY_BIN" -include-pkgs="$INCLUDE_PKGS" ./...

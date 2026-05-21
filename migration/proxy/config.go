@@ -52,8 +52,8 @@ func (c *Config) Validate() error {
 	if c.Default == "" {
 		return fmt.Errorf("default upstream is required")
 	}
-	if _, err := url.Parse(c.Default); err != nil {
-		return fmt.Errorf("default upstream is not a valid URL: %w", err)
+	if err := validateUpstream(c.Default); err != nil {
+		return fmt.Errorf("default upstream: %w", err)
 	}
 	for i, r := range c.Rules {
 		if r.Method == "" {
@@ -68,9 +68,26 @@ func (c *Config) Validate() error {
 		if r.Upstream == "" {
 			return fmt.Errorf("rule[%d]: upstream is required", i)
 		}
-		if _, err := url.Parse(r.Upstream); err != nil {
-			return fmt.Errorf("rule[%d]: upstream is not a valid URL: %w", i, err)
+		if err := validateUpstream(r.Upstream); err != nil {
+			return fmt.Errorf("rule[%d] upstream: %w", i, err)
 		}
+	}
+	return nil
+}
+
+// validateUpstream rejects anything that isn't an absolute http(s) URL. The
+// stdlib url.Parse accepts relative forms like "backend:8000" without error,
+// which then trips up httputil.ReverseProxy at runtime — catch it here.
+func validateUpstream(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("not a valid URL: %w", err)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("scheme must be http or https, got %q", u.Scheme)
+	}
+	if u.Host == "" {
+		return fmt.Errorf("host is required (e.g. http://backend:8000)")
 	}
 	return nil
 }
