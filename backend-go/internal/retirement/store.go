@@ -225,17 +225,17 @@ func (s *Store) LimitFor(ctx context.Context, year int, wrapper, owner string) (
 	return &l, nil
 }
 
-// LimitConfigured wraps LimitFor with the "no row" branch surfaced as a
-// (nil, nil) pair — callers don't need to import the sentinel.
-func (s *Store) LimitConfigured(ctx context.Context, year int, wrapper, owner string) (*Limit, bool, error) {
+// LimitConfigured wraps LimitFor with the "no row" branch surfaced via the
+// bool — callers can ignore the sentinel and not worry about a nil deref.
+func (s *Store) LimitConfigured(ctx context.Context, year int, wrapper, owner string) (Limit, bool, error) {
 	l, err := s.LimitFor(ctx, year, wrapper, owner)
 	if err != nil {
 		if errors.Is(err, errNoLimit) {
-			return nil, false, nil
+			return Limit{}, false, nil
 		}
-		return nil, false, err
+		return Limit{}, false, err
 	}
-	return l, true, nil
+	return *l, true, nil
 }
 
 // UpsertLimit creates the (year, wrapper, owner) row or updates limit_amount
