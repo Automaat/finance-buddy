@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Modal from '$lib/components/Modal.svelte';
+	import Skeleton from '$lib/components/Skeleton.svelte';
 	import { formatPLN } from '$lib/utils/format';
 	import { Wallet, TrendingDown, Pencil, Trash2, Plus, BarChart3 } from 'lucide-svelte';
 	import { env } from '$env/dynamic/public';
@@ -322,123 +323,171 @@
 	</button>
 </div>
 
-<div class="space-y-4">
-	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
-		<header>
-			<h3 class="h3 flex items-center gap-2"><Wallet size={20} /> Aktywa</h3>
-		</header>
-		{#if data.assets.length === 0}
-			<div class="text-center py-12 text-surface-700-300"><p>Brak aktywów</p></div>
-		{:else}
-			<div class="table-wrap">
-				<table class="table table-hover">
-					<thead>
-						<tr>
-							<th>Nazwa</th>
-							<th>Kategoria</th>
-							<th>Właściciel</th>
-							<th>Wartość</th>
-							<th class="text-right">Akcje</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each data.assets as account}
+{#await data.accountsData}
+	<div class="space-y-4">
+		{#each [{ icon: Wallet, title: 'Aktywa' }, { icon: TrendingDown, title: 'Pasywa' }] as section}
+			<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+				<header>
+					<h3 class="h3 flex items-center gap-2"><section.icon size={20} /> {section.title}</h3>
+				</header>
+				<div class="table-wrap">
+					<table class="table">
+						<thead>
 							<tr>
-								<td class="font-medium">{account.name}</td>
-								<td>{categoryLabels[account.category] || account.category}</td>
-								<td>{account.owner}</td>
-								<td class="font-semibold text-primary-600-400"
-									>{formatPLN(account.current_value)}</td
-								>
-								<td class="text-right whitespace-nowrap">
-									<button
-										type="button"
-										class="btn-icon btn-icon-sm"
-										aria-label="Edytuj"
-										onclick={() => startEdit(account)}
+								<th>Nazwa</th>
+								<th>Kategoria</th>
+								<th>Właściciel</th>
+								<th>Wartość</th>
+								<th class="text-right">Akcje</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each Array(5) as _, i (i)}
+								<tr>
+									<td><Skeleton height="1rem" width="70%" /></td>
+									<td><Skeleton height="1rem" width="60%" /></td>
+									<td><Skeleton height="1rem" width="50%" /></td>
+									<td><Skeleton height="1rem" width="65%" /></td>
+									<td>
+										<div class="flex justify-end gap-2">
+											<Skeleton height="2rem" width="2rem" rounded="md" />
+											<Skeleton height="2rem" width="2rem" rounded="md" />
+										</div>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		{/each}
+	</div>
+{:then accounts}
+	<div class="space-y-4">
+		<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+			<header>
+				<h3 class="h3 flex items-center gap-2"><Wallet size={20} /> Aktywa</h3>
+			</header>
+			{#if accounts.assets.length === 0}
+				<div class="text-center py-12 text-surface-700-300"><p>Brak aktywów</p></div>
+			{:else}
+				<div class="table-wrap">
+					<table class="table table-hover">
+						<thead>
+							<tr>
+								<th>Nazwa</th>
+								<th>Kategoria</th>
+								<th>Właściciel</th>
+								<th>Wartość</th>
+								<th class="text-right">Akcje</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each accounts.assets as account}
+								<tr>
+									<td class="font-medium">{account.name}</td>
+									<td>{categoryLabels[account.category] || account.category}</td>
+									<td>{account.owner}</td>
+									<td class="font-semibold text-primary-600-400"
+										>{formatPLN(account.current_value)}</td
 									>
-										<Pencil size={16} />
-									</button>
-									{#if INVESTMENT_CATEGORIES.has(account.category) || account.account_wrapper}
+									<td class="text-right whitespace-nowrap">
 										<button
 											type="button"
-											class="btn preset-tonal-surface btn-sm gap-1"
-											aria-label="Transakcje"
-											onclick={() =>
-												openTransactions(account.id, account.name, account.account_wrapper)}
+											class="btn-icon btn-icon-sm"
+											aria-label="Edytuj"
+											onclick={() => startEdit(account)}
 										>
-											<BarChart3 size={14} />
-											<span>{transactionCounts[account.id] || 0}</span>
+											<Pencil size={16} />
 										</button>
-									{/if}
-									<button
-										type="button"
-										class="btn-icon btn-icon-sm"
-										aria-label="Usuń"
-										onclick={() => handleDelete(account.id)}
-									>
-										<Trash2 size={16} />
-									</button>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-		{/if}
-	</div>
+										{#if INVESTMENT_CATEGORIES.has(account.category) || account.account_wrapper}
+											<button
+												type="button"
+												class="btn preset-tonal-surface btn-sm gap-1"
+												aria-label="Transakcje"
+												onclick={() =>
+													openTransactions(account.id, account.name, account.account_wrapper)}
+											>
+												<BarChart3 size={14} />
+												<span>{transactionCounts[account.id] || 0}</span>
+											</button>
+										{/if}
+										<button
+											type="button"
+											class="btn-icon btn-icon-sm"
+											aria-label="Usuń"
+											onclick={() => handleDelete(account.id)}
+										>
+											<Trash2 size={16} />
+										</button>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			{/if}
+		</div>
 
-	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
-		<header>
-			<h3 class="h3 flex items-center gap-2"><TrendingDown size={20} /> Pasywa</h3>
-		</header>
-		{#if data.liabilities.length === 0}
-			<div class="text-center py-12 text-surface-700-300"><p>Brak pasywów</p></div>
-		{:else}
-			<div class="table-wrap">
-				<table class="table table-hover">
-					<thead>
-						<tr>
-							<th>Nazwa</th>
-							<th>Kategoria</th>
-							<th>Właściciel</th>
-							<th>Wartość</th>
-							<th class="text-right">Akcje</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each data.liabilities as account}
+		<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+			<header>
+				<h3 class="h3 flex items-center gap-2"><TrendingDown size={20} /> Pasywa</h3>
+			</header>
+			{#if accounts.liabilities.length === 0}
+				<div class="text-center py-12 text-surface-700-300"><p>Brak pasywów</p></div>
+			{:else}
+				<div class="table-wrap">
+					<table class="table table-hover">
+						<thead>
 							<tr>
-								<td class="font-medium">{account.name}</td>
-								<td>{categoryLabels[account.category] || account.category}</td>
-								<td>{account.owner}</td>
-								<td class="font-semibold text-error-600-400">{formatPLN(account.current_value)}</td>
-								<td class="text-right whitespace-nowrap">
-									<button
-										type="button"
-										class="btn-icon btn-icon-sm"
-										aria-label="Edytuj"
-										onclick={() => startEdit(account)}
-									>
-										<Pencil size={16} />
-									</button>
-									<button
-										type="button"
-										class="btn-icon btn-icon-sm"
-										aria-label="Usuń"
-										onclick={() => handleDelete(account.id)}
-									>
-										<Trash2 size={16} />
-									</button>
-								</td>
+								<th>Nazwa</th>
+								<th>Kategoria</th>
+								<th>Właściciel</th>
+								<th>Wartość</th>
+								<th class="text-right">Akcje</th>
 							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-		{/if}
+						</thead>
+						<tbody>
+							{#each accounts.liabilities as account}
+								<tr>
+									<td class="font-medium">{account.name}</td>
+									<td>{categoryLabels[account.category] || account.category}</td>
+									<td>{account.owner}</td>
+									<td class="font-semibold text-error-600-400"
+										>{formatPLN(account.current_value)}</td
+									>
+									<td class="text-right whitespace-nowrap">
+										<button
+											type="button"
+											class="btn-icon btn-icon-sm"
+											aria-label="Edytuj"
+											onclick={() => startEdit(account)}
+										>
+											<Pencil size={16} />
+										</button>
+										<button
+											type="button"
+											class="btn-icon btn-icon-sm"
+											aria-label="Usuń"
+											onclick={() => handleDelete(account.id)}
+										>
+											<Trash2 size={16} />
+										</button>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			{/if}
+		</div>
 	</div>
-</div>
+{:catch err}
+	<div class="card preset-filled-error-500 p-4">
+		<p class="font-semibold">Nie udało się załadować kont.</p>
+		<p class="text-sm">{err?.message ?? 'Spróbuj ponownie później.'}</p>
+	</div>
+{/await}
 
 <Modal
 	open={showForm}

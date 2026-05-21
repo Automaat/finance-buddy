@@ -29,30 +29,27 @@ export interface AccountsData {
 export type { Transaction, TransactionsData };
 
 export const load: PageLoad = async ({ fetch }) => {
-	try {
-		const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
-		if (!apiUrl) {
-			throw error(500, 'API URL is not configured');
-		}
-		const [accountsResponse, personasResponse] = await Promise.all([
-			fetch(`${apiUrl}/api/accounts`),
-			fetch(`${apiUrl}/api/personas`)
-		]);
-
-		if (!accountsResponse.ok) {
-			throw error(accountsResponse.status, 'Failed to load accounts');
-		}
-		if (!personasResponse.ok) {
-			throw error(personasResponse.status, 'Failed to load personas');
-		}
-
-		const data: AccountsData = await accountsResponse.json();
-		const personas: Persona[] = await personasResponse.json();
-		return { ...data, personas };
-	} catch (err) {
-		if (err instanceof Error && 'status' in err) {
-			throw err;
-		}
-		throw error(500, 'Failed to load accounts');
+	const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
+	if (!apiUrl) {
+		throw error(500, 'API URL is not configured');
 	}
+
+	const personasResponse = await fetch(`${apiUrl}/api/personas`);
+	if (!personasResponse.ok) {
+		throw error(personasResponse.status, 'Failed to load personas');
+	}
+	const personas: Persona[] = await personasResponse.json();
+
+	const accountsData = (async () => {
+		const response = await fetch(`${apiUrl}/api/accounts`);
+		if (!response.ok) {
+			throw error(response.status, 'Failed to load accounts');
+		}
+		return (await response.json()) as AccountsData;
+	})();
+
+	return {
+		accountsData,
+		personas
+	};
 };
