@@ -102,3 +102,10 @@ rules:
   - method: DELETE
     path_prefix: /api/salaries
     upstream: http://backend-go:8000
+  # Group 7 — /api/zus cut over to Go (pension projection + salary-history prefill).
+  - method: GET
+    path_prefix: /api/zus
+    upstream: http://backend-go:8000
+  - method: POST
+    path_prefix: /api/zus
+    upstream: http://backend-go:8000
