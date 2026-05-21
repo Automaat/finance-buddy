@@ -135,3 +135,13 @@ rules:
   - method: DELETE
     path_prefix: /api/assets
     upstream: http://backend-go:8000
+  # Group 9c — /api/snapshots cut over to Go (atomic create/update with full recompute).
+  - method: GET
+    path_prefix: /api/snapshots
+    upstream: http://backend-go:8000
+  - method: POST
+    path_prefix: /api/snapshots
+    upstream: http://backend-go:8000
+  - method: PUT
+    path_prefix: /api/snapshots
+    upstream: http://backend-go:8000

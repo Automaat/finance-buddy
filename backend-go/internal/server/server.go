@@ -28,6 +28,7 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/goals"
 	"github.com/Automaat/finance-buddy/backend-go/internal/personas"
 	"github.com/Automaat/finance-buddy/backend-go/internal/salaries"
+	"github.com/Automaat/finance-buddy/backend-go/internal/snapshots"
 	"github.com/Automaat/finance-buddy/backend-go/internal/zus"
 )
 
@@ -80,6 +81,13 @@ func New(cfg Config, logger *slog.Logger, deps Deps) http.Handler {
 }
 
 func registerAPIRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
+	registerCoreRoutes(r, pool, logger)
+	registerEquityRoutes(r, pool, logger)
+	registerCPIAndPayrollRoutes(r, pool, logger)
+	registerPortfolioRoutes(r, pool, logger)
+}
+
+func registerCoreRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
 	cfgHandler := config.NewHandler(config.NewStore(pool), logger)
 	r.Route("/api/config", func(r chi.Router) {
 		r.Get("/", cfgHandler.Get)
@@ -102,7 +110,9 @@ func registerAPIRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
 		r.Put("/{id}", goalsHandler.Update)
 		r.Delete("/{id}", goalsHandler.Delete)
 	})
+}
 
+func registerEquityRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
 	valuationsStore := companyvaluations.NewStore(pool)
 	valuationsHandler := companyvaluations.NewHandler(valuationsStore, logger)
 	r.Route("/api/company-valuations", func(r chi.Router) {
@@ -133,7 +143,9 @@ func registerAPIRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
 		r.Patch("/{id}", grantsHandler.Update)
 		r.Delete("/{id}", grantsHandler.Delete)
 	})
+}
 
+func registerCPIAndPayrollRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
 	cpiStore := cpi.NewStore(pool)
 	cpiHandler := cpi.NewHandler(cpiStore, cpi.NewGUSFetcher(), logger)
 	r.Route("/api/cpi", func(r chi.Router) {
@@ -156,7 +168,9 @@ func registerAPIRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
 		r.Post("/calculate", zusHandler.Calculate)
 		r.Get("/prefill", zusHandler.Prefill)
 	})
+}
 
+func registerPortfolioRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
 	aggregatesStore := aggregates.NewStore(pool)
 	accountsHandler := accounts.NewHandler(accounts.NewStore(pool, aggregatesStore), logger)
 	r.Route("/api/accounts", func(r chi.Router) {
@@ -172,6 +186,14 @@ func registerAPIRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
 		r.Post("/", assetsHandler.Create)
 		r.Put("/{id}", assetsHandler.Update)
 		r.Delete("/{id}", assetsHandler.Delete)
+	})
+
+	snapshotsHandler := snapshots.NewHandler(snapshots.NewStore(pool, aggregatesStore), logger)
+	r.Route("/api/snapshots", func(r chi.Router) {
+		r.Get("/", snapshotsHandler.List)
+		r.Post("/", snapshotsHandler.Create)
+		r.Get("/{id}", snapshotsHandler.Get)
+		r.Put("/{id}", snapshotsHandler.Update)
 	})
 }
 
