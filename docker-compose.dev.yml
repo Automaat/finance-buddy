@@ -23,8 +23,8 @@ services:
     container_name: finance-backend
     volumes:
       - ./backend:/app
-    ports:
-      - '8000:8000'
+    expose:
+      - '8000'
     environment:
       - DATABASE_URL=postgresql://finance:${POSTGRES_PASSWORD:-password}@postgres:5432/finance
       - APP_PASSWORD=${APP_PASSWORD:-changeme}
@@ -46,6 +46,40 @@ services:
       retries: 5
       start_period: 10s
 
+  backend-go:
+    build:
+      context: ./backend-go
+    container_name: finance-backend-go
+    expose:
+      - '8000'
+    environment:
+      - DATABASE_URL=postgresql://finance:${POSTGRES_PASSWORD:-password}@postgres:5432/finance
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5174,http://localhost:3000}
+      - FB_ADDR=:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', '/usr/local/bin/api', 'healthcheck']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  proxy:
+    build:
+      context: ./migration/proxy
+    container_name: finance-proxy
+    ports:
+      - '8080:8080'
+    volumes:
+      - ./migration/proxy/routes.yaml:/etc/proxy/routes.yaml:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+      backend-go:
+        condition: service_healthy
+
   frontend:
     build:
       context: .
@@ -57,11 +91,10 @@ services:
     ports:
       - '5174:5173'
     environment:
-      - PUBLIC_API_URL=http://backend:8000
-      - PUBLIC_API_URL_BROWSER=http://localhost:8000
+      - PUBLIC_API_URL=http://proxy:8080
+      - PUBLIC_API_URL_BROWSER=http://localhost:8080
     depends_on:
-      backend:
-        condition: service_healthy
+      - proxy
 
 volumes:
   postgres-data:

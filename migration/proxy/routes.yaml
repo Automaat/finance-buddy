@@ -9,13 +9,11 @@
 
 default: http://backend:8000
 
-rules: []
-
-# Example for when /api/config is ready to flip:
-# rules:
-#   - method: GET
-#     path_prefix: /api/config
-#     upstream: http://backend-go:9000
-#   - method: PUT
-#     path_prefix: /api/config
-#     upstream: http://backend-go:9000
+rules:
+  # Group 1 — /api/config cut over to Go (see migration/CUTOVER.md).
+  - method: GET
+    path_prefix: /api/config
+    upstream: http://backend-go:8000
+  - method: PUT
+    path_prefix: /api/config
+    upstream: http://backend-go:8000
