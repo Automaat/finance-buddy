@@ -411,26 +411,26 @@
 	}
 </script>
 
-<form onsubmit={handleSubmit} class="snapshot-form">
+<form onsubmit={handleSubmit} class="max-w-[800px] flex flex-col gap-6">
 	<!-- Date & Notes -->
 	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
 		<header class="space-y-1">
 			<h3 class="h3">Data Snapshot</h3>
 		</header>
 		<div class="space-y-4">
-			<div class="form-group">
-				<label for="date" class="form-label">Data</label>
-				<input id="date" type="date" bind:value={snapshotDate} required class="form-input" />
+			<div class="flex flex-col gap-1">
+				<label for="date" class="text-sm font-semibold">Data</label>
+				<input id="date" type="date" bind:value={snapshotDate} required class="input" />
 			</div>
 
-			<div class="form-group">
-				<label for="notes" class="form-label">Notatki (opcjonalne)</label>
+			<div class="flex flex-col gap-1">
+				<label for="notes" class="text-sm font-semibold">Notatki (opcjonalne)</label>
 				<input
 					id="notes"
 					type="text"
 					bind:value={notes}
 					placeholder="Dodaj notatkę..."
-					class="form-input"
+					class="input"
 				/>
 			</div>
 		</div>
@@ -452,19 +452,23 @@
 				/>
 			{/each}
 
-			<div class="add-account">
+			<div class="mt-4 p-3 border border-dashed border-surface-300-700 rounded-container">
 				{#if financialAccounts.filter((a) => !visibleAccountIds.has(a.id)).length > 0}
 					<details>
-						<summary>+ Pokaż ukryte konta</summary>
-						<div class="add-account-list">
+						<summary
+							class="cursor-pointer text-primary-500 font-semibold text-sm select-none hover:text-primary-600-400"
+						>
+							+ Pokaż ukryte konta
+						</summary>
+						<div class="flex flex-col gap-2 mt-2">
 							{#each financialAccounts.filter((a) => !visibleAccountIds.has(a.id)) as account}
 								<button
 									type="button"
-									class="btn-add-account"
+									class="btn preset-tonal-surface w-full text-left text-sm"
 									onclick={() => addAccount(account.id)}
 								>
 									{account.name}
-									<span class="label-meta"
+									<span class="text-surface-600-400 font-normal ml-1"
 										>({categoryLabels[account.category] || account.category})</span
 									>
 								</button>
@@ -474,7 +478,7 @@
 				{/if}
 				<button
 					type="button"
-					class="btn-new-account"
+					class="btn w-full mt-2 border-2 border-dashed border-primary-500 text-primary-500 hover:preset-filled-primary-500"
 					onclick={() => openNewAccountForm('financial')}
 				>
 					+ Dodaj nowe konto
@@ -491,7 +495,11 @@
 			</header>
 			<div class="space-y-4">
 				{#each retirementByWrapper as group}
-					<h3 class="wrapper-subheading">{group.wrapper}</h3>
+					<h3
+						class="text-sm font-bold text-surface-600-400 uppercase tracking-wide mt-4 mb-2 pb-1 border-b border-surface-200-800"
+					>
+						{group.wrapper}
+					</h3>
 					{#each group.accounts.filter((a) => visibleAccountIds.has(a.id)) as account}
 						<ValueRow
 							inputId="account-{account.id}"
@@ -503,19 +511,25 @@
 					{/each}
 				{/each}
 
-				<div class="add-account">
+				<div class="mt-4 p-3 border border-dashed border-surface-300-700 rounded-container">
 					{#if retirementAccounts.filter((a) => !visibleAccountIds.has(a.id)).length > 0}
 						<details>
-							<summary>+ Pokaż ukryte konta</summary>
-							<div class="add-account-list">
+							<summary
+								class="cursor-pointer text-primary-500 font-semibold text-sm select-none hover:text-primary-600-400"
+							>
+								+ Pokaż ukryte konta
+							</summary>
+							<div class="flex flex-col gap-2 mt-2">
 								{#each retirementAccounts.filter((a) => !visibleAccountIds.has(a.id)) as account}
 									<button
 										type="button"
-										class="btn-add-account"
+										class="btn preset-tonal-surface w-full text-left text-sm"
 										onclick={() => addAccount(account.id)}
 									>
 										{account.name}
-										<span class="label-meta">({account.account_wrapper})</span>
+										<span class="text-surface-600-400 font-normal ml-1"
+											>({account.account_wrapper})</span
+										>
 									</button>
 								{/each}
 							</div>
@@ -523,7 +537,7 @@
 					{/if}
 					<button
 						type="button"
-						class="btn-new-account"
+						class="btn w-full mt-2 border-2 border-dashed border-primary-500 text-primary-500 hover:preset-filled-primary-500"
 						onclick={() => openNewAccountForm('retirement')}
 					>
 						+ Dodaj nowe konto
@@ -549,19 +563,23 @@
 				/>
 			{/each}
 
-			<div class="add-account">
+			<div class="mt-4 p-3 border border-dashed border-surface-300-700 rounded-container">
 				{#if investmentAccounts.filter((a) => !visibleAccountIds.has(a.id)).length > 0}
 					<details>
-						<summary>+ Pokaż ukryte konta</summary>
-						<div class="add-account-list">
+						<summary
+							class="cursor-pointer text-primary-500 font-semibold text-sm select-none hover:text-primary-600-400"
+						>
+							+ Pokaż ukryte konta
+						</summary>
+						<div class="flex flex-col gap-2 mt-2">
 							{#each investmentAccounts.filter((a) => !visibleAccountIds.has(a.id)) as account}
 								<button
 									type="button"
-									class="btn-add-account"
+									class="btn preset-tonal-surface w-full text-left text-sm"
 									onclick={() => addAccount(account.id)}
 								>
 									{account.name}
-									<span class="label-meta"
+									<span class="text-surface-600-400 font-normal ml-1"
 										>({categoryLabels[account.category] || account.category})</span
 									>
 								</button>
@@ -571,7 +589,7 @@
 				{/if}
 				<button
 					type="button"
-					class="btn-new-account"
+					class="btn w-full mt-2 border-2 border-dashed border-primary-500 text-primary-500 hover:preset-filled-primary-500"
 					onclick={() => openNewAccountForm('investment')}
 				>
 					+ Dodaj nowe konto
@@ -605,35 +623,51 @@
 				/>
 			{/each}
 
-			<div class="add-account">
+			<div class="mt-4 p-3 border border-dashed border-surface-300-700 rounded-container">
 				{#if majatekAccounts.filter((a) => !visibleAccountIds.has(a.id)).length > 0 || physicalAssets.filter((a) => !visibleAssetIds.has(a.id)).length > 0}
 					<details>
-						<summary>+ Pokaż ukryty majątek</summary>
-						<div class="add-account-list">
+						<summary
+							class="cursor-pointer text-primary-500 font-semibold text-sm select-none hover:text-primary-600-400"
+						>
+							+ Pokaż ukryty majątek
+						</summary>
+						<div class="flex flex-col gap-2 mt-2">
 							{#each majatekAccounts.filter((a) => !visibleAccountIds.has(a.id)) as account}
 								<button
 									type="button"
-									class="btn-add-account"
+									class="btn preset-tonal-surface w-full text-left text-sm"
 									onclick={() => addAccount(account.id)}
 								>
 									{account.name}
-									<span class="label-meta"
+									<span class="text-surface-600-400 font-normal ml-1"
 										>({categoryLabels[account.category] || account.category})</span
 									>
 								</button>
 							{/each}
 							{#each physicalAssets.filter((a) => !visibleAssetIds.has(a.id)) as asset}
-								<button type="button" class="btn-add-account" onclick={() => addAsset(asset.id)}>
+								<button
+									type="button"
+									class="btn preset-tonal-surface w-full text-left text-sm"
+									onclick={() => addAsset(asset.id)}
+								>
 									{asset.name}
 								</button>
 							{/each}
 						</div>
 					</details>
 				{/if}
-				<button type="button" class="btn-new-account" onclick={() => openNewAccountForm('majatek')}>
+				<button
+					type="button"
+					class="btn w-full mt-2 border-2 border-dashed border-primary-500 text-primary-500 hover:preset-filled-primary-500"
+					onclick={() => openNewAccountForm('majatek')}
+				>
 					+ Dodaj nowe konto
 				</button>
-				<button type="button" class="btn-new-account" onclick={() => (showNewAssetForm = true)}>
+				<button
+					type="button"
+					class="btn w-full mt-2 border-2 border-dashed border-primary-500 text-primary-500 hover:preset-filled-primary-500"
+					onclick={() => (showNewAssetForm = true)}
+				>
 					+ Dodaj nowy majątek
 				</button>
 			</div>
@@ -657,19 +691,25 @@
 					/>
 				{/each}
 
-				<div class="add-account">
+				<div class="mt-4 p-3 border border-dashed border-surface-300-700 rounded-container">
 					{#if liabilities.filter((a) => !visibleAccountIds.has(a.id)).length > 0}
 						<details>
-							<summary>+ Pokaż ukryte konta</summary>
-							<div class="add-account-list">
+							<summary
+								class="cursor-pointer text-primary-500 font-semibold text-sm select-none hover:text-primary-600-400"
+							>
+								+ Pokaż ukryte konta
+							</summary>
+							<div class="flex flex-col gap-2 mt-2">
 								{#each liabilities.filter((a) => !visibleAccountIds.has(a.id)) as account}
 									<button
 										type="button"
-										class="btn-add-account"
+										class="btn preset-tonal-surface w-full text-left text-sm"
 										onclick={() => addAccount(account.id)}
 									>
 										{account.name}
-										<span class="label-meta">({categoryLabels[account.category]})</span>
+										<span class="text-surface-600-400 font-normal ml-1"
+											>({categoryLabels[account.category]})</span
+										>
 									</button>
 								{/each}
 							</div>
@@ -677,7 +717,7 @@
 					{/if}
 					<button
 						type="button"
-						class="btn-new-account"
+						class="btn w-full mt-2 border-2 border-dashed border-primary-500 text-primary-500 hover:preset-filled-primary-500"
 						onclick={() => openNewAccountForm('liabilities')}
 					>
 						+ Dodaj nowe konto
@@ -716,198 +756,20 @@
 
 	<!-- Error Message -->
 	{#if error}
-		<div class="error-message">{error}</div>
+		<div class="card preset-filled-error-500 p-3 text-sm">{error}</div>
 	{/if}
 
 	<!-- Submit Buttons -->
-	<div class="button-group">
-		<button type="submit" disabled={loading} class="btn btn-primary">
+	<div class="flex flex-col-reverse sm:flex-row gap-3">
+		<button type="submit" disabled={loading} class="btn preset-filled-primary-500 sm:flex-1 w-full">
 			{loading ? 'Zapisywanie...' : '💾 Zapisz Snapshot'}
 		</button>
-		<button type="button" onclick={() => goto('/')} class="btn btn-secondary"> Anuluj </button>
+		<button
+			type="button"
+			onclick={() => goto('/')}
+			class="btn preset-tonal-surface w-full sm:w-auto"
+		>
+			Anuluj
+		</button>
 	</div>
 </form>
-
-<style>
-	.snapshot-form {
-		max-width: 800px;
-		display: flex;
-		flex-direction: column;
-		gap: var(--size-6);
-	}
-
-	.form-group {
-		margin-bottom: var(--size-4);
-	}
-
-	.form-group:last-child {
-		margin-bottom: 0;
-	}
-
-	.form-label {
-		display: block;
-		font-weight: var(--font-weight-6);
-		margin-bottom: var(--size-2);
-		color: var(--color-text);
-	}
-
-	.label-meta {
-		color: var(--color-text-secondary);
-		font-weight: var(--font-weight-4);
-		font-size: var(--font-size-1);
-	}
-
-	.wrapper-subheading {
-		margin: var(--size-4) 0 var(--size-2) 0;
-		padding-bottom: var(--size-1);
-		border-bottom: 1px solid var(--color-border);
-		font-size: var(--font-size-3);
-		font-weight: var(--font-weight-7);
-		color: var(--color-text-secondary);
-		letter-spacing: 0.05em;
-	}
-
-	.wrapper-subheading:first-child {
-		margin-top: 0;
-	}
-
-	.form-input {
-		width: 100%;
-		padding: var(--size-3);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-2);
-		background: var(--color-bg);
-		color: var(--color-text);
-		font-size: var(--font-size-2);
-		font-family: inherit;
-		transition: all 0.2s;
-		min-height: var(--tap-target-min);
-	}
-
-	.form-input:focus {
-		outline: none;
-		border-color: var(--color-primary);
-		box-shadow: 0 0 0 2px rgba(94, 129, 172, 0.2);
-	}
-
-	.error-message {
-		padding: var(--size-3);
-		background: var(--nord11);
-		color: var(--nord6);
-		border-radius: var(--radius-2);
-		font-size: var(--font-size-2);
-	}
-
-	.button-group {
-		display: flex;
-		gap: var(--size-3);
-	}
-
-	.btn {
-		padding: var(--size-3) var(--size-5);
-		border: none;
-		border-radius: var(--radius-2);
-		font-weight: var(--font-weight-6);
-		font-size: var(--font-size-2);
-		cursor: pointer;
-		transition: all 0.2s;
-	}
-
-	.btn:disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
-	}
-
-	.btn-primary {
-		background: var(--color-primary);
-		color: var(--nord6);
-		flex: 1;
-	}
-
-	.btn-primary:hover:not(:disabled) {
-		background: var(--nord9);
-	}
-
-	.btn-secondary {
-		background: transparent;
-		color: var(--color-text);
-		border: 1px solid var(--color-border);
-	}
-
-	.btn-secondary:hover {
-		background: var(--color-accent);
-	}
-
-	.add-account {
-		margin-top: var(--size-4);
-		padding: var(--size-3);
-		border: 1px dashed var(--color-border);
-		border-radius: var(--radius-2);
-	}
-
-	.add-account summary {
-		cursor: pointer;
-		color: var(--color-primary);
-		font-weight: var(--font-weight-6);
-		font-size: var(--font-size-2);
-		user-select: none;
-	}
-
-	.add-account summary:hover {
-		color: var(--nord9);
-	}
-
-	.add-account-list {
-		display: flex;
-		flex-direction: column;
-		gap: var(--size-2);
-	}
-
-	.btn-add-account {
-		width: 100%;
-		padding: var(--size-2) var(--size-3);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-2);
-		background: var(--color-bg);
-		color: var(--color-text);
-		font-size: var(--font-size-2);
-		text-align: left;
-		cursor: pointer;
-		transition: all 0.2s;
-	}
-
-	.btn-add-account:hover {
-		background: var(--color-accent);
-		border-color: var(--color-primary);
-	}
-
-	.btn-new-account {
-		width: 100%;
-		padding: var(--size-3);
-		margin-top: var(--size-2);
-		border: 2px dashed var(--color-primary);
-		border-radius: var(--radius-2);
-		background: transparent;
-		color: var(--color-primary);
-		font-size: var(--font-size-2);
-		font-weight: var(--font-weight-6);
-		cursor: pointer;
-		transition: all 0.2s;
-	}
-
-	.btn-new-account:hover {
-		background: var(--color-primary);
-		color: var(--nord6);
-	}
-
-	@media (max-width: 640px) {
-		.button-group {
-			flex-direction: column-reverse;
-		}
-
-		.button-group .btn {
-			width: 100%;
-			flex: none;
-		}
-	}
-</style>

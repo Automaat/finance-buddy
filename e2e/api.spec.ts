@@ -18,6 +18,22 @@ test.describe('backend API', () => {
 		expect(body).toHaveProperty('total_liabilities');
 		expect(Array.isArray(body.net_worth_history)).toBe(true);
 		expect(Array.isArray(body.allocation)).toBe(true);
+		expect(body).toHaveProperty('tile_deltas');
+		const td = body.tile_deltas;
+		for (const tile of ['net_worth', 'assets', 'liabilities']) {
+			expect(td).toHaveProperty(tile);
+			expect(td[tile]).toHaveProperty('mom');
+			expect(td[tile]).toHaveProperty('yoy');
+			for (const lens of ['mom', 'yoy']) {
+				const slot = td[tile][lens];
+				if (slot !== null) {
+					expect(slot).toHaveProperty('absolute');
+					expect(typeof slot.absolute).toBe('number');
+					expect(slot).toHaveProperty('percentage');
+					expect(slot.percentage === null || typeof slot.percentage === 'number').toBe(true);
+				}
+			}
+		}
 	});
 
 	test('GET /api/personas returns seeded personas', async ({ request }) => {

@@ -13,6 +13,7 @@ from app.models.persona import Persona
 from app.models.retirement_limit import RetirementLimit
 from app.models.salary_record import SalaryRecord
 from app.models.snapshot import Snapshot, SnapshotValue
+from app.models.snapshot_aggregate import SnapshotAggregate
 from app.models.transaction import Transaction
 
 __all__ = [
@@ -31,6 +32,7 @@ __all__ = [
     "RetirementLimit",
     "SalaryRecord",
     "Snapshot",
+    "SnapshotAggregate",
     "SnapshotValue",
     "Transaction",
 ]

@@ -3,8 +3,8 @@
 Caches NBP table A daily rates for FX conversion of foreign-currency
 compensation (USD/EUR/etc. → PLN). One row per (date, currency).
 
-Revision ID: 0008
-Revises: 0007
+Revision ID: 0010
+Revises: 0009
 Create Date: 2026-05-21
 
 """
@@ -16,8 +16,8 @@ from sqlalchemy import inspect
 
 from alembic import op
 
-revision: str = "0008"
-down_revision: str | None = "0007"
+revision: str = "0010"
+down_revision: str | None = "0009"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

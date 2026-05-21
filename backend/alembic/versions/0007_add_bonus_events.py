@@ -4,8 +4,8 @@ Stores discrete compensation bonus events (annual, sign-on, spot, retention)
 as part of total compensation tracking on the salaries page. Indexed on
 (owner, date) since the salaries view filters and orders by owner+date.
 
-Revision ID: 0005
-Revises: 0004
+Revision ID: 0007
+Revises: 0006
 Create Date: 2026-05-21
 
 """
@@ -17,8 +17,8 @@ from sqlalchemy import inspect
 
 from alembic import op
 
-revision: str = "0005"
-down_revision: str | None = "0004"
+revision: str = "0007"
+down_revision: str | None = "0006"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

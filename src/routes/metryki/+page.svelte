@@ -102,25 +102,27 @@
 	<title>Metryki - Finance Buddy</title>
 </svelte:head>
 
-<div class="container">
-	<h1>Metryki</h1>
+<div class="space-y-6">
+	<h1 class="h1">Metryki</h1>
 
-	<h2>Jak inwestować nowe pieniądze</h2>
+	<h2 class="h2">Jak inwestować nowe pieniądze</h2>
 
 	{#if allocationAnalysis.rebalancing.length > 0}
-		<div class="rebalancing-container">
-			<p class="rebalancing-intro">
+		<div class="card preset-filled-surface-100-900 p-5">
+			<p class="mb-4 text-surface-600-400">
 				Aby osiągnąć docelową alokację portfela, wpłać nowe środki w następujący sposób:
 			</p>
 
-			<div class="rebalancing-list">
+			<div class="flex flex-col gap-3 mb-4">
 				{#each allocationAnalysis.rebalancing as suggestion}
-					<div class="rebalancing-item buy">
-						<span class="action-label inline-flex items-center gap-1"
+					<div
+						class="flex items-center gap-4 p-3 rounded-container border border-success-500 bg-success-500/10"
+					>
+						<span class="font-bold min-w-[120px] text-success-500 inline-flex items-center gap-1"
 							><TrendingUp size={14} /> KUP</span
 						>
-						<span class="category-name">{suggestion.category}</span>
-						<span class="amount">
+						<span class="flex-1 capitalize">{suggestion.category}</span>
+						<span class="font-bold">
 							{suggestion.amount.toLocaleString('pl-PL', {
 								minimumFractionDigits: 0,
 								maximumFractionDigits: 0
@@ -130,7 +132,7 @@
 				{/each}
 			</div>
 
-			<p class="rebalancing-note inline-flex items-center gap-1">
+			<p class="italic text-surface-600-400 mt-4 inline-flex items-center gap-1">
 				<Lightbulb size={14} /> Całkowita wartość portfela inwestycyjnego: {allocationAnalysis.total_investment_value.toLocaleString(
 					'pl-PL',
 					{ minimumFractionDigits: 0, maximumFractionDigits: 0 }
@@ -138,14 +140,16 @@
 			</p>
 		</div>
 	{:else}
-		<div class="no-rebalancing inline-flex items-center gap-2">
+		<div
+			class="card preset-filled-surface-100-900 p-4 flex items-center gap-2 text-success-500 font-semibold"
+		>
 			<CheckCircle2 size={16} /> Portfel jest zgodny z docelową alokacją (różnice mniejsze niż 1%)
 		</div>
 	{/if}
 
-	<h2>Przegląd finansowy</h2>
+	<h2 class="h2">Przegląd finansowy</h2>
 
-	<div class="metrics-grid">
+	<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 		<MetricCard
 			label="Ile metrów mieszkania jest nasze"
 			value={metricCards.property_sqm}
@@ -262,10 +266,10 @@
 
 	<!-- PPK Stats Section -->
 	{#if data.ppkStats && data.ppkStats.length > 0}
-		<h2>Podsumowanie PPK</h2>
+		<h2 class="h2">Podsumowanie PPK</h2>
 		{#each data.ppkStats as ppkStat}
-			<h3 class="ppk-owner-title">{ppkStat.owner}</h3>
-			<div class="metrics-grid">
+			<h3 class="h4 font-semibold mt-4 mb-3">{ppkStat.owner}</h3>
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 				<MetricCard
 					label="PPK - Wartość całkowita"
 					value={ppkStat.total_value}
@@ -327,8 +331,8 @@
 
 	<!-- Stock Stats Section -->
 	{#if data.stockStats}
-		<h2>Podsumowanie Akcji</h2>
-		<div class="metrics-grid">
+		<h2 class="h2">Podsumowanie Akcji</h2>
+		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 			<MetricCard
 				label="Akcje - Wartość całkowita"
 				value={data.stockStats.total_value}
@@ -365,8 +369,8 @@
 
 	<!-- Bond Stats Section -->
 	{#if data.bondStats}
-		<h2>Podsumowanie Obligacji</h2>
-		<div class="metrics-grid">
+		<h2 class="h2">Podsumowanie Obligacji</h2>
+		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 			<MetricCard
 				label="Obligacje - Wartość całkowita"
 				value={data.bondStats.total_value}
@@ -401,248 +405,52 @@
 		</div>
 	{/if}
 
-	<h2>Struktura portfela inwestycyjnego</h2>
+	<h2 class="h2">Struktura portfela inwestycyjnego</h2>
 
-	<div class="charts-grid">
-		<div class="chart-container">
-			<div bind:this={allocationChart} class="chart"></div>
+	<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+		<div class="card preset-filled-surface-100-900 p-4">
+			<div bind:this={allocationChart} class="w-full h-[280px] sm:h-[400px]"></div>
 		</div>
 
-		<div class="chart-container">
-			<div bind:this={wrapperChart} class="chart"></div>
-		</div>
-	</div>
-
-	<h2>Wzrost inwestycji w czasie</h2>
-
-	<div class="chart-container-wide">
-		<div bind:this={investmentTrendChart} class="chart-wide"></div>
-	</div>
-
-	<h2>Wzrost według typu konta</h2>
-
-	<div class="wrapper-charts-grid">
-		<div class="chart-container">
-			<div bind:this={ikeChart} class="chart"></div>
-		</div>
-		<div class="chart-container">
-			<div bind:this={ikzeChart} class="chart"></div>
-		</div>
-		<div class="chart-container">
-			<div bind:this={ppkChart} class="chart"></div>
+		<div class="card preset-filled-surface-100-900 p-4">
+			<div bind:this={wrapperChart} class="w-full h-[280px] sm:h-[400px]"></div>
 		</div>
 	</div>
 
-	<h2>Wzrost według typu inwestycji</h2>
+	<h2 class="h2">Wzrost inwestycji w czasie</h2>
 
-	<div class="wrapper-charts-grid">
-		<div class="chart-container">
-			<div bind:this={stockChart} class="chart"></div>
+	<div class="card preset-filled-surface-100-900 p-4 mb-8">
+		<div bind:this={investmentTrendChart} class="w-full h-[320px] sm:h-[500px]"></div>
+	</div>
+
+	<h2 class="h2">Wzrost według typu konta</h2>
+
+	<div class="grid grid-cols-1 gap-4 mb-8">
+		<div class="card preset-filled-surface-100-900 p-4">
+			<div bind:this={ikeChart} class="w-full h-[280px] sm:h-[400px]"></div>
 		</div>
-		<div class="chart-container">
-			<div bind:this={bondChart} class="chart"></div>
+		<div class="card preset-filled-surface-100-900 p-4">
+			<div bind:this={ikzeChart} class="w-full h-[280px] sm:h-[400px]"></div>
+		</div>
+		<div class="card preset-filled-surface-100-900 p-4">
+			<div bind:this={ppkChart} class="w-full h-[280px] sm:h-[400px]"></div>
 		</div>
 	</div>
 
-	<h2>Roczny ROI według klasy aktywów</h2>
+	<h2 class="h2">Wzrost według typu inwestycji</h2>
 
-	<div class="chart-container-wide">
-		<div bind:this={yearlyRoiChart} class="chart-wide"></div>
+	<div class="grid grid-cols-1 gap-4 mb-8">
+		<div class="card preset-filled-surface-100-900 p-4">
+			<div bind:this={stockChart} class="w-full h-[280px] sm:h-[400px]"></div>
+		</div>
+		<div class="card preset-filled-surface-100-900 p-4">
+			<div bind:this={bondChart} class="w-full h-[280px] sm:h-[400px]"></div>
+		</div>
+	</div>
+
+	<h2 class="h2">Roczny ROI według klasy aktywów</h2>
+
+	<div class="card preset-filled-surface-100-900 p-4 mb-8">
+		<div bind:this={yearlyRoiChart} class="w-full h-[320px] sm:h-[500px]"></div>
 	</div>
 </div>
-
-<style>
-	.container {
-		padding: var(--size-5);
-		max-width: 1400px;
-		margin: 0 auto;
-	}
-
-	h1 {
-		margin-bottom: var(--size-6);
-		color: var(--color-text);
-	}
-
-	h2 {
-		margin-top: var(--size-8);
-		margin-bottom: var(--size-4);
-		color: var(--color-text);
-		font-size: var(--font-size-4);
-	}
-
-	.metrics-grid {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: var(--size-4);
-	}
-
-	.charts-grid {
-		display: grid;
-		grid-template-columns: repeat(2, 1fr);
-		gap: var(--size-6);
-		margin-bottom: var(--size-8);
-	}
-
-	.wrapper-charts-grid {
-		display: grid;
-		grid-template-columns: 1fr;
-		gap: var(--size-4);
-		margin-bottom: var(--size-8);
-	}
-
-	.chart-container {
-		background: var(--surface-2);
-		border-radius: var(--radius-2);
-		padding: var(--size-4);
-		border: 1px solid var(--surface-3);
-	}
-
-	.chart {
-		width: 100%;
-		height: 400px;
-	}
-
-	.chart-container-wide {
-		background: var(--surface-2);
-		border-radius: var(--radius-2);
-		padding: var(--size-4);
-		border: 1px solid var(--surface-3);
-		margin-bottom: var(--size-8);
-	}
-
-	.chart-wide {
-		width: 100%;
-		height: 500px;
-	}
-
-	.rebalancing-container {
-		background: var(--surface-2);
-		border-radius: var(--radius-2);
-		padding: var(--size-5);
-		border: 1px solid var(--surface-3);
-	}
-
-	.rebalancing-intro {
-		margin-bottom: var(--size-4);
-		color: var(--text-2);
-	}
-
-	.rebalancing-list {
-		display: flex;
-		flex-direction: column;
-		gap: var(--size-3);
-		margin-bottom: var(--size-4);
-	}
-
-	.rebalancing-item {
-		display: flex;
-		align-items: center;
-		gap: var(--size-4);
-		padding: var(--size-3);
-		border-radius: var(--radius-2);
-		border: 1px solid;
-	}
-
-	.rebalancing-item.buy {
-		background: rgba(163, 190, 140, 0.1);
-		border-color: var(--green-6);
-	}
-
-	.action-label {
-		font-weight: var(--font-weight-7);
-		min-width: 120px;
-	}
-
-	.rebalancing-item.buy .action-label {
-		color: var(--green-6);
-	}
-
-	.category-name {
-		flex: 1;
-		color: var(--color-text);
-		text-transform: capitalize;
-	}
-
-	.amount {
-		font-weight: var(--font-weight-7);
-		color: var(--color-text);
-		font-size: var(--font-size-3);
-	}
-
-	.rebalancing-note {
-		color: var(--text-2);
-		font-style: italic;
-		margin-top: var(--size-4);
-	}
-
-	.no-rebalancing {
-		background: rgba(163, 190, 140, 0.15);
-		border: 1px solid var(--green-6);
-		border-radius: var(--radius-2);
-		padding: var(--size-4);
-		color: var(--green-6);
-		text-align: center;
-		font-weight: var(--font-weight-6);
-	}
-
-	.ppk-owner-title {
-		font-size: var(--font-size-3);
-		font-weight: var(--font-weight-6);
-		color: var(--color-text);
-		margin-top: var(--size-4);
-		margin-bottom: var(--size-3);
-	}
-
-	@media (max-width: 1024px) {
-		.metrics-grid {
-			grid-template-columns: repeat(2, 1fr);
-		}
-
-		.charts-grid {
-			grid-template-columns: 1fr;
-		}
-	}
-
-	@media (max-width: 640px) {
-		.container {
-			padding: var(--size-3);
-		}
-
-		.metrics-grid {
-			grid-template-columns: 1fr;
-		}
-
-		.chart {
-			height: 280px;
-		}
-
-		.chart-wide {
-			height: 320px;
-		}
-
-		.chart-container,
-		.chart-container-wide,
-		.rebalancing-container {
-			padding: var(--size-3);
-		}
-
-		h1 {
-			font-size: var(--font-size-5);
-		}
-
-		h2 {
-			font-size: var(--font-size-3);
-			margin-top: var(--size-6);
-		}
-
-		.rebalancing-item {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: var(--size-2);
-		}
-
-		.action-label {
-			min-width: auto;
-		}
-	}
-</style>

@@ -4,8 +4,8 @@ Stores stock options and RSU grants with configurable vesting schedules.
 JSON column holds optional custom (back/front-loaded) schedules. Indexed on
 (owner, company) for the salaries page which groups by company.
 
-Revision ID: 0006
-Revises: 0005
+Revision ID: 0008
+Revises: 0007
 Create Date: 2026-05-21
 
 """
@@ -17,8 +17,8 @@ from sqlalchemy import inspect
 
 from alembic import op
 
-revision: str = "0006"
-down_revision: str | None = "0005"
+revision: str = "0008"
+down_revision: str | None = "0007"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

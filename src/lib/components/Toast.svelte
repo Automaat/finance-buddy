@@ -25,23 +25,24 @@
 	aria-label="Powiadomienia"
 >
 	{#each items as item (item.id)}
-		{@const Icon = iconFor(item.kind)}
-		<div
-			class="pointer-events-auto flex items-start gap-3 rounded-container px-4 py-3 shadow-lg w-full max-w-sm {classFor(
-				item.kind
-			)}"
-			role={item.kind === 'error' ? 'alert' : 'status'}
-		>
-			<Icon size={18} class="mt-0.5 shrink-0" />
-			<span class="flex-1 text-sm">{item.message}</span>
-			<button
-				type="button"
-				class="btn-icon btn-icon-sm shrink-0"
-				aria-label="Zamknij powiadomienie"
-				onclick={() => toast.dismiss(item.id)}
+		{#each [iconFor(item.kind)] as Icon}
+			<div
+				class="pointer-events-auto flex items-start gap-3 rounded-container px-4 py-3 shadow-lg w-full max-w-sm {classFor(
+					item.kind
+				)}"
+				role={item.kind === 'error' ? 'alert' : 'status'}
 			>
-				<X size={16} />
-			</button>
-		</div>
+				<Icon size={18} class="mt-0.5 shrink-0" />
+				<span class="flex-1 text-sm">{item.message}</span>
+				<button
+					type="button"
+					class="btn-icon btn-icon-sm shrink-0"
+					aria-label="Zamknij powiadomienie"
+					onclick={() => toast.dismiss(item.id)}
+				>
+					<X size={16} />
+				</button>
+			</div>
+		{/each}
 	{/each}
 </div>

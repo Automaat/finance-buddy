@@ -71,6 +71,10 @@
 		'grudzień'
 	];
 
+	function isNonNegative(value: number | null): boolean {
+		return (value ?? 0) >= 0;
+	}
+
 	function formatPctSigned(value: number | null): string {
 		if (value == null || Number.isNaN(value)) return '—';
 		const sign = value >= 0 ? '+' : '';
@@ -814,6 +818,14 @@
 		}
 	}
 
+	function getPreviousCompany(owner: string, date: string | null): string | null {
+		if (!date) return null;
+		return (
+			data.salaries.salary_records.find((r) => r.owner === owner && r.date === date)?.company ??
+			null
+		);
+	}
+
 	function applyFilters() {
 		const params = new URLSearchParams();
 		if (filterOwner) params.set('owner', filterOwner);
@@ -1245,17 +1257,13 @@
 		{:else}
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 				{#each inflationEntries as ctx (ctx.owner)}
-					{@const realPositive = (ctx.real_change_pln ?? 0) >= 0}
-					{@const previousRecord = data.salaries.salary_records.find(
-						(r) => r.owner === ctx.owner && r.date === ctx.previous_change_date
-					)}
 					<div class="card preset-tonal-surface p-4 space-y-2">
 						<div class="flex items-baseline justify-between flex-wrap gap-2">
 							<strong class="text-lg">{ctx.owner}</strong>
 							<span class="text-xs text-surface-700-300">
 								od {new Date(ctx.last_change_date).toLocaleDateString('pl-PL')}
-								{#if previousRecord?.company}
-									· {previousRecord.company}
+								{#if getPreviousCompany(ctx.owner, ctx.previous_change_date)}
+									· {getPreviousCompany(ctx.owner, ctx.previous_change_date)}
 								{/if}
 							</span>
 						</div>
@@ -1274,8 +1282,8 @@
 							<dt class="font-semibold pt-1">Realna podwyżka:</dt>
 							<dd
 								class="text-right font-bold pt-1"
-								class:text-success-500={realPositive}
-								class:text-error-500={!realPositive}
+								class:text-success-500={isNonNegative(ctx.real_change_pln)}
+								class:text-error-500={!isNonNegative(ctx.real_change_pln)}
 							>
 								{formatPlnSigned(ctx.real_change_pln)}
 								<span class="text-xs font-normal">

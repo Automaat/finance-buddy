@@ -57,6 +57,21 @@ vi.mock('$app/navigation', () => ({
 	invalidateAll: vi.fn()
 }));
 
+const baseTileDeltas = {
+	net_worth: {
+		mom: { absolute: 1000, percentage: 20 },
+		yoy: { absolute: 5000, percentage: 100 }
+	},
+	assets: {
+		mom: { absolute: 2000, percentage: 25 },
+		yoy: null
+	},
+	liabilities: {
+		mom: { absolute: -500, percentage: -10 },
+		yoy: { absolute: -1500, percentage: -30 }
+	}
+};
+
 function buildData(
 	overrides: {
 		dashboardData?: Promise<Record<string, unknown>> | Record<string, unknown>;
@@ -77,7 +92,8 @@ function buildData(
 			{ category: 'banking', owner: 'John', value: 5000 },
 			{ category: 'investments', owner: 'John', value: 5000 }
 		],
-		retirementStats: [] as unknown[]
+		retirementStats: [] as unknown[],
+		tile_deltas: baseTileDeltas
 	};
 
 	const dashboardData =
@@ -119,6 +135,40 @@ describe('Dashboard Page', () => {
 	it('renders dashboard metrics after data resolves', async () => {
 		render(Page, { props: { data: buildData() } });
 		await waitFor(() => expect(screen.getByText('Wartość Netto')).toBeTruthy());
+	});
+
+	it('renders six delta badges across three tiles', async () => {
+		render(Page, { props: { data: buildData() } });
+		await waitFor(() => expect(screen.getAllByLabelText(/^Δ MoM$/)).toHaveLength(3));
+		expect(screen.getAllByLabelText(/^Δ YoY$/)).toHaveLength(3);
+	});
+
+	it('colors positive net_worth MoM badge green', async () => {
+		render(Page, { props: { data: buildData() } });
+		await waitFor(() => screen.getAllByLabelText(/^Δ MoM$/));
+		const momBadges = screen.getAllByLabelText(/^Δ MoM$/);
+		expect(momBadges[0].className).toContain('text-success-600-400');
+	});
+
+	it('colors negative liabilities MoM badge red', async () => {
+		render(Page, { props: { data: buildData() } });
+		await waitFor(() => screen.getAllByLabelText(/^Δ MoM$/));
+		const momBadges = screen.getAllByLabelText(/^Δ MoM$/);
+		expect(momBadges[2].className).toContain('text-error-600-400');
+	});
+
+	it('renders em-dash for null YoY (assets)', async () => {
+		render(Page, { props: { data: buildData() } });
+		await waitFor(() => screen.getAllByLabelText(/^Δ YoY$/));
+		const yoyBadges = screen.getAllByLabelText(/^Δ YoY$/);
+		expect(yoyBadges[1].textContent).toContain('—');
+	});
+
+	it('uses Polish liability tooltip wording for MoM', async () => {
+		render(Page, { props: { data: buildData() } });
+		await waitFor(() => screen.getAllByLabelText(/^Δ MoM$/));
+		const momBadges = screen.getAllByLabelText(/^Δ MoM$/);
+		expect(momBadges[2].getAttribute('title')).toContain('niższe zobowiązania');
 	});
 });
 

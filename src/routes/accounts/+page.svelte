@@ -336,10 +336,12 @@
 {#await data.accountsData}
 	<div role="status" aria-live="polite" aria-label="Ładowanie kont" class="space-y-4">
 		{#each [{ icon: Wallet, title: 'Aktywa' }, { icon: TrendingDown, title: 'Pasywa' }] as section}
-			{@const Icon = section.icon}
 			<div class="card preset-filled-surface-100-900 p-4 space-y-4">
 				<header>
-					<h3 class="h3 flex items-center gap-2"><Icon size={20} /> {section.title}</h3>
+					<h3 class="h3 flex items-center gap-2">
+						<section.icon size={20} />
+						{section.title}
+					</h3>
 				</header>
 				<div class="table-wrap">
 					<table class="table">

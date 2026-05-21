@@ -8,6 +8,22 @@ class NetWorthPoint(BaseModel):
     value: float
 
 
+class DeltaValue(BaseModel):
+    absolute: float
+    percentage: float | None  # None when baseline is 0 or missing
+
+
+class TileDelta(BaseModel):
+    mom: DeltaValue | None
+    yoy: DeltaValue | None
+
+
+class TileDeltas(BaseModel):
+    net_worth: TileDelta
+    assets: TileDelta
+    liabilities: TileDelta
+
+
 class AllocationItem(BaseModel):
     category: str
     owner: str | None
@@ -88,3 +104,4 @@ class DashboardResponse(BaseModel):
     investment_time_series: list[InvestmentTimeSeriesPoint]
     wrapper_time_series: WrapperTimeSeries
     category_time_series: CategoryTimeSeries
+    tile_deltas: TileDeltas
