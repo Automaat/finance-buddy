@@ -199,6 +199,9 @@ def _get_dashboard_data_from_aggregates(
         accounts_df["category"].isin(_INVESTMENT_CATEGORIES).any()
     )
 
+    df = pd.DataFrame()
+    snapshots_df = pd.DataFrame()
+
     if has_investment:
         assets_df = pd.read_sql(select(Asset).where(Asset.is_active.is_(True)), db.get_bind())
         snapshots_df = pd.read_sql(select(Snapshot).order_by(Snapshot.date), db.get_bind())
@@ -233,6 +236,28 @@ def _get_dashboard_data_from_aggregates(
         wrapper_time_series = WrapperTimeSeries(ike=[], ikze=[], ppk=[])
         category_time_series = CategoryTimeSeries(stock=[], bond=[])
 
+    if has_investment:
+        tile_deltas = compute_tile_deltas(df, snapshots_df)
+    else:
+        # Build synthetic df from agg_rows so compute_tile_deltas works without
+        # loading the full snapshot values table.
+        synth_rows: list[dict] = []
+        for sid in sorted_sids:
+            d = snap_date[sid]
+            sid_agg = [r for r in agg_rows if r.snapshot_id == sid]
+            ta = sum(float(r.total_assets) for r in sid_agg)
+            tl = sum(float(r.total_liabilities) for r in sid_agg)
+            synth_rows.append(
+                {"snapshot_id": sid, "date": d, "account_id": 1, "asset_id": None, "name": None, "type": "asset", "value": ta}
+            )
+            synth_rows.append(
+                {"snapshot_id": sid, "date": d, "account_id": 2, "asset_id": None, "name": None, "type": "liability", "value": tl}
+            )
+        tile_deltas = compute_tile_deltas(
+            pd.DataFrame(synth_rows) if synth_rows else pd.DataFrame(),
+            pd.DataFrame({"id": sorted_sids}) if sorted_sids else pd.DataFrame(),
+        )
+
     return DashboardResponse(
         net_worth_history=net_worth_history,
         current_net_worth=current_net_worth,
@@ -246,6 +271,7 @@ def _get_dashboard_data_from_aggregates(
         investment_time_series=investment_time_series,
         wrapper_time_series=wrapper_time_series,
         category_time_series=category_time_series,
+        tile_deltas=tile_deltas,
     )
 
 
