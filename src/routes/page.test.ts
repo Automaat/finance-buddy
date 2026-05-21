@@ -90,7 +90,7 @@ function buildData(
 
 	return {
 		dashboardData,
-		personas: overrides.personas ?? [],
+		personas: Promise.resolve(overrides.personas ?? []),
 		currentYear: overrides.currentYear ?? 2024
 	};
 }

@@ -34,11 +34,13 @@ export const load: PageLoad = async ({ fetch }) => {
 		throw error(500, 'API URL is not configured');
 	}
 
-	const personasResponse = await fetch(`${apiUrl}/api/personas`);
-	if (!personasResponse.ok) {
-		throw error(personasResponse.status, 'Failed to load personas');
-	}
-	const personas: Persona[] = await personasResponse.json();
+	const personas = (async (): Promise<Persona[]> => {
+		const res = await fetch(`${apiUrl}/api/personas`);
+		if (!res.ok) {
+			throw error(res.status, 'Failed to load personas');
+		}
+		return (await res.json()) as Persona[];
+	})();
 
 	const accountsData = (async () => {
 		const response = await fetch(`${apiUrl}/api/accounts`);

@@ -25,7 +25,17 @@
 
 	let { data }: Props = $props();
 
-	const personas = $derived((data.personas || []) as Persona[]);
+	let personas: Persona[] = $state([]);
+
+	$effect(() => {
+		let cancelled = false;
+		Promise.resolve(data.personas).then((p) => {
+			if (!cancelled) personas = (p ?? []) as Persona[];
+		});
+		return () => {
+			cancelled = true;
+		};
+	});
 
 	let showLimitsModal = $state(false);
 	let limitsYear = $state(untrack(() => data.currentYear));

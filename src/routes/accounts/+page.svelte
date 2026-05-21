@@ -18,8 +18,18 @@
 	let { data }: Props = $props();
 
 	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
-	const personas = $derived(data.personas as Persona[]);
+	let personas: Persona[] = $state([]);
 	const defaultOwner = $derived(personas.length > 0 ? personas[0].name : 'Marcin');
+
+	$effect(() => {
+		let cancelled = false;
+		Promise.resolve(data.personas).then((p) => {
+			if (!cancelled) personas = (p ?? []) as Persona[];
+		});
+		return () => {
+			cancelled = true;
+		};
+	});
 
 	let showForm = $state(false);
 	let editingAccount: Account | null = $state(null);
@@ -326,9 +336,10 @@
 {#await data.accountsData}
 	<div role="status" aria-live="polite" aria-label="Ładowanie kont" class="space-y-4">
 		{#each [{ icon: Wallet, title: 'Aktywa' }, { icon: TrendingDown, title: 'Pasywa' }] as section}
+			{@const Icon = section.icon}
 			<div class="card preset-filled-surface-100-900 p-4 space-y-4">
 				<header>
-					<h3 class="h3 flex items-center gap-2"><section.icon size={20} /> {section.title}</h3>
+					<h3 class="h3 flex items-center gap-2"><Icon size={20} /> {section.title}</h3>
 				</header>
 				<div class="table-wrap">
 					<table class="table">

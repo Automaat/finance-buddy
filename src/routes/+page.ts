@@ -10,8 +10,10 @@ export async function load({ fetch }) {
 
 	const currentYear = new Date().getFullYear();
 
-	const personasRes = await fetch(`${apiUrl}/api/personas`);
-	const personas = personasRes.ok ? await personasRes.json() : [];
+	const personas = (async () => {
+		const res = await fetch(`${apiUrl}/api/personas`);
+		return res.ok ? await res.json() : [];
+	})();
 
 	const dashboardData = (async () => {
 		const [dashboardRes, retirementRes] = await Promise.all([
