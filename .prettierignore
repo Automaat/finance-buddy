@@ -40,3 +40,6 @@ playwright-report
 test-results
 blob-report
 playwright/.cache
+
+# Migration: OpenAPI spec is Python-dumped; CI drift check owns its format
+api/openapi.v1.json
