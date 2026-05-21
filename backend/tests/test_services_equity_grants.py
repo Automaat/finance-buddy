@@ -131,21 +131,15 @@ def test_update_switch_to_option_without_strike_rejected(test_db_session):
     grant = create_test_equity_grant(test_db_session, grant_type="rsu", strike_price=None)
 
     with pytest.raises(HTTPException) as exc:
-        update_equity_grant(
-            test_db_session, grant.id, EquityGrantUpdate(type="option")
-        )
+        update_equity_grant(test_db_session, grant.id, EquityGrantUpdate(type="option"))
     assert exc.value.status_code == 422
 
 
 def test_update_switch_to_rsu_clears_strike(test_db_session):
     """Option → RSU should drop the now-irrelevant strike price."""
-    grant = create_test_equity_grant(
-        test_db_session, grant_type="option", strike_price=5.0
-    )
+    grant = create_test_equity_grant(test_db_session, grant_type="option", strike_price=5.0)
 
-    result = update_equity_grant(
-        test_db_session, grant.id, EquityGrantUpdate(type="rsu")
-    )
+    result = update_equity_grant(test_db_session, grant.id, EquityGrantUpdate(type="rsu"))
     assert result.type == "rsu"
     assert result.strike_price is None
 

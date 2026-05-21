@@ -126,6 +126,20 @@
 		return breakdown.netAnnual / 12;
 	}
 
+	type CurrentSalaryRow = {
+		name: string;
+		salary: number | null;
+		net: number | null;
+	};
+
+	const currentSalaryRows = $derived.by<CurrentSalaryRow[]>(() =>
+		Object.entries(data.salaries.current_salaries).map(([name, salary]) => ({
+			name,
+			salary,
+			net: salary !== null ? netMonthlyForOwner(name, salary) : null
+		}))
+	);
+
 	const allYears = $derived.by(() => {
 		const years = new Set<number>();
 		years.add(currentYear);
@@ -232,6 +246,19 @@
 			hasEquityWithoutFx
 		};
 	});
+
+	// Computed in script — prettier-plugin-svelte 4.0.0 chokes on chained `+`
+	// BinaryExpressions inside {@const} blocks.
+	const totalCompGross = $derived(
+		(compSummary?.baseAnnualGross ?? 0) +
+			(compSummary?.bonusesPln ?? 0) +
+			(includeEquityInTotal ? (compSummary?.equityPaperPln ?? 0) : 0)
+	);
+	const totalCompNet = $derived(
+		(compSummary?.baseAnnualNet ?? 0) +
+			(compSummary?.bonusesNetPln ?? 0) +
+			(includeEquityInTotal ? (compSummary?.equityNetPln ?? 0) : 0)
+	);
 
 	const bonusEvents = $derived(data.bonuses?.bonus_events ?? []);
 	const bonusGroupedByCompany = $derived(
@@ -395,14 +422,63 @@
 	}
 
 	const equityGrants = $derived(data.equity?.equity_grants ?? []);
-	const equityGroupedByCompany = $derived(
-		equityGrants.reduce<Map<string, EquityGrant[]>>((acc, g) => {
+
+	type EquityGroup = {
+		company: string;
+		grants: EquityGrant[];
+		grantLabel: string;
+		totalShares: number;
+		vestedShares: number;
+		paperBase: number;
+		paperBasePln: number;
+		currency: string;
+		hasPaperValue: boolean;
+		hasPaperValuePln: boolean;
+	};
+
+	// Per-company aggregates pre-computed here — keeping these out of {@const}
+	// in the template avoids a prettier-plugin-svelte 4.0.0 crash on
+	// BinaryExpression inside @const initializers (chained `+`, reduce bodies).
+	const equityGroups = $derived.by<EquityGroup[]>(() => {
+		const byCompany = new Map<string, EquityGrant[]>();
+		for (const g of equityGrants) {
 			const key = g.company || 'Nieokreślona firma';
-			if (!acc.has(key)) acc.set(key, []);
-			acc.get(key)!.push(g);
-			return acc;
-		}, new Map())
-	);
+			if (!byCompany.has(key)) byCompany.set(key, []);
+			byCompany.get(key)!.push(g);
+		}
+		return [...byCompany.entries()].map(([company, grants]) => {
+			let totalShares = 0;
+			let vestedShares = 0;
+			let paperBase = 0;
+			let paperBasePln = 0;
+			let currency: string | null = null;
+			for (const g of grants) {
+				totalShares += g.total_shares;
+				vestedShares += g.vested_shares_today;
+				paperBase += g.paper_value_base ?? 0;
+				paperBasePln += g.paper_value_base_pln ?? 0;
+				if (currency === null && g.paper_value_currency) {
+					currency = g.paper_value_currency;
+				}
+			}
+			const safeCurrency = currency ?? '';
+			const hasPaperValue = safeCurrency !== '' && paperBase > 0;
+			const hasPaperValuePln = hasPaperValue && safeCurrency !== 'PLN' && paperBasePln > 0;
+			const grantLabel = grants.length === 1 ? 'grant' : 'grantów';
+			return {
+				company,
+				grants,
+				grantLabel,
+				totalShares,
+				vestedShares,
+				paperBase,
+				paperBasePln,
+				currency: safeCurrency,
+				hasPaperValue,
+				hasPaperValuePln
+			};
+		});
+	});
 
 	const equityTypeLabels: Record<EquityGrantType, string> = {
 		option: 'Opcje',
@@ -1198,14 +1274,6 @@
 		</header>
 
 		{#if compSummary}
-			{@const totalGross =
-				compSummary.baseAnnualGross +
-				compSummary.bonusesPln +
-				(includeEquityInTotal ? compSummary.equityPaperPln : 0)}
-			{@const totalNet =
-				compSummary.baseAnnualNet +
-				compSummary.bonusesNetPln +
-				(includeEquityInTotal ? compSummary.equityNetPln : 0)}
 			<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
 				<div class="card preset-tonal-surface p-3">
 					<div class="text-xs text-surface-700-300">Pensja podstawowa (gross)</div>
@@ -1244,9 +1312,9 @@
 					<div class="text-xs text-surface-700-300">
 						Total {includeEquityInTotal ? '(z equity)' : '(bez equity)'}
 					</div>
-					<div class="text-xl font-bold text-primary-600-400">{formatPLN(totalGross)}</div>
+					<div class="text-xl font-bold text-primary-600-400">{formatPLN(totalCompGross)}</div>
 					<div class="text-xs text-surface-700-300">
-						po podatku (szac.): {formatPLN(totalNet)}
+						po podatku (szac.): {formatPLN(totalCompNet)}
 					</div>
 				</div>
 			</div>
@@ -1268,19 +1336,18 @@
 			<h3 class="h3 flex items-center gap-2"><Banknote size={20} /> Aktualne wynagrodzenia</h3>
 		</header>
 		<div class="flex flex-wrap gap-6">
-			{#each Object.entries(data.salaries.current_salaries) as [name, salary]}
-				{@const net = salary !== null ? netMonthlyForOwner(name, salary) : null}
+			{#each currentSalaryRows as row (row.name)}
 				<div class="flex flex-col gap-1">
-					<span class="text-sm text-surface-700-300">{name}</span>
+					<span class="text-sm text-surface-700-300">{row.name}</span>
 					<strong class="text-lg">
-						{salary !== null ? formatPLN(salary) : 'Brak danych'}
-						{#if salary !== null}
+						{row.salary !== null ? formatPLN(row.salary) : 'Brak danych'}
+						{#if row.salary !== null}
 							<span class="text-xs font-normal text-surface-700-300">brutto</span>
 						{/if}
 					</strong>
-					{#if net !== null}
+					{#if row.net !== null}
 						<span class="text-sm text-success-500 font-semibold">
-							≈ {formatPLN(net)} <span class="text-xs font-normal">netto/mc</span>
+							≈ {formatPLN(row.net)} <span class="text-xs font-normal">netto/mc</span>
 						</span>
 					{/if}
 				</div>
@@ -1592,24 +1659,18 @@
 			</div>
 		{:else}
 			<div class="space-y-4">
-				{#each [...equityGroupedByCompany.entries()] as [company, grants] (company)}
-					{@const totalShares = grants.reduce((s, g) => s + g.total_shares, 0)}
-					{@const vestedShares = grants.reduce((s, g) => s + g.vested_shares_today, 0)}
-					{@const paperBase = grants.reduce((s, g) => s + (g.paper_value_base ?? 0), 0)}
-					{@const paperBasePln = grants.reduce((s, g) => s + (g.paper_value_base_pln ?? 0), 0)}
-					{@const groupCurrency =
-						grants.find((g) => g.paper_value_currency)?.paper_value_currency ?? null}
+				{#each equityGroups as group (group.company)}
 					<div class="card preset-tonal-surface p-3 space-y-2">
 						<header class="flex items-baseline justify-between flex-wrap gap-2">
-							<strong class="text-base">{company}</strong>
+							<strong class="text-base">{group.company}</strong>
 							<span class="text-xs text-surface-700-300">
-								{grants.length}
-								{grants.length === 1 ? 'grant' : 'grantów'} ·
-								{formatShares(vestedShares)} / {formatShares(totalShares)} vested
-								{#if groupCurrency && paperBase > 0}
-									· paper {formatCurrency(paperBase, groupCurrency)}
-									{#if groupCurrency !== 'PLN' && paperBasePln > 0}
-										(≈ {formatPLN(paperBasePln)})
+								{group.grants.length}
+								{group.grantLabel} ·
+								{formatShares(group.vestedShares)} / {formatShares(group.totalShares)} vested
+								{#if group.hasPaperValue}
+									· paper {formatCurrency(group.paperBase, group.currency)}
+									{#if group.hasPaperValuePln}
+										(≈ {formatPLN(group.paperBasePln)})
 									{/if}
 								{/if}
 							</span>
@@ -1630,7 +1691,7 @@
 									</tr>
 								</thead>
 								<tbody>
-									{#each grants as grant (grant.id)}
+									{#each group.grants as grant (grant.id)}
 										<tr>
 											<td>{new Date(grant.grant_date).toLocaleDateString('pl-PL')}</td>
 											<td>{equityTypeLabels[grant.type]}</td>

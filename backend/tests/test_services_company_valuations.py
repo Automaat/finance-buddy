@@ -260,9 +260,7 @@ class TestPaperValueOnGrant:
         )
         # Seed only a 2024-06-01 rate. If service uses "today" instead of the
         # valuation date it would miss this and report no PLN value.
-        test_db_session.add(
-            FxRate(date=date(2024, 6, 1), currency="USD", rate_pln=Decimal("4.0"))
-        )
+        test_db_session.add(FxRate(date=date(2024, 6, 1), currency="USD", rate_pln=Decimal("4.0")))
         test_db_session.commit()
 
         result = get_equity_grant(test_db_session, grant.id)

@@ -84,9 +84,7 @@ def _to_response(record: EquityGrant, db: Session) -> EquityGrantResponse:
 
     # Use the valuation date for FX so paper_value_*_pln matches valuation_date —
     # otherwise a 2-year-old valuation would be reported in today's PLN.
-    fx_rate = (
-        get_fx_rate_to_pln(db, pv_currency, pv_date) if pv_currency is not None else None
-    )
+    fx_rate = get_fx_rate_to_pln(db, pv_currency, pv_date) if pv_currency is not None else None
     pv_base_pln = to_pln(pv_base, pv_currency, fx_rate) if pv_currency else None
     pv_low_pln = to_pln(pv_low, pv_currency, fx_rate) if pv_currency else None
     pv_high_pln = to_pln(pv_high, pv_currency, fx_rate) if pv_currency else None
@@ -257,9 +255,7 @@ def update_equity_grant(db: Session, grant_id: int, data: EquityGrantUpdate) -> 
     # strike so the record stays self-consistent.
     if record.type == EquityGrantType.OPTION.value and record.strike_price is None:
         db.rollback()
-        raise HTTPException(
-            status_code=422, detail="Stock options require a strike price"
-        )
+        raise HTTPException(status_code=422, detail="Stock options require a strike price")
     if record.type == EquityGrantType.RSU.value:
         record.strike_price = None
 
