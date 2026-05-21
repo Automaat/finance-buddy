@@ -151,18 +151,12 @@ def _per_snapshot_totals(df: pd.DataFrame) -> pd.DataFrame:
     work["assets"] = value.where(asset_table_mask | account_asset_mask, 0.0)
     work["liabilities"] = value.where(account_liab_mask, 0.0)
 
-    grouped = (
-        work.groupby(["snapshot_id", "date"])[["assets", "liabilities"]]
-        .sum()
-        .reset_index()
-    )
+    grouped = work.groupby(["snapshot_id", "date"])[["assets", "liabilities"]].sum().reset_index()
     grouped["net_worth"] = grouped["assets"] - grouped["liabilities"]
     return grouped.sort_values(["date", "snapshot_id"]).reset_index(drop=True)
 
 
-def _pick_baseline(
-    totals: pd.DataFrame, low: object, high: object
-) -> pd.Series | None:
+def _pick_baseline(totals: pd.DataFrame, low: object, high: object) -> pd.Series | None:
     """Latest row with low <= date <= high; deterministic tie-break by snapshot_id desc."""
     window = totals[(totals["date"] >= low) & (totals["date"] <= high)]
     if window.empty:
@@ -172,9 +166,7 @@ def _pick_baseline(
     return same_day.sort_values("snapshot_id", ascending=False).iloc[0]
 
 
-def _delta(
-    current: float, baseline: pd.Series | None, field: str
-) -> DeltaValue | None:
+def _delta(current: float, baseline: pd.Series | None, field: str) -> DeltaValue | None:
     if baseline is None:
         return None
     base = float(baseline[field])

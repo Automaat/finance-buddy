@@ -153,9 +153,9 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
         if candidates.empty:
             latest_snapshot = None
         else:
-            latest_snapshot = candidates.sort_values(
-                ["date", "id"], ascending=[False, False]
-            ).iloc[0]
+            latest_snapshot = candidates.sort_values(["date", "id"], ascending=[False, False]).iloc[
+                0
+            ]
     else:
         latest_snapshot = None
 
