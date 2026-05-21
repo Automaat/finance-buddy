@@ -37,6 +37,10 @@ var (
 	ErrNotFound  = errors.New("company valuation not found")
 	ErrRangeLow  = errors.New("fmv_low cannot exceed fmv_per_share")
 	ErrRangeHigh = errors.New("fmv_high cannot be below fmv_per_share")
+	// ErrNoValuation signals "company has no active valuation" — a normal
+	// outcome for GetLatestForCompany that consumers (equity grants) treat
+	// as "skip paper-value computation", not as a failure.
+	ErrNoValuation = errors.New("no valuation for company")
 )
 
 // Store is the persistence boundary.
@@ -200,6 +204,30 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*Valuation, 
 		return nil, fmt.Errorf("update valuation: %w", err)
 	}
 	return updated, nil
+}
+
+// GetLatestForCompany returns the most recent active valuation for a company
+// on/before onDate. Returns ErrNoValuation when no valuation exists — callers
+// (equity grants) treat that as a normal "skip paper-value computation"
+// branch rather than a failure.
+func (s *Store) GetLatestForCompany(ctx context.Context, company string, onDate *time.Time) (*Valuation, error) {
+	query := `SELECT ` + selectColumns + ` FROM company_valuations
+		WHERE company = $1 AND is_active = true`
+	args := []any{company}
+	if onDate != nil {
+		query += ` AND date <= $2`
+		args = append(args, *onDate)
+	}
+	query += ` ORDER BY date DESC LIMIT 1`
+	row := s.pool.QueryRow(ctx, query, args...)
+	v, err := scanValuation(row)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNoValuation
+		}
+		return nil, fmt.Errorf("select latest valuation: %w", err)
+	}
+	return v, nil
 }
 
 // Delete soft-deletes the row (matches Python's soft_delete helper).

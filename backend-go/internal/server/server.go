@@ -19,6 +19,7 @@ import (
 	bonusevents "github.com/Automaat/finance-buddy/backend-go/internal/bonus_events"
 	companyvaluations "github.com/Automaat/finance-buddy/backend-go/internal/company_valuations"
 	"github.com/Automaat/finance-buddy/backend-go/internal/config"
+	equitygrants "github.com/Automaat/finance-buddy/backend-go/internal/equity_grants"
 	"github.com/Automaat/finance-buddy/backend-go/internal/fx"
 	"github.com/Automaat/finance-buddy/backend-go/internal/goals"
 	"github.com/Automaat/finance-buddy/backend-go/internal/personas"
@@ -110,6 +111,20 @@ func New(cfg Config, logger *slog.Logger, deps Deps) http.Handler {
 			r.Get("/{id}", bonusesHandler.Get)
 			r.Patch("/{id}", bonusesHandler.Update)
 			r.Delete("/{id}", bonusesHandler.Delete)
+		})
+
+		grantsHandler := equitygrants.NewHandler(
+			equitygrants.NewStore(deps.Pool),
+			companyvaluations.NewStore(deps.Pool),
+			fxSvc,
+			logger,
+		)
+		r.Route("/api/equity-grants", func(r chi.Router) {
+			r.Get("/", grantsHandler.List)
+			r.Post("/", grantsHandler.Create)
+			r.Get("/{id}", grantsHandler.Get)
+			r.Patch("/{id}", grantsHandler.Update)
+			r.Delete("/{id}", grantsHandler.Delete)
 		})
 	}
 
