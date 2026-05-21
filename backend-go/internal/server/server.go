@@ -16,6 +16,7 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	companyvaluations "github.com/Automaat/finance-buddy/backend-go/internal/company_valuations"
 	"github.com/Automaat/finance-buddy/backend-go/internal/config"
 	"github.com/Automaat/finance-buddy/backend-go/internal/goals"
 	"github.com/Automaat/finance-buddy/backend-go/internal/personas"
@@ -84,6 +85,17 @@ func New(cfg Config, logger *slog.Logger, deps Deps) http.Handler {
 			r.Get("/{id}", goalsHandler.Get)
 			r.Put("/{id}", goalsHandler.Update)
 			r.Delete("/{id}", goalsHandler.Delete)
+		})
+
+		valuationsHandler := companyvaluations.NewHandler(
+			companyvaluations.NewStore(deps.Pool), logger,
+		)
+		r.Route("/api/company-valuations", func(r chi.Router) {
+			r.Get("/", valuationsHandler.List)
+			r.Post("/", valuationsHandler.Create)
+			r.Get("/{id}", valuationsHandler.Get)
+			r.Patch("/{id}", valuationsHandler.Update)
+			r.Delete("/{id}", valuationsHandler.Delete)
 		})
 	}
 
