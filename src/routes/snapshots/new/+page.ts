@@ -1,14 +1,13 @@
 import { error } from '@sveltejs/kit';
-import { env } from '$env/dynamic/public';
-import { browser } from '$app/environment';
+import { API_URL_NOT_CONFIGURED_MESSAGE, resolveApiUrl } from '$lib/utils/api';
 
 export async function load({ fetch }) {
-	try {
-		const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
-		if (!apiUrl) {
-			throw error(500, 'API base URL is not configured');
-		}
+	const apiUrl = resolveApiUrl();
+	if (!apiUrl) {
+		throw error(500, API_URL_NOT_CONFIGURED_MESSAGE);
+	}
 
+	try {
 		// Fetch accounts, assets, and personas in parallel
 		const [accountsResponse, assetsResponse, personasResponse] = await Promise.all([
 			fetch(`${apiUrl}/api/accounts`),
@@ -36,7 +35,7 @@ export async function load({ fetch }) {
 			personas
 		};
 	} catch (err) {
-		if (err instanceof Error && 'status' in err) {
+		if (err && typeof err === 'object' && 'status' in err) {
 			throw err;
 		}
 		throw error(500, 'Failed to load data');

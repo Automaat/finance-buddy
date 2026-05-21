@@ -1,6 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { env } from '$env/dynamic/public';
-import { browser } from '$app/environment';
+import { API_URL_NOT_CONFIGURED_MESSAGE, resolveApiUrl } from '$lib/utils/api';
 import type { PageLoad } from './$types';
 
 export interface SnapshotListItem {
@@ -11,9 +10,9 @@ export interface SnapshotListItem {
 }
 
 export const load: PageLoad = async ({ fetch }) => {
-	const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
+	const apiUrl = resolveApiUrl();
 	if (!apiUrl) {
-		throw error(500, 'API URL is not configured');
+		throw error(500, API_URL_NOT_CONFIGURED_MESSAGE);
 	}
 
 	const snapshots = (async () => {
@@ -23,6 +22,7 @@ export const load: PageLoad = async ({ fetch }) => {
 		}
 		return (await response.json()) as SnapshotListItem[];
 	})();
+	snapshots.catch(() => {});
 
 	return {
 		snapshots

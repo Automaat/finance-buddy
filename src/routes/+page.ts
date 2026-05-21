@@ -1,19 +1,23 @@
 import { error } from '@sveltejs/kit';
-import { env } from '$env/dynamic/public';
-import { browser } from '$app/environment';
+import { API_URL_NOT_CONFIGURED_MESSAGE, resolveApiUrl } from '$lib/utils/api';
 
 export async function load({ fetch }) {
-	const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
+	const apiUrl = resolveApiUrl();
 	if (!apiUrl) {
-		throw error(500, 'API URL is not configured');
+		throw error(500, API_URL_NOT_CONFIGURED_MESSAGE);
 	}
 
 	const currentYear = new Date().getFullYear();
 
 	const personas = (async () => {
-		const res = await fetch(`${apiUrl}/api/personas`);
-		return res.ok ? await res.json() : [];
+		try {
+			const res = await fetch(`${apiUrl}/api/personas`);
+			return res.ok ? await res.json() : [];
+		} catch {
+			return [];
+		}
 	})();
+	personas.catch(() => {});
 
 	const dashboardData = (async () => {
 		const [dashboardRes, retirementRes] = await Promise.all([
@@ -33,6 +37,7 @@ export async function load({ fetch }) {
 			retirementStats
 		};
 	})();
+	dashboardData.catch(() => {});
 
 	return {
 		dashboardData,

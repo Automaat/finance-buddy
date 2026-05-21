@@ -1,6 +1,5 @@
-import { browser } from '$app/environment';
 import { error } from '@sveltejs/kit';
-import { env } from '$env/dynamic/public';
+import { API_URL_NOT_CONFIGURED_MESSAGE, resolveApiUrl } from '$lib/utils/api';
 import type { PageLoad } from './$types';
 
 export interface Debt {
@@ -41,7 +40,11 @@ export interface DebtsListResponse {
 }
 
 export const load: PageLoad = async ({ fetch }) => {
-	const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
+	const apiUrl = resolveApiUrl();
+	if (!apiUrl) {
+		throw error(500, API_URL_NOT_CONFIGURED_MESSAGE);
+	}
+
 	const [debtsResponse, personasResponse] = await Promise.all([
 		fetch(`${apiUrl}/api/debts`),
 		fetch(`${apiUrl}/api/personas`)

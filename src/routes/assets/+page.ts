@@ -1,6 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { env } from '$env/dynamic/public';
-import { browser } from '$app/environment';
+import { API_URL_NOT_CONFIGURED_MESSAGE, resolveApiUrl } from '$lib/utils/api';
 import type { PageLoad } from './$types';
 
 export interface Asset {
@@ -16,11 +15,12 @@ export interface AssetsData {
 }
 
 export const load: PageLoad = async ({ fetch }) => {
+	const apiUrl = resolveApiUrl();
+	if (!apiUrl) {
+		throw error(500, API_URL_NOT_CONFIGURED_MESSAGE);
+	}
+
 	try {
-		const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
-		if (!apiUrl) {
-			throw error(500, 'API URL is not configured');
-		}
 		const response = await fetch(`${apiUrl}/api/assets`);
 
 		if (!response.ok) {
@@ -30,7 +30,7 @@ export const load: PageLoad = async ({ fetch }) => {
 		const data: AssetsData = await response.json();
 		return data;
 	} catch (err) {
-		if (err instanceof Error && 'status' in err) {
+		if (err && typeof err === 'object' && 'status' in err) {
 			throw err;
 		}
 		throw error(500, 'Failed to load assets');

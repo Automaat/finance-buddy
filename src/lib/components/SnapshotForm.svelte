@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { env } from '$env/dynamic/public';
+	import { getApiUrlOrThrow } from '$lib/utils/api';
 	import { Wallet, Umbrella, TrendingUp, Home, CreditCard } from 'lucide-svelte';
 	import type { Account, Asset, SnapshotResponse } from '$lib/types';
 	import NewAccountModal from './snapshot/NewAccountModal.svelte';
@@ -169,8 +169,9 @@
 			const account_wrapper =
 				newAccountSection === 'retirement' && newAccountWrapper ? newAccountWrapper : null;
 			const purpose = newAccountSection === 'retirement' ? 'retirement' : 'general';
+			const apiUrl = getApiUrlOrThrow();
 
-			const response = await fetch(`${env.PUBLIC_API_URL_BROWSER}/api/accounts`, {
+			const response = await fetch(`${apiUrl}/api/accounts`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
@@ -250,7 +251,8 @@
 		error = '';
 
 		try {
-			const response = await fetch(`${env.PUBLIC_API_URL_BROWSER}/api/assets`, {
+			const apiUrl = getApiUrlOrThrow();
+			const response = await fetch(`${apiUrl}/api/assets`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
@@ -293,6 +295,7 @@
 		error = '';
 
 		try {
+			const apiUrl = getApiUrlOrThrow();
 			const allAccounts = [...assets, ...liabilities];
 			const accountPayloads = editingSnapshot
 				? allAccounts
@@ -356,8 +359,8 @@
 
 			const method = editingSnapshot ? 'PUT' : 'POST';
 			const url = editingSnapshot
-				? `${env.PUBLIC_API_URL_BROWSER}/api/snapshots/${editingSnapshot.id}`
-				: `${env.PUBLIC_API_URL_BROWSER}/api/snapshots`;
+				? `${apiUrl}/api/snapshots/${editingSnapshot.id}`
+				: `${apiUrl}/api/snapshots`;
 
 			const response = await fetch(url, {
 				method,

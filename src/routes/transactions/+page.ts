@@ -1,6 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { env } from '$env/dynamic/public';
-import { browser } from '$app/environment';
+import { API_URL_NOT_CONFIGURED_MESSAGE, resolveApiUrl } from '$lib/utils/api';
 import type { PageLoad } from './$types';
 import type { Transaction, TransactionsData } from '$lib/types/transactions';
 import { INVESTMENT_CATEGORIES } from '$lib/constants';
@@ -14,12 +13,12 @@ export interface Account {
 }
 
 export const load: PageLoad = async ({ fetch, url }) => {
-	try {
-		const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
-		if (!apiUrl) {
-			throw error(500, 'API URL is not configured');
-		}
+	const apiUrl = resolveApiUrl();
+	if (!apiUrl) {
+		throw error(500, API_URL_NOT_CONFIGURED_MESSAGE);
+	}
 
+	try {
 		// Build query params from URL
 		const accountId = url.searchParams.get('account_id');
 		const owner = url.searchParams.get('owner');
@@ -68,7 +67,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 			}
 		};
 	} catch (err) {
-		if (err instanceof Error && 'status' in err) {
+		if (err && typeof err === 'object' && 'status' in err) {
 			throw err;
 		}
 		throw error(500, 'Failed to load transactions');

@@ -1,6 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { env } from '$env/dynamic/public';
-import { browser } from '$app/environment';
+import { API_URL_NOT_CONFIGURED_MESSAGE, resolveApiUrl } from '$lib/utils/api';
 import type { PageLoad } from './$types';
 import type { Transaction, TransactionsData } from '$lib/types/transactions';
 import type { Persona } from '$lib/types/personas';
@@ -29,9 +28,9 @@ export interface AccountsData {
 export type { Transaction, TransactionsData };
 
 export const load: PageLoad = async ({ fetch }) => {
-	const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
+	const apiUrl = resolveApiUrl();
 	if (!apiUrl) {
-		throw error(500, 'API URL is not configured');
+		throw error(500, API_URL_NOT_CONFIGURED_MESSAGE);
 	}
 
 	const personas = (async (): Promise<Persona[]> => {
@@ -41,6 +40,7 @@ export const load: PageLoad = async ({ fetch }) => {
 		}
 		return (await res.json()) as Persona[];
 	})();
+	personas.catch(() => {});
 
 	const accountsData = (async () => {
 		const response = await fetch(`${apiUrl}/api/accounts`);
@@ -49,6 +49,7 @@ export const load: PageLoad = async ({ fetch }) => {
 		}
 		return (await response.json()) as AccountsData;
 	})();
+	accountsData.catch(() => {});
 
 	return {
 		accountsData,

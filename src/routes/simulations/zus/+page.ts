@@ -1,13 +1,12 @@
 import { error } from '@sveltejs/kit';
-import { browser } from '$app/environment';
-import { env } from '$env/dynamic/public';
+import { API_URL_NOT_CONFIGURED_MESSAGE, resolveApiUrl } from '$lib/utils/api';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ fetch }) => {
-	try {
-		const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
-		if (!apiUrl) throw error(500, 'API URL not configured');
+	const apiUrl = resolveApiUrl();
+	if (!apiUrl) throw error(500, API_URL_NOT_CONFIGURED_MESSAGE);
 
+	try {
 		const [prefillRes, personasRes] = await Promise.all([
 			fetch(`${apiUrl}/api/zus/prefill`),
 			fetch(`${apiUrl}/api/personas`)
@@ -18,7 +17,7 @@ export const load: PageLoad = async ({ fetch }) => {
 		const personas = personasRes.ok ? await personasRes.json() : [];
 		return { prefill, personas };
 	} catch (err) {
-		if (err instanceof Error && 'status' in err) throw err;
+		if (err && typeof err === 'object' && 'status' in err) throw err;
 		throw error(500, 'Failed to load ZUS calculator data');
 	}
 };

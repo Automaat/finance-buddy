@@ -1,6 +1,6 @@
 [tools]
 node = "24"
-python = "3.14.5"
+# Let uv manage Python resolution so Docker-based tasks don't depend on a local Python install.
 uv = "latest"
 
 [tasks.dev]

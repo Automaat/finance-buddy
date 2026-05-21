@@ -29,9 +29,13 @@
 
 	$effect(() => {
 		let cancelled = false;
-		Promise.resolve(data.personas).then((p) => {
-			if (!cancelled) personas = (p ?? []) as Persona[];
-		});
+		Promise.resolve(data.personas)
+			.then((p) => {
+				if (!cancelled) personas = (p ?? []) as Persona[];
+			})
+			.catch(() => {
+				if (!cancelled) personas = [];
+			});
 		return () => {
 			cancelled = true;
 		};

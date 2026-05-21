@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
 	import { browser } from '$app/environment';
-	import { env } from '$env/dynamic/public';
 	import * as echarts from 'echarts';
 	import type { PageData } from './$types';
+	import { getApiUrlOrThrow } from '$lib/utils/api';
 	import {
 		buildRetirementProjectionOption,
 		type AccountSimulation
@@ -159,8 +159,7 @@
 				}
 			}
 
-			const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
-			if (!apiUrl) throw new Error('API URL not configured');
+			const apiUrl = getApiUrlOrThrow();
 
 			const requestBody = {
 				current_age: currentAge,

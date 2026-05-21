@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { browser } from '$app/environment';
-	import { env } from '$env/dynamic/public';
 	import * as echarts from 'echarts';
 	import type { EChartsOption } from 'echarts';
+	import { getApiUrlOrThrow } from '$lib/utils/api';
 
 	interface MortgageVsInvestYearlyRow {
 		year: number;
@@ -74,8 +74,7 @@
 		results = null;
 
 		try {
-			const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
-			if (!apiUrl) throw new Error('API URL not configured');
+			const apiUrl = getApiUrlOrThrow();
 
 			const response = await fetch(`${apiUrl}/api/simulations/mortgage-vs-invest`, {
 				method: 'POST',

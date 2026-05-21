@@ -1,6 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { env } from '$env/dynamic/public';
-import { browser } from '$app/environment';
+import { API_URL_NOT_CONFIGURED_MESSAGE, resolveApiUrl } from '$lib/utils/api';
 import type { PageLoad } from './$types';
 import type { SalariesData } from '$lib/types/salaries';
 import type { CpiSeries } from '$lib/types/cpi';
@@ -8,12 +7,12 @@ import type { CpiSeries } from '$lib/types/cpi';
 const EMPTY_CPI: CpiSeries = { points: [], base_year: null, latest_year: null, source: '' };
 
 export const load: PageLoad = async ({ fetch, url }) => {
-	try {
-		const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
-		if (!apiUrl) {
-			throw error(500, 'API URL is not configured');
-		}
+	const apiUrl = resolveApiUrl();
+	if (!apiUrl) {
+		throw error(500, API_URL_NOT_CONFIGURED_MESSAGE);
+	}
 
+	try {
 		const owner = url.searchParams.get('owner');
 		const dateFrom = url.searchParams.get('date_from');
 		const dateTo = url.searchParams.get('date_to');
@@ -51,7 +50,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 			cpiSeries
 		};
 	} catch (err) {
-		if (err instanceof Error && 'status' in err) {
+		if (err && typeof err === 'object' && 'status' in err) {
 			throw err;
 		}
 		throw error(500, 'Failed to load salary records');

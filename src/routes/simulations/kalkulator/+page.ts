@@ -1,11 +1,10 @@
-import { browser } from '$app/environment';
-import { env } from '$env/dynamic/public';
+import { resolveApiUrl } from '$lib/utils/api';
 import type { PageLoad } from './$types';
 import type { SalaryRecord } from '$lib/types/salaries';
 
 export const load: PageLoad = async ({ fetch }) => {
 	try {
-		const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
+		const apiUrl = resolveApiUrl();
 		if (!apiUrl) return { latestSalaries: [] };
 
 		const res = await fetch(`${apiUrl}/api/salaries`);
