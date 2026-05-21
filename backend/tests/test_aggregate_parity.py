@@ -150,3 +150,32 @@ def test_aggregate_path_matches_raw_path(test_db_session):
         assert a.category == r.category
         assert a.owner == r.owner
         assert abs(a.value - r.value) < 0.01
+
+
+def test_same_month_snapshots_stay_distinct(test_db_session):
+    """Two snapshots in the same calendar month must produce two history points."""
+    acct = create_test_account(test_db_session, name="Bank Marcin", category="bank", owner="Marcin")
+
+    snap1 = create_test_snapshot(test_db_session, snapshot_date=date(2024, 1, 1))
+    create_test_snapshot_value(test_db_session, snap1.id, account_id=acct.id, value=Decimal("1000"))
+
+    snap2 = create_test_snapshot(test_db_session, snapshot_date=date(2024, 1, 15))
+    create_test_snapshot_value(test_db_session, snap2.id, account_id=acct.id, value=Decimal("2000"))
+
+    raw = _get_dashboard_data_raw(test_db_session)
+    assert len(raw.net_worth_history) == 2, "raw path must keep same-month snapshots distinct"
+
+    recompute_all(test_db_session)
+    test_db_session.commit()
+
+    agg = get_dashboard_data(test_db_session)
+    assert len(agg.net_worth_history) == 2, "aggregate path must keep same-month snapshots distinct"
+
+    raw_dates = [pt.date for pt in raw.net_worth_history]
+    agg_dates = [pt.date for pt in agg.net_worth_history]
+    assert agg_dates == raw_dates
+
+    for agg_pt, raw_pt in zip(agg.net_worth_history, raw.net_worth_history, strict=True):
+        assert abs(agg_pt.value - raw_pt.value) < 0.01, (
+            f"net_worth mismatch at {raw_pt.date}: agg={agg_pt.value}, raw={raw_pt.value}"
+        )

@@ -78,13 +78,20 @@ def _load_aggregate_rows(db: Session) -> list[SnapshotAggregate]:
 def _get_dashboard_data_from_aggregates(
     db: Session, agg_rows: list[SnapshotAggregate]
 ) -> DashboardResponse:
-    # --- Net worth history (group by month across all owners) ---
-    month_nw: dict = defaultdict(float)
+    # --- Net worth history (one point per snapshot, sum across owners) ---
+    snapshot_nw: dict = defaultdict(float)
     for row in agg_rows:
-        month_nw[row.month] += float(row.net_worth)
+        snapshot_nw[row.snapshot_id] += float(row.net_worth)
 
-    sorted_months = sorted(month_nw)
-    net_worth_history = [NetWorthPoint(date=m, value=month_nw[m]) for m in sorted_months]
+    snap_objs = db.execute(
+        select(Snapshot).where(Snapshot.id.in_(list(snapshot_nw)))
+    ).scalars().all()
+    snap_date: dict = {s.id: s.date for s in snap_objs}
+
+    sorted_sids = sorted(snapshot_nw, key=lambda sid: snap_date[sid])
+    net_worth_history = [
+        NetWorthPoint(date=snap_date[sid], value=snapshot_nw[sid]) for sid in sorted_sids
+    ]
     current_net_worth = float(net_worth_history[-1].value)
     last_month_net_worth = float(net_worth_history[-2].value) if len(net_worth_history) > 1 else 0.0
 
@@ -286,9 +293,20 @@ def _compute_savings_rate_from_aggregates(
     """Savings rate from aggregate net_worth deltas — no SnapshotValue scan."""
     from app.models import SalaryRecord
 
-    month_nw: dict = defaultdict(float)
+    # Group by snapshot_id first to avoid summing across multiple same-month snapshots
+    snapshot_nw_sr: dict = defaultdict(float)
+    snapshot_month_sr: dict = {}
     for row in agg_rows:
-        month_nw[row.month] += float(row.net_worth)
+        snapshot_nw_sr[row.snapshot_id] += float(row.net_worth)
+        snapshot_month_sr[row.snapshot_id] = row.month
+
+    # Per month, take the latest snapshot (highest snapshot_id = most recent)
+    month_latest_sid: dict = {}
+    for sid, month in snapshot_month_sr.items():
+        if month not in month_latest_sid or sid > month_latest_sid[month]:
+            month_latest_sid[month] = sid
+
+    month_nw: dict = {month: snapshot_nw_sr[sid] for month, sid in month_latest_sid.items()}
 
     sorted_months = sorted(month_nw)
     if len(sorted_months) < 4:
