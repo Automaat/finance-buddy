@@ -1,11 +1,14 @@
 """Metric-card calculations for the dashboard (savings rate, ratios, hourly costs)."""
 
+from datetime import timedelta
+
 import numpy as np
 import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import AppConfig, SalaryRecord
+from app.schemas.dashboard import DeltaValue, TileDelta, TileDeltas
 
 # Time constants for hourly cost calculations
 MONTHLY_WORK_HOURS = 160  # Standard monthly work hours
@@ -124,3 +127,93 @@ def _calculate_hour_of_life_cost(db: Session) -> float | None:
         return None
 
     return float(latest_salary.gross_amount) / MONTHLY_LIFE_HOURS
+
+
+_EMPTY_TILE_DELTAS = TileDeltas(
+    net_worth=TileDelta(mom=None, yoy=None),
+    assets=TileDelta(mom=None, yoy=None),
+    liabilities=TileDelta(mom=None, yoy=None),
+)
+
+
+def _per_snapshot_totals(df: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate (assets, liabilities, net_worth) per snapshot."""
+    if df.empty:
+        return pd.DataFrame(columns=["snapshot_id", "date", "assets", "liabilities", "net_worth"])
+
+    name_present = df["name"].notna() if "name" in df.columns else pd.Series(False, index=df.index)
+    asset_table_mask = df["asset_id"].notna() & name_present
+    account_asset_mask = df["account_id"].notna() & (df["type"] == "asset")
+    account_liab_mask = df["account_id"].notna() & (df["type"] == "liability")
+
+    value = df["value"].astype(float)
+    work = df[["snapshot_id", "date"]].copy()
+    work["assets"] = value.where(asset_table_mask | account_asset_mask, 0.0)
+    work["liabilities"] = value.where(account_liab_mask, 0.0)
+
+    grouped = (
+        work.groupby(["snapshot_id", "date"])[["assets", "liabilities"]]
+        .sum()
+        .reset_index()
+    )
+    grouped["net_worth"] = grouped["assets"] - grouped["liabilities"]
+    return grouped.sort_values(["date", "snapshot_id"]).reset_index(drop=True)
+
+
+def _pick_baseline(
+    totals: pd.DataFrame, low: object, high: object
+) -> pd.Series | None:
+    """Latest row with low <= date <= high; deterministic tie-break by snapshot_id desc."""
+    window = totals[(totals["date"] >= low) & (totals["date"] <= high)]
+    if window.empty:
+        return None
+    max_date = window["date"].max()
+    same_day = window[window["date"] == max_date]
+    return same_day.sort_values("snapshot_id", ascending=False).iloc[0]
+
+
+def _delta(
+    current: float, baseline: pd.Series | None, field: str
+) -> DeltaValue | None:
+    if baseline is None:
+        return None
+    base = float(baseline[field])
+    abs_change = current - base
+    pct = (abs_change / abs(base)) * 100 if base != 0 else None
+    return DeltaValue(absolute=float(abs_change), percentage=pct)
+
+
+def compute_tile_deltas(df: pd.DataFrame, snapshots_df: pd.DataFrame) -> TileDeltas:
+    """Compute MoM/YoY deltas for net worth, assets, liabilities.
+
+    MoM window = [latest - 45d, latest - 15d]
+    YoY window = [latest - 395d, latest - 335d]
+    Latest snapshot is excluded from baseline candidates.
+    """
+    if df.empty or snapshots_df.empty:
+        return _EMPTY_TILE_DELTAS
+
+    totals = _per_snapshot_totals(df)
+    if totals.empty:
+        return _EMPTY_TILE_DELTAS
+
+    current = totals.iloc[-1]
+    prior = totals.iloc[:-1]
+    latest_date = current["date"]
+
+    mom_base = _pick_baseline(
+        prior, latest_date - timedelta(days=45), latest_date - timedelta(days=15)
+    )
+    yoy_base = _pick_baseline(
+        prior, latest_date - timedelta(days=395), latest_date - timedelta(days=335)
+    )
+
+    def _tile(field: str) -> TileDelta:
+        cur = float(current[field])
+        return TileDelta(mom=_delta(cur, mom_base, field), yoy=_delta(cur, yoy_base, field))
+
+    return TileDeltas(
+        net_worth=_tile("net_worth"),
+        assets=_tile("assets"),
+        liabilities=_tile("liabilities"),
+    )

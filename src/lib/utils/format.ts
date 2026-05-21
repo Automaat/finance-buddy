@@ -39,6 +39,20 @@ export interface Change {
 	direction: 'up' | 'down' | 'flat';
 }
 
+export function formatSignedPLN(value: number | null | undefined): string {
+	if (value == null || Number.isNaN(value)) return '—';
+	if (value === 0) return plnFormatter.format(0);
+	const sign = value > 0 ? '+' : '−';
+	return `${sign}${plnFormatter.format(Math.abs(value))}`;
+}
+
+export function formatSignedPercent(value: number | null | undefined): string {
+	if (value == null || Number.isNaN(value)) return '—';
+	if (value === 0) return percentFormatter.format(0);
+	const sign = value > 0 ? '+' : '−';
+	return `${sign}${percentFormatter.format(Math.abs(value) / 100)}`;
+}
+
 export function calculateChange(current: number, previous: number): Change {
 	const absolute = current - previous;
 	const percent = previous === 0 ? 0 : (absolute / Math.abs(previous)) * 100;
