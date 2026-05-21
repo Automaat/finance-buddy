@@ -302,6 +302,9 @@ func metricsFor(accountID int, balances map[int]LatestBalance, totals map[int]de
 func (h *Handler) writeAccountError(w http.ResponseWriter, err error, id int, name string) {
 	switch {
 	case errors.Is(err, ErrAccountNotFound):
+		writeDetailError(w, http.StatusNotFound,
+			fmt.Sprintf("Account with id %d not found", id))
+	case errors.Is(err, ErrAccountInactive):
 		writeDetailError(w, http.StatusNotFound, "Account not found")
 	case errors.Is(err, ErrAccountNotLiability):
 		writeDetailError(w, http.StatusBadRequest,

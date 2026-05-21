@@ -49,6 +49,7 @@ type LatestBalance struct {
 // Sentinel errors.
 var (
 	ErrAccountNotFound     = errors.New("account not found")
+	ErrAccountInactive     = errors.New("account is inactive")
 	ErrAccountNotLiability = errors.New("account is not a liability")
 	ErrNotFound            = errors.New("debt not found")
 	ErrDuplicateForAccount = errors.New("debt already exists for account")
@@ -72,7 +73,10 @@ const debtColsQualified = `
 	d.interest_rate, d.currency, d.notes, d.is_active, d.created_at
 `
 
-// LoadAccount mirrors Python's create-debt validation.
+// LoadAccount mirrors Python's create-debt validation. Distinguishes the
+// missing-row case ("Account with id {id} not found") from the
+// soft-deleted-row case ("Account not found") by returning the account
+// alongside ErrAccountInactive.
 func (s *Store) LoadAccount(ctx context.Context, id int) (*AccountInfo, error) {
 	row := s.pool.QueryRow(ctx,
 		`SELECT id, name, owner, type, is_active FROM accounts WHERE id = $1`, id,
@@ -85,7 +89,7 @@ func (s *Store) LoadAccount(ctx context.Context, id int) (*AccountInfo, error) {
 		return nil, fmt.Errorf("load account: %w", err)
 	}
 	if !a.IsActive {
-		return nil, ErrAccountNotFound
+		return &a, ErrAccountInactive
 	}
 	if a.Type != "liability" {
 		return &a, ErrAccountNotLiability
