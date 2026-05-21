@@ -1,0 +1,28 @@
+{
+  "balances": {
+    "ike_ewa": 0.0,
+    "ike_marcin": 46100.0,
+    "ikze_ewa": 0.0,
+    "ikze_marcin": 0.0
+  },
+  "current_age": 35,
+  "monthly_salaries": {
+    "ewa": null,
+    "marcin": 21000.0
+  },
+  "ppk_balances": {
+    "ewa": 0.0,
+    "marcin": 13600.0
+  },
+  "ppk_rates": {
+    "ewa": {
+      "employee": 2.0,
+      "employer": 1.5
+    },
+    "marcin": {
+      "employee": 2.0,
+      "employer": 1.5
+    }
+  },
+  "retirement_age": 65
+}

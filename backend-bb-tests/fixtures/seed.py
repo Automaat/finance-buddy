@@ -24,13 +24,38 @@ if TYPE_CHECKING:
 # Fixture identities — fixed values so tests can reference them.
 PERSONA_MARCIN = "Marcin"
 PERSONA_EWA = "Ewa"
+PERSONA_SHARED = "Shared"
 CONFIG_BIRTH_DATE = date(1990, 6, 15)
 CONFIG_RETIREMENT_AGE = 65
 CONFIG_RETIREMENT_MONTHLY_SALARY = Decimal("8000.00")
 CONFIG_MONTHLY_EXPENSES = Decimal("5000.00")
 CONFIG_MONTHLY_MORTGAGE_PAYMENT = Decimal("2000.00")
 
-# Allow-list of tables the seed manages. _truncate_all refuses to wipe anything
+# Stable account names — tests look these up by name to resolve auto-assigned ids.
+ACCOUNT_MARCIN_BANK = "Marcin Checking"
+ACCOUNT_EWA_BANK = "Ewa Checking"
+ACCOUNT_MARCIN_IKE = "Marcin IKE"
+ACCOUNT_MARCIN_PPK = "Marcin PPK"
+ACCOUNT_MARCIN_MORTGAGE = "Marcin Mortgage"
+ACCOUNT_SHARED_REAL_ESTATE = "Shared Apartment Real Estate"
+
+# Stable asset / aggregate identities.
+ASSET_MARCIN_APARTMENT = "Marcin Apartment"
+
+# Stable snapshot dates — month-end so backend aggregation buckets cleanly.
+SNAPSHOT_DATES = (
+    date(2025, 11, 30),
+    date(2025, 12, 31),
+    date(2026, 1, 31),
+)
+
+# Companies used across compensation fixtures.
+COMPANY_MARCIN_EMPLOYER = "Acme Sp. z o.o."
+
+# Created-at marker used everywhere so equality assertions are stable.
+SEED_CREATED_AT = datetime(2026, 1, 1, 12, 0, 0)
+
+# Allow-list of tables the seed manages. _truncate_seeded refuses to wipe anything
 # outside this set — protects against a stray BB_DATABASE_URL pointed at a
 # non-test database.
 SEEDED_TABLES: frozenset[str] = frozenset(
@@ -111,15 +136,14 @@ def _truncate_seeded(cur: psycopg2.extensions.cursor) -> None:
 
 
 def _seed_personas(cur: psycopg2.extensions.cursor) -> None:
-    now = datetime(2026, 1, 1, 0, 0, 0)
     cur.executemany(
         """
         INSERT INTO personas (name, ppk_employee_rate, ppk_employer_rate, created_at)
         VALUES (%s, %s, %s, %s)
         """,
         [
-            (PERSONA_MARCIN, Decimal("2.0"), Decimal("1.5"), now),
-            (PERSONA_EWA, Decimal("2.0"), Decimal("1.5"), now),
+            (PERSONA_MARCIN, Decimal("2.0"), Decimal("1.5"), SEED_CREATED_AT),
+            (PERSONA_EWA, Decimal("2.0"), Decimal("1.5"), SEED_CREATED_AT),
         ],
     )
 
@@ -145,6 +169,457 @@ def _seed_config(cur: psycopg2.extensions.cursor) -> None:
     )
 
 
+def _seed_accounts(cur: psycopg2.extensions.cursor) -> dict[str, int]:
+    """Insert seeded accounts; return a name → id map for downstream FKs."""
+    rows = [
+        # name, type, category, owner, currency, wrapper, purpose, sqm, receives_contrib
+        (
+            ACCOUNT_MARCIN_BANK,
+            "asset",
+            "bank",
+            PERSONA_MARCIN,
+            "PLN",
+            None,
+            "general",
+            None,
+            True,
+        ),
+        (
+            ACCOUNT_EWA_BANK,
+            "asset",
+            "bank",
+            PERSONA_EWA,
+            "PLN",
+            None,
+            "general",
+            None,
+            True,
+        ),
+        (
+            ACCOUNT_MARCIN_IKE,
+            "asset",
+            "stock",
+            PERSONA_MARCIN,
+            "PLN",
+            "IKE",
+            "retirement",
+            None,
+            True,
+        ),
+        (
+            ACCOUNT_MARCIN_PPK,
+            "asset",
+            "ppk",
+            PERSONA_MARCIN,
+            "PLN",
+            "PPK",
+            "retirement",
+            None,
+            True,
+        ),
+        (
+            ACCOUNT_MARCIN_MORTGAGE,
+            "liability",
+            "mortgage",
+            PERSONA_MARCIN,
+            "PLN",
+            None,
+            "general",
+            None,
+            False,
+        ),
+        (
+            ACCOUNT_SHARED_REAL_ESTATE,
+            "asset",
+            "real_estate",
+            PERSONA_SHARED,
+            "PLN",
+            None,
+            "general",
+            Decimal("65.50"),
+            False,
+        ),
+    ]
+    ids: dict[str, int] = {}
+    for row in rows:
+        cur.execute(
+            """
+            INSERT INTO accounts (
+                name, type, category, owner, currency, account_wrapper, purpose,
+                square_meters, is_active, receives_contributions, created_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, TRUE, %s, %s)
+            RETURNING id
+            """,
+            (*row, SEED_CREATED_AT),
+        )
+        ids[row[0]] = cur.fetchone()[0]
+    return ids
+
+
+def _seed_assets(cur: psycopg2.extensions.cursor) -> dict[str, int]:
+    cur.execute(
+        """
+        INSERT INTO assets (name, is_active, created_at)
+        VALUES (%s, TRUE, %s)
+        RETURNING id
+        """,
+        (ASSET_MARCIN_APARTMENT, SEED_CREATED_AT),
+    )
+    return {ASSET_MARCIN_APARTMENT: cur.fetchone()[0]}
+
+
+def _seed_snapshots(cur: psycopg2.extensions.cursor) -> dict[date, int]:
+    ids: dict[date, int] = {}
+    for snap_date in SNAPSHOT_DATES:
+        cur.execute(
+            """
+            INSERT INTO snapshots (date, notes, created_at)
+            VALUES (%s, %s, %s)
+            RETURNING id
+            """,
+            (snap_date, f"Seed snapshot {snap_date.isoformat()}", SEED_CREATED_AT),
+        )
+        ids[snap_date] = cur.fetchone()[0]
+    return ids
+
+
+def _seed_snapshot_values(
+    cur: psycopg2.extensions.cursor,
+    snapshot_ids: dict[date, int],
+    account_ids: dict[str, int],
+    asset_ids: dict[str, int],
+) -> int:
+    """Three months of values per account + asset. Trend rises gently for assets,
+    mortgage principal shrinks. Returns row count for logging.
+    """
+    # Per-snapshot values (PLN). Ordering: [snap0, snap1, snap2] = Nov/Dec/Jan.
+    by_account: dict[str, tuple[Decimal, Decimal, Decimal]] = {
+        ACCOUNT_MARCIN_BANK: (Decimal("25000.00"), Decimal("27500.00"), Decimal("30000.00")),
+        ACCOUNT_EWA_BANK: (Decimal("18000.00"), Decimal("19200.00"), Decimal("20500.00")),
+        ACCOUNT_MARCIN_IKE: (Decimal("42000.00"), Decimal("44500.00"), Decimal("46100.00")),
+        ACCOUNT_MARCIN_PPK: (Decimal("12000.00"), Decimal("12800.00"), Decimal("13600.00")),
+        ACCOUNT_MARCIN_MORTGAGE: (
+            Decimal("280000.00"),
+            Decimal("278500.00"),
+            Decimal("277000.00"),
+        ),
+        ACCOUNT_SHARED_REAL_ESTATE: (
+            Decimal("650000.00"),
+            Decimal("655000.00"),
+            Decimal("660000.00"),
+        ),
+    }
+    by_asset: dict[str, tuple[Decimal, Decimal, Decimal]] = {
+        ASSET_MARCIN_APARTMENT: (Decimal("420000.00"), Decimal("422500.00"), Decimal("425000.00")),
+    }
+
+    count = 0
+    snap_dates = list(SNAPSHOT_DATES)
+    for name, values in by_account.items():
+        account_id = account_ids[name]
+        for snap_date, value in zip(snap_dates, values, strict=True):
+            cur.execute(
+                """
+                INSERT INTO snapshot_values (snapshot_id, account_id, asset_id, value)
+                VALUES (%s, %s, NULL, %s)
+                """,
+                (snapshot_ids[snap_date], account_id, value),
+            )
+            count += 1
+    for name, values in by_asset.items():
+        asset_id = asset_ids[name]
+        for snap_date, value in zip(snap_dates, values, strict=True):
+            cur.execute(
+                """
+                INSERT INTO snapshot_values (snapshot_id, account_id, asset_id, value)
+                VALUES (%s, NULL, %s, %s)
+                """,
+                (snapshot_ids[snap_date], asset_id, value),
+            )
+            count += 1
+    return count
+
+
+def _seed_transactions(
+    cur: psycopg2.extensions.cursor,
+    account_ids: dict[str, int],
+) -> None:
+    rows = [
+        (
+            account_ids[ACCOUNT_MARCIN_IKE],
+            Decimal("1500.00"),
+            date(2025, 12, 5),
+            PERSONA_MARCIN,
+            "employee",
+        ),
+        (
+            account_ids[ACCOUNT_MARCIN_PPK],
+            Decimal("400.00"),
+            date(2025, 12, 28),
+            PERSONA_MARCIN,
+            "employer",
+        ),
+        (
+            account_ids[ACCOUNT_MARCIN_PPK],
+            Decimal("250.00"),
+            date(2026, 1, 15),
+            PERSONA_MARCIN,
+            "government",
+        ),
+    ]
+    cur.executemany(
+        """
+        INSERT INTO transactions (
+            account_id, amount, date, owner, transaction_type, is_active, created_at
+        )
+        VALUES (%s, %s, %s, %s, %s, TRUE, %s)
+        """,
+        [(*r, SEED_CREATED_AT) for r in rows],
+    )
+
+
+def _seed_bonus_events(cur: psycopg2.extensions.cursor) -> None:
+    rows = [
+        # PLN annual bonus
+        (
+            date(2025, 12, 20),
+            Decimal("15000.00"),
+            "PLN",
+            "annual",
+            COMPANY_MARCIN_EMPLOYER,
+            PERSONA_MARCIN,
+            "UOP",
+            "2025 annual performance bonus",
+        ),
+        # USD sign-on bonus
+        (
+            date(2025, 7, 1),
+            Decimal("5000.00"),
+            "USD",
+            "signon",
+            COMPANY_MARCIN_EMPLOYER,
+            PERSONA_MARCIN,
+            "B2B",
+            "Joining USD signon",
+        ),
+    ]
+    cur.executemany(
+        """
+        INSERT INTO bonus_events (
+            date, amount, currency, type, company, owner, contract_type,
+            notes, is_active, created_at
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, TRUE, %s)
+        """,
+        [(*r, SEED_CREATED_AT) for r in rows],
+    )
+
+
+def _seed_company_valuations(cur: psycopg2.extensions.cursor) -> None:
+    cur.execute(
+        """
+        INSERT INTO company_valuations (
+            company, date, currency, fmv_per_share, fmv_low, fmv_high,
+            source, common_stock_discount_pct, notes, is_active, created_at
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE, %s)
+        """,
+        (
+            COMPANY_MARCIN_EMPLOYER,
+            date(2025, 6, 30),
+            "USD",
+            Decimal("12.5000"),
+            Decimal("11.0000"),
+            Decimal("14.0000"),
+            "409a",
+            Decimal("25.00"),
+            "Mid-2025 409A appraisal",
+            SEED_CREATED_AT,
+        ),
+    )
+
+
+def _seed_equity_grants(cur: psycopg2.extensions.cursor) -> None:
+    cur.execute(
+        """
+        INSERT INTO equity_grants (
+            grant_date, type, company, owner, total_shares, strike_price, currency,
+            vest_start_date, vest_cliff_months, vest_total_months, vest_frequency,
+            vest_custom_schedule, requires_liquidity_event, liquidity_event_date,
+            tax_treatment, notes, is_active, created_at
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE, %s)
+        """,
+        (
+            date(2024, 1, 15),
+            "rsu",
+            COMPANY_MARCIN_EMPLOYER,
+            PERSONA_MARCIN,
+            4800,
+            None,
+            "USD",
+            date(2024, 1, 15),
+            12,
+            48,
+            "monthly",
+            None,
+            False,
+            None,
+            "capital_gains_19",
+            "4-year RSU grant, monthly vest after 1-yr cliff",
+            SEED_CREATED_AT,
+        ),
+    )
+
+
+def _seed_fx_rates(cur: psycopg2.extensions.cursor) -> None:
+    rows = [
+        (date(2026, 1, 31), "USD", Decimal("4.150000")),
+        (date(2026, 1, 31), "EUR", Decimal("4.350000")),
+    ]
+    cur.executemany(
+        """
+        INSERT INTO fx_rates (date, currency, rate_pln, created_at)
+        VALUES (%s, %s, %s, %s)
+        """,
+        [(*r, SEED_CREATED_AT) for r in rows],
+    )
+
+
+def _seed_cpi_index(cur: psycopg2.extensions.cursor) -> None:
+    rows = [
+        (2023, Decimal("111.4000"), "GUS-BDL-217230"),
+        (2024, Decimal("103.6000"), "GUS-BDL-217230"),
+        (2025, Decimal("102.8000"), "GUS-BDL-217230"),
+    ]
+    cur.executemany(
+        """
+        INSERT INTO cpi_index (year, yoy_rate, source, fetched_at)
+        VALUES (%s, %s, %s, %s)
+        """,
+        [(*r, SEED_CREATED_AT) for r in rows],
+    )
+
+
+def _seed_debts(
+    cur: psycopg2.extensions.cursor,
+    account_ids: dict[str, int],
+) -> int:
+    cur.execute(
+        """
+        INSERT INTO debts (
+            account_id, name, debt_type, start_date, initial_amount,
+            interest_rate, currency, notes, is_active, created_at
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, TRUE, %s)
+        RETURNING id
+        """,
+        (
+            account_ids[ACCOUNT_MARCIN_MORTGAGE],
+            "Apartment Mortgage",
+            "mortgage",
+            date(2022, 6, 1),
+            Decimal("320000.00"),
+            Decimal("7.25"),
+            "PLN",
+            "Bank Pekao 30-year mortgage",
+            SEED_CREATED_AT,
+        ),
+    )
+    return cur.fetchone()[0]
+
+
+def _seed_debt_payments(
+    cur: psycopg2.extensions.cursor,
+    account_ids: dict[str, int],
+) -> None:
+    rows = [
+        (
+            account_ids[ACCOUNT_MARCIN_MORTGAGE],
+            Decimal("2000.00"),
+            date(2025, 12, 1),
+            PERSONA_MARCIN,
+        ),
+        (
+            account_ids[ACCOUNT_MARCIN_MORTGAGE],
+            Decimal("2000.00"),
+            date(2026, 1, 1),
+            PERSONA_MARCIN,
+        ),
+    ]
+    cur.executemany(
+        """
+        INSERT INTO debt_payments (account_id, amount, date, owner, is_active, created_at)
+        VALUES (%s, %s, %s, %s, TRUE, %s)
+        """,
+        [(*r, SEED_CREATED_AT) for r in rows],
+    )
+
+
+def _seed_salary_records(cur: psycopg2.extensions.cursor) -> None:
+    rows = [
+        (date(2025, 1, 31), Decimal("18000.00"), "UOP", COMPANY_MARCIN_EMPLOYER, PERSONA_MARCIN),
+        (date(2025, 6, 30), Decimal("19000.00"), "UOP", COMPANY_MARCIN_EMPLOYER, PERSONA_MARCIN),
+        (date(2026, 1, 31), Decimal("21000.00"), "UOP", COMPANY_MARCIN_EMPLOYER, PERSONA_MARCIN),
+    ]
+    cur.executemany(
+        """
+        INSERT INTO salary_records (
+            date, gross_amount, contract_type, company, owner, is_active, created_at
+        )
+        VALUES (%s, %s, %s, %s, %s, TRUE, %s)
+        """,
+        [(*r, SEED_CREATED_AT) for r in rows],
+    )
+
+
+def _seed_goals(
+    cur: psycopg2.extensions.cursor,
+    account_ids: dict[str, int],
+) -> None:
+    cur.execute(
+        """
+        INSERT INTO goals (
+            name, target_amount, target_date, current_amount, monthly_contribution,
+            is_completed, account_id, category, created_at
+        )
+        VALUES (%s, %s, %s, %s, %s, FALSE, %s, %s, %s)
+        """,
+        (
+            "Emergency fund",
+            Decimal("60000.00"),
+            date(2026, 12, 31),
+            Decimal("30000.00"),
+            Decimal("2500.00"),
+            account_ids[ACCOUNT_MARCIN_BANK],
+            # NOTE: Goal.category is a String(100) at the DB layer but the
+            # GoalResponse schema reads it back as `Category | None`. Pydantic
+            # raises on read if it's a non-Category value (e.g. a Purpose like
+            # "emergency_fund"). Leave NULL here — a seeded category isn't
+            # load-bearing for any current test.
+            None,
+            SEED_CREATED_AT,
+        ),
+    )
+
+
+def _seed_retirement_limits(cur: psycopg2.extensions.cursor) -> None:
+    rows = [
+        (2025, "IKE", PERSONA_MARCIN, Decimal("23472.00"), "2025 IKE limit"),
+        (2025, "IKZE", PERSONA_MARCIN, Decimal("9388.80"), "2025 IKZE limit"),
+    ]
+    cur.executemany(
+        """
+        INSERT INTO retirement_limits (
+            year, account_wrapper, owner, limit_amount, notes
+        )
+        VALUES (%s, %s, %s, %s, %s)
+        """,
+        rows,
+    )
+
+
 def seed(dsn: str) -> None:
     """Apply the deterministic seed. Idempotent — truncates first."""
     _assert_safe_to_truncate(dsn)
@@ -152,3 +627,18 @@ def seed(dsn: str) -> None:
         _truncate_seeded(cur)
         _seed_personas(cur)
         _seed_config(cur)
+        account_ids = _seed_accounts(cur)
+        asset_ids = _seed_assets(cur)
+        snapshot_ids = _seed_snapshots(cur)
+        _seed_snapshot_values(cur, snapshot_ids, account_ids, asset_ids)
+        _seed_transactions(cur, account_ids)
+        _seed_bonus_events(cur)
+        _seed_company_valuations(cur)
+        _seed_equity_grants(cur)
+        _seed_fx_rates(cur)
+        _seed_cpi_index(cur)
+        _seed_debts(cur, account_ids)
+        _seed_debt_payments(cur, account_ids)
+        _seed_salary_records(cur)
+        _seed_goals(cur, account_ids)
+        _seed_retirement_limits(cur)

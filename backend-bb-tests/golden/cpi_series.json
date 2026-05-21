@@ -1,0 +1,122 @@
+{
+  "base_year": 2003,
+  "latest_year": 2025,
+  "points": [
+    {
+      "cumulative_index": 100.0,
+      "year": 2003,
+      "yoy_rate": 100.8
+    },
+    {
+      "cumulative_index": 103.5,
+      "year": 2004,
+      "yoy_rate": 103.5
+    },
+    {
+      "cumulative_index": 105.6735,
+      "year": 2005,
+      "yoy_rate": 102.1
+    },
+    {
+      "cumulative_index": 106.730235,
+      "year": 2006,
+      "yoy_rate": 101.0
+    },
+    {
+      "cumulative_index": 109.398490875,
+      "year": 2007,
+      "yoy_rate": 102.5
+    },
+    {
+      "cumulative_index": 113.99322749175,
+      "year": 2008,
+      "yoy_rate": 104.2
+    },
+    {
+      "cumulative_index": 117.98299045396125,
+      "year": 2009,
+      "yoy_rate": 103.5
+    },
+    {
+      "cumulative_index": 121.05054820576424,
+      "year": 2010,
+      "yoy_rate": 102.6
+    },
+    {
+      "cumulative_index": 126.2557217786121,
+      "year": 2011,
+      "yoy_rate": 104.3
+    },
+    {
+      "cumulative_index": 130.92718348442077,
+      "year": 2012,
+      "yoy_rate": 103.7
+    },
+    {
+      "cumulative_index": 132.10552813578053,
+      "year": 2013,
+      "yoy_rate": 100.9
+    },
+    {
+      "cumulative_index": 132.10552813578053,
+      "year": 2014,
+      "yoy_rate": 100.0
+    },
+    {
+      "cumulative_index": 130.91657838255853,
+      "year": 2015,
+      "yoy_rate": 99.1
+    },
+    {
+      "cumulative_index": 130.13107891226318,
+      "year": 2016,
+      "yoy_rate": 99.4
+    },
+    {
+      "cumulative_index": 132.73370049050843,
+      "year": 2017,
+      "yoy_rate": 102.0
+    },
+    {
+      "cumulative_index": 134.85743969835656,
+      "year": 2018,
+      "yoy_rate": 101.6
+    },
+    {
+      "cumulative_index": 137.95916081141877,
+      "year": 2019,
+      "yoy_rate": 102.3
+    },
+    {
+      "cumulative_index": 142.649772279007,
+      "year": 2020,
+      "yoy_rate": 103.4
+    },
+    {
+      "cumulative_index": 149.92491066523635,
+      "year": 2021,
+      "yoy_rate": 105.1
+    },
+    {
+      "cumulative_index": 171.5140978010304,
+      "year": 2022,
+      "yoy_rate": 114.4
+    },
+    {
+      "cumulative_index": 191.06670495034786,
+      "year": 2023,
+      "yoy_rate": 111.4
+    },
+    {
+      "cumulative_index": 197.94510632856037,
+      "year": 2024,
+      "yoy_rate": 103.6
+    },
+    {
+      "cumulative_index": 205.07113015638856,
+      "year": 2025,
+      "yoy_rate": 103.6
+    }
+  ],
+  "source": "GUS-BDL-217230"
+}

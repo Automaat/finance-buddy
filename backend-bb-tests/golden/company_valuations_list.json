@@ -1,0 +1,22 @@
+{
+  "available_companies": [
+    "Acme Sp. z o.o."
+  ],
+  "company_valuations": [
+    {
+      "common_stock_discount_pct": 25.0,
+      "company": "Acme Sp. z o.o.",
+      "created_at": "2026-01-01T12:00:00",
+      "currency": "USD",
+      "date": "2025-06-30",
+      "fmv_high": 14.0,
+      "fmv_low": 11.0,
+      "fmv_per_share": 12.5,
+      "id": 1,
+      "is_active": true,
+      "notes": "Mid-2025 409A appraisal",
+      "source": "409a"
+    }
+  ],
+  "total_count": 1
+}
