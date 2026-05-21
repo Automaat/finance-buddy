@@ -83,9 +83,9 @@ def _get_dashboard_data_from_aggregates(
     for row in agg_rows:
         snapshot_nw[row.snapshot_id] += float(row.net_worth)
 
-    snap_objs = db.execute(
-        select(Snapshot).where(Snapshot.id.in_(list(snapshot_nw)))
-    ).scalars().all()
+    snap_objs = (
+        db.execute(select(Snapshot).where(Snapshot.id.in_(list(snapshot_nw)))).scalars().all()
+    )
     snap_date: dict = {s.id: s.date for s in snap_objs}
 
     sorted_sids = sorted(snapshot_nw, key=lambda sid: snap_date[sid])

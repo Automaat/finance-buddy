@@ -16,6 +16,7 @@ Create Date: 2026-05-21
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
 from alembic import op
 
@@ -26,6 +27,10 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    # Baseline 0001 uses Base.metadata.create_all against current metadata,
+    # which already creates snapshot_aggregates on fresh databases. Skip when present.
+    if inspect(op.get_bind()).has_table("snapshot_aggregates"):
+        return
     op.create_table(
         "snapshot_aggregates",
         sa.Column("id", sa.Integer, primary_key=True),
