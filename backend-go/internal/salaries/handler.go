@@ -198,6 +198,28 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	updated, err := h.store.Update(r.Context(), id, patch)
 	if err != nil {
+		if errors.Is(err, ErrDuplicate) {
+			// Need the merged record's (owner, date) for the message; refetch.
+			current, getErr := h.store.Get(r.Context(), id)
+			owner := ""
+			date := ""
+			if getErr == nil {
+				if patch.Owner != nil {
+					owner = *patch.Owner
+				} else {
+					owner = current.Owner
+				}
+				if patch.Date != nil {
+					date = patch.Date.Format("2006-01-02")
+				} else {
+					date = current.Date.Format("2006-01-02")
+				}
+			}
+			writeDetailError(w, http.StatusConflict,
+				fmt.Sprintf("Salary record for %s on %s conflicts with existing record",
+					owner, date))
+			return
+		}
 		h.writeStoreError(w, err, id)
 		return
 	}

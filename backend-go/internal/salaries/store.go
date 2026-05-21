@@ -158,6 +158,8 @@ type UpdatePatch struct {
 }
 
 // Update applies the patch and returns the refreshed row.
+// Mirrors Python's duplicate check: after merging the patch, fail with
+// ErrDuplicate if another active record exists for the same (owner, date).
 func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*SalaryRecord, error) {
 	r, err := s.Get(ctx, id)
 	if err != nil {
@@ -177,6 +179,19 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*SalaryRecor
 	}
 	if p.Owner != nil {
 		r.Owner = *p.Owner
+	}
+	var conflict int
+	err = s.pool.QueryRow(ctx, `
+		SELECT id FROM salary_records
+		WHERE owner = $1 AND date = $2 AND id <> $3 AND is_active = true
+		LIMIT 1`,
+		r.Owner, r.Date, id,
+	).Scan(&conflict)
+	if err == nil {
+		return nil, ErrDuplicate
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("check duplicate on update: %w", err)
 	}
 	row := s.pool.QueryRow(ctx, `
 		UPDATE salary_records SET
