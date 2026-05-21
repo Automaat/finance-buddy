@@ -17,3 +17,16 @@ rules:
   - method: PUT
     path_prefix: /api/config
     upstream: http://backend-go:8000
+  # Group 2 — /api/personas cut over to Go (incl. 5-table owner-rename cascade).
+  - method: GET
+    path_prefix: /api/personas
+    upstream: http://backend-go:8000
+  - method: POST
+    path_prefix: /api/personas
+    upstream: http://backend-go:8000
+  - method: PUT
+    path_prefix: /api/personas
+    upstream: http://backend-go:8000
+  - method: DELETE
+    path_prefix: /api/personas
+    upstream: http://backend-go:8000

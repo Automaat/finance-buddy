@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/config"
+	"github.com/Automaat/finance-buddy/backend-go/internal/personas"
 )
 
 // Config holds the runtime knobs the server reads at startup.
@@ -65,6 +66,14 @@ func New(cfg Config, logger *slog.Logger, deps Deps) http.Handler {
 		r.Route("/api/config", func(r chi.Router) {
 			r.Get("/", cfgHandler.Get)
 			r.Put("/", cfgHandler.Put)
+		})
+
+		personasHandler := personas.NewHandler(personas.NewStore(deps.Pool), logger)
+		r.Route("/api/personas", func(r chi.Router) {
+			r.Get("/", personasHandler.List)
+			r.Post("/", personasHandler.Create)
+			r.Put("/{id}", personasHandler.Update)
+			r.Delete("/{id}", personasHandler.Delete)
 		})
 	}
 
