@@ -2,12 +2,17 @@
 
 Bootstrap:
     testcontainers Postgres -> alembic upgrade head -> bb seed
-    -> backend-go on a random port -> pytest -k <pattern>
+    -> backend-go binary on a random port -> pytest
+
+Pre-built binary required (`go run` is hostile to mixed Go installs):
+    cd backend-go && go build -o /tmp/backend-go-bin ./cmd/api
 
 Usage:
     cd backend  # so we can use its uv env for alembic + testcontainers + psycopg2
-    uv run --with httpx --with "testcontainers[postgres]" \\
-        python ../scripts/test-go-parity.py --tests test_config.py
+    uv run --with httpx --with "testcontainers[postgres]" --with psycopg2-binary \\
+        python ../scripts/test-go-parity.py --tests tests/test_config.py
+
+Override the binary path with BACKEND_GO_BIN.
 
 The bb-tests harness honors BB_BASE_URL + BB_DATABASE_URL; we set both here
 and shell out to pytest from the backend-bb-tests/ dir.

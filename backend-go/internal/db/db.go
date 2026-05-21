@@ -15,8 +15,9 @@ import (
 // New opens a pgx pool against the given DSN and verifies it with a ping.
 //
 // The returned pool must be closed by the caller (typically via defer in main).
-// Sensible defaults applied: 10 max conns, 30s acquire timeout, statement
-// caching enabled. Override via DSN query string if needed.
+// Defaults applied: 10 max conns, 5-min idle timeout, 1-min health-check
+// period. All other pool settings (acquire timeout, statement caching, etc)
+// are pgx defaults; override via DSN query string if needed.
 func New(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	cfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {

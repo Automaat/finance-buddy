@@ -7,7 +7,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -142,7 +141,10 @@ func (d isoDate) MarshalJSON() ([]byte, error) {
 }
 
 func (d *isoDate) UnmarshalJSON(data []byte) error {
-	s := strings.Trim(string(data), `"`)
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return fmt.Errorf("birth_date must be a YYYY-MM-DD string: %w", err)
+	}
 	t, err := time.Parse(isoDateLayout, s)
 	if err != nil {
 		return fmt.Errorf("birth_date must be YYYY-MM-DD: %w", err)

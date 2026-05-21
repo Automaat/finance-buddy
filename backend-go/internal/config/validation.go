@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -63,14 +64,17 @@ func (r *request) validate() *validationError {
 	if marketTotal != 100 {
 		return &validationError{
 			"allocation_stocks",
-			"Market allocations must sum to 100%",
+			fmt.Sprintf("Market allocations must sum to 100%%, got %d%%", marketTotal),
 		}
 	}
 
 	if r.RetirementAge <= age {
 		return &validationError{
 			"retirement_age",
-			"Retirement age must be greater than current age",
+			fmt.Sprintf(
+				"Retirement age (%d) must be greater than current age (%d)",
+				r.RetirementAge, age,
+			),
 		}
 	}
 	return nil

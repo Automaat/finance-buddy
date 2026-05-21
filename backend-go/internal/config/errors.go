@@ -2,16 +2,20 @@ package config
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 )
 
-// writeJSON encodes the payload with Content-Type set. Drop encoding errors
-// silently — there's nothing meaningful to do with them at the response
-// boundary, and the client will see a partial body.
+// writeJSON encodes the payload with Content-Type set. Encoding errors are
+// logged but otherwise swallowed — by the time we're inside Encode, the
+// response status and headers are already on the wire and there's nothing
+// useful to send the client beyond a partial body.
 func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
+	if err := json.NewEncoder(w).Encode(payload); err != nil {
+		slog.Default().Error("encode response", "err", err, "status", status)
+	}
 }
 
 // writeDetailError matches FastAPI's HTTPException shape: {"detail": "..."}.
