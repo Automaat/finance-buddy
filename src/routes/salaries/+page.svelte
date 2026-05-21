@@ -96,6 +96,14 @@
 	let salaryError = $state('');
 	let savingSalary = $state(false);
 
+	function getPreviousCompany(owner: string, date: string | null): string | null {
+		if (!date) return null;
+		return (
+			data.salaries.salary_records.find((r) => r.owner === owner && r.date === date)?.company ??
+			null
+		);
+	}
+
 	function applyFilters() {
 		const params = new URLSearchParams();
 		if (filterOwner) params.set('owner', filterOwner);
