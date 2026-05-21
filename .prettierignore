@@ -46,3 +46,6 @@ api/openapi.v1.json
 
 # Black-box test golden snapshots — Python's json.dump owns the format
 backend-bb-tests/golden
+
+# Perf baseline — Python re-serializes sorted; prettier disagrees on formatting
+migration/perf/baseline.json
