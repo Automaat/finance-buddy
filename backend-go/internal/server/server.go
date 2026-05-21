@@ -24,6 +24,7 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/fx"
 	"github.com/Automaat/finance-buddy/backend-go/internal/goals"
 	"github.com/Automaat/finance-buddy/backend-go/internal/personas"
+	"github.com/Automaat/finance-buddy/backend-go/internal/salaries"
 )
 
 // Config holds the runtime knobs the server reads at startup.
@@ -128,11 +129,21 @@ func New(cfg Config, logger *slog.Logger, deps Deps) http.Handler {
 			r.Delete("/{id}", grantsHandler.Delete)
 		})
 
-		cpiHandler := cpi.NewHandler(cpi.NewStore(deps.Pool), cpi.NewGUSFetcher(), logger)
+		cpiStore := cpi.NewStore(deps.Pool)
+		cpiHandler := cpi.NewHandler(cpiStore, cpi.NewGUSFetcher(), logger)
 		r.Route("/api/cpi", func(r chi.Router) {
 			r.Get("/series", cpiHandler.GetSeries)
 			r.Post("/adjust", cpiHandler.Adjust)
 			r.Post("/refresh", cpiHandler.Refresh)
+		})
+
+		salariesHandler := salaries.NewHandler(salaries.NewStore(deps.Pool), cpiStore, logger)
+		r.Route("/api/salaries", func(r chi.Router) {
+			r.Get("/", salariesHandler.List)
+			r.Post("/", salariesHandler.Create)
+			r.Get("/{id}", salariesHandler.Get)
+			r.Patch("/{id}", salariesHandler.Update)
+			r.Delete("/{id}", salariesHandler.Delete)
 		})
 	}
 

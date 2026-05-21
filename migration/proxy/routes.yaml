@@ -89,3 +89,16 @@ rules:
   - method: POST
     path_prefix: /api/cpi
     upstream: http://backend-go:8000
+  # Group 6 — /api/salaries cut over to Go (CRUD + CPI-derived inflation_context).
+  - method: GET
+    path_prefix: /api/salaries
+    upstream: http://backend-go:8000
+  - method: POST
+    path_prefix: /api/salaries
+    upstream: http://backend-go:8000
+  - method: PATCH
+    path_prefix: /api/salaries
+    upstream: http://backend-go:8000
+  - method: DELETE
+    path_prefix: /api/salaries
+    upstream: http://backend-go:8000
