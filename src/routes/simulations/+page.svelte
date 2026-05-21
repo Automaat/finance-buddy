@@ -257,56 +257,73 @@
 	}
 </script>
 
-<div class="simulations-page">
-	<h1>Symulacje Emerytalne</h1>
+<div class="space-y-4">
+	<h1 class="h1">Symulacje Emerytalne</h1>
 
-	<div class="content">
-		<div class="form-section">
-			<h2>Parametry symulacji</h2>
+	<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+		<div class="card preset-filled-surface-100-900 p-5 space-y-4">
+			<h2 class="h3">Parametry symulacji</h2>
 
-			<div class="form-group">
-				<label>
-					Obecny wiek
-					<input type="number" bind:value={currentAge} min="18" max="100" />
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+				<label class="label">
+					<span class="text-sm font-semibold">Obecny wiek</span>
+					<input type="number" bind:value={currentAge} min="18" max="100" class="input" />
 				</label>
-				<label>
-					Wiek emerytalny
-					<input type="number" bind:value={retirementAge} min="18" max="100" />
+				<label class="label">
+					<span class="text-sm font-semibold">Wiek emerytalny</span>
+					<input type="number" bind:value={retirementAge} min="18" max="100" class="input" />
 				</label>
 			</div>
 
-			<h3>Konta do symulacji</h3>
-			<div class="accounts-grid">
+			<h3 class="h4">Konta do symulacji</h3>
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 				{#each ikeIkzeAccounts as account, i}
-					<div class="account-card">
-						<label class="checkbox-label">
-							<input type="checkbox" bind:checked={ikeIkzeAccounts[i].enabled} />
-							{account.wrapper} ({account.owner})
+					<div class="card preset-tonal-surface p-4 flex flex-col gap-2">
+						<label class="flex items-center gap-2 cursor-pointer">
+							<input type="checkbox" bind:checked={ikeIkzeAccounts[i].enabled} class="checkbox" />
+							<span class="text-sm font-semibold">{account.wrapper} ({account.owner})</span>
 						</label>
 						{#if account.enabled}
-							<label>
-								Saldo obecne (PLN)
-								<input type="number" bind:value={ikeIkzeAccounts[i].balance} min="0" step="100" />
+							<label class="label">
+								<span class="text-sm font-semibold">Saldo obecne (PLN)</span>
+								<input
+									type="number"
+									bind:value={ikeIkzeAccounts[i].balance}
+									min="0"
+									step="100"
+									class="input"
+								/>
 							</label>
-							<label class="checkbox-label">
-								<input type="checkbox" bind:checked={ikeIkzeAccounts[i].autoFill} />
-								Auto-wypełnienie limitu
+							<label class="flex items-center gap-2 cursor-pointer">
+								<input
+									type="checkbox"
+									bind:checked={ikeIkzeAccounts[i].autoFill}
+									class="checkbox"
+								/>
+								<span class="text-sm">Auto-wypełnienie limitu</span>
 							</label>
 							{#if !account.autoFill}
-								<label>
-									Wpłata miesięczna (PLN)
-									<input type="number" bind:value={ikeIkzeAccounts[i].monthly} min="0" step="100" />
+								<label class="label">
+									<span class="text-sm font-semibold">Wpłata miesięczna (PLN)</span>
+									<input
+										type="number"
+										bind:value={ikeIkzeAccounts[i].monthly}
+										min="0"
+										step="100"
+										class="input"
+									/>
 								</label>
 							{/if}
 							{#if account.wrapper === 'IKZE'}
-								<label>
-									Stawka podatkowa (%)
+								<label class="label">
+									<span class="text-sm font-semibold">Stawka podatkowa (%)</span>
 									<input
 										type="number"
 										bind:value={ikeIkzeAccounts[i].taxRate}
 										min="0"
 										max="50"
 										step="1"
+										class="input"
 									/>
 								</label>
 							{/if}
@@ -315,210 +332,275 @@
 				{/each}
 
 				{#each ppkAccounts as ppk, i}
-					<div class="account-card">
-						<label class="checkbox-label">
-							<input type="checkbox" bind:checked={ppkAccounts[i].enabled} />
-							PPK ({ppk.owner})
+					<div class="card preset-tonal-surface p-4 flex flex-col gap-2">
+						<label class="flex items-center gap-2 cursor-pointer">
+							<input type="checkbox" bind:checked={ppkAccounts[i].enabled} class="checkbox" />
+							<span class="text-sm font-semibold">PPK ({ppk.owner})</span>
 						</label>
 						{#if ppk.enabled}
-							<label>
-								Obecna wartość (PLN)
-								<input type="number" bind:value={ppkAccounts[i].balance} min="0" step="1000" />
+							<label class="label">
+								<span class="text-sm font-semibold">Obecna wartość (PLN)</span>
+								<input
+									type="number"
+									bind:value={ppkAccounts[i].balance}
+									min="0"
+									step="1000"
+									class="input"
+								/>
 							</label>
-							<label>
-								Miesięczne wynagrodzenie brutto (PLN)
-								<input type="number" bind:value={ppkAccounts[i].salary} min="1000" step="500" />
+							<label class="label">
+								<span class="text-sm font-semibold">Miesięczne wynagrodzenie brutto (PLN)</span>
+								<input
+									type="number"
+									bind:value={ppkAccounts[i].salary}
+									min="1000"
+									step="500"
+									class="input"
+								/>
 							</label>
-							<div class="contribution-rates">
-								<label>
-									Składka pracownika (%)
+							<div class="space-y-2">
+								<label class="label">
+									<span class="text-sm font-semibold">Składka pracownika (%)</span>
 									<input
 										type="number"
 										bind:value={ppkAccounts[i].employeeRate}
 										min="0.5"
 										max="4"
 										step="0.5"
+										class="input"
 									/>
-									<small>Zakres: 0.5-4% (podstawa: 2%)</small>
+									<span class="text-xs text-surface-600-400">Zakres: 0.5-4% (podstawa: 2%)</span>
 								</label>
-								<label>
-									Składka pracodawcy (%)
+								<label class="label">
+									<span class="text-sm font-semibold">Składka pracodawcy (%)</span>
 									<input
 										type="number"
 										bind:value={ppkAccounts[i].employerRate}
 										min="1.5"
 										max="4"
 										step="0.5"
+										class="input"
 									/>
-									<small>Zakres: 1.5-4% (podstawa: 1.5%)</small>
+									<span class="text-xs text-surface-600-400">Zakres: 1.5-4% (podstawa: 1.5%)</span>
 								</label>
 							</div>
-							<label class="checkbox-label">
-								<input type="checkbox" bind:checked={ppkAccounts[i].belowThreshold} />
-								Wynagrodzenie poniżej progu ({SALARY_THRESHOLD_2026} PLN)
-								<small>Dotyczy dopłaty rocznej 240 PLN</small>
+							<label class="flex items-start gap-2 cursor-pointer">
+								<input
+									type="checkbox"
+									bind:checked={ppkAccounts[i].belowThreshold}
+									class="checkbox mt-0.5"
+								/>
+								<span class="text-sm"
+									>Wynagrodzenie poniżej progu ({SALARY_THRESHOLD_2026} PLN)
+									<span class="block text-xs text-surface-600-400"
+										>Dotyczy dopłaty rocznej 240 PLN</span
+									>
+								</span>
 							</label>
-							<label class="checkbox-label">
-								<input type="checkbox" bind:checked={ppkAccounts[i].includeSubsidies} />
-								Uwzględnij dopłaty państwa (250 PLN + 240 PLN/rok)
+							<label class="flex items-center gap-2 cursor-pointer">
+								<input
+									type="checkbox"
+									bind:checked={ppkAccounts[i].includeSubsidies}
+									class="checkbox"
+								/>
+								<span class="text-sm">Uwzględnij dopłaty państwa (250 PLN + 240 PLN/rok)</span>
 							</label>
-							<div class="contribution-estimate">
-								<small>
-									Szacowana miesięczna składka:
-									{formatCurrency((ppk.salary * (ppk.employeeRate + ppk.employerRate)) / 100)}
-									PLN (pracownik: {formatCurrency((ppk.salary * ppk.employeeRate) / 100)} PLN, pracodawca:
-									{formatCurrency((ppk.salary * ppk.employerRate) / 100)} PLN)
-								</small>
-							</div>
+							<p class="text-xs text-surface-600-400">
+								Szacowana miesięczna składka:
+								{formatCurrency((ppk.salary * (ppk.employeeRate + ppk.employerRate)) / 100)}
+								PLN (pracownik: {formatCurrency((ppk.salary * ppk.employeeRate) / 100)} PLN, pracodawca:
+								{formatCurrency((ppk.salary * ppk.employerRate) / 100)} PLN)
+							</p>
 						{/if}
 					</div>
 				{/each}
 
 				{#each brokerageAccounts as brokerage, i}
-					<div class="account-card">
-						<label class="checkbox-label">
-							<input type="checkbox" bind:checked={brokerageAccounts[i].enabled} />
-							Rachunek maklerski ({brokerage.owner})
+					<div class="card preset-tonal-surface p-4 flex flex-col gap-2">
+						<label class="flex items-center gap-2 cursor-pointer">
+							<input type="checkbox" bind:checked={brokerageAccounts[i].enabled} class="checkbox" />
+							<span class="text-sm font-semibold">Rachunek maklerski ({brokerage.owner})</span>
 						</label>
 						{#if brokerage.enabled}
-							<label>
-								Obecna wartość (PLN)
+							<label class="label">
+								<span class="text-sm font-semibold">Obecna wartość (PLN)</span>
 								<input
 									type="number"
 									bind:value={brokerageAccounts[i].balance}
 									min="0"
 									step="1000"
+									class="input"
 								/>
 							</label>
-							<label>
-								Wpłata miesięczna (PLN)
-								<input type="number" bind:value={brokerageAccounts[i].monthly} min="0" step="100" />
+							<label class="label">
+								<span class="text-sm font-semibold">Wpłata miesięczna (PLN)</span>
+								<input
+									type="number"
+									bind:value={brokerageAccounts[i].monthly}
+									min="0"
+									step="100"
+									class="input"
+								/>
 							</label>
-							<div class="card-note">
-								<small
-									>Rachunki maklerskie są opodatkowane 19% podatkiem Belki od zysków kapitałowych</small
-								>
-							</div>
+							<p class="text-xs text-surface-600-400">
+								Rachunki maklerskie są opodatkowane 19% podatkiem Belki od zysków kapitałowych
+							</p>
 						{/if}
 					</div>
 				{/each}
 			</div>
 
-			<h3>Założenia</h3>
-			<div class="form-group">
-				<label>
-					Roczna stopa zwrotu (%)
-					<input type="number" bind:value={annualReturnRate} min="-50" max="50" step="0.1" />
+			<h3 class="h4">Założenia</h3>
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+				<label class="label">
+					<span class="text-sm font-semibold">Roczna stopa zwrotu (%)</span>
+					<input
+						type="number"
+						bind:value={annualReturnRate}
+						min="-50"
+						max="50"
+						step="0.1"
+						class="input"
+					/>
 				</label>
-				<label>
-					Wzrost limitów wpłat (%)
-					<input type="number" bind:value={limitGrowthRate} min="0" max="20" step="0.1" />
+				<label class="label">
+					<span class="text-sm font-semibold">Wzrost limitów wpłat (%)</span>
+					<input
+						type="number"
+						bind:value={limitGrowthRate}
+						min="0"
+						max="20"
+						step="0.1"
+						class="input"
+					/>
 				</label>
-				<label>
-					Przewidywany wzrost wynagrodzeń (%)
-					<input type="number" bind:value={expectedSalaryGrowth} min="0" max="10" step="0.5" />
-					<small>Roczny wzrost płacy brutto (typowo 3-5%)</small>
+				<label class="label">
+					<span class="text-sm font-semibold">Przewidywany wzrost wynagrodzeń (%)</span>
+					<input
+						type="number"
+						bind:value={expectedSalaryGrowth}
+						min="0"
+						max="10"
+						step="0.5"
+						class="input"
+					/>
+					<span class="text-xs text-surface-600-400">Roczny wzrost płacy brutto (typowo 3-5%)</span>
 				</label>
-				<label>
-					Inflacja (%)
-					<input type="number" bind:value={inflationRate} min="0" max="20" step="0.1" />
-					<small>Roczna inflacja do przeliczenia dochodu na dzisiejsze pieniądze</small>
+				<label class="label">
+					<span class="text-sm font-semibold">Inflacja (%)</span>
+					<input
+						type="number"
+						bind:value={inflationRate}
+						min="0"
+						max="20"
+						step="0.1"
+						class="input"
+					/>
+					<span class="text-xs text-surface-600-400"
+						>Roczna inflacja do przeliczenia dochodu na dzisiejsze pieniądze</span
+					>
 				</label>
 			</div>
 
-			<button class="primary-button" onclick={runSimulation} disabled={loading}>
+			<button
+				class="btn preset-filled-primary-500 w-full"
+				onclick={runSimulation}
+				disabled={loading}
+			>
 				{loading ? 'Obliczanie...' : 'Uruchom symulację'}
 			</button>
 
 			{#if error}
-				<div class="error-message">{error}</div>
+				<div class="card preset-filled-error-500 p-3 text-sm">{error}</div>
 			{/if}
 		</div>
 
 		{#if results}
-			<div class="results-section">
-				<h2>Wyniki symulacji</h2>
+			<div class="card preset-filled-surface-100-900 p-5 space-y-4">
+				<h2 class="h3">Wyniki symulacji</h2>
 
-				<div class="summary-cards">
-					<div class="summary-card">
-						<div class="card-label">Końcowy kapitał</div>
-						<div class="card-value">
+				<div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+					<div class="card preset-tonal-surface p-4">
+						<div class="text-xs text-surface-600-400 mb-2">Końcowy kapitał</div>
+						<div class="text-xl font-bold">
 							{formatCurrency(results.summary.total_final_balance)} PLN
 						</div>
 					</div>
-					<div class="summary-card">
-						<div class="card-label">Miesięczny dochód (4% rule)</div>
-						<div class="card-value">
+					<div class="card preset-tonal-surface p-4">
+						<div class="text-xs text-surface-600-400 mb-2">Miesięczny dochód (4% rule)</div>
+						<div class="text-xl font-bold">
 							{formatCurrency(results.summary.estimated_monthly_income)} PLN
 						</div>
 					</div>
-					<div class="summary-card">
-						<div class="card-label">Miesięczny dochód (w dzisiejszych pieniądzach)</div>
-						<div class="card-value">
+					<div class="card preset-tonal-surface p-4">
+						<div class="text-xs text-surface-600-400 mb-2">
+							Miesięczny dochód (w dzisiejszych pieniądzach)
+						</div>
+						<div class="text-xl font-bold">
 							{formatCurrency(results.summary.estimated_monthly_income_today)} PLN
 						</div>
-						<div class="card-note">przy 3% inflacji rocznie</div>
+						<div class="text-xs text-surface-600-400 mt-1">przy 3% inflacji rocznie</div>
 					</div>
-					<div class="summary-card">
-						<div class="card-label">Suma wpłat</div>
-						<div class="card-value">
+					<div class="card preset-tonal-surface p-4">
+						<div class="text-xs text-surface-600-400 mb-2">Suma wpłat</div>
+						<div class="text-xl font-bold">
 							{formatCurrency(results.summary.total_contributions)} PLN
 						</div>
 					</div>
-					<div class="summary-card">
-						<div class="card-label">Zyski z inwestycji</div>
-						<div class="card-value">
+					<div class="card preset-tonal-surface p-4">
+						<div class="text-xs text-surface-600-400 mb-2">Zyski z inwestycji</div>
+						<div class="text-xl font-bold">
 							{formatCurrency(results.summary.total_returns)} PLN
 						</div>
 					</div>
 					{#if results.summary.total_tax_savings > 0}
-						<div class="summary-card">
-							<div class="card-label">Oszczędności podatkowe (IKZE)</div>
-							<div class="card-value">
+						<div class="card preset-tonal-surface p-4">
+							<div class="text-xs text-surface-600-400 mb-2">Oszczędności podatkowe (IKZE)</div>
+							<div class="text-xl font-bold">
 								{formatCurrency(results.summary.total_tax_savings)} PLN
 							</div>
 						</div>
 					{/if}
 					{#if results.summary.total_subsidies && results.summary.total_subsidies > 0}
-						<div class="summary-card">
-							<div class="card-label">Dopłaty państwa (PPK)</div>
-							<div class="card-value">
+						<div class="card preset-tonal-surface p-4">
+							<div class="text-xs text-surface-600-400 mb-2">Dopłaty państwa (PPK)</div>
+							<div class="text-xl font-bold">
 								{formatCurrency(results.summary.total_subsidies)} PLN
 							</div>
 						</div>
 					{/if}
 				</div>
 
-				<div class="chart-container" bind:this={chartContainer}></div>
+				<div bind:this={chartContainer} class="w-full h-[400px] sm:h-[280px]"></div>
 
-				<h3>Szczegóły projekcji</h3>
+				<h3 class="h4">Szczegóły projekcji</h3>
 				{#each results.simulations as simulation}
-					<details class="account-details">
-						<summary>
+					<details class="card preset-tonal-surface p-3 mb-3">
+						<summary class="cursor-pointer text-sm font-semibold">
 							<strong>{simulation.account_name}</strong> - Końcowa wartość: {formatCurrency(
 								simulation.final_balance
 							)} PLN
 						</summary>
-						<div class="projection-table">
-							<table>
+						<div class="table-wrap mt-3">
+							<table class="table table-hover text-xs">
 								<thead>
 									<tr>
 										<th>Rok</th>
-										<th>Wiek</th>
-										<th>Roczna wpłata</th>
+										<th class="text-right">Wiek</th>
+										<th class="text-right">Roczna wpłata</th>
 										{#if !simulation.account_name.startsWith('PPK')}
-											<th>Wykorzystanie limitu</th>
+											<th class="text-right">Wykorzystanie limitu</th>
 										{/if}
-										<th>Saldo</th>
-										<th>Suma wpłat</th>
-										<th>Zyski</th>
+										<th class="text-right">Saldo</th>
+										<th class="text-right">Suma wpłat</th>
+										<th class="text-right">Zyski</th>
 										{#if simulation.account_name.includes('IKZE')}
-											<th>Ulga podatkowa</th>
+											<th class="text-right">Ulga podatkowa</th>
 										{/if}
 										{#if simulation.account_name.startsWith('PPK')}
-											<th>Dopłaty państwa</th>
-											<th>Roczne wynagrodzenie</th>
-											<th>Stopa zwrotu</th>
+											<th class="text-right">Dopłaty państwa</th>
+											<th class="text-right">Roczne wynagrodzenie</th>
+											<th class="text-right">Stopa zwrotu</th>
 										{/if}
 									</tr>
 								</thead>
@@ -526,23 +608,27 @@
 									{#each simulation.yearly_projections as projection}
 										<tr>
 											<td>{projection.year}</td>
-											<td>{projection.age}</td>
-											<td>{formatCurrency(projection.annual_contribution)}</td>
+											<td class="text-right">{projection.age}</td>
+											<td class="text-right">{formatCurrency(projection.annual_contribution)}</td>
 											{#if !simulation.account_name.startsWith('PPK')}
-												<td>{projection.limit_utilized_pct.toFixed(1)}%</td>
+												<td class="text-right">{projection.limit_utilized_pct.toFixed(1)}%</td>
 											{/if}
-											<td>{formatCurrency(projection.balance_end_of_year)}</td>
-											<td>{formatCurrency(projection.cumulative_contributions)}</td>
-											<td>{formatCurrency(projection.cumulative_returns)}</td>
+											<td class="text-right">{formatCurrency(projection.balance_end_of_year)}</td>
+											<td class="text-right"
+												>{formatCurrency(projection.cumulative_contributions)}</td
+											>
+											<td class="text-right">{formatCurrency(projection.cumulative_returns)}</td>
 											{#if simulation.account_name.includes('IKZE')}
-												<td>{formatCurrency(projection.tax_savings)}</td>
+												<td class="text-right">{formatCurrency(projection.tax_savings)}</td>
 											{/if}
 											{#if simulation.account_name.startsWith('PPK')}
-												<td>{formatCurrency(projection.government_subsidies || 0)}</td>
-												<td>
+												<td class="text-right"
+													>{formatCurrency(projection.government_subsidies || 0)}</td
+												>
+												<td class="text-right">
 													{formatCurrency((projection.monthly_salary || 0) * 12)}
 												</td>
-												<td>{(projection.return_rate || 0).toFixed(1)}%</td>
+												<td class="text-right">{(projection.return_rate || 0).toFixed(1)}%</td>
 											{/if}
 										</tr>
 									{/each}
@@ -555,265 +641,3 @@
 		{/if}
 	</div>
 </div>
-
-<style>
-	.simulations-page {
-		padding: var(--size-4);
-		max-width: 1400px;
-		margin: 0 auto;
-	}
-
-	h1 {
-		margin-bottom: var(--size-6);
-		color: var(--color-text-1);
-	}
-
-	.content {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: var(--size-6);
-	}
-
-	.form-section,
-	.results-section {
-		background: var(--surface-2);
-		padding: var(--size-5);
-		border-radius: var(--radius-2);
-	}
-
-	h2,
-	h3 {
-		margin-top: var(--size-5);
-		margin-bottom: var(--size-3);
-		color: var(--color-text-2);
-	}
-
-	h2 {
-		margin-top: 0;
-	}
-
-	.form-group {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: var(--size-3);
-		margin-bottom: var(--size-4);
-	}
-
-	.accounts-grid {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: var(--size-3);
-		margin-bottom: var(--size-4);
-	}
-
-	.account-card {
-		background: var(--surface-3);
-		padding: var(--size-4);
-		border-radius: var(--radius-2);
-		display: flex;
-		flex-direction: column;
-		gap: var(--size-2);
-	}
-
-	label {
-		display: flex;
-		flex-direction: column;
-		gap: var(--size-1);
-		font-size: var(--font-size-1);
-		color: var(--color-text-2);
-	}
-
-	.checkbox-label {
-		flex-direction: row;
-		align-items: center;
-		font-weight: 600;
-	}
-
-	.checkbox-label input[type='checkbox'] {
-		margin-right: var(--size-2);
-	}
-
-	input[type='number'] {
-		padding: var(--size-2);
-		border: 1px solid var(--surface-4);
-		border-radius: var(--radius-2);
-		background: var(--surface-1);
-		color: var(--color-text-1);
-		font-size: var(--font-size-1);
-		min-height: var(--tap-target-min);
-	}
-
-	input[type='checkbox'] {
-		width: var(--size-4);
-		height: var(--size-4);
-		cursor: pointer;
-	}
-
-	.primary-button {
-		width: 100%;
-		padding: var(--size-3);
-		background: var(--color-primary);
-		color: white;
-		border: none;
-		border-radius: var(--radius-2);
-		font-size: var(--font-size-2);
-		font-weight: 600;
-		cursor: pointer;
-		margin-top: var(--size-4);
-	}
-
-	.primary-button:hover:not(:disabled) {
-		background: var(--color-primary-hover);
-	}
-
-	.primary-button:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.error-message {
-		margin-top: var(--size-3);
-		padding: var(--size-3);
-		background: var(--color-error-bg);
-		color: var(--color-error);
-		border-radius: var(--radius-2);
-	}
-
-	.summary-cards {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-		gap: var(--size-3);
-		margin-bottom: var(--size-5);
-	}
-
-	.summary-card {
-		background: var(--surface-3);
-		padding: var(--size-4);
-		border-radius: var(--radius-2);
-	}
-
-	.card-label {
-		font-size: var(--font-size-0);
-		color: var(--color-text-3);
-		margin-bottom: var(--size-2);
-	}
-
-	.card-value {
-		font-size: var(--font-size-4);
-		font-weight: 700;
-		color: var(--color-text-1);
-	}
-
-	.card-note {
-		font-size: var(--font-size-0);
-		color: var(--color-text-3);
-		margin-top: var(--size-1);
-	}
-
-	.chart-container {
-		width: 100%;
-		height: 400px;
-		margin-bottom: var(--size-5);
-	}
-
-	.account-details {
-		background: var(--surface-3);
-		padding: var(--size-3);
-		border-radius: var(--radius-2);
-		margin-bottom: var(--size-3);
-	}
-
-	.account-details summary {
-		cursor: pointer;
-		padding: var(--size-2);
-		font-size: var(--font-size-2);
-	}
-
-	.projection-table {
-		margin-top: var(--size-3);
-		overflow-x: auto;
-	}
-
-	table {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: var(--font-size-0);
-	}
-
-	th,
-	td {
-		padding: var(--size-2);
-		text-align: right;
-		border-bottom: 1px solid var(--surface-4);
-	}
-
-	th {
-		background: var(--surface-4);
-		font-weight: 600;
-		color: var(--color-text-2);
-	}
-
-	th:first-child,
-	td:first-child {
-		text-align: left;
-	}
-
-	@media (max-width: 1200px) {
-		.content {
-			grid-template-columns: 1fr;
-		}
-	}
-
-	@media (max-width: 768px) {
-		.accounts-grid {
-			grid-template-columns: 1fr;
-		}
-
-		.form-group {
-			grid-template-columns: 1fr;
-		}
-	}
-
-	@media (max-width: 640px) {
-		.simulations-page {
-			padding: var(--size-3);
-		}
-
-		.form-section,
-		.results-section {
-			padding: var(--size-4);
-		}
-
-		.chart-container {
-			height: 280px;
-		}
-
-		.summary-cards {
-			grid-template-columns: 1fr 1fr;
-			gap: var(--size-2);
-		}
-
-		.card-value {
-			font-size: var(--font-size-2);
-		}
-
-		.primary-button {
-			min-height: var(--tap-target-min);
-		}
-
-		table {
-			font-size: var(--font-size-0);
-		}
-
-		th,
-		td {
-			padding: var(--size-1);
-			white-space: normal;
-			word-break: break-word;
-		}
-
-		h1 {
-			font-size: var(--font-size-4);
-		}
-	}
-</style>
