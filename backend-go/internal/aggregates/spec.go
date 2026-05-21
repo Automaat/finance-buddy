@@ -116,7 +116,10 @@ func ComputeAggregates(
 	sort.Strings(owners)
 	out := make([]AggregateRow, 0, len(owners))
 	for _, owner := range owners {
-		b := totals[owner]
+		b, ok := totals[owner]
+		if !ok || b == nil {
+			continue
+		}
 		cats := make([]string, 0, len(b.alloc))
 		for c := range b.alloc {
 			cats = append(cats, c)
