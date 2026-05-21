@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import os
 from contextlib import contextmanager
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
@@ -488,17 +488,43 @@ def _seed_fx_rates(cur: psycopg2.extensions.cursor) -> None:
 
 
 def _seed_cpi_index(cur: psycopg2.extensions.cursor) -> None:
+    # Full GUS-BDL Polish CPI history (variable 217230). Real values so the
+    # /api/cpi/series endpoint returns the same numbers the production
+    # backend would, fully offline. fetched_at must be "fresh" enough that
+    # the backend's startup-staleness check (services/inflation.needs_refresh,
+    # 7-day threshold) doesn't trigger an external GUS BDL refresh.
+    fetched_at = datetime.now(UTC).replace(tzinfo=None)
     rows = [
-        (2023, Decimal("111.4000"), "GUS-BDL-217230"),
-        (2024, Decimal("103.6000"), "GUS-BDL-217230"),
-        (2025, Decimal("102.8000"), "GUS-BDL-217230"),
+        (2003, Decimal("100.8"), "GUS-BDL-217230"),
+        (2004, Decimal("103.5"), "GUS-BDL-217230"),
+        (2005, Decimal("102.1"), "GUS-BDL-217230"),
+        (2006, Decimal("101.0"), "GUS-BDL-217230"),
+        (2007, Decimal("102.5"), "GUS-BDL-217230"),
+        (2008, Decimal("104.2"), "GUS-BDL-217230"),
+        (2009, Decimal("103.5"), "GUS-BDL-217230"),
+        (2010, Decimal("102.6"), "GUS-BDL-217230"),
+        (2011, Decimal("104.3"), "GUS-BDL-217230"),
+        (2012, Decimal("103.7"), "GUS-BDL-217230"),
+        (2013, Decimal("100.9"), "GUS-BDL-217230"),
+        (2014, Decimal("100.0"), "GUS-BDL-217230"),
+        (2015, Decimal("99.1"), "GUS-BDL-217230"),
+        (2016, Decimal("99.4"), "GUS-BDL-217230"),
+        (2017, Decimal("102.0"), "GUS-BDL-217230"),
+        (2018, Decimal("101.6"), "GUS-BDL-217230"),
+        (2019, Decimal("102.3"), "GUS-BDL-217230"),
+        (2020, Decimal("103.4"), "GUS-BDL-217230"),
+        (2021, Decimal("105.1"), "GUS-BDL-217230"),
+        (2022, Decimal("114.4"), "GUS-BDL-217230"),
+        (2023, Decimal("111.4"), "GUS-BDL-217230"),
+        (2024, Decimal("103.6"), "GUS-BDL-217230"),
+        (2025, Decimal("103.6"), "GUS-BDL-217230"),
     ]
     cur.executemany(
         """
         INSERT INTO cpi_index (year, yoy_rate, source, fetched_at)
         VALUES (%s, %s, %s, %s)
         """,
-        [(*r, SEED_CREATED_AT) for r in rows],
+        [(*r, fetched_at) for r in rows],
     )
 
 

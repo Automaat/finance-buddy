@@ -6,7 +6,7 @@ import httpx
 import psycopg2
 import pytest
 
-from fixtures.seed import ACCOUNT_MARCIN_BANK, ACCOUNT_MARCIN_MORTGAGE
+from fixtures.seed import ACCOUNT_MARCIN_BANK, ACCOUNT_MARCIN_MORTGAGE, PERSONA_MARCIN
 
 
 def _account_id_by_name(client: httpx.Client, name: str) -> int:
@@ -33,7 +33,7 @@ def _create_temp_liability_account(client: httpx.Client, name: str) -> int:
         "name": name,
         "type": "liability",
         "category": "installment",
-        "owner": "Marcin",
+        "owner": PERSONA_MARCIN,
         "currency": "PLN",
         "purpose": "general",
         "receives_contributions": False,
