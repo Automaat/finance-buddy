@@ -17,9 +17,10 @@ Sections are ordered alphabetically by URL path.
   - `src/routes/transactions/+page.ts:45`
 - **Response fields read by UI:**
   - top-level: `assets[]`, `liabilities[]`
-  - per-account (assets + liabilities): `id`, `name`, `type`, `category`, `owner`, `currency`, `account_wrapper`, `purpose`, `receives_contributions`, `square_meters`, `current_value`, `account_id` (via SnapshotForm props)
+  - per-account (assets + liabilities): `id`, `name`, `type`, `category`, `owner`, `currency`, `account_wrapper`, `purpose`, `receives_contributions`, `square_meters`, `current_value`
 - **Optional fields tolerated:** `account_wrapper` (nullable), `square_meters` (nullable)
-- **Notes:** goals page flattens `assets + liabilities` into `accounts` (only reads `id`, `name`). Transactions page reads `assets` only, filters by `category ∈ INVESTMENT_CATEGORIES`. SnapshotForm consumes the full per-account shape including `current_value`. `is_active` / `created_at` declared in type but not read by UI.
+- **Declared but not read by UI:** `is_active`, `created_at`
+- **Notes:** goals page flattens `assets + liabilities` into `accounts` (only reads `id`, `name`). Transactions page reads `assets` only, filters by `category ∈ INVESTMENT_CATEGORIES`. SnapshotForm consumes the full per-account shape including `current_value`. (SnapshotForm's child rows reference `account_id` against snapshot-value payloads, not against the accounts list response.)
 
 ---
 
@@ -116,7 +117,7 @@ Sections are ordered alphabetically by URL path.
 - **Response fields read by UI:**
   - top-level: `assets[]`
   - per-asset: `id`, `name`, `current_value` (SnapshotForm also reads same)
-- **Optional fields tolerated:** `is_active`, `created_at` declared but unused.
+- **Declared but not read by UI:** `is_active`, `created_at`
 
 ---
 
@@ -369,7 +370,7 @@ Sections are ordered alphabetically by URL path.
 ### `GET /api/payments/counts`
 
 - **Called from:** `src/routes/debts/+page.svelte:194`
-- **Response fields read by UI:** treated as `Record<account_id (number), count (number)>` — keys are account IDs, values are payment counts.
+- **Response fields read by UI:** treated as `Record<string, number>` — keys are account IDs serialized as strings (JSON object keys are always strings on the wire), values are payment counts.
 
 ---
 
@@ -559,7 +560,7 @@ Sections are ordered alphabetically by URL path.
 ### `GET /api/transactions/counts`
 
 - **Called from:** `src/routes/accounts/+page.svelte:201`
-- **Response fields read by UI:** treated as `Record<account_id (number), count (number)>`.
+- **Response fields read by UI:** treated as `Record<string, number>` — keys are account IDs serialized as strings (JSON object keys are always strings on the wire), values are transaction counts.
 
 ---
 
