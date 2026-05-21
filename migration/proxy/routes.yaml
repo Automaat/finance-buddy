@@ -43,3 +43,16 @@ rules:
   - method: DELETE
     path_prefix: /api/goals
     upstream: http://backend-go:8000
+  # Group 4a — /api/company-valuations cut over to Go.
+  - method: GET
+    path_prefix: /api/company-valuations
+    upstream: http://backend-go:8000
+  - method: POST
+    path_prefix: /api/company-valuations
+    upstream: http://backend-go:8000
+  - method: PATCH
+    path_prefix: /api/company-valuations
+    upstream: http://backend-go:8000
+  - method: DELETE
+    path_prefix: /api/company-valuations
+    upstream: http://backend-go:8000
