@@ -82,13 +82,13 @@
 
 ## Summary
 
-**Total endpoints:** 73
+**Total endpoints:** 75
 
 **By risk:**
 
-- S (trivial CRUD): 47
+- S (trivial CRUD): 50
 - M (multi-table/logic): 17
-- L (pandas/sim/scheduler/aggregation): 9
+- L (pandas/sim/scheduler/aggregation): 8
 
 **Endpoints touching pandas (parity hotspots):**
 
