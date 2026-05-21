@@ -19,6 +19,7 @@ import (
 	bonusevents "github.com/Automaat/finance-buddy/backend-go/internal/bonus_events"
 	companyvaluations "github.com/Automaat/finance-buddy/backend-go/internal/company_valuations"
 	"github.com/Automaat/finance-buddy/backend-go/internal/config"
+	"github.com/Automaat/finance-buddy/backend-go/internal/cpi"
 	equitygrants "github.com/Automaat/finance-buddy/backend-go/internal/equity_grants"
 	"github.com/Automaat/finance-buddy/backend-go/internal/fx"
 	"github.com/Automaat/finance-buddy/backend-go/internal/goals"
@@ -125,6 +126,13 @@ func New(cfg Config, logger *slog.Logger, deps Deps) http.Handler {
 			r.Get("/{id}", grantsHandler.Get)
 			r.Patch("/{id}", grantsHandler.Update)
 			r.Delete("/{id}", grantsHandler.Delete)
+		})
+
+		cpiHandler := cpi.NewHandler(cpi.NewStore(deps.Pool), cpi.NewGUSFetcher(), logger)
+		r.Route("/api/cpi", func(r chi.Router) {
+			r.Get("/series", cpiHandler.GetSeries)
+			r.Post("/adjust", cpiHandler.Adjust)
+			r.Post("/refresh", cpiHandler.Refresh)
 		})
 	}
 

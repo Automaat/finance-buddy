@@ -82,3 +82,10 @@ rules:
   - method: DELETE
     path_prefix: /api/equity-grants
     upstream: http://backend-go:8000
+  # Group 5 — /api/cpi cut over to Go (GUS BDL fetch + inflation math).
+  - method: GET
+    path_prefix: /api/cpi
+    upstream: http://backend-go:8000
+  - method: POST
+    path_prefix: /api/cpi
+    upstream: http://backend-go:8000
