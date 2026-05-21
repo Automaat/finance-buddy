@@ -33,7 +33,7 @@ Restart the proxy; the rest of the API stays on Python.
 
 ```bash
 cd migration/proxy
-cp routes.example.yaml routes.yaml
+# routes.yaml lives in this directory — edit it directly.
 go run . --config routes.yaml --addr :8080
 ```
 
