@@ -25,6 +25,7 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/goals"
 	"github.com/Automaat/finance-buddy/backend-go/internal/personas"
 	"github.com/Automaat/finance-buddy/backend-go/internal/salaries"
+	"github.com/Automaat/finance-buddy/backend-go/internal/zus"
 )
 
 // Config holds the runtime knobs the server reads at startup.
@@ -69,85 +70,89 @@ func New(cfg Config, logger *slog.Logger, deps Deps) http.Handler {
 	r.Get("/health", healthHandler(logger))
 
 	if deps.Pool != nil {
-		cfgHandler := config.NewHandler(config.NewStore(deps.Pool), logger)
-		r.Route("/api/config", func(r chi.Router) {
-			r.Get("/", cfgHandler.Get)
-			r.Put("/", cfgHandler.Put)
-		})
-
-		personasHandler := personas.NewHandler(personas.NewStore(deps.Pool), logger)
-		r.Route("/api/personas", func(r chi.Router) {
-			r.Get("/", personasHandler.List)
-			r.Post("/", personasHandler.Create)
-			r.Put("/{id}", personasHandler.Update)
-			r.Delete("/{id}", personasHandler.Delete)
-		})
-
-		goalsHandler := goals.NewHandler(goals.NewStore(deps.Pool), logger)
-		r.Route("/api/goals", func(r chi.Router) {
-			r.Get("/", goalsHandler.List)
-			r.Post("/", goalsHandler.Create)
-			r.Get("/{id}", goalsHandler.Get)
-			r.Put("/{id}", goalsHandler.Update)
-			r.Delete("/{id}", goalsHandler.Delete)
-		})
-
-		valuationsHandler := companyvaluations.NewHandler(
-			companyvaluations.NewStore(deps.Pool), logger,
-		)
-		r.Route("/api/company-valuations", func(r chi.Router) {
-			r.Get("/", valuationsHandler.List)
-			r.Post("/", valuationsHandler.Create)
-			r.Get("/{id}", valuationsHandler.Get)
-			r.Patch("/{id}", valuationsHandler.Update)
-			r.Delete("/{id}", valuationsHandler.Delete)
-		})
-
-		fxSvc := fx.NewService(deps.Pool, logger)
-		bonusesHandler := bonusevents.NewHandler(
-			bonusevents.NewStore(deps.Pool), fxSvc, logger,
-		)
-		r.Route("/api/bonuses", func(r chi.Router) {
-			r.Get("/", bonusesHandler.List)
-			r.Post("/", bonusesHandler.Create)
-			r.Get("/{id}", bonusesHandler.Get)
-			r.Patch("/{id}", bonusesHandler.Update)
-			r.Delete("/{id}", bonusesHandler.Delete)
-		})
-
-		grantsHandler := equitygrants.NewHandler(
-			equitygrants.NewStore(deps.Pool),
-			companyvaluations.NewStore(deps.Pool),
-			fxSvc,
-			logger,
-		)
-		r.Route("/api/equity-grants", func(r chi.Router) {
-			r.Get("/", grantsHandler.List)
-			r.Post("/", grantsHandler.Create)
-			r.Get("/{id}", grantsHandler.Get)
-			r.Patch("/{id}", grantsHandler.Update)
-			r.Delete("/{id}", grantsHandler.Delete)
-		})
-
-		cpiStore := cpi.NewStore(deps.Pool)
-		cpiHandler := cpi.NewHandler(cpiStore, cpi.NewGUSFetcher(), logger)
-		r.Route("/api/cpi", func(r chi.Router) {
-			r.Get("/series", cpiHandler.GetSeries)
-			r.Post("/adjust", cpiHandler.Adjust)
-			r.Post("/refresh", cpiHandler.Refresh)
-		})
-
-		salariesHandler := salaries.NewHandler(salaries.NewStore(deps.Pool), cpiStore, logger)
-		r.Route("/api/salaries", func(r chi.Router) {
-			r.Get("/", salariesHandler.List)
-			r.Post("/", salariesHandler.Create)
-			r.Get("/{id}", salariesHandler.Get)
-			r.Patch("/{id}", salariesHandler.Update)
-			r.Delete("/{id}", salariesHandler.Delete)
-		})
+		registerAPIRoutes(r, deps.Pool, logger)
 	}
 
 	return r
+}
+
+func registerAPIRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
+	cfgHandler := config.NewHandler(config.NewStore(pool), logger)
+	r.Route("/api/config", func(r chi.Router) {
+		r.Get("/", cfgHandler.Get)
+		r.Put("/", cfgHandler.Put)
+	})
+
+	personasHandler := personas.NewHandler(personas.NewStore(pool), logger)
+	r.Route("/api/personas", func(r chi.Router) {
+		r.Get("/", personasHandler.List)
+		r.Post("/", personasHandler.Create)
+		r.Put("/{id}", personasHandler.Update)
+		r.Delete("/{id}", personasHandler.Delete)
+	})
+
+	goalsHandler := goals.NewHandler(goals.NewStore(pool), logger)
+	r.Route("/api/goals", func(r chi.Router) {
+		r.Get("/", goalsHandler.List)
+		r.Post("/", goalsHandler.Create)
+		r.Get("/{id}", goalsHandler.Get)
+		r.Put("/{id}", goalsHandler.Update)
+		r.Delete("/{id}", goalsHandler.Delete)
+	})
+
+	valuationsStore := companyvaluations.NewStore(pool)
+	valuationsHandler := companyvaluations.NewHandler(valuationsStore, logger)
+	r.Route("/api/company-valuations", func(r chi.Router) {
+		r.Get("/", valuationsHandler.List)
+		r.Post("/", valuationsHandler.Create)
+		r.Get("/{id}", valuationsHandler.Get)
+		r.Patch("/{id}", valuationsHandler.Update)
+		r.Delete("/{id}", valuationsHandler.Delete)
+	})
+
+	fxSvc := fx.NewService(pool, logger)
+	bonusesHandler := bonusevents.NewHandler(bonusevents.NewStore(pool), fxSvc, logger)
+	r.Route("/api/bonuses", func(r chi.Router) {
+		r.Get("/", bonusesHandler.List)
+		r.Post("/", bonusesHandler.Create)
+		r.Get("/{id}", bonusesHandler.Get)
+		r.Patch("/{id}", bonusesHandler.Update)
+		r.Delete("/{id}", bonusesHandler.Delete)
+	})
+
+	grantsHandler := equitygrants.NewHandler(
+		equitygrants.NewStore(pool), valuationsStore, fxSvc, logger,
+	)
+	r.Route("/api/equity-grants", func(r chi.Router) {
+		r.Get("/", grantsHandler.List)
+		r.Post("/", grantsHandler.Create)
+		r.Get("/{id}", grantsHandler.Get)
+		r.Patch("/{id}", grantsHandler.Update)
+		r.Delete("/{id}", grantsHandler.Delete)
+	})
+
+	cpiStore := cpi.NewStore(pool)
+	cpiHandler := cpi.NewHandler(cpiStore, cpi.NewGUSFetcher(), logger)
+	r.Route("/api/cpi", func(r chi.Router) {
+		r.Get("/series", cpiHandler.GetSeries)
+		r.Post("/adjust", cpiHandler.Adjust)
+		r.Post("/refresh", cpiHandler.Refresh)
+	})
+
+	salariesHandler := salaries.NewHandler(salaries.NewStore(pool), cpiStore, logger)
+	r.Route("/api/salaries", func(r chi.Router) {
+		r.Get("/", salariesHandler.List)
+		r.Post("/", salariesHandler.Create)
+		r.Get("/{id}", salariesHandler.Get)
+		r.Patch("/{id}", salariesHandler.Update)
+		r.Delete("/{id}", salariesHandler.Delete)
+	})
+
+	zusHandler := zus.NewHandler(zus.NewStore(pool), logger)
+	r.Route("/api/zus", func(r chi.Router) {
+		r.Post("/calculate", zusHandler.Calculate)
+		r.Get("/prefill", zusHandler.Prefill)
+	})
 }
 
 func healthHandler(logger *slog.Logger) http.HandlerFunc {
