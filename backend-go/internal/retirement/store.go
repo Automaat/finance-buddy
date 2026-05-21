@@ -337,6 +337,18 @@ func (s *Store) InsertPPKContributions(ctx context.Context, c PPKContribution) (
 			_ = tx.Rollback(ctx)
 		}
 	}()
+	// Serialize concurrent generates for the same (account, month). The
+	// transactions table has no unique constraint covering this tuple, so
+	// a bare COUNT-then-INSERT races; a transaction-scoped advisory lock
+	// closes the window without a schema change. The key packs account_id
+	// into the high 32 bits and the day-number into the low 32 bits of a
+	// single bigint. Lock auto-releases on commit/rollback.
+	lockKey := int64(c.AccountID)<<32 | (c.Date.Unix() / 86400)
+	if _, err := tx.Exec(ctx,
+		`SELECT pg_advisory_xact_lock($1)`, lockKey,
+	); err != nil {
+		return nil, fmt.Errorf("ppk advisory lock: %w", err)
+	}
 	var existing int
 	err = tx.QueryRow(ctx, `
 		SELECT COUNT(*) FROM transactions

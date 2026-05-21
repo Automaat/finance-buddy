@@ -145,10 +145,9 @@ func (h *Handler) buildYearlyStat(ctx context.Context, year int, wrapper, owner 
 	if limitF > 0 {
 		percentage = totalF / limitF * 100
 	}
-	percentageRounded := math.Round(percentage*10) / 10
 	lAmt := pyFloat(limitF)
 	rem := pyFloat(remaining)
-	pct := pyFloat(percentageRounded)
+	pct := pyFloat(math.Round(percentage*10) / 10)
 	return yearlyStat{
 		Year: year, AccountWrapper: wrapper, Owner: owner,
 		LimitAmount:         &lAmt,
@@ -157,7 +156,10 @@ func (h *Handler) buildYearlyStat(ctx context.Context, year int, wrapper, owner 
 		EmployerContributed: pyFloat(employerF),
 		Remaining:           &rem,
 		PercentageUsed:      &pct,
-		IsWarning:           percentageRounded >= 90,
+		// is_warning uses the unrounded percentage — Python computes it from
+		// the raw value, so 89.95% must NOT flip the flag even though it
+		// rounds to 90.0 in percentage_used.
+		IsWarning: percentage >= 90,
 	}, true, nil
 }
 
