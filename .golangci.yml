@@ -1,0 +1,177 @@
+version: '2'
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+linters:
+  default: standard
+  enable:
+    # bug catchers (high signal, low noise)
+    - asasalint
+    - bidichk
+    - bodyclose
+    - copyloopvar
+    - durationcheck
+    - errorlint
+    - exhaustive
+    - fatcontext
+    - intrange
+    - loggercheck
+    - makezero
+    - mirror
+    - musttag
+    - nilerr
+    - nilnesserr
+    - nilnil
+    - reassign
+    - recvcheck
+    - sloglint
+    - wastedassign
+
+    # quality / perf
+    - dupword
+    - errname
+    - exptostd
+    - funlen
+    - gocheckcompilerdirectives
+    - gocritic
+    - goprintffuncname
+    - gosec
+    - modernize
+    - nolintlint
+    - nosprintfhostport
+    - perfsprint
+    - predeclared
+    - testableexamples
+    - thelper
+    - unconvert
+    - usestdlibvars
+    - usetesting
+
+    # dependency hygiene
+    - depguard
+
+  settings:
+    depguard:
+      rules:
+        non-test:
+          files:
+            - '!$test'
+          deny:
+            - pkg: math/rand$
+              desc: use math/rand/v2 instead
+            - pkg: io/ioutil
+              desc: use os/io instead (deprecated since Go 1.16)
+        non-main:
+          files:
+            - '!**/main.go'
+          deny:
+            - pkg: log$
+              desc: use log/slog instead
+
+    errcheck:
+      check-type-assertions: true
+
+    exhaustive:
+      default-signifies-exhaustive: true
+
+    funlen:
+      lines: 100
+      statements: 70
+
+    gosec:
+      excludes:
+        - G204 # subprocess args — validated at construction
+        - G304 # file inclusion via variable — intentional in this app
+
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment # struct field reordering rarely worth churn
+        - shadow # idiomatic Go re-declares err in nested blocks
+        - unusedwrite # too aggressive on test struct literals
+
+    gocritic:
+      enabled-checks:
+        - badLock
+        - badRegexp
+        - badSorting
+        - boolExprSimplify
+        - builtinShadow
+        - builtinShadowDecl
+        - commentedOutCode
+        - deferInLoop
+        - emptyFallthrough
+        - equalFold
+        - hexLiteral
+        - httpNoBody
+        - importShadow
+        - indexAlloc
+        - initClause
+        - nestingReduce
+        - nilValReturn
+        - octalLiteral
+        - paramTypeCombine
+        - preferFilepathJoin
+        - preferFprint
+        - preferStringWriter
+        - preferWriteByte
+        - ptrToRefParam
+        - rangeExprCopy
+        - rangeValCopy
+        - redundantSprint
+        - regexpPattern
+        - regexpSimplify
+        - returnAfterHttpError
+        - sloppyReassign
+        - sortSlice
+        - sprintfQuotedString
+        - sqlQuery
+        - stringConcatSimplify
+        - stringXbytes
+        - timeExprSimplify
+        - tooManyResultsChecker
+        - truncateCmp
+        - typeAssertChain
+        - typeDefFirst
+        - typeUnparen
+        - unlabelStmt
+        - unnamedResult
+        - unnecessaryBlock
+        - unnecessaryDefer
+        - weakCond
+        - yodaStyleExpr
+
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+      allow-no-explanation:
+        - funlen
+
+    perfsprint:
+      strconcat: false # noisy on logging-heavy code
+      error-format: false
+      errorf: false
+
+    sloglint:
+      no-mixed-args: true
+
+  exclusions:
+    warn-unused: true
+    presets:
+      - common-false-positives
+      - std-error-handling
+    rules:
+      - linters:
+          - bodyclose
+          - dupword
+          - errcheck
+          - funlen
+          - gosec
+        path: _test\.go
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

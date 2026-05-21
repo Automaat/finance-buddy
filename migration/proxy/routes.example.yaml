@@ -1,0 +1,21 @@
+# Per-endpoint cutover routing.
+#
+# `default`: every request that doesn't match a rule below goes here. During
+# migration, leave this pointed at the Python backend.
+#
+# `rules`: evaluated top-down, first match wins. Each rule routes a single
+# (method, path-prefix) tuple at the Go backend. Add entries one at a time
+# as endpoints are ported and pass the bb-tests parity suite.
+
+default: http://backend:8000
+
+rules: []
+
+# Example for when /api/config is ready to flip:
+# rules:
+#   - method: GET
+#     path_prefix: /api/config
+#     upstream: http://backend-go:9000
+#   - method: PUT
+#     path_prefix: /api/config
+#     upstream: http://backend-go:9000
