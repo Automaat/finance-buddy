@@ -38,34 +38,47 @@
 
 <svelte:window onkeydown={closeOnEscape} />
 
-<div class="modal-overlay" role="presentation" onclick={closeOnBackdrop}>
+<div
+	class="fixed inset-0 z-50 flex items-center justify-center bg-surface-950/60 backdrop-blur-sm p-4"
+	role="presentation"
+	onclick={closeOnBackdrop}
+>
 	<div
-		class="modal"
+		class="card preset-filled-surface-50-950 w-full max-w-lg max-h-[90vh] flex flex-col shadow-xl"
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="new-account-modal-title"
 		tabindex="-1"
 	>
-		<div class="modal-header">
-			<h2 id="new-account-modal-title">Dodaj nowe konto</h2>
-			<button type="button" class="btn-close" onclick={onClose} title="Zamknij"> × </button>
-		</div>
-		<div class="modal-content">
-			<div class="form-group">
-				<label for="newAccountName" class="form-label">Nazwa konta *</label>
+		<header class="flex items-center justify-between px-5 py-4 border-b border-surface-200-800">
+			<h2 id="new-account-modal-title" class="h4 font-bold">Dodaj nowe konto</h2>
+			<button
+				type="button"
+				class="btn-icon btn-icon-sm"
+				aria-label="Zamknij"
+				title="Zamknij"
+				onclick={onClose}
+			>
+				×
+			</button>
+		</header>
+
+		<div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+			<div class="flex flex-col gap-1">
+				<label for="newAccountName" class="text-sm font-semibold">Nazwa konta *</label>
 				<input
 					id="newAccountName"
 					type="text"
 					bind:value={name}
 					placeholder="np. Konto oszczędnościowe"
-					class="form-input"
+					class="input"
 					required
 				/>
 			</div>
 
-			<div class="form-group">
-				<label for="newAccountCategory" class="form-label">Kategoria *</label>
-				<select id="newAccountCategory" bind:value={category} class="form-input">
+			<div class="flex flex-col gap-1">
+				<label for="newAccountCategory" class="text-sm font-semibold">Kategoria *</label>
+				<select id="newAccountCategory" bind:value={category} class="select">
 					{#if section === 'financial'}
 						<option value="bank">Konto bankowe</option>
 						<option value="saving_account">Konto oszczędnościowe</option>
@@ -95,9 +108,9 @@
 			</div>
 
 			{#if section === 'retirement'}
-				<div class="form-group">
-					<label for="newAccountWrapper" class="form-label">Wrapper *</label>
-					<select id="newAccountWrapper" bind:value={wrapper} class="form-input">
+				<div class="flex flex-col gap-1">
+					<label for="newAccountWrapper" class="text-sm font-semibold">Wrapper *</label>
+					<select id="newAccountWrapper" bind:value={wrapper} class="select">
 						<option value="IKE">IKE</option>
 						<option value="IKZE">IKZE</option>
 						<option value="PPK">PPK</option>
@@ -105,175 +118,38 @@
 				</div>
 			{/if}
 
-			<div class="form-group">
-				<label for="newAccountOwner" class="form-label">Właściciel</label>
-				<select id="newAccountOwner" bind:value={owner} class="form-input">
+			<div class="flex flex-col gap-1">
+				<label for="newAccountOwner" class="text-sm font-semibold">Właściciel</label>
+				<select id="newAccountOwner" bind:value={owner} class="select">
 					{#each personas as persona}
 						<option value={persona.name}>{persona.name}</option>
 					{/each}
 				</select>
 			</div>
 
-			<div class="form-group">
-				<label for="newAccountValue" class="form-label">Wartość początkowa</label>
+			<div class="flex flex-col gap-1">
+				<label for="newAccountValue" class="text-sm font-semibold">Wartość początkowa</label>
 				<input
 					id="newAccountValue"
 					type="number"
 					step="0.01"
 					bind:value
 					placeholder="0.00"
-					class="form-input"
+					class="input"
 				/>
 			</div>
 		</div>
-		<div class="modal-footer">
-			<button type="button" class="btn btn-secondary" onclick={onClose}> Anuluj </button>
-			<button type="button" class="btn btn-primary" disabled={creating} onclick={onCreate}>
+
+		<footer class="flex justify-end gap-2 px-5 py-4 border-t border-surface-200-800">
+			<button type="button" class="btn preset-tonal-surface" onclick={onClose}>Anuluj</button>
+			<button
+				type="button"
+				class="btn preset-filled-primary-500"
+				disabled={creating}
+				onclick={onCreate}
+			>
 				{creating ? 'Tworzenie...' : 'Utwórz konto'}
 			</button>
-		</div>
+		</footer>
 	</div>
 </div>
-
-<style>
-	.form-group {
-		margin-bottom: var(--size-4);
-	}
-
-	.form-group:last-child {
-		margin-bottom: 0;
-	}
-
-	.form-label {
-		display: block;
-		font-weight: var(--font-weight-6);
-		margin-bottom: var(--size-2);
-		color: var(--color-text);
-	}
-
-	.form-input {
-		width: 100%;
-		padding: var(--size-3);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-2);
-		background: var(--color-bg);
-		color: var(--color-text);
-		font-size: var(--font-size-2);
-		font-family: inherit;
-		transition: all 0.2s;
-		min-height: var(--tap-target-min);
-	}
-
-	.form-input:focus {
-		outline: none;
-		border-color: var(--color-primary);
-		box-shadow: 0 0 0 2px rgba(94, 129, 172, 0.2);
-	}
-
-	.btn {
-		padding: var(--size-3) var(--size-5);
-		border: none;
-		border-radius: var(--radius-2);
-		font-weight: var(--font-weight-6);
-		font-size: var(--font-size-2);
-		cursor: pointer;
-		transition: all 0.2s;
-	}
-
-	.btn:disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
-	}
-
-	.btn-primary {
-		background: var(--color-primary);
-		color: var(--nord6);
-		flex: 1;
-	}
-
-	.btn-primary:hover:not(:disabled) {
-		background: var(--nord9);
-	}
-
-	.btn-secondary {
-		background: transparent;
-		color: var(--color-text);
-		border: 1px solid var(--color-border);
-	}
-
-	.btn-secondary:hover {
-		background: var(--color-accent);
-	}
-
-	.modal-overlay {
-		position: fixed;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background: rgba(0, 0, 0, 0.5);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 1000;
-		padding: var(--size-4);
-	}
-
-	.modal {
-		background: var(--color-bg);
-		border-radius: var(--radius-2);
-		max-width: 500px;
-		width: 100%;
-		box-shadow: var(--shadow-6);
-	}
-
-	.modal-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: var(--size-4);
-		border-bottom: 1px solid var(--color-border);
-	}
-
-	.modal-header h2 {
-		margin: 0;
-		font-size: var(--font-size-4);
-		font-weight: var(--font-weight-7);
-		color: var(--color-text);
-	}
-
-	.btn-close {
-		width: var(--tap-target-min);
-		height: var(--tap-target-min);
-		padding: 0;
-		border: none;
-		background: transparent;
-		color: var(--color-text-secondary);
-		font-size: var(--font-size-5);
-		line-height: 1;
-		cursor: pointer;
-		transition: all 0.2s;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.btn-close:hover {
-		color: var(--nord11);
-	}
-
-	.modal-content {
-		padding: var(--size-4);
-	}
-
-	.modal-footer {
-		display: flex;
-		gap: var(--size-3);
-		padding: var(--size-4);
-		border-top: 1px solid var(--color-border);
-	}
-
-	.modal-footer .btn {
-		flex: 1;
-	}
-</style>

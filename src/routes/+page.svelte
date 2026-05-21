@@ -137,11 +137,6 @@
 			</div>
 		</div>
 	{:then dashboard}
-		{@const change = calculateChange(
-			dashboard.current_net_worth,
-			dashboard.current_net_worth - dashboard.change_vs_last_month
-		)}
-
 		<div class="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
 			<div class="card preset-filled-surface-100-900 p-4 space-y-2">
 				<header>
@@ -159,7 +154,14 @@
 						<TrendingDown size={14} />
 					{/if}
 					{formatPLN(Math.abs(dashboard.change_vs_last_month))}
-					({formatPercent(Math.abs(change.percent))})
+					({formatPercent(
+						Math.abs(
+							calculateChange(
+								dashboard.current_net_worth,
+								dashboard.current_net_worth - dashboard.change_vs_last_month
+							).percent
+						)
+					)})
 					<span class="text-surface-700-300">vs poprzedni miesiąc</span>
 				</p>
 			</div>
