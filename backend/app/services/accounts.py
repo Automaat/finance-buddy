@@ -3,27 +3,37 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models import Account
+from app.models import Account, SnapshotValue
 from app.schemas.accounts import AccountCreate, AccountResponse, AccountsListResponse, AccountUpdate
+from app.services.snapshot_aggregates import recompute_for_snapshots
 from app.utils.db_helpers import (
     check_duplicate_name,
     get_latest_snapshot_value,
     get_latest_snapshot_values_batch,
     get_or_404,
-    soft_delete,
 )
+
+
+def _affected_snapshot_ids(db: Session, account_id: int) -> list[int]:
+    """Return snapshot IDs that have a SnapshotValue for this account."""
+    return list(
+        db.execute(
+            select(SnapshotValue.snapshot_id)
+            .where(SnapshotValue.account_id == account_id)
+            .distinct()
+        )
+        .scalars()
+        .all()
+    )
 
 
 def get_all_accounts(db: Session) -> AccountsListResponse:
     """Get all active accounts with their latest snapshot values"""
-    # Get all active accounts
     accounts = db.execute(select(Account).where(Account.is_active.is_(True))).scalars().all()
 
-    # Batch fetch latest snapshot values for all accounts
     account_ids = [account.id for account in accounts]
     latest_values = get_latest_snapshot_values_batch(db, account_ids)
 
-    # Build response with accounts grouped by type
     assets = []
     liabilities = []
 
@@ -54,7 +64,6 @@ def get_all_accounts(db: Session) -> AccountsListResponse:
 
 def create_account(db: Session, data: AccountCreate) -> AccountResponse:
     """Create new account"""
-    # Check for duplicate active account name
     check_duplicate_name(db, Account, data.name)
 
     account = Account(
@@ -102,11 +111,12 @@ def update_account(db: Session, account_id: int, data: AccountUpdate) -> Account
     """Update existing account"""
     account = get_or_404(db, Account, account_id)
 
-    # Check for duplicate name if changing name
     if data.name and data.name != account.name:
         check_duplicate_name(db, Account, data.name, exclude_id=account_id)
 
-    # Update fields
+    old_owner = account.owner
+    old_category = account.category
+
     if data.name is not None:
         account.name = data.name
     if data.category is not None:
@@ -119,13 +129,22 @@ def update_account(db: Session, account_id: int, data: AccountUpdate) -> Account
         account.purpose = data.purpose
     if data.receives_contributions is not None:
         account.receives_contributions = data.receives_contributions
-    # For account_wrapper and square_meters, distinguish between
-    # "not provided" and "explicitly set to None"
     _field_set = getattr(data, "model_fields_set", set())
     if "account_wrapper" in _field_set:
         account.account_wrapper = data.account_wrapper
     if "square_meters" in _field_set:
         account.square_meters = data.square_meters
+
+    # Recompute aggregates when fields that affect totals/allocation change
+    needs_recompute = (data.owner is not None and data.owner != old_owner) or (
+        data.category is not None and data.category != old_category
+    )
+
+    if needs_recompute:
+        affected_ids = _affected_snapshot_ids(db, account_id)
+        if affected_ids:
+            db.flush()  # Persist new owner/category before recompute queries accounts
+            recompute_for_snapshots(db, affected_ids)
 
     try:
         db.commit()
@@ -137,7 +156,6 @@ def update_account(db: Session, account_id: int, data: AccountUpdate) -> Account
             detail="Failed to update account due to database integrity error",
         ) from e
 
-    # Get current value
     current_value = get_latest_snapshot_value(db, account.id)
 
     return AccountResponse(
@@ -158,5 +176,18 @@ def update_account(db: Session, account_id: int, data: AccountUpdate) -> Account
 
 
 def delete_account(db: Session, account_id: int) -> None:
-    """Soft delete account by setting is_active=False"""
-    soft_delete(db, Account, account_id)
+    """Soft delete account and recompute affected aggregates"""
+    account = get_or_404(db, Account, account_id)
+
+    if not account.is_active:
+        return
+
+    affected_ids = _affected_snapshot_ids(db, account_id)
+
+    account.is_active = False
+    db.flush()  # Persist is_active=False before recompute queries accounts
+
+    if affected_ids:
+        recompute_for_snapshots(db, affected_ids)
+
+    db.commit()

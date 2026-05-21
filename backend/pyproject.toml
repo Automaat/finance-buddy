@@ -32,6 +32,9 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+markers = [
+    "perf: marks tests as performance benchmarks",
+]
 addopts = [
     "--strict-markers",
     "--strict-config",

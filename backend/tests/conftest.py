@@ -25,6 +25,7 @@ from app.models import (
     RetirementLimit,
     SalaryRecord,
     Snapshot,
+    SnapshotAggregate,
     SnapshotValue,
     Transaction,
 )
@@ -41,6 +42,7 @@ _REGISTERED_MODELS = (
     RetirementLimit,
     SalaryRecord,
     Snapshot,
+    SnapshotAggregate,
     SnapshotValue,
     Transaction,
 )

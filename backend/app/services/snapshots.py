@@ -13,6 +13,7 @@ from app.schemas.snapshots import (
     SnapshotUpdate,
     SnapshotValueResponse,
 )
+from app.services.snapshot_aggregates import recompute_for_snapshot
 
 
 def create_snapshot(db: Session, data: SnapshotCreate) -> SnapshotResponse:
@@ -78,6 +79,10 @@ def create_snapshot(db: Session, data: SnapshotCreate) -> SnapshotResponse:
         )
         db.add(sv)
         snapshot_values.append(sv)
+
+    # Flush snapshot_values so recompute can query them (autoflush=False in SessionLocal)
+    db.flush()
+    recompute_for_snapshot(db, snapshot.id)
 
     try:
         db.commit()
@@ -250,6 +255,10 @@ def update_snapshot(db: Session, snapshot_id: int, data: SnapshotUpdate) -> Snap
         assets = []
         accounts = []
         snapshot_values = []
+
+    # Flush pending changes so recompute sees the updated state
+    db.flush()
+    recompute_for_snapshot(db, snapshot_id)
 
     try:
         db.commit()

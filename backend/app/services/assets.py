@@ -5,24 +5,32 @@ from sqlalchemy.orm import Session
 
 from app.models import Asset, Snapshot, SnapshotValue
 from app.schemas.assets import AssetCreate, AssetResponse, AssetsListResponse, AssetUpdate
+from app.services.snapshot_aggregates import recompute_for_snapshots
 from app.utils.db_helpers import (
     check_duplicate_name,
     get_latest_snapshot_values_batch_for_assets,
     get_or_404,
-    soft_delete,
 )
+
+
+def _affected_snapshot_ids_for_asset(db: Session, asset_id: int) -> list[int]:
+    """Return snapshot IDs that have a SnapshotValue for this asset."""
+    return list(
+        db.execute(
+            select(SnapshotValue.snapshot_id).where(SnapshotValue.asset_id == asset_id).distinct()
+        )
+        .scalars()
+        .all()
+    )
 
 
 def get_all_assets(db: Session) -> AssetsListResponse:
     """Get all active assets with their latest snapshot values"""
-    # Get all active assets
     assets = db.execute(select(Asset).where(Asset.is_active.is_(True))).scalars().all()
 
-    # Batch fetch latest snapshot values for all assets
     asset_ids = [asset.id for asset in assets]
     latest_values = get_latest_snapshot_values_batch_for_assets(db, asset_ids)
 
-    # Build response
     asset_responses = []
     for asset in assets:
         asset_response = AssetResponse(
@@ -39,7 +47,6 @@ def get_all_assets(db: Session) -> AssetsListResponse:
 
 def create_asset(db: Session, data: AssetCreate) -> AssetResponse:
     """Create new asset"""
-    # Check for duplicate active asset name
     check_duplicate_name(db, Asset, data.name)
 
     asset = Asset(
@@ -68,14 +75,12 @@ def create_asset(db: Session, data: AssetCreate) -> AssetResponse:
 
 
 def update_asset(db: Session, asset_id: int, data: AssetUpdate) -> AssetResponse:
-    """Update existing asset"""
+    """Update existing asset (name-only; no aggregate recompute needed)"""
     asset = get_or_404(db, Asset, asset_id)
 
-    # Check for duplicate name if changing name
     if data.name and data.name != asset.name:
         check_duplicate_name(db, Asset, data.name, exclude_id=asset_id)
 
-    # Update fields
     if data.name is not None:
         asset.name = data.name
 
@@ -89,7 +94,6 @@ def update_asset(db: Session, asset_id: int, data: AssetUpdate) -> AssetResponse
             detail="Failed to update asset due to database integrity error",
         ) from e
 
-    # Get current value
     latest_snapshot = db.execute(
         select(Snapshot).order_by(desc(Snapshot.date)).limit(1)
     ).scalar_one_or_none()
@@ -115,5 +119,18 @@ def update_asset(db: Session, asset_id: int, data: AssetUpdate) -> AssetResponse
 
 
 def delete_asset(db: Session, asset_id: int) -> None:
-    """Soft delete asset by setting is_active=False"""
-    soft_delete(db, Asset, asset_id)
+    """Soft delete asset and recompute affected aggregates"""
+    asset = get_or_404(db, Asset, asset_id)
+
+    if not asset.is_active:
+        return
+
+    affected_ids = _affected_snapshot_ids_for_asset(db, asset_id)
+
+    asset.is_active = False
+    db.flush()  # Persist is_active=False before recompute queries assets
+
+    if affected_ids:
+        recompute_for_snapshots(db, affected_ids)
+
+    db.commit()
