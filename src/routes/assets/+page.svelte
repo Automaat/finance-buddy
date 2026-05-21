@@ -2,8 +2,8 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import { formatPLN } from '$lib/utils/format';
 	import { Home, Pencil, Plus, Trash2 } from 'lucide-svelte';
-	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
+	import { getApiUrlOrThrow } from '$lib/utils/api';
 	import type { Asset } from './+page';
 	import type { PageData } from './$types';
 
@@ -13,7 +13,7 @@
 
 	let { data }: Props = $props();
 
-	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
+	const apiUrl = () => getApiUrlOrThrow();
 
 	let showForm = $state(false);
 	let editingAsset: Asset | null = $state(null);
@@ -53,8 +53,8 @@
 
 		try {
 			const endpoint = editingAsset
-				? `${apiUrl}/api/assets/${editingAsset.id}`
-				: `${apiUrl}/api/assets`;
+				? `${apiUrl()}/api/assets/${editingAsset.id}`
+				: `${apiUrl()}/api/assets`;
 			const method = editingAsset ? 'PUT' : 'POST';
 
 			const response = await fetch(endpoint, {
@@ -93,7 +93,9 @@
 		if (!assetToDelete) return;
 
 		try {
-			const response = await fetch(`${apiUrl}/api/assets/${assetToDelete}`, { method: 'DELETE' });
+			const response = await fetch(`${apiUrl()}/api/assets/${assetToDelete}`, {
+				method: 'DELETE'
+			});
 
 			if (!response.ok) {
 				throw new Error('Failed to delete asset');

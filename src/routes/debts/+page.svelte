@@ -2,9 +2,9 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import { formatPLN, formatDate } from '$lib/utils/format';
 	import { ClipboardList, Plus, Pencil, Trash2, Wallet, CircleDollarSign } from 'lucide-svelte';
-	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount, untrack } from 'svelte';
+	import { getApiUrlOrThrow } from '$lib/utils/api';
 	import type { Debt, DebtPayment } from './+page';
 	import type { Persona } from '$lib/types/personas';
 	import type { PageData } from './$types';
@@ -15,7 +15,7 @@
 
 	let { data }: Props = $props();
 
-	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
+	const apiUrl = () => getApiUrlOrThrow();
 	const personas = $derived(data.personas as Persona[]);
 	const defaultOwner = $derived(personas.length > 0 ? personas[0].name : 'Marcin');
 
@@ -107,7 +107,7 @@
 			let method: string;
 
 			if (editingDebt) {
-				endpoint = `${apiUrl}/api/debts/${editingDebt.id}`;
+				endpoint = `${apiUrl()}/api/debts/${editingDebt.id}`;
 				method = 'PUT';
 			} else {
 				const accountOwner = defaultOwner;
@@ -119,7 +119,7 @@
 					currency: formData.currency
 				};
 
-				const accountResponse = await fetch(`${apiUrl}/api/accounts`, {
+				const accountResponse = await fetch(`${apiUrl()}/api/accounts`, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify(tempAccount)
@@ -131,7 +131,7 @@
 				}
 
 				const accountData = await accountResponse.json();
-				endpoint = `${apiUrl}/api/accounts/${accountData.id}/debts`;
+				endpoint = `${apiUrl()}/api/accounts/${accountData.id}/debts`;
 				method = 'POST';
 			}
 
@@ -171,7 +171,9 @@
 		if (!debtToDelete) return;
 
 		try {
-			const response = await fetch(`${apiUrl}/api/debts/${debtToDelete}`, { method: 'DELETE' });
+			const response = await fetch(`${apiUrl()}/api/debts/${debtToDelete}`, {
+				method: 'DELETE'
+			});
 
 			if (!response.ok) {
 				throw new Error('Failed to delete debt');
@@ -191,7 +193,7 @@
 
 	async function loadPaymentCounts() {
 		try {
-			const response = await fetch(`${apiUrl}/api/payments/counts`);
+			const response = await fetch(`${apiUrl()}/api/payments/counts`);
 			if (response.ok) {
 				paymentCounts = await response.json();
 			}
@@ -218,7 +220,7 @@
 		if (!selectedDebt) return;
 
 		try {
-			const response = await fetch(`${apiUrl}/api/accounts/${selectedDebt.account_id}/payments`);
+			const response = await fetch(`${apiUrl()}/api/accounts/${selectedDebt.account_id}/payments`);
 			if (response.ok) {
 				paymentsData = await response.json();
 			} else {
@@ -238,7 +240,7 @@
 		savingPayment = true;
 
 		try {
-			const response = await fetch(`${apiUrl}/api/accounts/${selectedDebt.account_id}/payments`, {
+			const response = await fetch(`${apiUrl()}/api/accounts/${selectedDebt.account_id}/payments`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(paymentFormData)
@@ -282,7 +284,7 @@
 
 		try {
 			const response = await fetch(
-				`${apiUrl}/api/accounts/${selectedDebt.account_id}/payments/${paymentToDelete}`,
+				`${apiUrl()}/api/accounts/${selectedDebt.account_id}/payments/${paymentToDelete}`,
 				{ method: 'DELETE' }
 			);
 

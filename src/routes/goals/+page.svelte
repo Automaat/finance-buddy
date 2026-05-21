@@ -2,8 +2,8 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import { formatPLN, formatDate } from '$lib/utils/format';
 	import { Target, Plus, Pencil, Trash2, CheckCircle2, Calendar } from 'lucide-svelte';
-	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
+	import { getApiUrlOrThrow } from '$lib/utils/api';
 	import type { Goal, AccountOption } from './+page';
 	import type { PageData } from './$types';
 
@@ -13,7 +13,7 @@
 
 	let { data }: Props = $props();
 
-	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
+	const apiUrl = () => getApiUrlOrThrow();
 
 	const goals = $derived(data.goals as Goal[]);
 	const accounts = $derived(data.accounts as AccountOption[]);
@@ -94,8 +94,8 @@
 		saving = true;
 		try {
 			const endpoint = editingGoal
-				? `${apiUrl}/api/goals/${editingGoal.id}`
-				: `${apiUrl}/api/goals`;
+				? `${apiUrl()}/api/goals/${editingGoal.id}`
+				: `${apiUrl()}/api/goals`;
 			const method = editingGoal ? 'PUT' : 'POST';
 			const response = await fetch(endpoint, {
 				method,
@@ -128,7 +128,9 @@
 	async function confirmDelete() {
 		if (!goalToDelete) return;
 		try {
-			const response = await fetch(`${apiUrl}/api/goals/${goalToDelete}`, { method: 'DELETE' });
+			const response = await fetch(`${apiUrl()}/api/goals/${goalToDelete}`, {
+				method: 'DELETE'
+			});
 			if (!response.ok) throw new Error('Nie udało się usunąć celu');
 			await invalidateAll();
 		} catch (err) {

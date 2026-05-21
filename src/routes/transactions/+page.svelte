@@ -2,9 +2,9 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import { formatPLN } from '$lib/utils/format';
 	import { Plus, Landmark, Search, BarChart3, Trash2 } from 'lucide-svelte';
-	import { env } from '$env/dynamic/public';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { toast } from '$lib/stores/toast.svelte';
+	import { getApiUrlOrThrow } from '$lib/utils/api';
 	import type { Persona } from '$lib/types/personas';
 	import { untrack } from 'svelte';
 	import type { PageData } from './$types';
@@ -15,7 +15,7 @@
 
 	let { data }: Props = $props();
 
-	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
+	const apiUrl = () => getApiUrlOrThrow();
 	const personas = $derived(data.personas as Persona[]);
 	const defaultOwner = $derived(personas.length > 0 ? personas[0].name : 'Marcin');
 
@@ -66,7 +66,7 @@
 
 		try {
 			const response = await fetch(
-				`${apiUrl}/api/accounts/${accountId}/transactions/${transactionId}`,
+				`${apiUrl()}/api/accounts/${accountId}/transactions/${transactionId}`,
 				{ method: 'DELETE' }
 			);
 
@@ -117,7 +117,7 @@
 		ppkGenerating = true;
 
 		try {
-			const response = await fetch(`${apiUrl}/api/retirement/ppk-contributions/generate`, {
+			const response = await fetch(`${apiUrl()}/api/retirement/ppk-contributions/generate`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(ppkGenerateData)
@@ -150,7 +150,7 @@
 
 		try {
 			const response = await fetch(
-				`${apiUrl}/api/accounts/${newTransactionData.account_id}/transactions`,
+				`${apiUrl()}/api/accounts/${newTransactionData.account_id}/transactions`,
 				{
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },

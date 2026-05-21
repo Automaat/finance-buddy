@@ -1,8 +1,8 @@
 <script lang="ts">
 	import Modal from '$lib/components/Modal.svelte';
 	import { Plus, Pencil, Trash2 } from 'lucide-svelte';
-	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
+	import { getApiUrlOrThrow } from '$lib/utils/api';
 	import type { Persona } from '$lib/types/personas';
 
 	interface Props {
@@ -11,7 +11,7 @@
 
 	let { data }: Props = $props();
 
-	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
+	const apiUrl = () => getApiUrlOrThrow();
 
 	let showForm = $state(false);
 	let editingPersona: Persona | null = $state(null);
@@ -54,8 +54,8 @@
 
 		try {
 			const endpoint = editingPersona
-				? `${apiUrl}/api/personas/${editingPersona.id}`
-				: `${apiUrl}/api/personas`;
+				? `${apiUrl()}/api/personas/${editingPersona.id}`
+				: `${apiUrl()}/api/personas`;
 			const method = editingPersona ? 'PUT' : 'POST';
 
 			const response = await fetch(endpoint, {
@@ -89,7 +89,7 @@
 		if (!personaToDelete) return;
 
 		try {
-			const response = await fetch(`${apiUrl}/api/personas/${personaToDelete.id}`, {
+			const response = await fetch(`${apiUrl()}/api/personas/${personaToDelete.id}`, {
 				method: 'DELETE'
 			});
 

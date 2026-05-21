@@ -15,9 +15,9 @@
 		Trash2,
 		Scale
 	} from 'lucide-svelte';
-	import { env } from '$env/dynamic/public';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { toast } from '$lib/stores/toast.svelte';
+	import { getApiUrlOrThrow } from '$lib/utils/api';
 	import type { SalaryRecord } from '$lib/types/salaries';
 	import type { Persona } from '$lib/types/personas';
 	import type { CpiSeries } from '$lib/types/cpi';
@@ -29,7 +29,7 @@
 
 	let { data }: Props = $props();
 
-	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
+	const apiUrl = () => getApiUrlOrThrow();
 	const personas = $derived(data.personas as Persona[]);
 	const defaultOwner = $derived(personas.length > 0 ? personas[0].name : 'Marcin');
 	const cpiSeries = $derived(data.cpiSeries as CpiSeries);
@@ -175,8 +175,8 @@
 		try {
 			const method = editingSalary ? 'PATCH' : 'POST';
 			const url = editingSalary
-				? `${apiUrl}/api/salaries/${editingSalary.id}`
-				: `${apiUrl}/api/salaries`;
+				? `${apiUrl()}/api/salaries/${editingSalary.id}`
+				: `${apiUrl()}/api/salaries`;
 
 			const response = await fetch(url, {
 				method,
@@ -220,7 +220,7 @@
 		}
 
 		try {
-			const response = await fetch(`${apiUrl}/api/salaries/${id}`, {
+			const response = await fetch(`${apiUrl()}/api/salaries/${id}`, {
 				method: 'DELETE'
 			});
 

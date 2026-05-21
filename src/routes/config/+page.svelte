@@ -11,8 +11,8 @@
 		AlertTriangle,
 		Gauge
 	} from 'lucide-svelte';
-	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
+	import { getApiUrlOrThrow } from '$lib/utils/api';
 	import { untrack } from 'svelte';
 	import type { PageData } from './$types';
 
@@ -22,7 +22,7 @@
 
 	let { data }: Props = $props();
 
-	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
+	const apiUrl = () => getApiUrlOrThrow();
 
 	const defaults = {
 		birth_date: '1990-01-01',
@@ -102,7 +102,7 @@
 		saving = true;
 
 		try {
-			const response = await fetch(`${apiUrl}/api/config`, {
+			const response = await fetch(`${apiUrl()}/api/config`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({

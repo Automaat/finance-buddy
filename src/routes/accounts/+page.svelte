@@ -3,9 +3,9 @@
 	import Skeleton from '$lib/components/Skeleton.svelte';
 	import { formatPLN } from '$lib/utils/format';
 	import { Wallet, TrendingDown, Pencil, Trash2, Plus, BarChart3 } from 'lucide-svelte';
-	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount, untrack } from 'svelte';
+	import { getApiUrlOrThrow } from '$lib/utils/api';
 	import { INVESTMENT_CATEGORIES } from '$lib/constants';
 	import type { Account, TransactionsData } from './+page';
 	import type { Persona } from '$lib/types/personas';
@@ -17,7 +17,7 @@
 
 	let { data }: Props = $props();
 
-	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
+	const apiUrl = () => getApiUrlOrThrow();
 	let personas: Persona[] = $state([]);
 	const defaultOwner = $derived(personas.length > 0 ? personas[0].name : 'Marcin');
 
@@ -131,8 +131,8 @@
 
 		try {
 			const endpoint = editingAccount
-				? `${apiUrl}/api/accounts/${editingAccount.id}`
-				: `${apiUrl}/api/accounts`;
+				? `${apiUrl()}/api/accounts/${editingAccount.id}`
+				: `${apiUrl()}/api/accounts`;
 			const method = editingAccount ? 'PUT' : 'POST';
 
 			const payload =
@@ -176,7 +176,7 @@
 		if (!accountToDelete) return;
 
 		try {
-			const response = await fetch(`${apiUrl}/api/accounts/${accountToDelete}`, {
+			const response = await fetch(`${apiUrl()}/api/accounts/${accountToDelete}`, {
 				method: 'DELETE'
 			});
 
@@ -198,7 +198,7 @@
 
 	async function loadTransactionCounts() {
 		try {
-			const response = await fetch(`${apiUrl}/api/transactions/counts`);
+			const response = await fetch(`${apiUrl()}/api/transactions/counts`);
 			if (response.ok) {
 				transactionCounts = await response.json();
 			}
@@ -227,7 +227,7 @@
 		if (!selectedAccountId) return;
 
 		try {
-			const response = await fetch(`${apiUrl}/api/accounts/${selectedAccountId}/transactions`);
+			const response = await fetch(`${apiUrl()}/api/accounts/${selectedAccountId}/transactions`);
 			if (response.ok) {
 				transactionsData = await response.json();
 			} else {
@@ -262,7 +262,7 @@
 		savingTransaction = true;
 
 		try {
-			const response = await fetch(`${apiUrl}/api/accounts/${selectedAccountId}/transactions`, {
+			const response = await fetch(`${apiUrl()}/api/accounts/${selectedAccountId}/transactions`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(transactionFormData)
@@ -296,7 +296,7 @@
 
 		try {
 			const response = await fetch(
-				`${apiUrl}/api/accounts/${selectedAccountId}/transactions/${transactionId}`,
+				`${apiUrl()}/api/accounts/${selectedAccountId}/transactions/${transactionId}`,
 				{ method: 'DELETE' }
 			);
 
