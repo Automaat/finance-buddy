@@ -70,7 +70,13 @@ func run() int {
 	defer stop()
 
 	deps := server.Deps{}
-	if dsn := os.Getenv("DATABASE_URL"); dsn != "" {
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn != "" || os.Getenv("PGHOST") != "" {
+		// pgx's URL parser is strict — special chars in the password (@, :,
+		// /, ?, #) must be percent-encoded. If callers prefer to skip that
+		// hazard, they can leave DATABASE_URL empty and provide the libpq
+		// env vars (PGHOST/PGPORT/PGUSER/PGPASSWORD/PGDATABASE); pgx picks
+		// them up from an empty DSN.
 		pool, err := db.New(ctx, dsn)
 		if err != nil {
 			logger.Error("open db pool", "err", err)
@@ -80,7 +86,7 @@ func run() int {
 		deps.Pool = pool
 		logger.Info("db pool ready")
 	} else {
-		logger.Warn("DATABASE_URL not set — DB-backed endpoints will 404")
+		logger.Warn("no DB config (DATABASE_URL or PGHOST) — DB-backed endpoints will 404")
 	}
 
 	srv := &http.Server{
