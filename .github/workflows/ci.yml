@@ -92,6 +92,17 @@ jobs:
           APP_PASSWORD: test
           CORS_ORIGINS: http://localhost:3000
 
+      - name: OpenAPI drift check
+        run: |
+          uv run python scripts/dump_openapi.py
+          if ! git diff --exit-code ../api/openapi.v1.json; then
+            echo "::error::api/openapi.v1.json is out of date." \
+                 "Regenerate with: (cd backend && uv run python scripts/dump_openapi.py)" \
+                 "and commit the result, or bump to openapi.v2.json if the change is intentional."
+            exit 1
+          fi
+        working-directory: backend
+
       - name: Upload backend coverage
         uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
