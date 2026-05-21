@@ -119,7 +119,10 @@ func (h *Handler) toResponse(ctx context.Context, g *EquityGrant) (response, err
 		LiquidityEventDate:     g.LiquidityEventDate,
 	}
 	vested := VestedSharesAt(sched, today)
-	progress := math.Round(VestingProgressPct(sched, today)*100) / 100
+	// Python uses round(x, 2) which is banker's rounding (ties-to-even).
+	// math.RoundToEven matches that semantics; math.Round would diverge on
+	// .005 ties.
+	progress := math.RoundToEven(VestingProgressPct(sched, today)*100) / 100
 
 	paper, err := computePaperValues(ctx, h.valuations, g, vested)
 	if err != nil {
@@ -341,6 +344,11 @@ func (h *Handler) writeStoreError(w http.ResponseWriter, err error, id int) {
 	if errors.Is(err, ErrNotFound) {
 		writeDetailError(w, http.StatusNotFound,
 			fmt.Sprintf("Equity grant with id %d not found", id))
+		return
+	}
+	var inv *InvariantError
+	if errors.As(err, &inv) {
+		writeValidationError(w, inv.Field, inv.Msg, "")
 		return
 	}
 	h.logger.Error("equity grant store", "err", err)

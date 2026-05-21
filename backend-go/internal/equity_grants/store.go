@@ -39,6 +39,18 @@ type EquityGrant struct {
 // ErrNotFound is returned when a row is missing or soft-deleted.
 var ErrNotFound = errors.New("equity grant not found")
 
+// InvariantError is returned by Update when applying a patch violates a
+// cross-field invariant (cliff > total, option without strike, etc). The
+// handler maps it to a 422.
+type InvariantError struct {
+	Field string
+	Msg   string
+}
+
+func (e *InvariantError) Error() string {
+	return e.Field + ": " + e.Msg
+}
+
 // ListFilter narrows the active rows.
 type ListFilter struct {
 	Owner   *string
@@ -170,6 +182,24 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*EquityGrant
 		return nil, err
 	}
 	applyPatch(g, p)
+	// Mirror Python's cross-field invariants on the merged record.
+	// RSU clears any lingering strike — Python's schema enforces this in
+	// the model validator; we do it post-patch.
+	if g.Type == "rsu" {
+		g.StrikePrice = nil
+	}
+	if g.VestCliffMonths > g.VestTotalMonths {
+		return nil, &InvariantError{
+			Field: "vest_cliff_months",
+			Msg:   "Cliff months cannot exceed total vesting months",
+		}
+	}
+	if g.Type == "option" && g.StrikePrice == nil {
+		return nil, &InvariantError{
+			Field: "strike_price",
+			Msg:   "Stock options require a strike price",
+		}
+	}
 	customJSON, err := encodeSchedule(g.VestCustomSchedule)
 	if err != nil {
 		return nil, fmt.Errorf("encode schedule: %w", err)

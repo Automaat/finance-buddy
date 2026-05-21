@@ -303,19 +303,19 @@ func patchDates(raw map[string]json.RawMessage, p *UpdatePatch) *validationError
 	return nil
 }
 
+// patchSchedule reads vest_custom_schedule. Matches Python's update_equity_grant
+// behavior: explicit null is treated the same as omitted (no-op); only an
+// actual JSON array reassigns the field.
 func patchSchedule(raw map[string]json.RawMessage, p *UpdatePatch) *validationError {
 	v, ok := raw["vest_custom_schedule"]
-	if !ok {
-		return nil
-	}
-	p.VestCustomScheduleSet = true
-	if isNull(v) {
+	if !ok || isNull(v) {
 		return nil
 	}
 	schedule, vErr := parseCustomSchedule(v)
 	if vErr != nil {
 		return vErr
 	}
+	p.VestCustomScheduleSet = true
 	p.VestCustomSchedule = schedule
 	return nil
 }
