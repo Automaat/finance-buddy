@@ -248,7 +248,8 @@ jobs:
             tests/test_personas.py \
             tests/test_personas_mutations.py \
             tests/test_goals.py \
-            tests/test_company_valuations.py
+            tests/test_company_valuations.py \
+            tests/test_bonus_events.py
         working-directory: backend-bb-tests
         env:
           BB_BASE_URL: http://127.0.0.1:8000
