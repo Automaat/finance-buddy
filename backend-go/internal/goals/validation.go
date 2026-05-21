@@ -16,6 +16,9 @@ func validateCreate(req *createRequest) *validationError {
 		return &validationError{Field: "name", Msg: "Name cannot be empty"}
 	}
 	req.Name = name
+	if time.Time(req.TargetDate).IsZero() {
+		return &validationError{Field: "target_date", Msg: "Field required"}
+	}
 	if req.TargetAmount <= 0 {
 		return &validationError{Field: "target_amount", Msg: "Target amount must be greater than 0"}
 	}
@@ -53,13 +56,11 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *validationE
 	return p, nil
 }
 
-// patchScalarFields handles fields where "null" is invalid (omitting them =
-// no-op, present = validate + apply).
+// patchScalarFields handles non-nullable-but-omittable update fields.
+// Matches Python's GoalUpdate validators: explicit null is treated as
+// "no-op" (the validator returns None and the service skips that field).
 func patchScalarFields(raw map[string]json.RawMessage, p *UpdatePatch) *validationError {
-	if v, ok := raw["name"]; ok {
-		if isNull(v) {
-			return &validationError{Field: "name", Msg: "Name cannot be empty"}
-		}
+	if v, ok := raw["name"]; ok && !isNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
 			return &validationError{Field: "name", Msg: "must be a string"}

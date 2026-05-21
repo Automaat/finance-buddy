@@ -192,22 +192,30 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*Goal, strin
 		g.Category = p.Category
 	}
 
-	_, err = s.pool.Exec(ctx, `
+	row := s.pool.QueryRow(ctx, `
 		UPDATE goals SET
 			name = $1, target_amount = $2, target_date = $3, current_amount = $4,
 			monthly_contribution = $5, is_completed = $6, account_id = $7, category = $8
-		WHERE id = $9`,
+		WHERE id = $9
+		RETURNING `+selectColumns,
 		g.Name, g.TargetAmount, g.TargetDate, g.CurrentAmount,
 		g.MonthlyContribution, g.IsCompleted, g.AccountID, g.Category, id,
 	)
+	updated, err := scanGoal(row)
 	if err != nil {
+		// pgx.ErrNoRows here means the row was concurrently deleted between
+		// the Get above and this UPDATE; surface as a 404 instead of 200ing
+		// with stale in-memory state.
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, "", ErrNotFound
+		}
 		return nil, "", fmt.Errorf("update goal: %w", err)
 	}
-	name, err := s.accountName(ctx, g.AccountID)
+	name, err := s.accountName(ctx, updated.AccountID)
 	if err != nil {
 		return nil, "", err
 	}
-	return g, name, nil
+	return updated, name, nil
 }
 
 // Delete removes the goal (hard delete — Python does the same).
