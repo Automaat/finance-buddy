@@ -1,0 +1,13 @@
+{
+  "allocation_bonds": 20,
+  "allocation_commodities": 5,
+  "allocation_gold": 5,
+  "allocation_real_estate": 40,
+  "allocation_stocks": 30,
+  "birth_date": "1990-06-15",
+  "id": 1,
+  "monthly_expenses": "5000.00",
+  "monthly_mortgage_payment": "2000.00",
+  "retirement_age": 65,
+  "retirement_monthly_salary": "8000.00"
+}

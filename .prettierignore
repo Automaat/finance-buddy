@@ -43,3 +43,6 @@ playwright/.cache
 
 # Migration: OpenAPI spec is Python-dumped; CI drift check owns its format
 api/openapi.v1.json
+
+# Black-box test golden snapshots — Python's json.dump owns the format
+backend-bb-tests/golden

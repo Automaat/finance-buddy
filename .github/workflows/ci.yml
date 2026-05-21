@@ -111,6 +111,53 @@ jobs:
           flags: backend
           name: backend-coverage
 
+  bb-tests:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: bb
+          POSTGRES_PASSWORD: bb
+          POSTGRES_DB: bb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+        with:
+          experimental: true
+        env:
+          MISE_PYTHON_COMPILE: '0'
+
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+
+      - name: Install backend dependencies
+        run: uv sync
+        working-directory: backend
+
+      - name: Install bb-tests dependencies
+        run: uv sync
+        working-directory: backend-bb-tests
+
+      - name: Lint bb-tests
+        run: |
+          uv run --with ruff ruff check .
+          uv run --with ruff ruff format --check .
+        working-directory: backend-bb-tests
+
+      - name: Run black-box tests
+        run: uv run pytest -v
+        working-directory: backend-bb-tests
+        env:
+          BB_DATABASE_URL: postgresql://bb:bb@localhost:5432/bb
+
   docker-publish:
     runs-on: ubuntu-24.04
     needs: [frontend, backend]

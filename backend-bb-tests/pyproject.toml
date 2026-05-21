@@ -1,0 +1,25 @@
+[project]
+name = "finance-buddy-bb-tests"
+version = "0.1.0"
+description = "Black-box tests for the Finance Buddy backend. Runs against a real HTTP server and Postgres; used as the migration parity oracle between the Python and Go implementations."
+requires-python = ">=3.14"
+dependencies = [
+    "httpx>=0.28.1",
+    "psycopg2-binary>=2.9.11",
+    "pytest>=9.0.2",
+    "testcontainers[postgres]>=4.10.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = ["--strict-markers", "--strict-config"]
+markers = [
+    "golden: GET test that compares against a captured response file (use BB_UPDATE_GOLDEN=1 to refresh)",
+    "mutates: test that writes to the seeded database",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
