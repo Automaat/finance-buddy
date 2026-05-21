@@ -16,6 +16,8 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/Automaat/finance-buddy/backend-go/internal/accounts"
+	"github.com/Automaat/finance-buddy/backend-go/internal/aggregates"
 	bonusevents "github.com/Automaat/finance-buddy/backend-go/internal/bonus_events"
 	companyvaluations "github.com/Automaat/finance-buddy/backend-go/internal/company_valuations"
 	"github.com/Automaat/finance-buddy/backend-go/internal/config"
@@ -152,6 +154,15 @@ func registerAPIRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
 	r.Route("/api/zus", func(r chi.Router) {
 		r.Post("/calculate", zusHandler.Calculate)
 		r.Get("/prefill", zusHandler.Prefill)
+	})
+
+	aggregatesStore := aggregates.NewStore(pool)
+	accountsHandler := accounts.NewHandler(accounts.NewStore(pool, aggregatesStore), logger)
+	r.Route("/api/accounts", func(r chi.Router) {
+		r.Get("/", accountsHandler.List)
+		r.Post("/", accountsHandler.Create)
+		r.Put("/{id}", accountsHandler.Update)
+		r.Delete("/{id}", accountsHandler.Delete)
 	})
 }
 

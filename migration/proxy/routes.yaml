@@ -109,3 +109,16 @@ rules:
   - method: POST
     path_prefix: /api/zus
     upstream: http://backend-go:8000
+  # Group 9a — /api/accounts cut over to Go (incl. cascade aggregate recompute on owner/category change).
+  - method: GET
+    path_prefix: /api/accounts
+    upstream: http://backend-go:8000
+  - method: POST
+    path_prefix: /api/accounts
+    upstream: http://backend-go:8000
+  - method: PUT
+    path_prefix: /api/accounts
+    upstream: http://backend-go:8000
+  - method: DELETE
+    path_prefix: /api/accounts
+    upstream: http://backend-go:8000
