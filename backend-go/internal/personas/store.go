@@ -231,5 +231,8 @@ func scanPersona(row pgx.Row) (*Persona, error) {
 
 func isUniqueViolation(err error) bool {
 	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation
+	if !errors.As(err, &pgErr) || pgErr == nil {
+		return false
+	}
+	return pgErr.Code == pgerrcode.UniqueViolation
 }
