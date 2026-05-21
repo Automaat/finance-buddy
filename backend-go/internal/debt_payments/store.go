@@ -80,7 +80,22 @@ func (s *Store) ListForAccount(ctx context.Context, accountID int) ([]DebtPaymen
 		 ORDER BY date DESC, id DESC`,
 		accountID,
 	)
-	return scanPayments(rows, err)
+	if err != nil {
+		return nil, fmt.Errorf("query payments: %w", err)
+	}
+	defer rows.Close()
+	out := []DebtPayment{}
+	for rows.Next() {
+		p, err := scanPayment(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan payment: %w", err)
+		}
+		out = append(out, *p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate payments: %w", err)
+	}
+	return out, nil
 }
 
 // ListFilter narrows the all-payments view.
@@ -216,25 +231,6 @@ func (s *Store) CountsByAccount(ctx context.Context) (map[int]int, error) {
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate counts: %w", err)
-	}
-	return out, nil
-}
-
-func scanPayments(rows pgx.Rows, err error) ([]DebtPayment, error) {
-	if err != nil {
-		return nil, fmt.Errorf("query payments: %w", err)
-	}
-	defer rows.Close()
-	out := []DebtPayment{}
-	for rows.Next() {
-		p, err := scanPayment(rows)
-		if err != nil {
-			return nil, fmt.Errorf("scan payment: %w", err)
-		}
-		out = append(out, *p)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate payments: %w", err)
 	}
 	return out, nil
 }

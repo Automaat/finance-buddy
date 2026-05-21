@@ -101,7 +101,22 @@ func (s *Store) ListForAccount(ctx context.Context, accountID int) ([]Transactio
 		 ORDER BY date DESC, id DESC`,
 		accountID,
 	)
-	return scanTransactions(rows, err)
+	if err != nil {
+		return nil, fmt.Errorf("list transactions: %w", err)
+	}
+	defer rows.Close()
+	out := []Transaction{}
+	for rows.Next() {
+		t, err := scanTransaction(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan transaction: %w", err)
+		}
+		out = append(out, *t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate transactions: %w", err)
+	}
+	return out, nil
 }
 
 // ListFilter narrows the all-transactions view.
@@ -239,25 +254,6 @@ func (s *Store) CountsByAccount(ctx context.Context) (map[int]int, error) {
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate counts: %w", err)
-	}
-	return out, nil
-}
-
-func scanTransactions(rows pgx.Rows, err error) ([]Transaction, error) {
-	if err != nil {
-		return nil, fmt.Errorf("list transactions: %w", err)
-	}
-	defer rows.Close()
-	out := []Transaction{}
-	for rows.Next() {
-		t, err := scanTransaction(rows)
-		if err != nil {
-			return nil, fmt.Errorf("scan transaction: %w", err)
-		}
-		out = append(out, *t)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate transactions: %w", err)
 	}
 	return out, nil
 }
