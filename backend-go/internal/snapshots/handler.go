@@ -157,9 +157,12 @@ func (h *Handler) writeStoreError(w http.ResponseWriter, err error, id int, date
 		}
 		writeDetailError(w, http.StatusBadRequest,
 			fmt.Sprintf("Snapshot for date %s already exists", d))
-	case errors.Is(err, ErrDuplicateValueIDs):
+	case errors.Is(err, ErrDuplicateAssetIDs):
 		writeDetailError(w, http.StatusBadRequest,
-			"Duplicate asset or account IDs in snapshot values")
+			"Duplicate asset IDs in snapshot values")
+	case errors.Is(err, ErrDuplicateAccountIDs):
+		writeDetailError(w, http.StatusBadRequest,
+			"Duplicate account IDs in snapshot values")
 	default:
 		var mre *MissingReferencesError
 		if errors.As(err, &mre) {

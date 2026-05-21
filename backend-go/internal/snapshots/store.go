@@ -10,7 +10,9 @@ import (
 	"sort"
 	"time"
 
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
 
@@ -54,10 +56,10 @@ type ValueInput struct {
 
 // Sentinel errors mapped to HTTP status codes by the handler.
 var (
-	ErrNotFound          = errors.New("snapshot not found")
-	ErrDuplicateDate     = errors.New("snapshot date conflicts")
-	ErrDuplicateValueIDs = errors.New("duplicate value ids")
-	ErrMissingReferences = errors.New("referenced assets or accounts missing")
+	ErrNotFound            = errors.New("snapshot not found")
+	ErrDuplicateDate       = errors.New("snapshot date conflicts")
+	ErrDuplicateAssetIDs   = errors.New("duplicate asset ids")
+	ErrDuplicateAccountIDs = errors.New("duplicate account ids")
 )
 
 // MissingReferencesError carries the missing IDs back to the handler so the
@@ -202,6 +204,9 @@ func (s *Store) Create(ctx context.Context, date time.Time, notes *string, value
 		date, notes, time.Now().UTC(),
 	).Scan(&snap.ID, &snap.Date, &snap.Notes, &snap.CreatedAt)
 	if err != nil {
+		if isUniqueViolation(err) {
+			return nil, nil, ErrDuplicateDate
+		}
 		return nil, nil, fmt.Errorf("insert snapshot: %w", err)
 	}
 	if err := insertValues(ctx, tx, snap.ID, values); err != nil {
@@ -266,6 +271,9 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*Snapshot, [
 		`UPDATE snapshots SET date = $1, notes = $2 WHERE id = $3`,
 		snap.Date, snap.Notes, id,
 	); err != nil {
+		if isUniqueViolation(err) {
+			return nil, nil, ErrDuplicateDate
+		}
 		return nil, nil, fmt.Errorf("update snapshot: %w", err)
 	}
 	if p.ValuesSet {
@@ -303,13 +311,13 @@ func validateValueIDs(values []ValueInput) error {
 	for _, v := range values {
 		if v.AssetID != nil {
 			if _, dup := seenAssets[*v.AssetID]; dup {
-				return ErrDuplicateValueIDs
+				return ErrDuplicateAssetIDs
 			}
 			seenAssets[*v.AssetID] = struct{}{}
 		}
 		if v.AccountID != nil {
 			if _, dup := seenAccounts[*v.AccountID]; dup {
-				return ErrDuplicateValueIDs
+				return ErrDuplicateAccountIDs
 			}
 			seenAccounts[*v.AccountID] = struct{}{}
 		}
@@ -410,17 +418,38 @@ func missingFrom(ctx context.Context, tx pgx.Tx, table string, ids []int, active
 	return missing, nil
 }
 
+// insertValues batches all inserts through a single pgx.Batch so a snapshot
+// with N values pays one round-trip instead of N.
 func insertValues(ctx context.Context, tx pgx.Tx, snapshotID int, values []ValueInput) error {
+	if len(values) == 0 {
+		return nil
+	}
+	batch := &pgx.Batch{}
 	for _, v := range values {
-		if _, err := tx.Exec(ctx, `
+		batch.Queue(`
 			INSERT INTO snapshot_values (snapshot_id, asset_id, account_id, value)
 			VALUES ($1, $2, $3, $4)`,
 			snapshotID, v.AssetID, v.AccountID, v.Value,
-		); err != nil {
-			return fmt.Errorf("insert snapshot value: %w", err)
+		)
+	}
+	br := tx.SendBatch(ctx, batch)
+	defer br.Close()
+	for i := range values {
+		if _, err := br.Exec(); err != nil {
+			return fmt.Errorf("insert snapshot value[%d]: %w", i, err)
 		}
 	}
 	return nil
+}
+
+// isUniqueViolation checks whether err is a Postgres 23505. Used to convert
+// a racy duplicate-date INSERT into the same 400 the pre-check returns.
+func isUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) || pgErr == nil {
+		return false
+	}
+	return pgErr.Code == pgerrcode.UniqueViolation
 }
 
 func lockSnapshot(ctx context.Context, tx pgx.Tx, id int) (*Snapshot, error) {
