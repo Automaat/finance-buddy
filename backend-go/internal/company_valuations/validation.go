@@ -17,66 +17,66 @@ import (
 // IEEE754 rounding that diverges from Python's Decimal(str(...)) round-trip).
 // Required fields surface 422 "Field required" when missing — Pydantic
 // behavior for the required-field case.
-func buildCreateRequest(raw map[string]json.RawMessage) (*createRequest, *validationError) {
-	r := &createRequest{}
+func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *validationError) {
+	var r createRequest
 
 	company, vErr := requireString(raw, "company", "Field required", "Company cannot be empty")
 	if vErr != nil {
-		return nil, vErr
+		return r, vErr
 	}
 	r.Company = company
 
 	t, vErr := requireDate(raw, "date")
 	if vErr != nil {
-		return nil, vErr
+		return r, vErr
 	}
 	r.Date = t
 
 	currency, vErr := optionalCurrency(raw)
 	if vErr != nil {
-		return nil, vErr
+		return r, vErr
 	}
 	r.Currency = currency
 
 	fmv, vErr := requireNonNegativeDecimal(raw, "fmv_per_share", "FMV per share must be non-negative")
 	if vErr != nil {
-		return nil, vErr
+		return r, vErr
 	}
 	r.FMVPerShare = fmv
 
 	r.FMVLow, vErr = optionalNonNegativeDecimal(raw, "fmv_low", "FMV range values must be non-negative")
 	if vErr != nil {
-		return nil, vErr
+		return r, vErr
 	}
 	r.FMVHigh, vErr = optionalNonNegativeDecimal(raw, "fmv_high", "FMV range values must be non-negative")
 	if vErr != nil {
-		return nil, vErr
+		return r, vErr
 	}
 	if r.FMVLow != nil && r.FMVLow.GreaterThan(r.FMVPerShare) {
-		return nil, &validationError{Field: "fmv_low", Msg: "fmv_low cannot exceed fmv_per_share"}
+		return r, &validationError{Field: "fmv_low", Msg: "fmv_low cannot exceed fmv_per_share"}
 	}
 	if r.FMVHigh != nil && r.FMVHigh.LessThan(r.FMVPerShare) {
-		return nil, &validationError{Field: "fmv_high", Msg: "fmv_high cannot be below fmv_per_share"}
+		return r, &validationError{Field: "fmv_high", Msg: "fmv_high cannot be below fmv_per_share"}
 	}
 
 	r.CommonStockDiscountPct, vErr = optionalDiscountPct(raw)
 	if vErr != nil {
-		return nil, vErr
+		return r, vErr
 	}
 
 	source, vErr := requireString(raw, "source", "Field required", "Source cannot be empty")
 	if vErr != nil {
-		return nil, vErr
+		return r, vErr
 	}
 	if _, ok := validSources[source]; !ok {
-		return nil, &validationError{Field: "source", Msg: fmt.Sprintf("invalid source %q", source)}
+		return r, &validationError{Field: "source", Msg: fmt.Sprintf("invalid source %q", source)}
 	}
 	r.Source = source
 
 	if v, ok := raw["notes"]; ok && !isNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
-			return nil, &validationError{Field: "notes", Msg: "must be a string"}
+			return r, &validationError{Field: "notes", Msg: "must be a string"}
 		}
 		r.Notes = &s
 	}

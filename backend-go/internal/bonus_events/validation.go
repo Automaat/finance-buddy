@@ -14,56 +14,59 @@ import (
 // from raw bytes (decimal.NewFromString) to preserve Numeric precision —
 // going through float64 introduces IEEE754 rounding that diverges from
 // Python's Decimal(str(float)) round-trip.
-func buildCreateRequest(raw map[string]json.RawMessage) (*createRequest, *validationError) {
-	r := &createRequest{}
+//
+// Returns the value type rather than a pointer so callers can use the result
+// directly without a nil-check on success (nilaway-friendly).
+func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *validationError) {
+	var r createRequest
 
 	t, vErr := requireDate(raw, "date")
 	if vErr != nil {
-		return nil, vErr
+		return r, vErr
 	}
 	if t.After(today()) {
-		return nil, &validationError{Field: "date", Msg: "Date cannot be in the future"}
+		return r, &validationError{Field: "date", Msg: "Date cannot be in the future"}
 	}
 	r.Date = t
 
 	amount, vErr := requirePositiveDecimal(raw, "amount", "Amount must be greater than 0")
 	if vErr != nil {
-		return nil, vErr
+		return r, vErr
 	}
 	r.Amount = amount
 
 	currency, vErr := optionalCurrency(raw, "PLN")
 	if vErr != nil {
-		return nil, vErr
+		return r, vErr
 	}
 	r.Currency = currency
 
 	r.Type, vErr = requireEnumString(raw, "type", validBonusTypes)
 	if vErr != nil {
-		return nil, vErr
+		return r, vErr
 	}
 
 	company, vErr := requireString(raw, "company", "Company cannot be empty")
 	if vErr != nil {
-		return nil, vErr
+		return r, vErr
 	}
 	r.Company = company
 
 	owner, vErr := requireString(raw, "owner", "Owner cannot be empty")
 	if vErr != nil {
-		return nil, vErr
+		return r, vErr
 	}
 	r.Owner = owner
 
 	r.ContractType, vErr = requireEnumString(raw, "contract_type", validContractTypes)
 	if vErr != nil {
-		return nil, vErr
+		return r, vErr
 	}
 
 	if v, ok := raw["notes"]; ok && !isNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
-			return nil, &validationError{Field: "notes", Msg: "must be a string"}
+			return r, &validationError{Field: "notes", Msg: "must be a string"}
 		}
 		r.Notes = &s
 	}

@@ -160,7 +160,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		writePydanticError(w, vErr)
 		return
 	}
-	v := requestToValuation(req)
+	v := requestToValuation(&req)
 	created, err := h.store.Create(r.Context(), v)
 	if err != nil {
 		h.logger.Error("create valuation", "err", err)
