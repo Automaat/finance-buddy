@@ -75,14 +75,14 @@ func (g *GUSFetcher) Fetch(ctx context.Context) ([]YearRate, error) {
 	}
 	values := body.Results[0].Values
 	out := make([]YearRate, 0, len(values))
-	for _, v := range values {
+	for i, v := range values {
 		year, err := strconv.Atoi(v.Year)
 		if err != nil {
-			continue
+			return nil, fmt.Errorf("gus value[%d]: invalid year %q: %w", i, v.Year, err)
 		}
 		rate, err := decimal.NewFromString(fmt.Sprintf("%v", v.Val))
 		if err != nil {
-			continue
+			return nil, fmt.Errorf("gus value[%d] year=%d: invalid yoy %v: %w", i, year, v.Val, err)
 		}
 		out = append(out, YearRate{Year: year, YoY: rate})
 	}

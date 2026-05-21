@@ -8,14 +8,31 @@ package cpi
 
 import (
 	"errors"
+	"fmt"
 	"sort"
 	"time"
 
 	"github.com/shopspring/decimal"
 )
 
-// ErrInflationDataMissing mirrors Python's InflationDataMissingError.
+// ErrInflationDataMissing mirrors Python's InflationDataMissingError. Use
+// errors.Is to detect the family from the handler — both the
+// empty-table case and the zero-source-index case wrap it.
 var ErrInflationDataMissing = errors.New("CPI table is empty")
+
+// inflationDataError carries a specific message but answers errors.Is for
+// ErrInflationDataMissing so the handler routes both to 503 with the
+// specific message preserved (matches Python's raise InflationDataMissingError(msg)).
+type inflationDataError struct{ msg string }
+
+func (e *inflationDataError) Error() string { return e.msg }
+func (e *inflationDataError) Is(target error) bool {
+	return target == ErrInflationDataMissing
+}
+
+func newInflationErr(msg string) error {
+	return &inflationDataError{msg: msg}
+}
 
 // YearRate is a (year, yoy_rate) pair as published by GUS.
 type YearRate struct {
@@ -43,6 +60,8 @@ func CumulativeIndex(yoyByYear map[int]decimal.Decimal) map[int]decimal.Decimal 
 
 // IndexAtDate interpolates the fixed-base index at an arbitrary calendar date.
 // Outside the known range we clamp to the earliest or latest known year.
+// Inside the range, a missing year (gap in the series) is a hard error —
+// silently zeroing it would corrupt downstream math.
 func IndexAtDate(indexByYear map[int]decimal.Decimal, when time.Time) (decimal.Decimal, error) {
 	if len(indexByYear) == 0 {
 		return decimal.Zero, ErrInflationDataMissing
@@ -54,11 +73,14 @@ func IndexAtDate(indexByYear map[int]decimal.Decimal, when time.Time) (decimal.D
 	if when.Year() > years[len(years)-1] {
 		return indexByYear[years[len(years)-1]], nil
 	}
+	endIdx, ok := indexByYear[when.Year()]
+	if !ok {
+		return decimal.Zero, newInflationErr(fmt.Sprintf("CPI series missing year %d", when.Year()))
+	}
 	startIdx, ok := indexByYear[when.Year()-1]
 	if !ok {
 		startIdx = indexByYear[years[0]]
 	}
-	endIdx := indexByYear[when.Year()]
 
 	yearStart := time.Date(when.Year(), 1, 1, 0, 0, 0, 0, time.UTC)
 	nextYearStart := time.Date(when.Year()+1, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -88,7 +110,7 @@ func AdjustWithIndex(
 		return 0, err
 	}
 	if fromIdx.IsZero() {
-		return 0, errors.New("source index is zero")
+		return 0, newInflationErr("Source index is zero")
 	}
 	factor := toIdx.Div(fromIdx)
 	amountDec := decimal.NewFromFloat(amount)

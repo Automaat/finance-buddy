@@ -11,14 +11,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// CpiIndex mirrors backend/app/models/cpi_index.CpiIndex.
-type CpiIndex struct {
-	Year      int
-	YoYRate   decimal.Decimal
-	Source    string
-	FetchedAt time.Time
-}
-
 // Store is the persistence boundary.
 type Store struct {
 	pool *pgxpool.Pool
@@ -68,39 +60,73 @@ func (s *Store) LatestKnownYear(ctx context.Context) (int, bool, error) {
 }
 
 // Upsert applies the (year, yoy_rate) batch as Python's refresh_cpi_sync does:
-// only updates the existing row when the value changed and inserts otherwise.
+// only writes rows whose yoy_rate actually changed. The whole batch is wrapped
+// in a transaction so concurrent refreshes can't leave the table partially
+// updated. Per-row uses INSERT ... ON CONFLICT (year) DO UPDATE so concurrent
+// inserts race-cleanly on the primary key.
+//
 // Returns the number of rows actually written.
 func (s *Store) Upsert(ctx context.Context, source string, rows []YearRate) (int, error) {
 	if len(rows) == 0 {
 		return 0, nil
 	}
-	existing, err := s.LoadYoYMap(ctx)
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return 0, fmt.Errorf("begin upsert tx: %w", err)
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+	written, err := writeRows(ctx, tx, source, rows)
 	if err != nil {
 		return 0, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return 0, fmt.Errorf("commit upsert tx: %w", err)
+	}
+	committed = true
+	return written, nil
+}
+
+func writeRows(ctx context.Context, tx pgx.Tx, source string, rows []YearRate) (int, error) {
+	existing := map[int]decimal.Decimal{}
+	q, err := tx.Query(ctx, `SELECT year, yoy_rate FROM cpi_index FOR UPDATE`)
+	if err != nil {
+		return 0, fmt.Errorf("lock cpi_index: %w", err)
+	}
+	for q.Next() {
+		var y int
+		var rate decimal.Decimal
+		if err := q.Scan(&y, &rate); err != nil {
+			q.Close()
+			return 0, fmt.Errorf("scan existing cpi_index: %w", err)
+		}
+		existing[y] = rate
+	}
+	q.Close()
+	if err := q.Err(); err != nil {
+		return 0, fmt.Errorf("iterate cpi_index: %w", err)
 	}
 	written := 0
 	now := time.Now().UTC()
 	for _, r := range rows {
-		if current, ok := existing[r.Year]; ok {
-			if current.Equal(r.YoY) {
-				continue
-			}
-			if _, err := s.pool.Exec(ctx, `
-				UPDATE cpi_index SET yoy_rate = $1, source = $2, fetched_at = $3
-				WHERE year = $4`,
-				r.YoY, source, now, r.Year,
-			); err != nil {
-				return written, fmt.Errorf("update cpi_index year %d: %w", r.Year, err)
-			}
-			written++
+		if current, ok := existing[r.Year]; ok && current.Equal(r.YoY) {
 			continue
 		}
-		if _, err := s.pool.Exec(ctx, `
+		if _, err := tx.Exec(ctx, `
 			INSERT INTO cpi_index (year, yoy_rate, source, fetched_at)
-			VALUES ($1, $2, $3, $4)`,
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT (year) DO UPDATE SET
+				yoy_rate = EXCLUDED.yoy_rate,
+				source = EXCLUDED.source,
+				fetched_at = EXCLUDED.fetched_at
+			WHERE cpi_index.yoy_rate IS DISTINCT FROM EXCLUDED.yoy_rate`,
 			r.Year, r.YoY, source, now,
 		); err != nil {
-			return written, fmt.Errorf("insert cpi_index year %d: %w", r.Year, err)
+			return written, fmt.Errorf("upsert cpi_index year %d: %w", r.Year, err)
 		}
 		written++
 	}
