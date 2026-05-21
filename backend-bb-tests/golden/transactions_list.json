@@ -1,0 +1,36 @@
+{
+  "total_invested": 2150.0,
+  "transaction_count": 3,
+  "transactions": [
+    {
+      "account_id": 4,
+      "account_name": "Marcin PPK",
+      "amount": 250.0,
+      "created_at": "2026-01-01T12:00:00",
+      "date": "2026-01-15",
+      "id": 3,
+      "owner": "Marcin",
+      "transaction_type": "government"
+    },
+    {
+      "account_id": 4,
+      "account_name": "Marcin PPK",
+      "amount": 400.0,
+      "created_at": "2026-01-01T12:00:00",
+      "date": "2025-12-28",
+      "id": 2,
+      "owner": "Marcin",
+      "transaction_type": "employer"
+    },
+    {
+      "account_id": 3,
+      "account_name": "Marcin IKE",
+      "amount": 1500.0,
+      "created_at": "2026-01-01T12:00:00",
+      "date": "2025-12-05",
+      "id": 1,
+      "owner": "Marcin",
+      "transaction_type": "employee"
+    }
+  ]
+}

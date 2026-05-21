@@ -50,6 +50,49 @@ backend-bb-tests/
     └── ...             # one file per API domain
 ```
 
+## Seed shape
+
+`fixtures/seed.py` truncates every table on its allowlist and re-inserts the
+fixture set below. Names/dates are stable — tests look rows up by name to
+resolve the auto-assigned ids. Exported constants live at the top of `seed.py`
+(e.g. `PERSONA_MARCIN`, `ACCOUNT_MARCIN_BANK`, `SNAPSHOT_DATES`).
+
+| Table                | Rows | Notes                                                                  |
+| -------------------- | ---- | ---------------------------------------------------------------------- |
+| `personas`           | 2    | `Marcin`, `Ewa`                                                        |
+| `app_config`         | 1    | Birth 1990-06-15, retire 65, monthly salary 8000 PLN                   |
+| `accounts`           | 6    | See persona → account table below                                      |
+| `assets`             | 1    | `Marcin Apartment` (non-account asset entry)                           |
+| `snapshots`          | 3    | Month-end 2025-11-30, 2025-12-31, 2026-01-31                           |
+| `snapshot_values`    | 21   | 3 snapshots × (6 accounts + 1 asset); gentle uptrend, mortgage paydown |
+| `transactions`       | 3    | IKE employee, PPK employer, PPK government — Marcin                    |
+| `bonus_events`       | 2    | PLN annual + USD signon, both Marcin / `Acme Sp. z o.o.`               |
+| `equity_grants`      | 1    | 4800 RSU, 1-yr cliff + 48mo monthly vest, mid-vest by 2026-01          |
+| `company_valuations` | 1    | `Acme Sp. z o.o.` 409A @ $12.50/share                                  |
+| `fx_rates`           | 2    | 2026-01-31 USDPLN 4.15, EURPLN 4.35                                    |
+| `cpi_index`          | 3    | 2023/2024/2025 GUS-BDL yoy rates                                       |
+| `debts`              | 1    | Apartment mortgage on `Marcin Mortgage`, 7.25% PLN                     |
+| `debt_payments`      | 2    | 2 × 2000 PLN against the mortgage                                      |
+| `salary_records`     | 3    | 2025-01-31, 2025-06-30, 2026-01-31 — UOP, Marcin                       |
+| `goals`              | 1    | "Emergency fund" 60k PLN by 2026-12-31, linked to Marcin checking      |
+| `retirement_limits`  | 2    | 2025 IKE + IKZE limits for Marcin                                      |
+
+Persona → accounts:
+
+| Persona | Account                        | Type      | Category    | Wrapper |
+| ------- | ------------------------------ | --------- | ----------- | ------- |
+| Marcin  | `Marcin Checking`              | asset     | bank        | —       |
+| Ewa     | `Ewa Checking`                 | asset     | bank        | —       |
+| Marcin  | `Marcin IKE`                   | asset     | stock       | IKE     |
+| Marcin  | `Marcin PPK`                   | asset     | ppk         | PPK     |
+| Marcin  | `Marcin Mortgage`              | liability | mortgage    | —       |
+| Shared  | `Shared Apartment Real Estate` | asset     | real_estate | —       |
+
+`snapshot_aggregates` is intentionally NOT seeded — the backend populates it on
+the snapshot write-path. Tests that exercise aggregates should hit POST
+`/api/snapshots` (or recompute via the relevant service) rather than rely on
+preseeded rows.
+
 ## Adding a test
 
 1. If the endpoint needs seeded data, extend `fixtures/seed.py`. Keep seed inserts pure SQL — no SQLAlchemy.

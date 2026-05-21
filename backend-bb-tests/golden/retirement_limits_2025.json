@@ -1,0 +1,18 @@
+[
+  {
+    "account_wrapper": "IKE",
+    "id": 1,
+    "limit_amount": 23472.0,
+    "notes": "2025 IKE limit",
+    "owner": "Marcin",
+    "year": 2025
+  },
+  {
+    "account_wrapper": "IKZE",
+    "id": 2,
+    "limit_amount": 9388.8,
+    "notes": "2025 IKZE limit",
+    "owner": "Marcin",
+    "year": 2025
+  }
+]
