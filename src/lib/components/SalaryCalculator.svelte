@@ -397,13 +397,14 @@
 									{#each results as r}
 										<td class:highlight={row.bold && r === winner}>
 											{row.value(r)}
-											{#if baseline && row.delta && !r.isCurrentJob}
-												{@const d = row.delta(r, baseline)}
-												{#if d !== 0}
-													<span class="delta" class:positive={d > 0} class:negative={d < 0}>
-														{d > 0 ? '+' : ''}{fmt(d)}
-													</span>
-												{/if}
+											{#if baseline && row.delta && !r.isCurrentJob && row.delta(r, baseline) !== 0}
+												<span
+													class="delta"
+													class:positive={row.delta(r, baseline) > 0}
+													class:negative={row.delta(r, baseline) < 0}
+												>
+													{row.delta(r, baseline) > 0 ? '+' : ''}{fmt(row.delta(r, baseline))}
+												</span>
 											{/if}
 										</td>
 									{/each}

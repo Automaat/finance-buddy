@@ -25,14 +25,13 @@
 	aria-label="Powiadomienia"
 >
 	{#each items as item (item.id)}
-		{@const Icon = iconFor(item.kind)}
 		<div
 			class="pointer-events-auto flex items-start gap-3 rounded-container px-4 py-3 shadow-lg w-full max-w-sm {classFor(
 				item.kind
 			)}"
 			role={item.kind === 'error' ? 'alert' : 'status'}
 		>
-			<Icon size={18} class="mt-0.5 shrink-0" />
+			<svelte:component this={iconFor(item.kind)} size={18} class="mt-0.5 shrink-0" />
 			<span class="flex-1 text-sm">{item.message}</span>
 			<button
 				type="button"
