@@ -29,6 +29,7 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/fx"
 	"github.com/Automaat/finance-buddy/backend-go/internal/goals"
 	"github.com/Automaat/finance-buddy/backend-go/internal/personas"
+	"github.com/Automaat/finance-buddy/backend-go/internal/retirement"
 	"github.com/Automaat/finance-buddy/backend-go/internal/salaries"
 	"github.com/Automaat/finance-buddy/backend-go/internal/snapshots"
 	"github.com/Automaat/finance-buddy/backend-go/internal/transactions"
@@ -115,6 +116,13 @@ func registerLedgerRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger)
 	r.Get("/api/debts/{id}", debtsHandler.Get)
 	r.Put("/api/debts/{id}", debtsHandler.Update)
 	r.Delete("/api/debts/{id}", debtsHandler.Delete)
+
+	retHandler := retirement.NewHandler(retirement.NewStore(pool), logger)
+	r.Get("/api/retirement/stats", retHandler.Stats)
+	r.Get("/api/retirement/ppk-stats", retHandler.PPKStats)
+	r.Post("/api/retirement/ppk-contributions/generate", retHandler.GeneratePPKContributions)
+	r.Get("/api/retirement/limits/{year}", retHandler.LimitsForYear)
+	r.Put("/api/retirement/limits/{year}/{wrapper}/{owner}", retHandler.UpsertLimit)
 }
 
 func registerCoreRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
