@@ -83,9 +83,10 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *validat
 // buildUpdatePatch reads PUT body.
 //
 // Field semantics mirror Pydantic's AccountUpdate (all fields Optional):
-// - absent  -> no change
-// - explicit null on nullable fields (account_wrapper, square_meters) -> set to NULL
-// - explicit null on other fields -> validation error
+//   - absent OR explicit null on non-nullable fields -> no change
+//     (Python's service uses `if data.X is not None` and skips Nones)
+//   - explicit null on account_wrapper or square_meters -> set to NULL
+//     (Pydantic's `Wrapper | None` lets None through and the service writes it)
 func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *validationError) {
 	var p UpdatePatch
 	if v, ok := raw["name"]; ok && !isNull(v) {

@@ -77,7 +77,9 @@ func (s *Store) List(ctx context.Context) ([]Account, error) {
 	return out, nil
 }
 
-// Get returns one active account or ErrNotFound.
+// Get returns the account regardless of is_active, mirroring Python's
+// get_or_404 helper. Returns ErrNotFound when the row doesn't exist; callers
+// that need an active row check IsActive themselves.
 func (s *Store) Get(ctx context.Context, id int) (*Account, error) {
 	row := s.pool.QueryRow(ctx,
 		`SELECT `+selectColumns+` FROM accounts WHERE id = $1`, id,
@@ -248,7 +250,14 @@ func (s *Store) Delete(ctx context.Context, id int) error {
 		return err
 	}
 	if !current.IsActive {
-		return tx.Commit(ctx) // Idempotent — matches Python's `if not is_active: return`.
+		// Idempotent — matches Python's `if not is_active: return`.
+		// Commit the empty tx so the FOR UPDATE row lock releases promptly,
+		// and mark committed so the deferred rollback is a no-op.
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("commit idempotent delete: %w", err)
+		}
+		committed = true
+		return nil
 	}
 	if _, err := tx.Exec(ctx,
 		`UPDATE accounts SET is_active = false WHERE id = $1`, id,
