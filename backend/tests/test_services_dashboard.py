@@ -2071,7 +2071,11 @@ def test_tile_deltas_alignment_with_tile_totals(test_db_session):
         test_db_session, name="Bank", category="bank", owner="Marcin"
     )
     liab_account = create_test_account(
-        test_db_session, name="Mortgage", account_type="liability", category="housing", owner="Marcin"
+        test_db_session,
+        name="Mortgage",
+        account_type="liability",
+        category="housing",
+        owner="Marcin",
     )
 
     # Baseline 30 days before latest (2024-04-30): 2024-04-01 in MoM window

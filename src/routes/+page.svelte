@@ -164,7 +164,9 @@
 				<header>
 					<h3 class="h4 flex items-center gap-2"><TrendingUp size={18} /> Aktywa</h3>
 				</header>
-				<div class="text-3xl font-bold text-success-600-400">{formatPLN(dashboard.total_assets)}</div>
+				<div class="text-3xl font-bold text-success-600-400">
+					{formatPLN(dashboard.total_assets)}
+				</div>
 				<div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
 					<DeltaBadge
 						label="MoM"
@@ -185,7 +187,9 @@
 				<header>
 					<h3 class="h4 flex items-center gap-2"><TrendingDown size={18} /> Zobowiązania</h3>
 				</header>
-				<div class="text-3xl font-bold text-error-600-400">{formatPLN(dashboard.total_liabilities)}</div>
+				<div class="text-3xl font-bold text-error-600-400">
+					{formatPLN(dashboard.total_liabilities)}
+				</div>
 				<div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
 					<DeltaBadge
 						label="MoM"
