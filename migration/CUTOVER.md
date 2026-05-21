@@ -67,7 +67,7 @@ In two terminals:
 cd backend && SEED_DEV_DATA=true uv run uvicorn app.main:app --port 8000
 
 # Terminal 2: start Go on :9000 against the same Postgres
-cd backend-go && DATABASE_URL=$PYTHON_DSN go run ./cmd/api -addr=:9000
+cd backend-go && FB_ADDR=:9000 DATABASE_URL=$PYTHON_DSN go run ./cmd/api
 ```
 
 Then run bb-tests against each:
@@ -138,7 +138,7 @@ rules:
     upstream: http://backend-go:9000
 ```
 
-Then update `docker-compose.dev.yml` to wire the proxy + `backend-go` service in (one-time, only with the first cutover):
+Then update `docker-compose.dev.yml` to wire the proxy + `backend-go` service in **and repoint the frontend at the proxy** (one-time, only with the first cutover):
 
 ```yaml
 services:
@@ -159,9 +159,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+  frontend:
+    # was: PUBLIC_API_URL=http://backend:8000 / PUBLIC_API_URL_BROWSER=http://localhost:8000
+    environment:
+      - PUBLIC_API_URL=http://proxy:8080
+      - PUBLIC_API_URL_BROWSER=http://localhost:8080
 ```
 
-Frontend keeps hitting `:8080` (the proxy); proxy now sends `/api/config` to Go.
+After this change the frontend hits `:8080` (the proxy) instead of `:8000` (Python directly). The proxy then routes `/api/config` to Go and everything else to Python.
 
 ### 8. Smoke
 
