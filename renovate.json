@@ -4,6 +4,16 @@
     "config:recommended"
   ],
   "reviewers": ["Automaat"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Track pinned nilaway pseudo-version in scripts/run-nilaway.sh",
+      "fileMatch": ["^scripts/run-nilaway\\.sh$"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+NILAWAY_VERSION=\"(?<currentValue>.+?)\""
+      ]
+    }
+  ],
   "packageRules": [
     {
       "description": "Group the Svelte / Vite / Vitest toolchain",
