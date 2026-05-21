@@ -1877,7 +1877,6 @@ def test_dashboard_performance_60_snapshots(test_db_session):
     )
 
 
-<<<<<<< HEAD
 def _build_merged_df(db) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Build merged df matching service.get_dashboard_data's pattern."""
     assets_query = select(Asset).where(Asset.is_active.is_(True))
