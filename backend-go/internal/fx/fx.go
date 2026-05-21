@@ -64,13 +64,23 @@ func NewService(pool *pgxpool.Pool, logger *slog.Logger) *Service {
 	}
 }
 
+// Result wraps the optional rate so callers don't deal with (nil, nil) — the
+// Found flag distinguishes "no rate available" (a normal outcome on first
+// access to an exotic currency over a long weekend) from a real DB failure.
+type Result struct {
+	Rate  decimal.Decimal
+	Found bool
+}
+
 // GetRateToPLN returns the PLN-per-unit rate for currency on/before onDate.
-// PLN returns 1. Returns nil if no rate could be found in cache or fetched.
-func (s *Service) GetRateToPLN(ctx context.Context, currency string, onDate time.Time) *decimal.Decimal {
+// PLN returns {1, true}. Returns {_, false} when no rate exists and NBP
+// couldn't supply one. An error only surfaces for DB outages — NBP transient
+// failures fall back to whatever's in the cache (stale or absent) and don't
+// propagate, matching Python's behavior.
+func (s *Service) GetRateToPLN(ctx context.Context, currency string, onDate time.Time) (Result, error) {
 	code := strings.ToUpper(strings.TrimSpace(currency))
 	if code == "PLN" {
-		one := decimal.NewFromInt(1)
-		return &one
+		return Result{Rate: decimal.NewFromInt(1), Found: true}, nil
 	}
 	target := onDate.UTC()
 	if target.IsZero() {
@@ -78,32 +88,32 @@ func (s *Service) GetRateToPLN(ctx context.Context, currency string, onDate time
 	}
 	target = truncateDay(target)
 
-	cached, _ := s.lookupCached(ctx, code, target)
+	cached, err := s.lookupCached(ctx, code, target)
+	if err != nil && !errors.Is(err, errCacheMiss) {
+		return Result{}, fmt.Errorf("fx cache lookup: %w", err)
+	}
 	if cached != nil {
 		ageDays := int(target.Sub(cached.Date).Hours() / 24)
 		if ageDays <= cacheToleranceDay {
-			rate := cached.RatePLN
-			return &rate
+			return Result{Rate: cached.RatePLN, Found: true}, nil
 		}
 	}
 
 	// Cache miss or stale — fetch the window.
 	start := target.AddDate(0, 0, -lookbackDays)
-	fetched, err := s.fetchRange(ctx, code, start, target)
-	if err != nil {
-		s.logger.Warn("nbp fetch failed", "currency", code, "err", err)
+	fetched, ferr := s.fetchRange(ctx, code, start, target)
+	if ferr != nil {
+		s.logger.Warn("nbp fetch failed", "currency", code, "err", ferr)
 		if cached != nil {
-			rate := cached.RatePLN
-			return &rate
+			return Result{Rate: cached.RatePLN, Found: true}, nil
 		}
-		return nil
+		return Result{}, nil
 	}
 	if len(fetched) == 0 {
 		if cached != nil {
-			rate := cached.RatePLN
-			return &rate
+			return Result{Rate: cached.RatePLN, Found: true}, nil
 		}
-		return nil
+		return Result{}, nil
 	}
 	sort.Slice(fetched, func(i, j int) bool {
 		return fetched[i].Date.Before(fetched[j].Date)
@@ -116,34 +126,33 @@ func (s *Service) GetRateToPLN(ctx context.Context, currency string, onDate time
 			s.logger.Warn("persist fx rate", "currency", code, "date", r.Date, "err", err)
 		}
 	}
-	refreshed, _ := s.lookupCached(ctx, code, target)
+	refreshed, err := s.lookupCached(ctx, code, target)
+	if err != nil && !errors.Is(err, errCacheMiss) {
+		return Result{}, fmt.Errorf("fx cache lookup after fetch: %w", err)
+	}
 	if refreshed != nil {
-		rate := refreshed.RatePLN
-		return &rate
+		return Result{Rate: refreshed.RatePLN, Found: true}, nil
 	}
 	if cached != nil {
-		rate := cached.RatePLN
-		return &rate
+		return Result{Rate: cached.RatePLN, Found: true}, nil
 	}
-	return nil
+	return Result{}, nil
 }
 
 // ToPLN converts amount in currency to PLN using the supplied rate. Returns
-// nil when amount is missing or (non-PLN and rate is nil). PLN amounts pass
-// through unchanged regardless of rate.
-func ToPLN(amount *decimal.Decimal, currency string, rate *decimal.Decimal) *decimal.Decimal {
+// (_, false) when amount is missing or (non-PLN and no rate found). PLN
+// amounts pass through unchanged regardless of rate.
+func ToPLN(amount *decimal.Decimal, currency string, rate Result) (decimal.Decimal, bool) {
 	if amount == nil {
-		return nil
+		return decimal.Decimal{}, false
 	}
 	if strings.EqualFold(currency, "PLN") {
-		v := *amount
-		return &v
+		return *amount, true
 	}
-	if rate == nil {
-		return nil
+	if !rate.Found {
+		return decimal.Decimal{}, false
 	}
-	v := amount.Mul(*rate)
-	return &v
+	return amount.Mul(rate.Rate), true
 }
 
 func (s *Service) lookupCached(ctx context.Context, code string, onOrBefore time.Time) (*Rate, error) {

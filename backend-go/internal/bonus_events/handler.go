@@ -80,9 +80,12 @@ func NewHandler(store *Store, fxSvc *fx.Service, logger *slog.Logger) *Handler {
 	return &Handler{store: store, fx: fxSvc, logger: logger}
 }
 
-func (h *Handler) toResponse(ctx context.Context, b *BonusEvent) response {
-	rate := h.fx.GetRateToPLN(ctx, b.Currency, b.Date)
-	pln := fx.ToPLN(&b.Amount, b.Currency, rate)
+func (h *Handler) toResponse(ctx context.Context, b *BonusEvent) (response, error) {
+	rate, err := h.fx.GetRateToPLN(ctx, b.Currency, b.Date)
+	if err != nil {
+		return response{}, err
+	}
+	plnAmount, hasPLN := fx.ToPLN(&b.Amount, b.Currency, rate)
 
 	amt, _ := b.Amount.Float64()
 	out := response{
@@ -98,17 +101,17 @@ func (h *Handler) toResponse(ctx context.Context, b *BonusEvent) response {
 		IsActive:     b.IsActive,
 		CreatedAt:    isoNaive(b.CreatedAt),
 	}
-	if pln != nil {
-		f, _ := pln.Float64()
+	if hasPLN {
+		f, _ := plnAmount.Float64()
 		pf := pyFloat(f)
 		out.AmountPLN = &pf
 	}
-	if rate != nil {
-		f, _ := rate.Float64()
+	if rate.Found {
+		f, _ := rate.Rate.Float64()
 		pf := pyFloat(f)
 		out.FXRate = &pf
 	}
-	return out
+	return out, nil
 }
 
 // List serves GET /api/bonuses.
@@ -130,7 +133,13 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		AvailableCompanies: companies,
 	}
 	for i := range rows {
-		out.BonusEvents = append(out.BonusEvents, h.toResponse(r.Context(), &rows[i]))
+		resp, err := h.toResponse(r.Context(), &rows[i])
+		if err != nil {
+			h.logger.Error("fx lookup", "err", err)
+			writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+		out.BonusEvents = append(out.BonusEvents, resp)
 	}
 	writeJSON(w, http.StatusOK, out)
 }
@@ -146,7 +155,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		h.writeStoreError(w, err, id)
 		return
 	}
-	writeJSON(w, http.StatusOK, h.toResponse(r.Context(), b))
+	h.writeBonusResponse(w, r, http.StatusOK, b)
 }
 
 // Create serves POST /api/bonuses.
@@ -177,7 +186,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	writeJSON(w, http.StatusCreated, h.toResponse(r.Context(), created))
+	h.writeBonusResponse(w, r, http.StatusCreated, created)
 }
 
 // Update serves PATCH /api/bonuses/{id}.
@@ -201,7 +210,19 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		h.writeStoreError(w, err, id)
 		return
 	}
-	writeJSON(w, http.StatusOK, h.toResponse(r.Context(), updated))
+	h.writeBonusResponse(w, r, http.StatusOK, updated)
+}
+
+// writeBonusResponse marshals a single bonus with its FX-derived fields,
+// emitting a 500 if the FX lookup hits a DB error.
+func (h *Handler) writeBonusResponse(w http.ResponseWriter, r *http.Request, status int, b *BonusEvent) {
+	resp, err := h.toResponse(r.Context(), b)
+	if err != nil {
+		h.logger.Error("fx lookup", "err", err)
+		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	writeJSON(w, status, resp)
 }
 
 // Delete serves DELETE /api/bonuses/{id}.
