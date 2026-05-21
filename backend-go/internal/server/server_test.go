@@ -10,7 +10,7 @@ import (
 )
 
 func TestHealthEndpoint(t *testing.T) {
-	srv := httptest.NewServer(New(Config{CORSOrigins: "*"}, slog.New(slog.DiscardHandler)))
+	srv := httptest.NewServer(New(Config{CORSOrigins: "*"}, slog.New(slog.DiscardHandler), Deps{}))
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/health")
