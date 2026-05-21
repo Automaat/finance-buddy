@@ -1877,6 +1877,7 @@ def test_dashboard_performance_60_snapshots(test_db_session):
     )
 
 
+<<<<<<< HEAD
 def _build_merged_df(db) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Build merged df matching service.get_dashboard_data's pattern."""
     assets_query = select(Asset).where(Asset.is_active.is_(True))
@@ -2094,3 +2095,74 @@ def test_tile_deltas_alignment_with_tile_totals(test_db_session):
 
     assert result.tile_deltas.net_worth.mom is not None
     assert result.tile_deltas.net_worth.mom.absolute == pytest.approx(expected_abs)
+
+
+@pytest.mark.perf
+def test_dashboard_aggregate_path_200_snapshots(test_db_session):
+    """Aggregate hot path must serve GET /api/dashboard in < 50 ms (median of 5).
+
+    200 snapshots × 10 bank accounts — no investment accounts, no AppConfig so
+    the conditional time-series load is skipped and query count stays ≤ 5.
+    """
+    import time
+
+    from sqlalchemy import event
+
+    from app.services.snapshot_aggregates import recompute_all
+
+    account_specs = [
+        {"name": f"Bank {i}", "category": "bank", "owner": "Marcin"} for i in range(10)
+    ]
+    defaults = {"currency": "PLN", "purpose": "general", "is_active": True, "type": "asset"}
+    accounts = [Account(**{**defaults, **spec}) for spec in account_specs]
+    test_db_session.add_all(accounts)
+    test_db_session.commit()
+
+    snapshots = [Snapshot(date=date(2008 + i // 12, (i % 12) + 1, 1)) for i in range(200)]
+    test_db_session.add_all(snapshots)
+    test_db_session.commit()
+
+    values = [
+        SnapshotValue(
+            snapshot_id=snap.id,
+            account_id=acct.id,
+            value=Decimal(str(1000 * (i + 1) + 50 * j)),
+        )
+        for i, snap in enumerate(snapshots)
+        for j, acct in enumerate(accounts)
+    ]
+    test_db_session.add_all(values)
+    test_db_session.commit()
+
+    recompute_all(test_db_session)
+    test_db_session.commit()
+
+    # Count queries during a single call after aggregates are populated.
+    query_count = 0
+
+    def _before_cursor(_conn, _cursor, _statement, _parameters, _context, _executemany):
+        nonlocal query_count
+        query_count += 1
+
+    engine = test_db_session.get_bind()
+    event.listen(engine, "before_cursor_execute", _before_cursor)
+
+    try:
+        get_dashboard_data(test_db_session)
+        single_call_queries = query_count
+    finally:
+        event.remove(engine, "before_cursor_execute", _before_cursor)
+
+    # 7 runs, drop best + worst → median of middle 5
+    timings_ms = []
+    for _ in range(7):
+        start = time.perf_counter()
+        result = get_dashboard_data(test_db_session)
+        timings_ms.append((time.perf_counter() - start) * 1000)
+    median_ms = sorted(timings_ms)[3]
+
+    assert len(result.net_worth_history) == 200
+    assert single_call_queries <= 5, f"Query count {single_call_queries} exceeds limit of 5"
+    assert median_ms < 50, (
+        f"Aggregate path median {median_ms:.1f} ms (limit: 50 ms; runs: {timings_ms})"
+    )
