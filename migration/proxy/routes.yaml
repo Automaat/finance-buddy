@@ -167,3 +167,14 @@ rules:
   - method: DELETE
     path_prefix: /api/debts
     upstream: http://backend-go:8000
+  # Group 10 — /api/retirement cut over to Go (IKE/IKZE stats, PPK aggregates,
+  # limit upsert, monthly PPK contribution generation).
+  - method: GET
+    path_prefix: /api/retirement
+    upstream: http://backend-go:8000
+  - method: POST
+    path_prefix: /api/retirement
+    upstream: http://backend-go:8000
+  - method: PUT
+    path_prefix: /api/retirement
+    upstream: http://backend-go:8000
