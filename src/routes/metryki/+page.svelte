@@ -409,31 +409,31 @@
 
 	<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
 		<div class="card preset-filled-surface-100-900 p-4">
-			<div bind:this={allocationChart} class="w-full h-[400px] sm:h-[280px]"></div>
+			<div bind:this={allocationChart} class="w-full h-[280px] sm:h-[400px]"></div>
 		</div>
 
 		<div class="card preset-filled-surface-100-900 p-4">
-			<div bind:this={wrapperChart} class="w-full h-[400px] sm:h-[280px]"></div>
+			<div bind:this={wrapperChart} class="w-full h-[280px] sm:h-[400px]"></div>
 		</div>
 	</div>
 
 	<h2 class="h2">Wzrost inwestycji w czasie</h2>
 
 	<div class="card preset-filled-surface-100-900 p-4 mb-8">
-		<div bind:this={investmentTrendChart} class="w-full h-[500px] sm:h-[320px]"></div>
+		<div bind:this={investmentTrendChart} class="w-full h-[320px] sm:h-[500px]"></div>
 	</div>
 
 	<h2 class="h2">Wzrost według typu konta</h2>
 
 	<div class="grid grid-cols-1 gap-4 mb-8">
 		<div class="card preset-filled-surface-100-900 p-4">
-			<div bind:this={ikeChart} class="w-full h-[400px] sm:h-[280px]"></div>
+			<div bind:this={ikeChart} class="w-full h-[280px] sm:h-[400px]"></div>
 		</div>
 		<div class="card preset-filled-surface-100-900 p-4">
-			<div bind:this={ikzeChart} class="w-full h-[400px] sm:h-[280px]"></div>
+			<div bind:this={ikzeChart} class="w-full h-[280px] sm:h-[400px]"></div>
 		</div>
 		<div class="card preset-filled-surface-100-900 p-4">
-			<div bind:this={ppkChart} class="w-full h-[400px] sm:h-[280px]"></div>
+			<div bind:this={ppkChart} class="w-full h-[280px] sm:h-[400px]"></div>
 		</div>
 	</div>
 
@@ -441,16 +441,16 @@
 
 	<div class="grid grid-cols-1 gap-4 mb-8">
 		<div class="card preset-filled-surface-100-900 p-4">
-			<div bind:this={stockChart} class="w-full h-[400px] sm:h-[280px]"></div>
+			<div bind:this={stockChart} class="w-full h-[280px] sm:h-[400px]"></div>
 		</div>
 		<div class="card preset-filled-surface-100-900 p-4">
-			<div bind:this={bondChart} class="w-full h-[400px] sm:h-[280px]"></div>
+			<div bind:this={bondChart} class="w-full h-[280px] sm:h-[400px]"></div>
 		</div>
 	</div>
 
 	<h2 class="h2">Roczny ROI według klasy aktywów</h2>
 
 	<div class="card preset-filled-surface-100-900 p-4 mb-8">
-		<div bind:this={yearlyRoiChart} class="w-full h-[500px] sm:h-[320px]"></div>
+		<div bind:this={yearlyRoiChart} class="w-full h-[320px] sm:h-[500px]"></div>
 	</div>
 </div>

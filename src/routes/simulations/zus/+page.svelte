@@ -419,7 +419,7 @@
 					</div>
 				</div>
 
-				<div bind:this={chartContainer} class="w-full h-[380px] sm:h-[280px]"></div>
+				<div bind:this={chartContainer} class="w-full h-[280px] sm:h-[380px]"></div>
 
 				<h3 class="h4">Analiza wrażliwości</h3>
 				<div class="table-wrap">
@@ -455,7 +455,7 @@
 						<table class="table table-hover text-xs">
 							<thead>
 								<tr>
-									<th>Rok</th>
+									<th class="sticky left-0 z-10 bg-surface-100 dark:bg-surface-900">Rok</th>
 									<th class="text-right">Wiek</th>
 									<th class="text-right">Wynagrodzenie</th>
 									<th class="text-right">Limit</th>
@@ -469,7 +469,8 @@
 							<tbody>
 								{#each results.yearly_projections as row}
 									<tr class={row.salary_capped ? 'bg-warning-500/10' : ''}>
-										<td>{row.year}</td>
+										<td class="sticky left-0 z-10 bg-surface-100 dark:bg-surface-900">{row.year}</td
+										>
 										<td class="text-right">{row.age}</td>
 										<td class="text-right">{formatCurrency(row.annual_gross_salary)}</td>
 										<td class="text-right">{row.salary_capped ? '30x' : '—'}</td>

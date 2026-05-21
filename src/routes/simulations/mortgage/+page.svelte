@@ -395,7 +395,7 @@
 					</div>
 				</div>
 
-				<div bind:this={chartContainer} class="w-full h-[380px] sm:h-[280px]"></div>
+				<div bind:this={chartContainer} class="w-full h-[280px] sm:h-[380px]"></div>
 
 				<details class="card preset-tonal-surface p-3">
 					<summary class="cursor-pointer text-sm font-semibold py-1">Projekcja roczna</summary>
@@ -403,7 +403,7 @@
 						<table class="table table-hover text-xs">
 							<thead>
 								<tr>
-									<th>Rok</th>
+									<th class="sticky left-0 z-10 bg-surface-100 dark:bg-surface-900">Rok</th>
 									<th class="text-right">Stopa %</th>
 									<th class="text-right">Saldo A</th>
 									<th class="text-right">Saldo A (realne)</th>
@@ -422,7 +422,7 @@
 							<tbody>
 								{#each results.yearly_projections as row}
 									<tr>
-										<td
+										<td class="sticky left-0 z-10 bg-surface-100 dark:bg-surface-900"
 											>{row.year}{#if row.scenario_a_paid_off}
 												✓{/if}</td
 										>

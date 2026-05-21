@@ -571,7 +571,7 @@
 					{/if}
 				</div>
 
-				<div bind:this={chartContainer} class="w-full h-[400px] sm:h-[280px]"></div>
+				<div bind:this={chartContainer} class="w-full h-[280px] sm:h-[400px]"></div>
 
 				<h3 class="h4">Szczegóły projekcji</h3>
 				{#each results.simulations as simulation}
