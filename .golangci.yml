@@ -24,6 +24,7 @@ linters:
     - nilerr
     - nilnesserr
     - nilnil
+    - nonamedreturns
     - reassign
     - recvcheck
     - sloglint
@@ -137,7 +138,6 @@ linters:
         - typeDefFirst
         - typeUnparen
         - unlabelStmt
-        - unnamedResult
         - unnecessaryBlock
         - unnecessaryDefer
         - weakCond
