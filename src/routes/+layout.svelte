@@ -56,13 +56,12 @@
 			{#each navItems as item}
 				<a
 					href={item.href}
-					class="flex items-center gap-3 px-3 py-2 rounded-container text-sm transition-colors {isActive(
-						item.href
-					)
+					class="flex items-center gap-3 px-3 py-2 rounded-container text-sm transition-colors
+						{isActive(item.href)
 						? 'preset-filled-primary-500 font-semibold'
 						: 'hover:preset-tonal-primary text-surface-800-200'}"
 				>
-					<svelte:component this={item.icon} size={18} />
+					<item.icon size={18} />
 					<span>{item.label}</span>
 				</a>
 			{/each}
@@ -90,13 +89,10 @@
 			{#each navItems as item}
 				<a
 					href={item.href}
-					class="flex flex-col items-center justify-center gap-1 min-w-16 shrink-0 px-3 py-2 text-[10px] {isActive(
-						item.href
-					)
-						? 'text-primary-500 font-semibold'
-						: 'text-surface-700-300'}"
+					class="flex flex-col items-center justify-center gap-1 min-w-16 shrink-0 px-3 py-2 text-[10px]
+						{isActive(item.href) ? 'text-primary-500 font-semibold' : 'text-surface-700-300'}"
 				>
-					<svelte:component this={item.icon} size={20} />
+					<item.icon size={20} />
 					<span class="whitespace-nowrap">{item.label}</span>
 				</a>
 			{/each}

@@ -3,7 +3,8 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import Skeleton from '$lib/components/Skeleton.svelte';
 	import DashboardCharts from '$lib/components/DashboardCharts.svelte';
-	import { formatPLN, formatPercent, calculateChange } from '$lib/utils/format';
+	import DeltaBadge from '$lib/components/DeltaBadge.svelte';
+	import { formatPLN } from '$lib/utils/format';
 	import {
 		Wallet,
 		TrendingUp,
@@ -143,27 +144,20 @@
 					<h3 class="h4 flex items-center gap-2"><Wallet size={18} /> Wartość Netto</h3>
 				</header>
 				<div class="text-3xl font-bold">{formatPLN(dashboard.current_net_worth)}</div>
-				<p
-					class="text-sm flex items-center gap-1 {dashboard.change_vs_last_month >= 0
-						? 'text-success-600-400'
-						: 'text-error-600-400'}"
-				>
-					{#if dashboard.change_vs_last_month >= 0}
-						<TrendingUp size={14} />
-					{:else}
-						<TrendingDown size={14} />
-					{/if}
-					{formatPLN(Math.abs(dashboard.change_vs_last_month))}
-					({formatPercent(
-						Math.abs(
-							calculateChange(
-								dashboard.current_net_worth,
-								dashboard.current_net_worth - dashboard.change_vs_last_month
-							).percent
-						)
-					)})
-					<span class="text-surface-700-300">vs poprzedni miesiąc</span>
-				</p>
+				<div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+					<DeltaBadge
+						label="MoM"
+						absolute={dashboard.tile_deltas?.net_worth?.mom?.absolute ?? null}
+						percentage={dashboard.tile_deltas?.net_worth?.mom?.percentage ?? null}
+						formulaTitle="Δ MoM = bieżąca − sprzed ~1 miesiąca; % = Δ / |sprzed ~1 miesiąca|"
+					/>
+					<DeltaBadge
+						label="YoY"
+						absolute={dashboard.tile_deltas?.net_worth?.yoy?.absolute ?? null}
+						percentage={dashboard.tile_deltas?.net_worth?.yoy?.percentage ?? null}
+						formulaTitle="Δ YoY = bieżąca − sprzed ~12 miesięcy; % = Δ / |sprzed ~12 miesięcy|"
+					/>
+				</div>
 			</div>
 
 			<div class="card preset-filled-surface-100-900 p-4 space-y-2">
@@ -173,7 +167,20 @@
 				<div class="text-3xl font-bold text-success-600-400">
 					{formatPLN(dashboard.total_assets)}
 				</div>
-				<p class="text-sm text-surface-700-300">Suma wszystkich aktywów</p>
+				<div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+					<DeltaBadge
+						label="MoM"
+						absolute={dashboard.tile_deltas?.assets?.mom?.absolute ?? null}
+						percentage={dashboard.tile_deltas?.assets?.mom?.percentage ?? null}
+						formulaTitle="Δ MoM = bieżąca − sprzed ~1 miesiąca; % = Δ / |sprzed ~1 miesiąca|"
+					/>
+					<DeltaBadge
+						label="YoY"
+						absolute={dashboard.tile_deltas?.assets?.yoy?.absolute ?? null}
+						percentage={dashboard.tile_deltas?.assets?.yoy?.percentage ?? null}
+						formulaTitle="Δ YoY = bieżąca − sprzed ~12 miesięcy; % = Δ / |sprzed ~12 miesięcy|"
+					/>
+				</div>
 			</div>
 
 			<div class="card preset-filled-surface-100-900 p-4 space-y-2">
@@ -183,7 +190,20 @@
 				<div class="text-3xl font-bold text-error-600-400">
 					{formatPLN(dashboard.total_liabilities)}
 				</div>
-				<p class="text-sm text-surface-700-300">Suma wszystkich zobowiązań</p>
+				<div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+					<DeltaBadge
+						label="MoM"
+						absolute={dashboard.tile_deltas?.liabilities?.mom?.absolute ?? null}
+						percentage={dashboard.tile_deltas?.liabilities?.mom?.percentage ?? null}
+						formulaTitle="Δ MoM = bieżąca − sprzed ~1 miesiąca; % = Δ / |sprzed ~1 miesiąca| — niższe zobowiązania (znak ujemny) = poprawa"
+					/>
+					<DeltaBadge
+						label="YoY"
+						absolute={dashboard.tile_deltas?.liabilities?.yoy?.absolute ?? null}
+						percentage={dashboard.tile_deltas?.liabilities?.yoy?.percentage ?? null}
+						formulaTitle="Δ YoY = bieżąca − sprzed ~12 miesięcy; % = Δ / |sprzed ~12 miesięcy| — niższe zobowiązania (znak ujemny) = poprawa"
+					/>
+				</div>
 			</div>
 		</div>
 

@@ -55,6 +55,10 @@
 		'grudzień'
 	];
 
+	function isNonNegative(value: number | null): boolean {
+		return (value ?? 0) >= 0;
+	}
+
 	function formatPctSigned(value: number | null): string {
 		if (value == null || Number.isNaN(value)) return '—';
 		const sign = value >= 0 ? '+' : '';
@@ -462,8 +466,8 @@
 							<dt class="font-semibold pt-1">Realna podwyżka:</dt>
 							<dd
 								class="text-right font-bold pt-1"
-								class:text-success-500={(ctx.real_change_pln ?? 0) >= 0}
-								class:text-error-500={(ctx.real_change_pln ?? 0) < 0}
+								class:text-success-500={isNonNegative(ctx.real_change_pln)}
+								class:text-error-500={!isNonNegative(ctx.real_change_pln)}
 							>
 								{formatPlnSigned(ctx.real_change_pln)}
 								<span class="text-xs font-normal">

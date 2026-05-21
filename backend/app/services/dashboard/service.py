@@ -19,6 +19,8 @@ from app.schemas.dashboard import (
     MetricCards,
     NetWorthPoint,
     RebalancingSuggestion,
+    TileDelta,
+    TileDeltas,
     WrapperTimeSeries,
 )
 from app.services.dashboard.metrics import (
@@ -26,6 +28,7 @@ from app.services.dashboard.metrics import (
     _calculate_hour_of_life_cost,
     _calculate_hour_of_work_cost,
     _calculate_savings_rate,
+    compute_tile_deltas,
 )
 from app.services.dashboard.time_series import (
     build_category_time_series,
@@ -99,6 +102,11 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
             investment_time_series=[],
             wrapper_time_series=WrapperTimeSeries(ike=[], ikze=[], ppk=[]),
             category_time_series=CategoryTimeSeries(stock=[], bond=[]),
+            tile_deltas=TileDeltas(
+                net_worth=TileDelta(mom=None, yoy=None),
+                assets=TileDelta(mom=None, yoy=None),
+                liabilities=TileDelta(mom=None, yoy=None),
+            ),
         )
 
     # Vectorized signed value:
@@ -140,8 +148,14 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
     # Use merged df to determine latest snapshot (handles case where merge filters out snapshots)
     latest_df = pd.DataFrame()  # Initialize to satisfy type checker
     if not df.empty and "snapshot_id" in df.columns:
-        latest_snapshot_id = df["snapshot_id"].max()
-        latest_snapshot = snapshots_df[snapshots_df["id"] == latest_snapshot_id].iloc[0]
+        valid_ids = df["snapshot_id"].dropna().unique()
+        candidates = snapshots_df[snapshots_df["id"].isin(valid_ids)]
+        if candidates.empty:
+            latest_snapshot = None
+        else:
+            latest_snapshot = candidates.sort_values(["date", "id"], ascending=[False, False]).iloc[
+                0
+            ]
     else:
         latest_snapshot = None
 
@@ -479,6 +493,8 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
         df, snapshots_df, transactions_with_accounts_df
     )
 
+    tile_deltas = compute_tile_deltas(df, snapshots_df)
+
     return DashboardResponse(
         net_worth_history=net_worth_history,
         current_net_worth=current_net_worth,
@@ -492,4 +508,5 @@ def get_dashboard_data(db: Session) -> DashboardResponse:
         investment_time_series=investment_time_series,
         wrapper_time_series=wrapper_time_series,
         category_time_series=category_time_series,
+        tile_deltas=tile_deltas,
     )

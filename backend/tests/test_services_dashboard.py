@@ -1,10 +1,14 @@
 from datetime import date
 from decimal import Decimal
 
+import pandas as pd
+import pytest
+from sqlalchemy import select
+
+from app.models import Asset, Snapshot, SnapshotValue
 from app.models.account import Account
 from app.models.app_config import AppConfig
 from app.models.salary_record import SalaryRecord
-from app.models.snapshot import Snapshot, SnapshotValue
 from app.services.dashboard import (
     _calculate_debt_to_income,
     _calculate_hour_of_life_cost,
@@ -12,6 +16,7 @@ from app.services.dashboard import (
     _calculate_savings_rate,
     get_dashboard_data,
 )
+from app.services.dashboard.metrics import _pick_baseline, compute_tile_deltas
 from tests.factories import (
     create_test_account,
     create_test_asset,
@@ -1870,3 +1875,222 @@ def test_dashboard_performance_60_snapshots(test_db_session):
     assert median_ms < 200, (
         f"Dashboard median {median_ms:.1f} ms (limit: 200 ms; runs: {timings_ms})"
     )
+
+
+def _build_merged_df(db) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Build merged df matching service.get_dashboard_data's pattern."""
+    assets_query = select(Asset).where(Asset.is_active.is_(True))
+    assets_df = pd.read_sql(assets_query, db.get_bind())
+
+    accounts_query = select(Account).where(Account.is_active.is_(True))
+    accounts_df = pd.read_sql(accounts_query, db.get_bind())
+
+    snapshots_query = select(Snapshot).order_by(Snapshot.date)
+    snapshots_df = pd.read_sql(snapshots_query, db.get_bind())
+
+    values_query = select(SnapshotValue)
+    values_df = pd.read_sql(values_query, db.get_bind())
+
+    df = values_df.merge(
+        assets_df, left_on="asset_id", right_on="id", how="left", suffixes=("", "_asset")
+    )
+    df = df.merge(
+        accounts_df, left_on="account_id", right_on="id", how="left", suffixes=("", "_account")
+    )
+    df = df.merge(snapshots_df, left_on="snapshot_id", right_on="id", suffixes=("", "_snapshot"))
+    return df, snapshots_df
+
+
+def test_tile_deltas_empty_df():
+    """compute_tile_deltas with empty inputs returns all-None slots."""
+    result = compute_tile_deltas(pd.DataFrame(), pd.DataFrame())
+    assert result.net_worth.mom is None
+    assert result.net_worth.yoy is None
+    assert result.assets.mom is None
+    assert result.assets.yoy is None
+    assert result.liabilities.mom is None
+    assert result.liabilities.yoy is None
+
+
+def test_tile_deltas_single_snapshot(test_db_session):
+    """Single snapshot → no baseline → all six slots None."""
+    account = create_test_account(test_db_session, name="Bank", category="bank", owner="Marcin")
+    snap = create_test_snapshot(test_db_session, snapshot_date=date(2024, 4, 30))
+    create_test_snapshot_value(test_db_session, snap.id, account.id, Decimal("10000"))
+
+    df, snapshots_df = _build_merged_df(test_db_session)
+    result = compute_tile_deltas(df, snapshots_df)
+
+    assert result.net_worth.mom is None
+    assert result.net_worth.yoy is None
+    assert result.assets.mom is None
+    assert result.assets.yoy is None
+    assert result.liabilities.mom is None
+    assert result.liabilities.yoy is None
+
+
+def test_tile_deltas_mom_in_window(test_db_session):
+    """MoM delta computed correctly when baseline falls in window."""
+    asset_account = create_test_account(
+        test_db_session, name="Assets", category="bank", owner="Marcin"
+    )
+    liab_account = create_test_account(
+        test_db_session, name="Loan", account_type="liability", category="debt", owner="Marcin"
+    )
+
+    # Baseline: 30 days before latest (2024-04-30), so 2024-04-01
+    # MoM window: [2024-03-16, 2024-04-15] — 2024-04-01 is in window
+    snap_base = create_test_snapshot(test_db_session, snapshot_date=date(2024, 4, 1))
+    create_test_snapshot_value(test_db_session, snap_base.id, asset_account.id, Decimal("10000"))
+    create_test_snapshot_value(test_db_session, snap_base.id, liab_account.id, Decimal("2000"))
+
+    snap_cur = create_test_snapshot(test_db_session, snapshot_date=date(2024, 4, 30))
+    create_test_snapshot_value(test_db_session, snap_cur.id, asset_account.id, Decimal("12000"))
+    create_test_snapshot_value(test_db_session, snap_cur.id, liab_account.id, Decimal("1500"))
+
+    df, snapshots_df = _build_merged_df(test_db_session)
+    result = compute_tile_deltas(df, snapshots_df)
+
+    assert result.net_worth.mom is not None
+    assert result.net_worth.mom.absolute == 2500.0  # (12000-1500) - (10000-2000)
+    assert result.net_worth.mom.percentage == pytest.approx(31.25)
+
+    assert result.assets.mom is not None
+    assert result.assets.mom.absolute == 2000.0
+    assert result.assets.mom.percentage == pytest.approx(20.0)
+
+    assert result.liabilities.mom is not None
+    assert result.liabilities.mom.absolute == -500.0
+    assert result.liabilities.mom.percentage == pytest.approx(-25.0)
+
+    # No snapshot in YoY window
+    assert result.net_worth.yoy is None
+    assert result.assets.yoy is None
+    assert result.liabilities.yoy is None
+
+
+def test_tile_deltas_mom_outside_window(test_db_session):
+    """Baseline outside MoM window → mom is None for all tiles."""
+    account = create_test_account(test_db_session, name="Bank", category="bank", owner="Marcin")
+
+    # 2024-04-30 - 60 days = 2024-03-01: outside MoM window [Mar 16, Apr 15]
+    snap_base = create_test_snapshot(test_db_session, snapshot_date=date(2024, 3, 1))
+    create_test_snapshot_value(test_db_session, snap_base.id, account.id, Decimal("5000"))
+
+    snap_cur = create_test_snapshot(test_db_session, snapshot_date=date(2024, 4, 30))
+    create_test_snapshot_value(test_db_session, snap_cur.id, account.id, Decimal("7000"))
+
+    df, snapshots_df = _build_merged_df(test_db_session)
+    result = compute_tile_deltas(df, snapshots_df)
+
+    assert result.net_worth.mom is None
+    assert result.assets.mom is None
+    assert result.liabilities.mom is None
+
+
+def test_tile_deltas_yoy(test_db_session):
+    """YoY delta computed correctly when baseline in yearly window."""
+    asset_account = create_test_account(
+        test_db_session, name="Assets", category="bank", owner="Marcin"
+    )
+    liab_account = create_test_account(
+        test_db_session, name="Loan", account_type="liability", category="debt", owner="Marcin"
+    )
+
+    # YoY window for latest=2024-04-30: [2023-03-31, 2023-05-30]
+    # 2023-04-30 is 365 days before: within window
+    snap_base = create_test_snapshot(test_db_session, snapshot_date=date(2023, 4, 30))
+    create_test_snapshot_value(test_db_session, snap_base.id, asset_account.id, Decimal("5000"))
+    create_test_snapshot_value(test_db_session, snap_base.id, liab_account.id, Decimal("1000"))
+
+    snap_cur = create_test_snapshot(test_db_session, snapshot_date=date(2024, 4, 30))
+    create_test_snapshot_value(test_db_session, snap_cur.id, asset_account.id, Decimal("15000"))
+    create_test_snapshot_value(test_db_session, snap_cur.id, liab_account.id, Decimal("2000"))
+
+    df, snapshots_df = _build_merged_df(test_db_session)
+    result = compute_tile_deltas(df, snapshots_df)
+
+    assert result.net_worth.yoy is not None
+    assert result.net_worth.yoy.absolute == 9000.0  # 13000 - 4000
+    assert result.net_worth.yoy.percentage == pytest.approx(225.0)
+
+    assert result.assets.yoy is not None
+    assert result.assets.yoy.absolute == 10000.0
+
+    assert result.liabilities.yoy is not None
+    assert result.liabilities.yoy.absolute == 1000.0
+
+
+def test_tile_deltas_zero_baseline_percentage_is_none(test_db_session):
+    """Zero baseline → percentage is None, absolute still reported."""
+    asset_account = create_test_account(
+        test_db_session, name="Assets", category="bank", owner="Marcin"
+    )
+    liab_account = create_test_account(
+        test_db_session, name="Loan", account_type="liability", category="debt", owner="Marcin"
+    )
+
+    # Baseline: zero values; 2024-04-01 is in MoM window [Mar 16, Apr 15] for latest 2024-04-30
+    snap_base = create_test_snapshot(test_db_session, snapshot_date=date(2024, 4, 1))
+    create_test_snapshot_value(test_db_session, snap_base.id, asset_account.id, Decimal("0"))
+    create_test_snapshot_value(test_db_session, snap_base.id, liab_account.id, Decimal("0"))
+
+    snap_cur = create_test_snapshot(test_db_session, snapshot_date=date(2024, 4, 30))
+    create_test_snapshot_value(test_db_session, snap_cur.id, asset_account.id, Decimal("500"))
+    create_test_snapshot_value(test_db_session, snap_cur.id, liab_account.id, Decimal("0"))
+
+    df, snapshots_df = _build_merged_df(test_db_session)
+    result = compute_tile_deltas(df, snapshots_df)
+
+    assert result.net_worth.mom is not None
+    assert result.net_worth.mom.absolute == 500.0
+    assert result.net_worth.mom.percentage is None  # base = 0
+
+
+def test_tile_deltas_same_day_tie_break():
+    """_pick_baseline picks highest snapshot_id when multiple rows share the same date."""
+    totals = pd.DataFrame(
+        {
+            "snapshot_id": [1, 2, 3],
+            "date": [date(2024, 4, 1), date(2024, 4, 1), date(2024, 4, 1)],
+            "assets": [10000.0, 12000.0, 11000.0],
+            "liabilities": [0.0, 0.0, 0.0],
+            "net_worth": [10000.0, 12000.0, 11000.0],
+        }
+    )
+    result = _pick_baseline(totals, date(2024, 3, 16), date(2024, 4, 15))
+    assert result is not None
+    # snapshot_id=3 is the highest id on 2024-04-01
+    assert result["snapshot_id"] == 3
+    assert result["assets"] == 11000.0
+
+
+def test_tile_deltas_alignment_with_tile_totals(test_db_session):
+    """tile_deltas.net_worth.mom.absolute == current_net_worth - baseline_net_worth."""
+    asset_account = create_test_account(
+        test_db_session, name="Bank", category="bank", owner="Marcin"
+    )
+    liab_account = create_test_account(
+        test_db_session,
+        name="Mortgage",
+        account_type="liability",
+        category="housing",
+        owner="Marcin",
+    )
+
+    # Baseline 30 days before latest (2024-04-30): 2024-04-01 in MoM window
+    snap_base = create_test_snapshot(test_db_session, snapshot_date=date(2024, 4, 1))
+    create_test_snapshot_value(test_db_session, snap_base.id, asset_account.id, Decimal("50000"))
+    create_test_snapshot_value(test_db_session, snap_base.id, liab_account.id, Decimal("20000"))
+
+    snap_cur = create_test_snapshot(test_db_session, snapshot_date=date(2024, 4, 30))
+    create_test_snapshot_value(test_db_session, snap_cur.id, asset_account.id, Decimal("55000"))
+    create_test_snapshot_value(test_db_session, snap_cur.id, liab_account.id, Decimal("19000"))
+
+    result = get_dashboard_data(test_db_session)
+
+    baseline_nw = 50000 - 20000  # 30000
+    expected_abs = result.current_net_worth - baseline_nw  # 36000 - 30000 = 6000
+
+    assert result.tile_deltas.net_worth.mom is not None
+    assert result.tile_deltas.net_worth.mom.absolute == pytest.approx(expected_abs)

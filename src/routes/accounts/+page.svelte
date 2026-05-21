@@ -339,7 +339,7 @@
 			<div class="card preset-filled-surface-100-900 p-4 space-y-4">
 				<header>
 					<h3 class="h3 flex items-center gap-2">
-						<svelte:component this={section.icon} size={20} />
+						<section.icon size={20} />
 						{section.title}
 					</h3>
 				</header>

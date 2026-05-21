@@ -1,4 +1,4 @@
-import { error } from '@sveltejs/kit';
+import { error, isHttpError } from '@sveltejs/kit';
 import { env } from '$env/dynamic/public';
 import { browser } from '$app/environment';
 
@@ -16,22 +16,29 @@ export async function load({ fetch }) {
 	})();
 
 	const dashboardData = (async () => {
-		const [dashboardRes, retirementRes] = await Promise.all([
-			fetch(`${apiUrl}/api/dashboard`),
-			fetch(`${apiUrl}/api/retirement/stats?year=${currentYear}`)
-		]);
+		try {
+			const [dashboardRes, retirementRes] = await Promise.all([
+				fetch(`${apiUrl}/api/dashboard`),
+				fetch(`${apiUrl}/api/retirement/stats?year=${currentYear}`)
+			]);
 
-		if (!dashboardRes.ok) {
-			throw error(dashboardRes.status, 'Failed to load dashboard data');
+			if (!dashboardRes.ok) {
+				throw error(dashboardRes.status, 'Failed to load dashboard data');
+			}
+
+			const dashboard = await dashboardRes.json();
+			const retirementStats = retirementRes.ok ? await retirementRes.json() : [];
+
+			return {
+				...dashboard,
+				retirementStats
+			};
+		} catch (err) {
+			if (isHttpError(err)) {
+				throw err;
+			}
+			throw error(500, 'Failed to load dashboard data');
 		}
-
-		const dashboard = await dashboardRes.json();
-		const retirementStats = retirementRes.ok ? await retirementRes.json() : [];
-
-		return {
-			...dashboard,
-			retirementStats
-		};
 	})();
 
 	return {
