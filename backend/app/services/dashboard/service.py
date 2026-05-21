@@ -248,10 +248,26 @@ def _get_dashboard_data_from_aggregates(
             ta = sum(float(r.total_assets) for r in sid_agg)
             tl = sum(float(r.total_liabilities) for r in sid_agg)
             synth_rows.append(
-                {"snapshot_id": sid, "date": d, "account_id": 1, "asset_id": None, "name": None, "type": "asset", "value": ta}
+                {
+                    "snapshot_id": sid,
+                    "date": d,
+                    "account_id": 1,
+                    "asset_id": None,
+                    "name": None,
+                    "type": "asset",
+                    "value": ta,
+                }
             )
             synth_rows.append(
-                {"snapshot_id": sid, "date": d, "account_id": 2, "asset_id": None, "name": None, "type": "liability", "value": tl}
+                {
+                    "snapshot_id": sid,
+                    "date": d,
+                    "account_id": 2,
+                    "asset_id": None,
+                    "name": None,
+                    "type": "liability",
+                    "value": tl,
+                }
             )
         tile_deltas = compute_tile_deltas(
             pd.DataFrame(synth_rows) if synth_rows else pd.DataFrame(),

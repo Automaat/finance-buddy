@@ -9,8 +9,11 @@ from sqlalchemy.orm import Session
 from app.models import (
     Account,
     Asset,
+    BonusEvent,
+    CompanyValuation,
     Debt,
     DebtPayment,
+    EquityGrant,
     SalaryRecord,
     Snapshot,
     SnapshotValue,
@@ -284,6 +287,127 @@ def create_test_salary_record(
     db.commit()
     db.refresh(salary_record)
     return salary_record
+
+
+def create_test_bonus_event(
+    db: Session,
+    bonus_date: date = date(2024, 12, 15),
+    amount: float = 20000.0,
+    currency: str = "PLN",
+    bonus_type: str = "annual",
+    company: str = "Company A",
+    owner: str = "Marcin",
+    contract_type: str = "UOP",
+    notes: str | None = None,
+    is_active: bool = True,
+    **kwargs: Any,
+) -> BonusEvent:
+    """Factory for test bonus events with sensible defaults."""
+    defaults = {
+        "date": bonus_date,
+        "amount": Decimal(str(amount)),
+        "currency": currency,
+        "type": bonus_type,
+        "company": company,
+        "owner": owner,
+        "contract_type": contract_type,
+        "notes": notes,
+        "is_active": is_active,
+    }
+    defaults.update(kwargs)
+    bonus = BonusEvent(**defaults)
+    db.add(bonus)
+    db.commit()
+    db.refresh(bonus)
+    return bonus
+
+
+def create_test_equity_grant(
+    db: Session,
+    grant_date: date = date(2024, 1, 1),
+    grant_type: str = "rsu",
+    company: str = "Company X",
+    owner: str = "Marcin",
+    total_shares: int = 4800,
+    strike_price: float | None = None,
+    currency: str = "USD",
+    vest_start_date: date = date(2024, 1, 1),
+    vest_cliff_months: int = 12,
+    vest_total_months: int = 48,
+    vest_frequency: str = "monthly",
+    vest_custom_schedule: list[dict[str, Any]] | None = None,
+    requires_liquidity_event: bool = False,
+    liquidity_event_date: date | None = None,
+    tax_treatment: str = "capital_gains_19",
+    notes: str | None = None,
+    is_active: bool = True,
+    **kwargs: Any,
+) -> EquityGrant:
+    """Factory for test equity grants with sensible defaults."""
+    defaults = {
+        "grant_date": grant_date,
+        "type": grant_type,
+        "company": company,
+        "owner": owner,
+        "total_shares": total_shares,
+        "strike_price": Decimal(str(strike_price)) if strike_price is not None else None,
+        "currency": currency,
+        "vest_start_date": vest_start_date,
+        "vest_cliff_months": vest_cliff_months,
+        "vest_total_months": vest_total_months,
+        "vest_frequency": vest_frequency,
+        "vest_custom_schedule": vest_custom_schedule,
+        "requires_liquidity_event": requires_liquidity_event,
+        "liquidity_event_date": liquidity_event_date,
+        "tax_treatment": tax_treatment,
+        "notes": notes,
+        "is_active": is_active,
+    }
+    defaults.update(kwargs)
+    grant = EquityGrant(**defaults)
+    db.add(grant)
+    db.commit()
+    db.refresh(grant)
+    return grant
+
+
+def create_test_company_valuation(
+    db: Session,
+    company: str = "Company X",
+    valuation_date: date = date(2024, 6, 1),
+    currency: str = "USD",
+    fmv_per_share: float = 10.0,
+    fmv_low: float | None = None,
+    fmv_high: float | None = None,
+    source: str = "409a",
+    common_stock_discount_pct: float | None = None,
+    notes: str | None = None,
+    is_active: bool = True,
+    **kwargs: Any,
+) -> CompanyValuation:
+    """Factory for test company valuations with sensible defaults."""
+    defaults = {
+        "company": company,
+        "date": valuation_date,
+        "currency": currency,
+        "fmv_per_share": Decimal(str(fmv_per_share)),
+        "fmv_low": Decimal(str(fmv_low)) if fmv_low is not None else None,
+        "fmv_high": Decimal(str(fmv_high)) if fmv_high is not None else None,
+        "source": source,
+        "common_stock_discount_pct": (
+            Decimal(str(common_stock_discount_pct))
+            if common_stock_discount_pct is not None
+            else None
+        ),
+        "notes": notes,
+        "is_active": is_active,
+    }
+    defaults.update(kwargs)
+    valuation = CompanyValuation(**defaults)
+    db.add(valuation)
+    db.commit()
+    db.refresh(valuation)
+    return valuation
 
 
 def create_test_debt_payment(
