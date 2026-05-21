@@ -28,7 +28,7 @@ func run() int {
 
 	cfg := server.Config{
 		Addr:        envOr("FB_ADDR", ":8000"),
-		CORSOrigins: envOr("CORS_ORIGINS", "http://localhost:3000"),
+		CORSOrigins: envOrPresent("CORS_ORIGINS", "http://localhost:3000"),
 	}
 
 	handler := server.New(cfg, logger)
@@ -65,8 +65,21 @@ func run() int {
 	return 0
 }
 
+// envOr returns os.Getenv(key) if non-empty, else fallback. Use for values
+// like FB_ADDR where empty is meaningless and we want a default.
 func envOr(key, fallback string) string {
 	if v, ok := os.LookupEnv(key); ok && v != "" {
+		return v
+	}
+	return fallback
+}
+
+// envOrPresent returns the env value if the key is set (even if empty),
+// else fallback. Use for values where an explicit empty string is a
+// legitimate signal — e.g. CORS_ORIGINS="" matching Python's behaviour
+// of trusting whatever Settings parsed from the environment.
+func envOrPresent(key, fallback string) string {
+	if v, ok := os.LookupEnv(key); ok {
 		return v
 	}
 	return fallback

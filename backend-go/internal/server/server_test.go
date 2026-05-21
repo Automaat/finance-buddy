@@ -35,15 +35,16 @@ func TestHealthEndpoint(t *testing.T) {
 }
 
 func TestSplitOrigins(t *testing.T) {
+	// Parity with Python's `settings.cors_origins.split(",")` — verbatim,
+	// no trimming, no wildcard fallback.
 	cases := []struct {
 		name string
 		in   string
 		want []string
 	}{
-		{"empty falls back to wildcard", "", []string{"*"}},
+		{"empty passes through", "", []string{""}},
 		{"single origin", "http://localhost:3000", []string{"http://localhost:3000"}},
-		{"comma-separated trimmed", "http://a, http://b ,http://c", []string{"http://a", "http://b", "http://c"}},
-		{"only whitespace falls back", "  ,  ", []string{"*"}},
+		{"comma-separated kept verbatim", "http://a, http://b ,http://c", []string{"http://a", " http://b ", "http://c"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

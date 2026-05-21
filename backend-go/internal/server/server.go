@@ -17,12 +17,17 @@ import (
 )
 
 // Config holds the runtime knobs the server reads at startup.
+//
+// The caller (cmd/api) owns env-var loading and defaulting; New treats every
+// field as already-resolved input. Empty values flow through unchanged so the
+// behavior matches the Python backend during cutover.
 type Config struct {
-	// Addr is the listen address (host:port). Empty falls back to ":8000".
+	// Addr is the listen address (host:port). Consumed by cmd/api when
+	// constructing http.Server; not used by New itself.
 	Addr string
-	// CORSOrigins is the same comma-separated value the Python backend reads
-	// from CORS_ORIGINS. Trim/expand to match Python's behaviour exactly so
-	// the proxy can flip endpoints without breaking the SvelteKit client.
+	// CORSOrigins is the exact value of the CORS_ORIGINS env var. It's
+	// split on "," verbatim (no trimming, no wildcard fallback) to match
+	// the Python backend's `settings.cors_origins.split(",")`.
 	CORSOrigins string
 }
 
@@ -57,19 +62,10 @@ func healthHandler(logger *slog.Logger) http.HandlerFunc {
 	}
 }
 
+// splitOrigins mirrors the Python backend's `settings.cors_origins.split(",")`
+// verbatim — no trimming, no wildcard fallback. Behavior parity matters
+// during proxy-mediated cutover (the SvelteKit client sees exactly one of the
+// two backends per request).
 func splitOrigins(raw string) []string {
-	if raw == "" {
-		return []string{"*"}
-	}
-	parts := strings.Split(raw, ",")
-	out := make([]string, 0, len(parts))
-	for _, p := range parts {
-		if trimmed := strings.TrimSpace(p); trimmed != "" {
-			out = append(out, trimmed)
-		}
-	}
-	if len(out) == 0 {
-		return []string{"*"}
-	}
-	return out
+	return strings.Split(raw, ",")
 }
