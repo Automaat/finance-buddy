@@ -3,9 +3,12 @@
 // Goal: capture a per-endpoint p50/p95/p99 reference against a seeded DB so we
 // can detect regressions after the Go cutover.
 //
-// Light load (10 VUs × 30 s) — this is a baseline, not a stress test. Heavy
-// endpoints (dashboard, simulations) get their own scenarios so a slow pandas
-// call doesn't drown out the cheap CRUD reads.
+// Light load (10 VUs × 30 s) — this is a baseline, not a stress test.
+//
+// One iteration walks the full endpoint list, so each VU spreads its time
+// across every route. Per-iteration timing therefore reflects the slowest
+// endpoint (currently /api/dashboard); the per-route Trend metrics below are
+// what you read for actual latencies.
 //
 // Each request is tagged with `endpoint` so the JSON summary can be sliced
 // per route; see migration/perf/baseline.json after a run.
@@ -59,11 +62,14 @@ export const options = {
 		}
 	},
 	thresholds: {
-		// The only hard gate here: any request failing means the seed is wrong
-		// or the backend isn't healthy, and the baseline is meaningless.
+		// The only hard gate: every per-endpoint 2xx check must pass. If a
+		// request errors or returns 4xx/5xx, the seed is wrong or the backend
+		// isn't healthy, and the captured numbers are meaningless. Using the
+		// `checks` metric (rather than http_req_failed) gives a clearer
+		// passes/fails breakdown in the exported JSON summary.
 		// Latency thresholds intentionally omitted — this is a *baseline*
 		// capture, not a CI gate. Compare new runs against baseline.json.
-		http_req_failed: ['rate<0.01']
+		checks: ['rate>0.99']
 	},
 	summaryTrendStats: ['avg', 'min', 'med', 'p(95)', 'p(99)', 'max']
 };

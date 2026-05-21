@@ -179,7 +179,12 @@ def main() -> int:
         json.dumps(summary, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
-    logger.info("Wrote %s", args.output.relative_to(REPO_ROOT))
+    try:
+        printable = args.output.relative_to(REPO_ROOT)
+    except ValueError:
+        # --output was given a path outside the repo (e.g. /tmp/...).
+        printable = args.output.resolve()
+    logger.info("Wrote %s", printable)
     return 0
 
 

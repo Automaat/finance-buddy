@@ -30,23 +30,23 @@ BB_BASE_URL=http://localhost:9000 k6 run --summary-export=go-baseline.json \
     migration/perf/baseline.js
 ```
 
-Diff against the Python baseline; per-endpoint deltas live in `metrics.latency_<slug>.values`.
+Diff against the Python baseline; per-endpoint stats live directly on `metrics.latency_<slug>` (fields: `avg`, `min`, `med`, `p(95)`, `p(99)`, `max`) — no nested `.values`.
 
 ## Headline numbers (captured 2026-05-21, dev seed, 10 VUs × 30 s)
 
 | Endpoint                    | p50    | p95    | p99    | Notes                          |
 | --------------------------- | ------ | ------ | ------ | ------------------------------ |
-| `/api/dashboard`            | 138 ms | 234 ms | 267 ms | Heaviest; pandas aggregations. |
-| `/api/snapshots`            | 67 ms  | 132 ms | 161 ms | Per-row net-worth compute.     |
-| `/api/simulations/prefill`  | 32 ms  | 99 ms  | 122 ms | 4-table aggregation.           |
-| `/api/retirement/ppk-stats` | 19 ms  | 82 ms  | 116 ms | Per-owner ROI.                 |
-| `/api/retirement/stats`     | 25 ms  | 74 ms  | 121 ms | IKE/IKZE per owner.            |
-| `/api/zus/prefill`          | 16 ms  | 59 ms  | 79 ms  | Salary history aggregation.    |
-| `/api/accounts`             | 29 ms  | 70 ms  | 101 ms | Read latest snapshot.          |
+| `/api/dashboard`            | 116 ms | 208 ms | 292 ms | Heaviest; pandas aggregations. |
+| `/api/snapshots`            | 63 ms  | 116 ms | 132 ms | Per-row net-worth compute.     |
+| `/api/simulations/prefill`  | 36 ms  | 87 ms  | 109 ms | 4-table aggregation.           |
+| `/api/retirement/stats`     | 27 ms  | 64 ms  | 84 ms  | IKE/IKZE per owner.            |
+| `/api/retirement/ppk-stats` | 22 ms  | 56 ms  | 72 ms  | Per-owner ROI.                 |
+| `/api/accounts`             | 25 ms  | 57 ms  | 76 ms  | Read latest snapshot.          |
+| `/api/zus/prefill`          | 20 ms  | 53 ms  | 74 ms  | Salary history aggregation.    |
 | Other CRUD reads            | <20 ms | <50 ms | <80 ms | Simple list endpoints.         |
-| `/health`                   | 12 ms  | 39 ms  | 56 ms  | Network floor.                 |
+| `/health`                   | 12 ms  | 37 ms  | 55 ms  | Network floor.                 |
 
-10560 requests, 0 failures.
+10780 requests, 0 failures (10780/10780 `checks` passed).
 
 ## When to refresh
 
