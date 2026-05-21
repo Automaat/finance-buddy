@@ -59,11 +59,6 @@
 		return (value ?? 0) >= 0;
 	}
 
-	function getPreviousCompany(owner: string, date: string | null): string | undefined {
-		if (!date) return undefined;
-		return data.salaries.salary_records.find((r) => r.owner === owner && r.date === date)?.company;
-	}
-
 	function formatPctSigned(value: number | null): string {
 		if (value == null || Number.isNaN(value)) return '—';
 		const sign = value >= 0 ? '+' : '';
