@@ -30,3 +30,16 @@ rules:
   - method: DELETE
     path_prefix: /api/personas
     upstream: http://backend-go:8000
+  # Group 3 — /api/goals cut over to Go.
+  - method: GET
+    path_prefix: /api/goals
+    upstream: http://backend-go:8000
+  - method: POST
+    path_prefix: /api/goals
+    upstream: http://backend-go:8000
+  - method: PUT
+    path_prefix: /api/goals
+    upstream: http://backend-go:8000
+  - method: DELETE
+    path_prefix: /api/goals
+    upstream: http://backend-go:8000

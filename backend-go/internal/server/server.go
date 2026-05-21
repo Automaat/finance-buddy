@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/config"
+	"github.com/Automaat/finance-buddy/backend-go/internal/goals"
 	"github.com/Automaat/finance-buddy/backend-go/internal/personas"
 )
 
@@ -74,6 +75,15 @@ func New(cfg Config, logger *slog.Logger, deps Deps) http.Handler {
 			r.Post("/", personasHandler.Create)
 			r.Put("/{id}", personasHandler.Update)
 			r.Delete("/{id}", personasHandler.Delete)
+		})
+
+		goalsHandler := goals.NewHandler(goals.NewStore(deps.Pool), logger)
+		r.Route("/api/goals", func(r chi.Router) {
+			r.Get("/", goalsHandler.List)
+			r.Post("/", goalsHandler.Create)
+			r.Get("/{id}", goalsHandler.Get)
+			r.Put("/{id}", goalsHandler.Update)
+			r.Delete("/{id}", goalsHandler.Delete)
 		})
 	}
 
