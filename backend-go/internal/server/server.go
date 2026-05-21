@@ -28,6 +28,7 @@ import (
 	equitygrants "github.com/Automaat/finance-buddy/backend-go/internal/equity_grants"
 	"github.com/Automaat/finance-buddy/backend-go/internal/fx"
 	"github.com/Automaat/finance-buddy/backend-go/internal/goals"
+	"github.com/Automaat/finance-buddy/backend-go/internal/investment"
 	"github.com/Automaat/finance-buddy/backend-go/internal/personas"
 	"github.com/Automaat/finance-buddy/backend-go/internal/retirement"
 	"github.com/Automaat/finance-buddy/backend-go/internal/salaries"
@@ -123,6 +124,10 @@ func registerLedgerRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger)
 	r.Post("/api/retirement/ppk-contributions/generate", retHandler.GeneratePPKContributions)
 	r.Get("/api/retirement/limits/{year}", retHandler.LimitsForYear)
 	r.Put("/api/retirement/limits/{year}/{wrapper}/{owner}", retHandler.UpsertLimit)
+
+	invHandler := investment.NewHandler(investment.NewStore(pool), logger)
+	r.Get("/api/investment/stock-stats", invHandler.StockStats)
+	r.Get("/api/investment/bond-stats", invHandler.BondStats)
 }
 
 func registerCoreRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {

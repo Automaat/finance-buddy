@@ -178,3 +178,7 @@ rules:
   - method: PUT
     path_prefix: /api/retirement
     upstream: http://backend-go:8000
+  # Group 11 — /api/investment cut over to Go (stock + bond ROI aggregates).
+  - method: GET
+    path_prefix: /api/investment
+    upstream: http://backend-go:8000
