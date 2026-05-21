@@ -31,6 +31,11 @@ var (
 )
 
 // response mirrors backend/app/schemas/bonus_events.BonusEventResponse.
+//
+// CreatedAt uses isoAware (with trailing Z) because the bonus_events table
+// migrates created_at as TIMESTAMPTZ — Pydantic emits aware datetimes with
+// a UTC indicator. Other domains (personas, valuations) use plain TIMESTAMP
+// and serialize naive.
 type response struct {
 	ID           int      `json:"id"`
 	Date         isoDate  `json:"date"`
@@ -42,7 +47,7 @@ type response struct {
 	ContractType string   `json:"contract_type"`
 	Notes        *string  `json:"notes"`
 	IsActive     bool     `json:"is_active"`
-	CreatedAt    isoNaive `json:"created_at"`
+	CreatedAt    isoAware `json:"created_at"`
 	AmountPLN    *pyFloat `json:"amount_pln"`
 	FXRate       *pyFloat `json:"fx_rate"`
 }
@@ -99,7 +104,7 @@ func (h *Handler) toResponse(ctx context.Context, b *BonusEvent) (response, erro
 		ContractType: b.ContractType,
 		Notes:        b.Notes,
 		IsActive:     b.IsActive,
-		CreatedAt:    isoNaive(b.CreatedAt),
+		CreatedAt:    isoAware(b.CreatedAt),
 	}
 	if hasPLN {
 		f, _ := plnAmount.Float64()
@@ -315,10 +320,13 @@ func (d *isoDate) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-type isoNaive time.Time
+// isoAware emits a UTC-aware ISO timestamp with a trailing Z — matches the
+// Pydantic format for a TIMESTAMPTZ-backed column. bonus_events.created_at
+// migrated as TIMESTAMP WITH TIME ZONE so the response is always aware.
+type isoAware time.Time
 
-func (t isoNaive) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(t).Format("2006-01-02T15:04:05.999999") + `"`), nil
+func (t isoAware) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + time.Time(t).UTC().Format("2006-01-02T15:04:05.999999") + `Z"`), nil
 }
 
 type pyFloat float64
