@@ -37,7 +37,7 @@
 	</header>
 
 	{#await data.snapshots}
-		<div class="table-wrap">
+		<div role="status" aria-live="polite" aria-label="Ładowanie snapshotów" class="table-wrap">
 			<table class="table">
 				<thead>
 					<tr>
@@ -48,7 +48,7 @@
 					</tr>
 				</thead>
 				<tbody>
-					{#each Array(5) as _, i (i)}
+					{#each { length: 5 } as _, i (i)}
 						<tr>
 							<td><Skeleton height="1rem" width="70%" /></td>
 							<td><Skeleton height="1rem" width="60%" /></td>

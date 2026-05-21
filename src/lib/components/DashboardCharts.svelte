@@ -12,8 +12,8 @@
 
 	let { netWorthHistory, allocation }: Props = $props();
 
-	let chartContainer: HTMLDivElement | undefined = $state();
-	let pieChartContainer: HTMLDivElement | undefined = $state();
+	let chartContainer: HTMLDivElement | undefined;
+	let pieChartContainer: HTMLDivElement | undefined;
 	let lineChart: echarts.ECharts | undefined;
 	let pieChart: echarts.ECharts | undefined;
 

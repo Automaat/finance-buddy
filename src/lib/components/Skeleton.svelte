@@ -4,16 +4,9 @@
 		width?: string;
 		height?: string;
 		rounded?: 'sm' | 'md' | 'lg' | 'full';
-		'aria-label'?: string;
 	}
 
-	let {
-		class: className = '',
-		width,
-		height,
-		rounded = 'md',
-		'aria-label': ariaLabel = 'Ładowanie'
-	}: Props = $props();
+	let { class: className = '', width, height, rounded = 'md' }: Props = $props();
 
 	const radiusClass = $derived(
 		rounded === 'full'
@@ -26,15 +19,7 @@
 	);
 </script>
 
-<div
-	class="skeleton {radiusClass} {className}"
-	style:width
-	style:height
-	role="status"
-	aria-busy="true"
-	aria-live="polite"
-	aria-label={ariaLabel}
-></div>
+<div class="skeleton {radiusClass} {className}" style:width style:height aria-hidden="true"></div>
 
 <style>
 	.skeleton {

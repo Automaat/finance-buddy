@@ -106,22 +106,24 @@
 	</div>
 
 	{#await data.dashboardData}
-		<div class="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-			{#each Array(3) as _, i (i)}
-				<div class="card preset-filled-surface-100-900 p-4 space-y-3">
-					<Skeleton height="1.25rem" width="60%" />
-					<Skeleton height="2rem" width="80%" />
-					<Skeleton height="0.875rem" width="70%" />
-				</div>
-			{/each}
-		</div>
-
-		<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-			<div class="card preset-filled-surface-100-900 p-4">
-				<Skeleton height="400px" rounded="lg" aria-label="Ładowanie wykresu wartości netto" />
+		<div role="status" aria-live="polite" aria-label="Ładowanie dashboardu" class="space-y-8">
+			<div class="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+				{#each { length: 3 } as _, i (i)}
+					<div class="card preset-filled-surface-100-900 p-4 space-y-3">
+						<Skeleton height="1.25rem" width="60%" />
+						<Skeleton height="2rem" width="80%" />
+						<Skeleton height="0.875rem" width="70%" />
+					</div>
+				{/each}
 			</div>
-			<div class="card preset-filled-surface-100-900 p-4">
-				<Skeleton height="400px" rounded="lg" aria-label="Ładowanie wykresu alokacji" />
+
+			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+				<div class="card preset-filled-surface-100-900 p-4">
+					<Skeleton height="400px" rounded="lg" />
+				</div>
+				<div class="card preset-filled-surface-100-900 p-4">
+					<Skeleton height="400px" rounded="lg" />
+				</div>
 			</div>
 		</div>
 	{:then dashboard}

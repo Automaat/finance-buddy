@@ -324,7 +324,7 @@
 </div>
 
 {#await data.accountsData}
-	<div class="space-y-4">
+	<div role="status" aria-live="polite" aria-label="Ładowanie kont" class="space-y-4">
 		{#each [{ icon: Wallet, title: 'Aktywa' }, { icon: TrendingDown, title: 'Pasywa' }] as section}
 			<div class="card preset-filled-surface-100-900 p-4 space-y-4">
 				<header>
@@ -342,7 +342,7 @@
 							</tr>
 						</thead>
 						<tbody>
-							{#each Array(5) as _, i (i)}
+							{#each { length: 5 } as _, i (i)}
 								<tr>
 									<td><Skeleton height="1rem" width="70%" /></td>
 									<td><Skeleton height="1rem" width="60%" /></td>

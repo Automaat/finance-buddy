@@ -108,9 +108,12 @@ describe('Dashboard Page', () => {
 
 	it('shows skeleton placeholders while dashboard data is loading', () => {
 		const pending = new Promise<Record<string, unknown>>(() => {});
-		render(Page, { props: { data: buildData({ dashboardData: pending }) } });
-		const placeholders = screen.getAllByRole('status', { name: /Ładowanie/i });
-		expect(placeholders.length).toBeGreaterThan(0);
+		const { container } = render(Page, {
+			props: { data: buildData({ dashboardData: pending }) }
+		});
+		const live = screen.getByRole('status', { name: /Ładowanie dashboardu/i });
+		expect(live).toBeTruthy();
+		expect(container.querySelectorAll('.skeleton').length).toBeGreaterThan(0);
 	});
 
 	it('renders dashboard metrics after data resolves', async () => {
