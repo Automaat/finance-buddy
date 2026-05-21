@@ -36,7 +36,8 @@ vi.mock('echarts', () => ({
 	default: {
 		init: vi.fn(() => ({
 			setOption: vi.fn(),
-			resize: vi.fn()
+			resize: vi.fn(),
+			dispose: vi.fn()
 		})),
 		graphic: {
 			LinearGradient: vi.fn()
@@ -44,7 +45,8 @@ vi.mock('echarts', () => ({
 	},
 	init: vi.fn(() => ({
 		setOption: vi.fn(),
-		resize: vi.fn()
+		resize: vi.fn(),
+		dispose: vi.fn()
 	})),
 	graphic: {
 		LinearGradient: vi.fn()
@@ -55,8 +57,14 @@ vi.mock('$app/navigation', () => ({
 	invalidateAll: vi.fn()
 }));
 
-describe('Dashboard Page', () => {
-	const mockData = {
+function buildData(
+	overrides: {
+		dashboardData?: Promise<Record<string, unknown>> | Record<string, unknown>;
+		personas?: { name: string }[];
+		currentYear?: number;
+	} = {}
+) {
+	const baseDashboard = {
 		net_worth_history: [
 			{ date: '2024-01-01', value: 5000 },
 			{ date: '2024-02-01', value: 6000 }
@@ -69,42 +77,75 @@ describe('Dashboard Page', () => {
 			{ category: 'banking', owner: 'John', value: 5000 },
 			{ category: 'investments', owner: 'John', value: 5000 }
 		],
-		retirementStats: [],
-		currentYear: 2024
+		retirementStats: [] as unknown[]
 	};
 
+	const dashboardData =
+		overrides.dashboardData instanceof Promise
+			? overrides.dashboardData
+			: Promise.resolve({
+					...baseDashboard,
+					...(overrides.dashboardData ?? {})
+				});
+
+	return {
+		dashboardData,
+		personas: Promise.resolve(overrides.personas ?? []),
+		currentYear: overrides.currentYear ?? 2024
+	};
+}
+
+describe('Dashboard Page', () => {
 	it('renders the main heading', () => {
-		render(Page, { props: { data: mockData } });
+		render(Page, { props: { data: buildData() } });
 		expect(screen.getByRole('heading', { name: /Dashboard/i })).toBeTruthy();
 	});
 
 	it('renders the description', () => {
-		render(Page, { props: { data: mockData } });
+		render(Page, { props: { data: buildData() } });
 		expect(screen.getByText('Twoja sytuacja finansowa w jednym miejscu')).toBeTruthy();
+	});
+
+	it('shows skeleton placeholders while dashboard data is loading', () => {
+		const pending = new Promise<Record<string, unknown>>(() => {});
+		const { container } = render(Page, {
+			props: { data: buildData({ dashboardData: pending }) }
+		});
+		const live = screen.getByRole('status', { name: /Ładowanie dashboardu/i });
+		expect(live).toBeTruthy();
+		expect(container.querySelectorAll('.skeleton').length).toBeGreaterThan(0);
+	});
+
+	it('renders dashboard metrics after data resolves', async () => {
+		render(Page, { props: { data: buildData() } });
+		await waitFor(() => expect(screen.getByText('Wartość Netto')).toBeTruthy());
 	});
 });
 
 describe('Dashboard retirement limits save flow', () => {
-	const dataWithStats = {
-		net_worth_history: [{ date: '2024-01-01', value: 5000 }],
-		current_net_worth: 6000,
-		change_vs_last_month: 1000,
-		total_assets: 10000,
-		total_liabilities: 4000,
-		allocation: [{ category: 'banking', owner: 'Marcin', value: 5000 }],
-		retirementStats: [
-			{
-				account_wrapper: 'IKE',
-				owner: 'Marcin',
-				total_contributed: 5000,
-				limit_amount: 23000,
-				remaining: 18000,
-				percentage_used: 21
-			}
-		],
-		personas: [{ name: 'Marcin' }],
-		currentYear: 2024
+	const retirementStat = {
+		account_wrapper: 'IKE',
+		owner: 'Marcin',
+		total_contributed: 5000,
+		limit_amount: 23000,
+		remaining: 18000,
+		percentage_used: 21
 	};
+
+	function dataWithStats() {
+		return buildData({
+			dashboardData: {
+				net_worth_history: [{ date: '2024-01-01', value: 5000 }],
+				current_net_worth: 6000,
+				change_vs_last_month: 1000,
+				total_assets: 10000,
+				total_liabilities: 4000,
+				allocation: [{ category: 'banking', owner: 'Marcin', value: 5000 }],
+				retirementStats: [retirementStat]
+			},
+			personas: [{ name: 'Marcin' }]
+		});
+	}
 
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -114,17 +155,20 @@ describe('Dashboard retirement limits save flow', () => {
 		vi.unstubAllGlobals();
 	});
 
-	it('renders the retirement limits card when stats exist', () => {
-		render(Page, { props: { data: dataWithStats } });
-		expect(screen.getByRole('heading', { name: /Limity Emerytalne 2024/ })).toBeTruthy();
+	it('renders the retirement limits card when stats exist', async () => {
+		render(Page, { props: { data: dataWithStats() } });
+		await waitFor(() =>
+			expect(screen.getByRole('heading', { name: /Limity Emerytalne 2024/ })).toBeTruthy()
+		);
 	});
 
 	it('opens the limits modal and PUTs each persona/wrapper limit on save', async () => {
 		const fetchMock = vi.fn().mockResolvedValue({ ok: true });
 		vi.stubGlobal('fetch', fetchMock);
 
-		render(Page, { props: { data: dataWithStats } });
+		render(Page, { props: { data: dataWithStats() } });
 
+		await waitFor(() => screen.getByLabelText('Konfiguruj limity'));
 		await fireEvent.click(screen.getByLabelText('Konfiguruj limity'));
 		expect(screen.getByText('Konfiguracja Limitów Emerytalnych')).toBeTruthy();
 
@@ -148,7 +192,8 @@ describe('Dashboard retirement limits save flow', () => {
 		const fetchMock = vi.fn().mockResolvedValue({ ok: true });
 		vi.stubGlobal('fetch', fetchMock);
 
-		render(Page, { props: { data: dataWithStats } });
+		render(Page, { props: { data: dataWithStats() } });
+		await waitFor(() => screen.getByLabelText('Konfiguruj limity'));
 		await fireEvent.click(screen.getByLabelText('Konfiguruj limity'));
 
 		const ikeInput = screen.getByLabelText('IKE Marcin (PLN)') as HTMLInputElement;
@@ -160,7 +205,8 @@ describe('Dashboard retirement limits save flow', () => {
 		vi.stubGlobal('fetch', fetchMock);
 		const errorSpy = vi.spyOn(toast, 'error');
 
-		render(Page, { props: { data: dataWithStats } });
+		render(Page, { props: { data: dataWithStats() } });
+		await waitFor(() => screen.getByLabelText('Konfiguruj limity'));
 		await fireEvent.click(screen.getByLabelText('Konfiguruj limity'));
 		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
 
