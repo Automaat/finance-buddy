@@ -2,7 +2,11 @@ import { error } from '@sveltejs/kit';
 import { env } from '$env/dynamic/public';
 import { browser } from '$app/environment';
 import type { PageLoad } from './$types';
-import type { AppConfig } from '$lib/types/config';
+import type { paths } from '$lib/types/api.generated';
+
+// Response shape generated from backend-go's OpenAPI spec — the wire contract,
+// not a hand-maintained guess. Regenerate with `npm run gen:api-types`.
+type AppConfig = paths['/api/config']['get']['responses'][200]['content']['application/json'];
 
 export const load: PageLoad = async ({ fetch }) => {
 	try {

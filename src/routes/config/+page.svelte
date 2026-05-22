@@ -38,8 +38,10 @@
 	const config = untrack(() => data.config);
 	let birthDate = $state(config?.birth_date ?? defaults.birth_date);
 	let retirementAge = $state(config?.retirement_age ?? defaults.retirement_age);
+	// Money fields arrive as JSON strings (backend-go serializes decimals as
+	// strings); coerce to number for the numeric inputs + projections below.
 	let retirementMonthlySalary = $state(
-		config?.retirement_monthly_salary ?? defaults.retirement_monthly_salary
+		Number(config?.retirement_monthly_salary ?? defaults.retirement_monthly_salary)
 	);
 	let allocationRealEstate = $state(
 		config?.allocation_real_estate ?? defaults.allocation_real_estate
@@ -50,8 +52,8 @@
 	let allocationCommodities = $state(
 		config?.allocation_commodities ?? defaults.allocation_commodities
 	);
-	let monthlyExpenses = $state(config?.monthly_expenses ?? 0);
-	let monthlyMortgagePayment = $state(config?.monthly_mortgage_payment ?? 0);
+	let monthlyExpenses = $state(Number(config?.monthly_expenses ?? 0));
+	let monthlyMortgagePayment = $state(Number(config?.monthly_mortgage_payment ?? 0));
 
 	let error = $state('');
 	let saving = $state(false);

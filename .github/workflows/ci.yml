@@ -21,6 +21,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: API types drift check
+        run: |
+          npm run gen:api-types
+          if ! git diff --exit-code src/lib/types/api.generated.ts; then
+            echo "::error::src/lib/types/api.generated.ts is stale." \
+                 "Regenerate with: npm run gen:api-types — and commit the result."
+            exit 1
+          fi
+
       - name: Run linter
         run: npm run lint
 
