@@ -208,41 +208,6 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "properties": {
-                  "Currency": {
-                    "type": "string"
-                  },
-                  "DebtType": {
-                    "type": "string"
-                  },
-                  "InitialAmount": {
-                    "type": "string"
-                  },
-                  "InterestRate": {
-                    "type": "string"
-                  },
-                  "Name": {
-                    "type": "string"
-                  },
-                  "Notes": {
-                    "nullable": true,
-                    "type": "string"
-                  },
-                  "StartDate": {
-                    "format": "date-time",
-                    "type": "string"
-                  }
-                },
-                "type": "object"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "201": {
             "content": {
@@ -406,28 +371,6 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "properties": {
-                  "Amount": {
-                    "type": "string"
-                  },
-                  "Date": {
-                    "format": "date-time",
-                    "type": "string"
-                  },
-                  "Owner": {
-                    "type": "string"
-                  }
-                },
-                "type": "object"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "201": {
             "content": {
@@ -588,32 +531,6 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "properties": {
-                  "Amount": {
-                    "type": "string"
-                  },
-                  "Date": {
-                    "format": "date-time",
-                    "type": "string"
-                  },
-                  "Owner": {
-                    "type": "string"
-                  },
-                  "TransactionType": {
-                    "nullable": true,
-                    "type": "string"
-                  }
-                },
-                "type": "object"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "201": {
             "content": {
@@ -1030,44 +947,6 @@
         ]
       },
       "post": {
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "properties": {
-                  "Amount": {
-                    "type": "string"
-                  },
-                  "Company": {
-                    "type": "string"
-                  },
-                  "ContractType": {
-                    "type": "string"
-                  },
-                  "Currency": {
-                    "type": "string"
-                  },
-                  "Date": {
-                    "format": "date-time",
-                    "type": "string"
-                  },
-                  "Notes": {
-                    "nullable": true,
-                    "type": "string"
-                  },
-                  "Owner": {
-                    "type": "string"
-                  },
-                  "Type": {
-                    "type": "string"
-                  }
-                },
-                "type": "object"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "201": {
             "content": {
@@ -1397,50 +1276,6 @@
         ]
       },
       "post": {
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "properties": {
-                  "CommonStockDiscountPct": {
-                    "nullable": true,
-                    "type": "string"
-                  },
-                  "Company": {
-                    "type": "string"
-                  },
-                  "Currency": {
-                    "type": "string"
-                  },
-                  "Date": {
-                    "format": "date-time",
-                    "type": "string"
-                  },
-                  "FMVHigh": {
-                    "nullable": true,
-                    "type": "string"
-                  },
-                  "FMVLow": {
-                    "nullable": true,
-                    "type": "string"
-                  },
-                  "FMVPerShare": {
-                    "type": "string"
-                  },
-                  "Notes": {
-                    "nullable": true,
-                    "type": "string"
-                  },
-                  "Source": {
-                    "type": "string"
-                  }
-                },
-                "type": "object"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "201": {
             "content": {
@@ -4253,34 +4088,6 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "properties": {
-                  "AccountWrapper": {
-                    "type": "string"
-                  },
-                  "LimitAmount": {
-                    "type": "string"
-                  },
-                  "Notes": {
-                    "nullable": true,
-                    "type": "string"
-                  },
-                  "Owner": {
-                    "type": "string"
-                  },
-                  "Year": {
-                    "type": "integer"
-                  }
-                },
-                "type": "object"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "200": {
             "content": {
@@ -4323,27 +4130,6 @@
     },
     "/api/retirement/ppk-contributions/generate": {
       "post": {
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "properties": {
-                  "Month": {
-                    "type": "integer"
-                  },
-                  "Owner": {
-                    "type": "string"
-                  },
-                  "Year": {
-                    "type": "integer"
-                  }
-                },
-                "type": "object"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "200": {
             "content": {
