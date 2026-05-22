@@ -215,7 +215,11 @@ func (s *Store) SnapshotValuesFor(ctx context.Context, snapshotID int) ([]Snapsh
 		FROM snapshot_values WHERE snapshot_id = $1`,
 		snapshotID,
 	)
-	return scanSnapshotValues(rows, err)
+	if err != nil {
+		return nil, fmt.Errorf("snapshot values: %w", err)
+	}
+	defer rows.Close()
+	return collectSnapshotValues(rows)
 }
 
 // AllSnapshotValues returns every snapshot_values row.
@@ -223,14 +227,14 @@ func (s *Store) AllSnapshotValues(ctx context.Context) ([]SnapshotValue, error) 
 	rows, err := s.pool.Query(ctx, `
 		SELECT snapshot_id, account_id, asset_id, value FROM snapshot_values`,
 	)
-	return scanSnapshotValues(rows, err)
-}
-
-func scanSnapshotValues(rows pgx.Rows, err error) ([]SnapshotValue, error) {
 	if err != nil {
 		return nil, fmt.Errorf("snapshot values: %w", err)
 	}
 	defer rows.Close()
+	return collectSnapshotValues(rows)
+}
+
+func collectSnapshotValues(rows pgx.Rows) ([]SnapshotValue, error) {
 	out := []SnapshotValue{}
 	for rows.Next() {
 		var v SnapshotValue
