@@ -15,13 +15,13 @@ import (
 
 // DebtPayment mirrors backend/app/models/debt_payment.DebtPayment.
 type DebtPayment struct {
-	ID        int
-	AccountID int
-	Amount    decimal.Decimal
-	Date      time.Time
-	Owner     string
-	IsActive  bool
-	CreatedAt time.Time
+	ID          int
+	AccountID   int
+	Amount      decimal.Decimal
+	Date        time.Time
+	OwnerUserID *int
+	IsActive    bool
+	CreatedAt   time.Time
 }
 
 // AccountInfo carries the subset of the parent account we need.
@@ -47,7 +47,7 @@ type Store struct{ pool *pgxpool.Pool }
 // NewStore wraps a pool.
 func NewStore(pool *pgxpool.Pool) *Store { return &Store{pool: pool} }
 
-const paymentCols = `id, account_id, amount, date, owner, is_active, created_at`
+const paymentCols = `id, account_id, amount, date, owner_user_id, is_active, created_at`
 
 // LoadAccount mirrors Python's validation: active account that is type=liability.
 // Returns the account along with ErrAccountNotLiability so the handler can use
@@ -100,10 +100,10 @@ func (s *Store) ListForAccount(ctx context.Context, accountID int) ([]DebtPaymen
 
 // ListFilter narrows the all-payments view.
 type ListFilter struct {
-	AccountID *int
-	Owner     *string
-	DateFrom  *time.Time
-	DateTo    *time.Time
+	AccountID   *int
+	OwnerUserID *int
+	DateFrom    *time.Time
+	DateTo      *time.Time
 }
 
 // PaymentWithAccount is one payment with its account name joined in.
@@ -120,9 +120,9 @@ func (s *Store) ListAll(ctx context.Context, f ListFilter) ([]PaymentWithAccount
 		args = append(args, *f.AccountID)
 		conds = append(conds, fmt.Sprintf("p.account_id = $%d", len(args)))
 	}
-	if f.Owner != nil {
-		args = append(args, *f.Owner)
-		conds = append(conds, fmt.Sprintf("p.owner = $%d", len(args)))
+	if f.OwnerUserID != nil {
+		args = append(args, *f.OwnerUserID)
+		conds = append(conds, fmt.Sprintf("p.owner_user_id = $%d", len(args)))
 	}
 	if f.DateFrom != nil {
 		args = append(args, *f.DateFrom)
@@ -132,7 +132,7 @@ func (s *Store) ListAll(ctx context.Context, f ListFilter) ([]PaymentWithAccount
 		args = append(args, *f.DateTo)
 		conds = append(conds, fmt.Sprintf("p.date <= $%d", len(args)))
 	}
-	q := `SELECT p.id, p.account_id, p.amount, p.date, p.owner, p.is_active, p.created_at, a.name
+	q := `SELECT p.id, p.account_id, p.amount, p.date, p.owner_user_id, p.is_active, p.created_at, a.name
 	      FROM debt_payments p
 	      JOIN accounts a ON a.id = p.account_id
 	      WHERE ` + strings.Join(conds, " AND ") + `
@@ -146,7 +146,7 @@ func (s *Store) ListAll(ctx context.Context, f ListFilter) ([]PaymentWithAccount
 	for rows.Next() {
 		var p DebtPayment
 		var name string
-		if err := rows.Scan(&p.ID, &p.AccountID, &p.Amount, &p.Date, &p.Owner, &p.IsActive, &p.CreatedAt, &name); err != nil {
+		if err := rows.Scan(&p.ID, &p.AccountID, &p.Amount, &p.Date, &p.OwnerUserID, &p.IsActive, &p.CreatedAt, &name); err != nil {
 			return nil, fmt.Errorf("scan payment join: %w", err)
 		}
 		out = append(out, PaymentWithAccount{Payment: p, AccountName: name})
@@ -174,10 +174,10 @@ func (s *Store) Create(ctx context.Context, p *DebtPayment) (*DebtPayment, error
 		return nil, fmt.Errorf("check duplicate payment: %w", err)
 	}
 	row := s.pool.QueryRow(ctx, `
-		INSERT INTO debt_payments (account_id, amount, date, owner, is_active, created_at)
-		VALUES ($1, $2, $3, $4, true, $5)
+		INSERT INTO debt_payments (account_id, amount, date, owner, owner_user_id, is_active, created_at)
+		VALUES ($1, $2, $3, COALESCE((SELECT name FROM users WHERE id = $4), 'Shared'), $4, true, $5)
 		RETURNING `+paymentCols,
-		p.AccountID, p.Amount, p.Date, p.Owner, time.Now().UTC(),
+		p.AccountID, p.Amount, p.Date, p.OwnerUserID, time.Now().UTC(),
 	)
 	out, err := scanPayment(row)
 	if err != nil {
@@ -237,7 +237,7 @@ func (s *Store) CountsByAccount(ctx context.Context) (map[int]int, error) {
 
 func scanPayment(row pgx.Row) (*DebtPayment, error) {
 	var p DebtPayment
-	if err := row.Scan(&p.ID, &p.AccountID, &p.Amount, &p.Date, &p.Owner, &p.IsActive, &p.CreatedAt); err != nil {
+	if err := row.Scan(&p.ID, &p.AccountID, &p.Amount, &p.Date, &p.OwnerUserID, &p.IsActive, &p.CreatedAt); err != nil {
 		return nil, err
 	}
 	return &p, nil

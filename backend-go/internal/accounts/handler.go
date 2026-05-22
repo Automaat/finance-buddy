@@ -35,7 +35,7 @@ type response struct {
 	Name                  string   `json:"name"`
 	Type                  string   `json:"type"`
 	Category              string   `json:"category"`
-	Owner                 string   `json:"owner"`
+	OwnerUserID           *int     `json:"owner_user_id"`
 	Currency              string   `json:"currency"`
 	AccountWrapper        *string  `json:"account_wrapper"`
 	Purpose               string   `json:"purpose"`
@@ -72,7 +72,7 @@ func toResponse(a *Account, currentValue decimal.Decimal) response {
 		Name:                  a.Name,
 		Type:                  a.Type,
 		Category:              a.Category,
-		Owner:                 a.Owner,
+		OwnerUserID:           a.OwnerUserID,
 		Currency:              a.Currency,
 		AccountWrapper:        a.AccountWrapper,
 		Purpose:               a.Purpose,
@@ -137,7 +137,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		Name:                  req.Name,
 		Type:                  req.Type,
 		Category:              req.Category,
-		Owner:                 req.Owner,
+		OwnerUserID:           req.OwnerUserID,
 		Currency:              req.Currency,
 		AccountWrapper:        req.AccountWrapper,
 		Purpose:               req.Purpose,

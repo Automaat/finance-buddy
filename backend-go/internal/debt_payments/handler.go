@@ -22,7 +22,7 @@ type response struct {
 	AccountName string   `json:"account_name"`
 	Amount      pyFloat  `json:"amount"`
 	Date        isoDate  `json:"date"`
-	Owner       string   `json:"owner"`
+	OwnerUserID *int     `json:"owner_user_id"`
 	CreatedAt   isoNaive `json:"created_at"`
 }
 
@@ -50,7 +50,7 @@ func toResponse(p DebtPayment, name string) response {
 	amt, _ := p.Amount.Float64()
 	return response{
 		ID: p.ID, AccountID: p.AccountID, AccountName: name,
-		Amount: pyFloat(amt), Date: isoDate(p.Date), Owner: p.Owner,
+		Amount: pyFloat(amt), Date: isoDate(p.Date), OwnerUserID: p.OwnerUserID,
 		CreatedAt: isoNaive(p.CreatedAt.UTC()),
 	}
 }
@@ -100,9 +100,13 @@ func (h *Handler) ListAll(w http.ResponseWriter, r *http.Request) {
 		}
 		f.AccountID = &n
 	}
-	if v := q.Get("owner"); v != "" {
-		s := v
-		f.Owner = &s
+	if v := q.Get("owner_user_id"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			writeValidationError(w, "owner_user_id", "must be an integer", v)
+			return
+		}
+		f.OwnerUserID = &n
 	}
 	for _, p := range []struct {
 		key  string
@@ -164,7 +168,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	created, err := h.store.Create(r.Context(), &DebtPayment{
-		AccountID: accountID, Amount: req.Amount, Date: req.Date, Owner: req.Owner,
+		AccountID: accountID, Amount: req.Amount, Date: req.Date, OwnerUserID: req.OwnerUserID,
 	})
 	if err != nil {
 		if errors.Is(err, ErrDuplicate) {
@@ -249,9 +253,9 @@ func parseAccountID(w http.ResponseWriter, r *http.Request) (int, bool) {
 }
 
 type createRequest struct {
-	Amount decimal.Decimal
-	Date   time.Time
-	Owner  string
+	Amount      decimal.Decimal
+	Date        time.Time
+	OwnerUserID *int
 }
 
 func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *validationError) {
@@ -268,28 +272,29 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *validat
 	}
 	r.Date = t
 
-	owner, vErr := requireString(raw, "owner", "Owner cannot be empty")
+	ownerID, vErr := requireIntOrNull(raw, "owner_user_id")
 	if vErr != nil {
 		return r, vErr
 	}
-	r.Owner = owner
+	r.OwnerUserID = ownerID
 	return r, nil
 }
 
-func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string, *validationError) {
+// requireIntOrNull reads an integer key that must be present; an explicit
+// null is allowed and yields nil (the "Shared" owner).
+func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *validationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
-		return "", &validationError{Field: key, Msg: "Field required"}
+	if !ok {
+		return nil, &validationError{Field: key, Msg: "Field required"}
 	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &validationError{Field: key, Msg: "must be a string"}
+	if isNull(v) {
+		return nil, nil
 	}
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return "", &validationError{Field: key, Msg: emptyMsg}
+	var n int
+	if err := json.Unmarshal(v, &n); err != nil {
+		return nil, &validationError{Field: key, Msg: "must be an integer"}
 	}
-	return s, nil
+	return &n, nil
 }
 
 func requireDateNotFuture(raw map[string]json.RawMessage, key string) (time.Time, *validationError) {
