@@ -137,18 +137,15 @@ func (s *Store) Create(ctx context.Context, g *EquityGrant) (*EquityGrant, error
 	if err != nil {
 		return nil, fmt.Errorf("encode schedule: %w", err)
 	}
-	// owner ($4-derived) is dual-written from owner_user_id until a later
-	// phase drops the legacy owner string column.
 	row := s.pool.QueryRow(ctx, `
 		INSERT INTO equity_grants (
-			grant_date, type, company, owner, owner_user_id, total_shares,
+			grant_date, type, company, owner_user_id, total_shares,
 			strike_price, currency,
 			vest_start_date, vest_cliff_months, vest_total_months, vest_frequency,
 			vest_custom_schedule, requires_liquidity_event, liquidity_event_date,
 			tax_treatment, notes, is_active, created_at
 		) VALUES (
-			$1, $2, $3, COALESCE((SELECT name FROM users WHERE id = $4), 'Shared'),
-			$4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
 			true, $17
 		) RETURNING `+selectColumns,
 		g.GrantDate, g.Type, g.Company, g.OwnerUserID, g.TotalShares, g.StrikePrice, g.Currency,
@@ -210,12 +207,9 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*EquityGrant
 	if err != nil {
 		return nil, fmt.Errorf("encode schedule: %w", err)
 	}
-	// owner is dual-written from owner_user_id ($4) until the legacy column
-	// is dropped.
 	row := s.pool.QueryRow(ctx, `
 		UPDATE equity_grants SET
 			grant_date = $1, type = $2, company = $3,
-			owner = COALESCE((SELECT name FROM users WHERE id = $4), 'Shared'),
 			owner_user_id = $4,
 			total_shares = $5, strike_price = $6, currency = $7,
 			vest_start_date = $8, vest_cliff_months = $9, vest_total_months = $10,

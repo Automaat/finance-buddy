@@ -71,7 +71,6 @@ SEEDED_TABLES: frozenset[str] = frozenset(
         "equity_grants",
         "fx_rates",
         "goals",
-        "personas",
         "retirement_limits",
         "salary_records",
         "snapshot_aggregates",
@@ -135,17 +134,9 @@ def _truncate_seeded(cur: psycopg2.extensions.cursor) -> None:
     cur.execute(f"TRUNCATE {quoted} RESTART IDENTITY CASCADE")
 
 
-# Owner-bearing tables whose owner_user_id is backfilled from the owner
-# string after seeding (mirrors the backend's db.Migrate step).
-_OWNER_TABLES = (
-    "accounts",
-    "transactions",
-    "debt_payments",
-    "salary_records",
-    "bonus_events",
-    "equity_grants",
-    "retirement_limits",
-)
+# Sub-select resolving an owner name to a users.id. A name with no matching
+# user (notably "Shared") yields NULL — the jointly-owned bucket.
+_OWNER_ID_SQL = "(SELECT id FROM users WHERE name = %s)"
 
 
 def _seed_users(cur: psycopg2.extensions.cursor) -> None:
@@ -190,29 +181,6 @@ def _seed_users(cur: psycopg2.extensions.cursor) -> None:
     )
 
 
-def _backfill_owner_user_id(cur: psycopg2.extensions.cursor) -> None:
-    """Point owner_user_id at the user whose name equals the owner string;
-    rows owned by "Shared" (no matching user) keep NULL. Table names come
-    from the fixed _OWNER_TABLES tuple, not request input."""
-    for table in _OWNER_TABLES:
-        cur.execute(
-            f"UPDATE {table} AS t SET owner_user_id = u.id FROM users u WHERE t.owner = u.name"
-        )
-
-
-def _seed_personas(cur: psycopg2.extensions.cursor) -> None:
-    cur.executemany(
-        """
-        INSERT INTO personas (name, ppk_employee_rate, ppk_employer_rate, created_at)
-        VALUES (%s, %s, %s, %s)
-        """,
-        [
-            (PERSONA_MARCIN, Decimal("2.0"), Decimal("1.5"), SEED_CREATED_AT),
-            (PERSONA_EWA, Decimal("2.0"), Decimal("1.5"), SEED_CREATED_AT),
-        ],
-    )
-
-
 def _seed_config(cur: psycopg2.extensions.cursor) -> None:
     cur.execute(
         """
@@ -237,7 +205,7 @@ def _seed_config(cur: psycopg2.extensions.cursor) -> None:
 def _seed_accounts(cur: psycopg2.extensions.cursor) -> dict[str, int]:
     """Insert seeded accounts; return a name → id map for downstream FKs."""
     rows = [
-        # name, type, category, owner, currency, wrapper, purpose, sqm, receives_contrib
+        # name, type, category, owner name, currency, wrapper, purpose, sqm, receives_contrib
         (
             ACCOUNT_MARCIN_BANK,
             "asset",
@@ -308,12 +276,12 @@ def _seed_accounts(cur: psycopg2.extensions.cursor) -> dict[str, int]:
     ids: dict[str, int] = {}
     for row in rows:
         cur.execute(
-            """
+            f"""
             INSERT INTO accounts (
-                name, type, category, owner, currency, account_wrapper, purpose,
+                name, type, category, owner_user_id, currency, account_wrapper, purpose,
                 square_meters, is_active, receives_contributions, created_at
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, TRUE, %s, %s)
+            VALUES (%s, %s, %s, {_OWNER_ID_SQL}, %s, %s, %s, %s, TRUE, %s, %s)
             RETURNING id
             """,
             (*row, SEED_CREATED_AT),
@@ -434,11 +402,11 @@ def _seed_transactions(
         ),
     ]
     cur.executemany(
-        """
+        f"""
         INSERT INTO transactions (
-            account_id, amount, date, owner, transaction_type, is_active, created_at
+            account_id, amount, date, owner_user_id, transaction_type, is_active, created_at
         )
-        VALUES (%s, %s, %s, %s, %s, TRUE, %s)
+        VALUES (%s, %s, %s, {_OWNER_ID_SQL}, %s, TRUE, %s)
         """,
         [(*r, SEED_CREATED_AT) for r in rows],
     )
@@ -470,12 +438,12 @@ def _seed_bonus_events(cur: psycopg2.extensions.cursor) -> None:
         ),
     ]
     cur.executemany(
-        """
+        f"""
         INSERT INTO bonus_events (
-            date, amount, currency, type, company, owner, contract_type,
+            date, amount, currency, type, company, owner_user_id, contract_type,
             notes, is_active, created_at
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, TRUE, %s)
+        VALUES (%s, %s, %s, %s, %s, {_OWNER_ID_SQL}, %s, %s, TRUE, %s)
         """,
         [(*r, SEED_CREATED_AT) for r in rows],
     )
@@ -507,14 +475,14 @@ def _seed_company_valuations(cur: psycopg2.extensions.cursor) -> None:
 
 def _seed_equity_grants(cur: psycopg2.extensions.cursor) -> None:
     cur.execute(
-        """
+        f"""
         INSERT INTO equity_grants (
-            grant_date, type, company, owner, total_shares, strike_price, currency,
+            grant_date, type, company, owner_user_id, total_shares, strike_price, currency,
             vest_start_date, vest_cliff_months, vest_total_months, vest_frequency,
             vest_custom_schedule, requires_liquidity_event, liquidity_event_date,
             tax_treatment, notes, is_active, created_at
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE, %s)
+        VALUES (%s, %s, %s, {_OWNER_ID_SQL}, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE, %s)
         """,
         (
             date(2024, 1, 15),
@@ -646,9 +614,9 @@ def _seed_debt_payments(
         ),
     ]
     cur.executemany(
-        """
-        INSERT INTO debt_payments (account_id, amount, date, owner, is_active, created_at)
-        VALUES (%s, %s, %s, %s, TRUE, %s)
+        f"""
+        INSERT INTO debt_payments (account_id, amount, date, owner_user_id, is_active, created_at)
+        VALUES (%s, %s, %s, {_OWNER_ID_SQL}, TRUE, %s)
         """,
         [(*r, SEED_CREATED_AT) for r in rows],
     )
@@ -661,11 +629,11 @@ def _seed_salary_records(cur: psycopg2.extensions.cursor) -> None:
         (date(2026, 1, 31), Decimal("21000.00"), "UOP", COMPANY_MARCIN_EMPLOYER, PERSONA_MARCIN),
     ]
     cur.executemany(
-        """
+        f"""
         INSERT INTO salary_records (
-            date, gross_amount, contract_type, company, owner, is_active, created_at
+            date, gross_amount, contract_type, company, owner_user_id, is_active, created_at
         )
-        VALUES (%s, %s, %s, %s, %s, TRUE, %s)
+        VALUES (%s, %s, %s, %s, {_OWNER_ID_SQL}, TRUE, %s)
         """,
         [(*r, SEED_CREATED_AT) for r in rows],
     )
@@ -707,11 +675,11 @@ def _seed_retirement_limits(cur: psycopg2.extensions.cursor) -> None:
         (2025, "IKZE", PERSONA_MARCIN, Decimal("9388.80"), "2025 IKZE limit"),
     ]
     cur.executemany(
-        """
+        f"""
         INSERT INTO retirement_limits (
-            year, account_wrapper, owner, limit_amount, notes
+            year, account_wrapper, owner_user_id, limit_amount, notes
         )
-        VALUES (%s, %s, %s, %s, %s)
+        VALUES (%s, %s, {_OWNER_ID_SQL}, %s, %s)
         """,
         rows,
     )
@@ -723,7 +691,6 @@ def seed(dsn: str) -> None:
     with _connect(dsn) as conn, conn.cursor() as cur:
         _truncate_seeded(cur)
         _seed_users(cur)
-        _seed_personas(cur)
         _seed_config(cur)
         account_ids = _seed_accounts(cur)
         asset_ids = _seed_assets(cur)
@@ -740,4 +707,3 @@ def seed(dsn: str) -> None:
         _seed_salary_records(cur)
         _seed_goals(cur, account_ids)
         _seed_retirement_limits(cur)
-        _backfill_owner_user_id(cur)

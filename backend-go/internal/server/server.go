@@ -31,7 +31,6 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/fx"
 	"github.com/Automaat/finance-buddy/backend-go/internal/goals"
 	"github.com/Automaat/finance-buddy/backend-go/internal/investment"
-	"github.com/Automaat/finance-buddy/backend-go/internal/personas"
 	"github.com/Automaat/finance-buddy/backend-go/internal/retirement"
 	"github.com/Automaat/finance-buddy/backend-go/internal/salaries"
 	"github.com/Automaat/finance-buddy/backend-go/internal/simulations"
@@ -175,14 +174,6 @@ func registerCoreRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
 	r.Route("/api/config", func(r chi.Router) {
 		r.Get("/", cfgHandler.Get)
 		r.Put("/", cfgHandler.Put)
-	})
-
-	personasHandler := personas.NewHandler(personas.NewStore(pool), logger)
-	r.Route("/api/personas", func(r chi.Router) {
-		r.Get("/", personasHandler.List)
-		r.Post("/", personasHandler.Create)
-		r.Put("/{id}", personasHandler.Update)
-		r.Delete("/{id}", personasHandler.Delete)
 	})
 
 	goalsHandler := goals.NewHandler(goals.NewStore(pool), logger)

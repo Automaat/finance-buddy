@@ -154,15 +154,12 @@ func (s *Store) Create(ctx context.Context, a *Account) (*Account, error) {
 	if err := s.checkDuplicateName(ctx, a.Name, 0); err != nil {
 		return nil, err
 	}
-	// owner ($4-derived) is dual-written from owner_user_id until a later
-	// phase drops the legacy owner string column.
 	row := s.pool.QueryRow(ctx, `
 		INSERT INTO accounts (
-			name, type, category, owner, owner_user_id, currency, account_wrapper,
+			name, type, category, owner_user_id, currency, account_wrapper,
 			purpose, square_meters, is_active, receives_contributions, created_at
 		) VALUES (
-			$1, $2, $3, COALESCE((SELECT name FROM users WHERE id = $4), 'Shared'),
-			$4, $5, $6, $7, $8, true, $9, $10
+			$1, $2, $3, $4, $5, $6, $7, $8, true, $9, $10
 		)
 		RETURNING `+selectColumns,
 		a.Name, a.Type, a.Category, a.OwnerUserID, a.Currency, a.AccountWrapper, a.Purpose,
@@ -321,12 +318,9 @@ func (s *Store) checkDuplicateNameTx(ctx context.Context, tx pgx.Tx, name string
 }
 
 func (s *Store) updateRow(ctx context.Context, tx pgx.Tx, id int, a *Account) error {
-	// owner is dual-written from owner_user_id ($4) until the legacy column
-	// is dropped.
 	_, err := tx.Exec(ctx, `
 		UPDATE accounts SET
 			name = $1, type = $2, category = $3,
-			owner = COALESCE((SELECT name FROM users WHERE id = $4), 'Shared'),
 			owner_user_id = $4, currency = $5,
 			account_wrapper = $6, purpose = $7, square_meters = $8,
 			receives_contributions = $9
