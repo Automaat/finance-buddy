@@ -1333,7 +1333,7 @@ export interface paths {
                         "application/json": {
                             allocation?: {
                                 category?: string;
-                                owner?: string | null;
+                                owner_user_id?: number | null;
                                 /** Format: double */
                                 value?: number;
                             }[];
@@ -2682,7 +2682,7 @@ export interface paths {
                             /** Format: double */
                             limit_amount?: number;
                             notes?: string | null;
-                            owner?: string;
+                            owner_user_id?: number | null;
                             year?: number;
                         }[];
                     };
@@ -2697,7 +2697,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/retirement/limits/{year}/{wrapper}/{owner}": {
+    "/api/retirement/limits/{year}/{wrapper}/{owner_user_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -2713,7 +2713,7 @@ export interface paths {
                 path: {
                     year: number;
                     wrapper: string;
-                    owner: string;
+                    owner_user_id: string;
                 };
                 cookie?: never;
             };
@@ -2731,7 +2731,7 @@ export interface paths {
                             /** Format: double */
                             limit_amount?: number;
                             notes?: string | null;
-                            owner?: string;
+                            owner_user_id?: number | null;
                             year?: number;
                         };
                     };
@@ -2778,7 +2778,7 @@ export interface paths {
                             /** Format: double */
                             gross_salary?: number;
                             month?: number;
-                            owner?: string;
+                            owner_user_id?: number | null;
                             /** Format: double */
                             total_amount?: number;
                             transactions_created?: number[];
@@ -2824,7 +2824,7 @@ export interface paths {
                             employer_contributed?: number;
                             /** Format: double */
                             government_contributed?: number;
-                            owner?: string;
+                            owner_user_id?: number | null;
                             /** Format: double */
                             returns?: number;
                             /** Format: double */
@@ -2878,7 +2878,7 @@ export interface paths {
                             is_warning?: boolean;
                             /** Format: double */
                             limit_amount?: number | null;
-                            owner?: string;
+                            owner_user_id?: number | null;
                             /** Format: double */
                             percentage_used?: number | null;
                             /** Format: double */
@@ -3580,7 +3580,7 @@ export interface paths {
                                 inflation_rate?: number;
                                 /** Format: double */
                                 kapital_poczatkowy?: number;
-                                owner?: string;
+                                owner_user_id?: number | null;
                                 retirement_age?: number;
                                 /** Format: double */
                                 salary_growth_rate?: number;
@@ -3683,7 +3683,7 @@ export interface paths {
                             /** Format: double */
                             current_gross_monthly_salary?: number | null;
                             gender?: string;
-                            owner?: string | null;
+                            owner_user_id?: number | null;
                             retirement_age?: number;
                             salary_history?: {
                                 /** Format: double */

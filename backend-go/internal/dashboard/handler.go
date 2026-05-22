@@ -64,9 +64,9 @@ type netWorthPointWire struct {
 }
 
 type allocationItemWire struct {
-	Category string  `json:"category"`
-	Owner    *string `json:"owner"`
-	Value    pyFloat `json:"value"`
+	Category    string  `json:"category"`
+	OwnerUserID *int    `json:"owner_user_id"`
+	Value       pyFloat `json:"value"`
 }
 
 type deltaValueWire struct {
@@ -182,7 +182,7 @@ func toWire(res result) dashboardWire {
 	w.Allocation = make([]allocationItemWire, 0, len(res.Allocation))
 	for _, a := range res.Allocation {
 		w.Allocation = append(w.Allocation, allocationItemWire{
-			Category: a.Category, Owner: a.Owner, Value: pyFloat(a.Value),
+			Category: a.Category, OwnerUserID: a.OwnerUserID, Value: pyFloat(a.Value),
 		})
 	}
 	w.InvestmentTimeSeries = seriesToWire(res.InvestmentTimeSeries)

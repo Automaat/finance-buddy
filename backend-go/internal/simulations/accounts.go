@@ -36,10 +36,11 @@ type AccountSimulation struct {
 
 // IkeIkzeParams is the per-account input for simulateAccount. BaseLimit is
 // resolved by the caller via the retirement_limits table (DB read kept out
-// of the pure math).
+// of the pure math). OwnerName is the resolved display label for AccountName.
 type IkeIkzeParams struct {
 	Wrapper             string
-	Owner               string
+	OwnerUserID         *int
+	OwnerName           string
 	StartingBalance     float64
 	AutoFillLimit       bool
 	MonthlyContribution float64
@@ -95,7 +96,7 @@ func SimulateAccount(p IkeIkzeParams, yearsToRetirement, currentAge, currentYear
 	}
 
 	return AccountSimulation{
-		AccountName:        p.Wrapper + " (" + p.Owner + ")",
+		AccountName:        p.Wrapper + " (" + p.OwnerName + ")",
 		StartingBalance:    p.StartingBalance,
 		TotalContributions: cumulativeContributions,
 		TotalReturns:       cumulativeReturns,
@@ -107,7 +108,8 @@ func SimulateAccount(p IkeIkzeParams, yearsToRetirement, currentAge, currentYear
 
 // BrokerageParams is the per-account input for simulateBrokerageAccount.
 type BrokerageParams struct {
-	Owner               string
+	OwnerUserID         *int
+	OwnerName           string
 	StartingBalance     float64
 	MonthlyContribution float64
 }
@@ -144,7 +146,7 @@ func SimulateBrokerageAccount(p BrokerageParams, currentAge, retirementAge, curr
 	}
 
 	return AccountSimulation{
-		AccountName:        "Rachunek maklerski (" + p.Owner + ")",
+		AccountName:        "Rachunek maklerski (" + p.OwnerName + ")",
 		StartingBalance:    p.StartingBalance,
 		TotalContributions: cumulativeContributions,
 		TotalReturns:       cumulativeReturns,
@@ -155,7 +157,8 @@ func SimulateBrokerageAccount(p BrokerageParams, currentAge, retirementAge, curr
 
 // PPKParams is the per-account input for simulatePPKAccount.
 type PPKParams struct {
-	Owner                string
+	OwnerUserID          *int
+	OwnerName            string
 	StartingBalance      float64
 	MonthlyGrossSalary   float64
 	EmployeeRate         float64
@@ -236,7 +239,7 @@ func SimulatePPKAccount(p PPKParams, currentAge, retirementAge int, salaryGrowth
 	}
 
 	return AccountSimulation{
-		AccountName:        "PPK (" + p.Owner + ")",
+		AccountName:        "PPK (" + p.OwnerName + ")",
 		StartingBalance:    p.StartingBalance,
 		TotalContributions: totalContributions,
 		TotalReturns:       balance - totalContributions - totalSubsidies,

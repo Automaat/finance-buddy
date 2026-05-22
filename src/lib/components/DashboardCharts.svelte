@@ -5,13 +5,15 @@
 	import { formatPLN } from '$lib/utils/format';
 	import { isMobile, isTablet } from '$lib/utils/viewport';
 	import { chartPalette, chartAccent, chartAccentGradient } from '$lib/utils/theme';
+	import { ownerName, type OwnerOption } from '$lib/types/owners';
 
 	interface Props {
 		netWorthHistory: { date: string; value: number }[];
-		allocation: { category: string; owner: string | null; value: number }[];
+		allocation: { category: string; owner_user_id: number | null; value: number }[];
+		owners: OwnerOption[];
 	}
 
-	let { netWorthHistory, allocation }: Props = $props();
+	let { netWorthHistory, allocation, owners }: Props = $props();
 
 	let chartContainer: HTMLDivElement | undefined;
 	let pieChartContainer: HTMLDivElement | undefined;
@@ -86,7 +88,7 @@
 					type: 'pie',
 					radius: ['40%', '70%'],
 					data: allocation.map((a) => ({
-						name: `${a.category}${a.owner ? ` (${a.owner})` : ''}`,
+						name: `${a.category} (${ownerName(owners, a.owner_user_id)})`,
 						value: a.value
 					})),
 					emphasis: {

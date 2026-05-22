@@ -10,7 +10,7 @@
         "balance": 46100.0,
         "enabled": true,
         "monthly_contribution": 1500.0,
-        "owner": "Marcin",
+        "owner_user_id": 2,
         "tax_rate": 0.0,
         "wrapper": "IKE"
       }

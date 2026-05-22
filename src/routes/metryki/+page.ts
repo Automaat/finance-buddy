@@ -38,6 +38,10 @@ export async function load({ fetch }) {
 			bondStats = await bondStatsRes.json();
 		}
 
+		// Fetch owners for owner_user_id resolution
+		const ownersRes = await fetch(`${apiUrl}/api/users`);
+		const owners = ownersRes.ok ? await ownersRes.json() : [];
+
 		return {
 			metricCards: dashboard.metric_cards,
 			allocationAnalysis: dashboard.allocation_analysis,
@@ -46,7 +50,8 @@ export async function load({ fetch }) {
 			categoryTimeSeries: dashboard.category_time_series,
 			ppkStats,
 			stockStats,
-			bondStats
+			bondStats,
+			owners
 		};
 	} catch (err) {
 		if (err instanceof Error && 'status' in err) {

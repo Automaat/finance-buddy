@@ -73,11 +73,9 @@ func computeFromAggregates(ctx context.Context, s *Store, aggRows []AggregateRow
 		tl, _ := r.TotalLiabilities.Float64()
 		res.TotalAssets += ta
 		res.TotalLiabilities += tl
-		owner := r.Owner
 		for _, item := range r.Allocation {
-			o := owner
 			res.Allocation = append(res.Allocation, allocationItem{
-				Category: item.Category, Owner: &o, Value: item.Value,
+				Category: item.Category, OwnerUserID: r.OwnerUserID, Value: item.Value,
 			})
 		}
 	}
@@ -210,21 +208,37 @@ func rawTotals(latestRows []mergedRow) (float64, float64) {
 }
 
 func rawAllocation(latestRows []mergedRow) []allocationItem {
-	type key struct{ cat, owner string }
+	// owner is *int — pack it into a comparable key. shared==true marks a
+	// nil owner_user_id (jointly owned).
+	type key struct {
+		cat    string
+		owner  int
+		shared bool
+	}
 	sums := map[key]float64{}
 	for _, r := range latestRows {
 		if r.AccountID == nil || r.AccType == nil || *r.AccType != "asset" {
 			continue
 		}
-		if r.Category == nil || r.Owner == nil {
+		if r.Category == nil {
 			continue
 		}
-		sums[key{*r.Category, *r.Owner}] += r.Value
+		k := key{cat: *r.Category}
+		if r.OwnerUserID == nil {
+			k.shared = true
+		} else {
+			k.owner = *r.OwnerUserID
+		}
+		sums[k] += r.Value
 	}
 	out := make([]allocationItem, 0, len(sums))
 	for k, v := range sums {
-		o := k.owner
-		out = append(out, allocationItem{Category: k.cat, Owner: &o, Value: v})
+		item := allocationItem{Category: k.cat, Value: v}
+		if !k.shared {
+			id := k.owner
+			item.OwnerUserID = &id
+		}
+		out = append(out, item)
 	}
 	sortAllocation(out)
 	return out
@@ -320,7 +334,7 @@ func buildMetricCards(
 	realEstateIDs := map[int]struct{}{}
 	totalPropertySQM := 0.0
 	for _, a := range shared.accountList {
-		if a.Category == "real_estate" && (a.Owner == "Marcin" || a.Owner == "Shared") {
+		if a.Category == "real_estate" {
 			realEstateIDs[a.ID] = struct{}{}
 			if a.SquareMeters != nil {
 				sqm, _ := a.SquareMeters.Float64()

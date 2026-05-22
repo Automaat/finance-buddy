@@ -83,7 +83,9 @@ def test_post_mortgage_vs_invest_validation_error(client: httpx.Client) -> None:
 
 
 @pytest.mark.golden
-def test_post_simulate_retirement_matches_golden(client: httpx.Client, update_golden: bool) -> None:
+def test_post_simulate_retirement_matches_golden(
+    client: httpx.Client, update_golden: bool, owner_ids: dict[str, int]
+) -> None:
     from _golden import assert_matches_golden
 
     payload = {
@@ -93,7 +95,7 @@ def test_post_simulate_retirement_matches_golden(client: httpx.Client, update_go
             {
                 "enabled": True,
                 "wrapper": "IKE",
-                "owner": PERSONA_MARCIN,
+                "owner_user_id": owner_ids[PERSONA_MARCIN],
                 "balance": 46100.0,
                 "auto_fill_limit": False,
                 "monthly_contribution": 1500.0,
@@ -136,7 +138,9 @@ def _round_floats(value: object) -> object:
     return value
 
 
-def test_post_simulate_retirement_happy_path(client: httpx.Client) -> None:
+def test_post_simulate_retirement_happy_path(
+    client: httpx.Client, owner_ids: dict[str, int]
+) -> None:
     payload = {
         "current_age": 35,
         "retirement_age": 65,
@@ -144,7 +148,7 @@ def test_post_simulate_retirement_happy_path(client: httpx.Client) -> None:
             {
                 "enabled": True,
                 "wrapper": "IKE",
-                "owner": PERSONA_MARCIN,
+                "owner_user_id": owner_ids[PERSONA_MARCIN],
                 "balance": 46100.0,
                 "monthly_contribution": 1500.0,
             }

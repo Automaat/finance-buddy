@@ -75,7 +75,7 @@ const baseTileDeltas = {
 function buildData(
 	overrides: {
 		dashboardData?: Promise<Record<string, unknown>> | Record<string, unknown>;
-		personas?: { name: string }[];
+		owners?: { id: number; name: string }[];
 		currentYear?: number;
 	} = {}
 ) {
@@ -89,8 +89,8 @@ function buildData(
 		total_assets: 10000,
 		total_liabilities: 4000,
 		allocation: [
-			{ category: 'banking', owner: 'John', value: 5000 },
-			{ category: 'investments', owner: 'John', value: 5000 }
+			{ category: 'banking', owner_user_id: 1, value: 5000 },
+			{ category: 'investments', owner_user_id: 1, value: 5000 }
 		],
 		retirementStats: [] as unknown[],
 		tile_deltas: baseTileDeltas
@@ -107,7 +107,7 @@ function buildData(
 	return {
 		user: null,
 		dashboardData,
-		personas: Promise.resolve(overrides.personas ?? []),
+		owners: Promise.resolve(overrides.owners ?? []),
 		currentYear: overrides.currentYear ?? 2024
 	};
 }
@@ -176,7 +176,7 @@ describe('Dashboard Page', () => {
 describe('Dashboard retirement limits save flow', () => {
 	const retirementStat = {
 		account_wrapper: 'IKE',
-		owner: 'Marcin',
+		owner_user_id: 1,
 		total_contributed: 5000,
 		limit_amount: 23000,
 		remaining: 18000,
@@ -191,10 +191,10 @@ describe('Dashboard retirement limits save flow', () => {
 				change_vs_last_month: 1000,
 				total_assets: 10000,
 				total_liabilities: 4000,
-				allocation: [{ category: 'banking', owner: 'Marcin', value: 5000 }],
+				allocation: [{ category: 'banking', owner_user_id: 1, value: 5000 }],
 				retirementStats: [retirementStat]
 			},
-			personas: [{ name: 'Marcin' }]
+			owners: [{ id: 1, name: 'Marcin' }]
 		});
 	}
 
@@ -213,7 +213,7 @@ describe('Dashboard retirement limits save flow', () => {
 		);
 	});
 
-	it('opens the limits modal and PUTs each persona/wrapper limit on save', async () => {
+	it('opens the limits modal and PUTs each owner/wrapper limit on save', async () => {
 		const fetchMock = vi.fn().mockResolvedValue({ ok: true });
 		vi.stubGlobal('fetch', fetchMock);
 
@@ -229,8 +229,8 @@ describe('Dashboard retirement limits save flow', () => {
 		const urls = fetchMock.mock.calls.map((c) => c[0] as string);
 		expect(urls).toEqual(
 			expect.arrayContaining([
-				'http://localhost:8000/api/retirement/limits/2024/IKE/Marcin',
-				'http://localhost:8000/api/retirement/limits/2024/IKZE/Marcin'
+				'http://localhost:8000/api/retirement/limits/2024/IKE/1',
+				'http://localhost:8000/api/retirement/limits/2024/IKZE/1'
 			])
 		);
 		for (const call of fetchMock.mock.calls) {

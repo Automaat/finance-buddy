@@ -151,18 +151,41 @@ _OWNER_TABLES = (
 def _seed_users(cur: psycopg2.extensions.cursor) -> None:
     """Insert Marcin/Ewa as users so owner_user_id can reference them.
 
+    PPK rates live on the users table now that owner-aware code resolves
+    them via owner_user_id instead of the personas table.
+
     The users table is not truncated (it holds the backend-seeded admin),
     so the insert is idempotent on username.
     """
     cur.executemany(
         """
-        INSERT INTO users (username, password_hash, name, is_admin, created_at)
-        VALUES (%s, %s, %s, FALSE, %s)
-        ON CONFLICT (username) DO UPDATE SET name = EXCLUDED.name
+        INSERT INTO users (
+            username, password_hash, name, is_admin,
+            ppk_employee_rate, ppk_employer_rate, created_at
+        )
+        VALUES (%s, %s, %s, FALSE, %s, %s, %s)
+        ON CONFLICT (username) DO UPDATE SET
+            name = EXCLUDED.name,
+            ppk_employee_rate = EXCLUDED.ppk_employee_rate,
+            ppk_employer_rate = EXCLUDED.ppk_employer_rate
         """,
         [
-            ("marcin", "!seed-no-login", PERSONA_MARCIN, SEED_CREATED_AT),
-            ("ewa", "!seed-no-login", PERSONA_EWA, SEED_CREATED_AT),
+            (
+                "marcin",
+                "!seed-no-login",
+                PERSONA_MARCIN,
+                Decimal("2.0"),
+                Decimal("1.5"),
+                SEED_CREATED_AT,
+            ),
+            (
+                "ewa",
+                "!seed-no-login",
+                PERSONA_EWA,
+                Decimal("2.0"),
+                Decimal("1.5"),
+                SEED_CREATED_AT,
+            ),
         ],
     )
 

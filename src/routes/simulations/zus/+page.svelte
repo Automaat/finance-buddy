@@ -4,6 +4,7 @@
 	import { env } from '$env/dynamic/public';
 	import * as echarts from 'echarts';
 	import type { EChartsOption } from 'echarts';
+	import type { OwnerOption } from '$lib/types/owners';
 
 	interface Props {
 		data: {
@@ -12,11 +13,11 @@
 				retirement_age: number;
 				gender: string;
 				current_gross_monthly_salary: number | null;
-				owner: string | null;
+				owner_user_id: number | null;
 				salary_history: { year: number; annual_gross: number }[];
 				work_start_year: number | null;
 			};
-			personas: { name: string }[];
+			owners: OwnerOption[];
 		};
 	}
 
@@ -58,7 +59,7 @@
 	}
 
 	// Form state
-	let owner = $state(untrack(() => data.prefill.owner ?? data.personas[0]?.name ?? ''));
+	let ownerUserId = $state(untrack(() => data.prefill.owner_user_id ?? data.owners[0]?.id ?? null));
 	let birthDate = $state(untrack(() => data.prefill.birth_date ?? ''));
 	let gender = $state(untrack(() => data.prefill.gender ?? 'M'));
 	let retirementAge = $state(untrack(() => data.prefill.retirement_age ?? 65));
@@ -100,7 +101,7 @@
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					owner,
+					owner_user_id: ownerUserId,
 					birth_date: birthDate,
 					gender,
 					retirement_age: retirementAge,
@@ -216,9 +217,9 @@
 			<div class="flex flex-col gap-3">
 				<label class="label">
 					<span class="text-sm font-semibold">Osoba</span>
-					<select bind:value={owner} class="select">
-						{#each data.personas as persona}
-							<option value={persona.name}>{persona.name}</option>
+					<select bind:value={ownerUserId} class="select">
+						{#each data.owners as owner}
+							<option value={owner.id}>{owner.name}</option>
 						{/each}
 					</select>
 				</label>

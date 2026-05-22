@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -25,11 +25,12 @@ func NewStore(pool *pgxpool.Pool) *Store { return &Store{pool: pool} }
 
 // LimitForYear ports get_limit_for_year — retirement_limits row or the
 // wrapper default.
-func (s *Store) LimitForYear(ctx context.Context, year int, wrapper, owner string) (float64, error) {
+func (s *Store) LimitForYear(ctx context.Context, year int, wrapper string, ownerUserID *int) (float64, error) {
 	row := s.pool.QueryRow(ctx, `
 		SELECT limit_amount FROM retirement_limits
-		WHERE year = $1 AND account_wrapper = $2 AND owner = $3`,
-		year, wrapper, owner,
+		WHERE year = $1 AND account_wrapper = $2
+		  AND owner_user_id IS NOT DISTINCT FROM $3`,
+		year, wrapper, ownerUserID,
 	)
 	var amount float64
 	if err := row.Scan(&amount); err != nil {
@@ -48,10 +49,14 @@ func (s *Store) LimitForYear(ctx context.Context, year int, wrapper, owner strin
 	return amount, nil
 }
 
-// PrefillData is everything GET /api/simulations/prefill needs.
+// PrefillData is everything GET /api/simulations/prefill needs. The
+// owner-keyed maps are keyed by the owner_user_id rendered as a string
+// (JSON object keys must be strings); Balances composite keys are
+// "ike_<id>" / "ikze_<id>".
 type PrefillData struct {
 	CurrentAge      int
 	RetirementAge   int
+	Owners          []userRow
 	Balances        map[string]float64
 	PPKRates        map[string]map[string]float64
 	MonthlySalaries map[string]*float64
@@ -76,22 +81,23 @@ func (s *Store) LoadPrefill(ctx context.Context) (PrefillData, error) {
 	}
 	data.CurrentAge = ageFromBirth(birth)
 
-	personas, err := s.loadPersonas(ctx)
+	users, err := s.loadUsers(ctx)
 	if err != nil {
 		return data, err
 	}
-	for _, p := range personas {
-		lower := strings.ToLower(p.name)
-		data.Balances["ike_"+lower] = 0
-		data.Balances["ikze_"+lower] = 0
-		data.PPKBalances[lower] = 0
-		data.PPKRates[lower] = map[string]float64{
-			"employee": p.employeeRate,
-			"employer": p.employerRate,
+	data.Owners = users
+	for _, u := range users {
+		key := strconv.Itoa(u.id)
+		data.Balances["ike_"+key] = 0
+		data.Balances["ikze_"+key] = 0
+		data.PPKBalances[key] = 0
+		data.PPKRates[key] = map[string]float64{
+			"employee": u.employeeRate,
+			"employer": u.employerRate,
 		}
-		data.MonthlySalaries[lower] = nil
+		data.MonthlySalaries[key] = nil
 	}
-	if err := s.fillLatestSalaries(ctx, personas, data.MonthlySalaries); err != nil {
+	if err := s.fillLatestSalaries(ctx, users, data.MonthlySalaries); err != nil {
 		return data, err
 	}
 	if err := s.fillWrapperBalances(ctx, data); err != nil {
@@ -100,7 +106,10 @@ func (s *Store) LoadPrefill(ctx context.Context) (PrefillData, error) {
 	return data, nil
 }
 
-type personaRow struct {
+// userRow is one household member with PPK rate defaults. NULL PPK rates on
+// the users table fall back to zero.
+type userRow struct {
+	id           int
 	name         string
 	employeeRate float64
 	employerRate float64
@@ -121,35 +130,52 @@ func (s *Store) loadConfig(ctx context.Context) (*time.Time, int, error) {
 	return birth, ra, nil
 }
 
-func (s *Store) loadPersonas(ctx context.Context) ([]personaRow, error) {
-	rows, err := s.pool.Query(ctx,
-		`SELECT name, ppk_employee_rate, ppk_employer_rate FROM personas ORDER BY name`,
+func (s *Store) loadUsers(ctx context.Context) ([]userRow, error) {
+	// The prefill owner picker covers named users who own retirement data:
+	// an IKE/IKZE/PPK account or a salary record. This excludes the admin
+	// account (NULL name) and any login-only user with no financial rows.
+	rows, err := s.pool.Query(ctx, `
+		SELECT id, name,
+		       COALESCE(ppk_employee_rate, 0), COALESCE(ppk_employer_rate, 0)
+		FROM users u
+		WHERE name IS NOT NULL
+		  AND (
+		    EXISTS (
+		      SELECT 1 FROM accounts a
+		      WHERE a.owner_user_id = u.id
+		        AND a.account_wrapper IN ('IKE', 'IKZE', 'PPK')
+		    )
+		    OR EXISTS (
+		      SELECT 1 FROM salary_records sr WHERE sr.owner_user_id = u.id
+		    )
+		  )
+		ORDER BY name`,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("load personas: %w", err)
+		return nil, fmt.Errorf("load users: %w", err)
 	}
 	defer rows.Close()
-	out := []personaRow{}
+	out := []userRow{}
 	for rows.Next() {
-		var p personaRow
-		if err := rows.Scan(&p.name, &p.employeeRate, &p.employerRate); err != nil {
-			return nil, fmt.Errorf("scan persona: %w", err)
+		var u userRow
+		if err := rows.Scan(&u.id, &u.name, &u.employeeRate, &u.employerRate); err != nil {
+			return nil, fmt.Errorf("scan user: %w", err)
 		}
-		out = append(out, p)
+		out = append(out, u)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate personas: %w", err)
+		return nil, fmt.Errorf("iterate users: %w", err)
 	}
 	return out, nil
 }
 
-func (s *Store) fillLatestSalaries(ctx context.Context, personas []personaRow, dest map[string]*float64) error {
-	for _, p := range personas {
+func (s *Store) fillLatestSalaries(ctx context.Context, users []userRow, dest map[string]*float64) error {
+	for _, u := range users {
 		row := s.pool.QueryRow(ctx, `
 			SELECT gross_amount FROM salary_records
-			WHERE owner = $1 AND is_active = true
+			WHERE owner_user_id = $1 AND is_active = true
 			ORDER BY date DESC LIMIT 1`,
-			p.name,
+			u.id,
 		)
 		var v float64
 		if err := row.Scan(&v); err != nil {
@@ -159,7 +185,7 @@ func (s *Store) fillLatestSalaries(ctx context.Context, personas []personaRow, d
 			return fmt.Errorf("latest salary: %w", err)
 		}
 		val := v
-		dest[strings.ToLower(p.name)] = &val
+		dest[strconv.Itoa(u.id)] = &val
 	}
 	return nil
 }
@@ -179,11 +205,12 @@ func (s *Store) fillWrapperBalances(ctx context.Context, data PrefillData) error
 		return fmt.Errorf("latest snapshot: %w", err)
 	}
 	rows, err := s.pool.Query(ctx, `
-		SELECT a.account_wrapper, a.owner, sv.value
+		SELECT a.account_wrapper, a.owner_user_id, sv.value
 		FROM accounts a
 		JOIN snapshot_values sv ON sv.account_id = a.id
 		WHERE a.is_active = true
 		  AND a.account_wrapper IN ('IKE', 'IKZE', 'PPK')
+		  AND a.owner_user_id IS NOT NULL
 		  AND sv.snapshot_id = $1`,
 		snapshotID,
 	)
@@ -192,22 +219,51 @@ func (s *Store) fillWrapperBalances(ctx context.Context, data PrefillData) error
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var wrapper, owner string
+		var wrapper string
+		var ownerUserID int
 		var value float64
-		if err := rows.Scan(&wrapper, &owner, &value); err != nil {
+		if err := rows.Scan(&wrapper, &ownerUserID, &value); err != nil {
 			return fmt.Errorf("scan wrapper balance: %w", err)
 		}
-		ownerLower := strings.ToLower(owner)
+		key := strconv.Itoa(ownerUserID)
 		if wrapper == "PPK" {
-			data.PPKBalances[ownerLower] = value
+			data.PPKBalances[key] = value
 			continue
 		}
-		data.Balances[strings.ToLower(wrapper)+"_"+ownerLower] = value
+		switch wrapper {
+		case "IKE":
+			data.Balances["ike_"+key] = value
+		case "IKZE":
+			data.Balances["ikze_"+key] = value
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("iterate wrapper balances: %w", err)
 	}
 	return nil
+}
+
+// UserNames returns an owner_user_id -> name map for every named user — the
+// retirement handler uses it to render AccountName labels.
+func (s *Store) UserNames(ctx context.Context) (map[int]string, error) {
+	rows, err := s.pool.Query(ctx, `SELECT id, name FROM users WHERE name IS NOT NULL`)
+	if err != nil {
+		return nil, fmt.Errorf("user names: %w", err)
+	}
+	defer rows.Close()
+	out := map[int]string{}
+	for rows.Next() {
+		var id int
+		var name string
+		if err := rows.Scan(&id, &name); err != nil {
+			return nil, fmt.Errorf("scan user name: %w", err)
+		}
+		out[id] = name
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate user names: %w", err)
+	}
+	return out, nil
 }
 
 func ageFromBirth(birth *time.Time) int {

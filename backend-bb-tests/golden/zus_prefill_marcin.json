@@ -2,7 +2,7 @@
   "birth_date": "1990-06-15",
   "current_gross_monthly_salary": 21000.0,
   "gender": "M",
-  "owner": "Marcin",
+  "owner_user_id": 2,
   "retirement_age": 65,
   "salary_history": [
     {

@@ -61,7 +61,8 @@ const mockData = {
 	categoryTimeSeries: { stock: [], bond: [] },
 	ppkStats: [],
 	stockStats: null,
-	bondStats: null
+	bondStats: null,
+	owners: []
 };
 
 describe('Metryki Page', () => {
@@ -143,7 +144,7 @@ describe('Metryki Page with populated data', () => {
 		},
 		ppkStats: [
 			{
-				owner: 'Marcin',
+				owner_user_id: 1,
 				total_value: 20000,
 				employee_contributed: 8000,
 				employer_contributed: 6000,
@@ -164,7 +165,8 @@ describe('Metryki Page with populated data', () => {
 			total_contributed: 9500,
 			returns: 500,
 			roi_percentage: 5.26
-		}
+		},
+		owners: [{ id: 1, name: 'Marcin' }]
 	};
 
 	it('renders the rebalancing suggestions when present', () => {

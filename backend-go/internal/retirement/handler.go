@@ -21,7 +21,7 @@ import (
 type yearlyStat struct {
 	Year                int      `json:"year"`
 	AccountWrapper      string   `json:"account_wrapper"`
-	Owner               string   `json:"owner"`
+	OwnerUserID         *int     `json:"owner_user_id"`
 	LimitAmount         *pyFloat `json:"limit_amount"`
 	TotalContributed    pyFloat  `json:"total_contributed"`
 	EmployeeContributed pyFloat  `json:"employee_contributed"`
@@ -32,7 +32,7 @@ type yearlyStat struct {
 }
 
 type ppkStat struct {
-	Owner                 string  `json:"owner"`
+	OwnerUserID           *int    `json:"owner_user_id"`
 	TotalValue            pyFloat `json:"total_value"`
 	EmployeeContributed   pyFloat `json:"employee_contributed"`
 	EmployerContributed   pyFloat `json:"employer_contributed"`
@@ -46,13 +46,13 @@ type limitResponse struct {
 	ID             int     `json:"id"`
 	Year           int     `json:"year"`
 	AccountWrapper string  `json:"account_wrapper"`
-	Owner          string  `json:"owner"`
+	OwnerUserID    *int    `json:"owner_user_id"`
 	LimitAmount    pyFloat `json:"limit_amount"`
 	Notes          *string `json:"notes"`
 }
 
 type ppkGenerateResponse struct {
-	Owner               string  `json:"owner"`
+	OwnerUserID         *int    `json:"owner_user_id"`
 	Month               int     `json:"month"`
 	Year                int     `json:"year"`
 	GrossSalary         pyFloat `json:"gross_salary"`
@@ -88,8 +88,13 @@ func (h *Handler) Stats(w http.ResponseWriter, r *http.Request) {
 		}
 		year = n
 	}
-	owners, err := h.resolveOwners(r.Context(), r.URL.Query().Get("owner"))
+	owners, err := h.resolveOwners(r.Context(), r.URL.Query().Get("owner_user_id"))
 	if err != nil {
+		if errors.Is(err, errBadOwnerParam) {
+			writeValidationError(w, "owner_user_id", "must be an integer",
+				r.URL.Query().Get("owner_user_id"))
+			return
+		}
 		h.logger.Error("resolve owners", "err", err)
 		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
@@ -111,8 +116,8 @@ func (h *Handler) Stats(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, out)
 }
 
-func (h *Handler) buildYearlyStat(ctx context.Context, year int, wrapper, owner string) (yearlyStat, bool, error) {
-	accountIDs, err := h.store.AccountIDsForWrapper(ctx, wrapper, owner)
+func (h *Handler) buildYearlyStat(ctx context.Context, year int, wrapper string, ownerUserID *int) (yearlyStat, bool, error) {
+	accountIDs, err := h.store.AccountIDsForWrapper(ctx, wrapper, ownerUserID)
 	if err != nil {
 		return yearlyStat{}, false, err
 	}
@@ -123,7 +128,7 @@ func (h *Handler) buildYearlyStat(ctx context.Context, year int, wrapper, owner 
 	if err != nil {
 		return yearlyStat{}, false, err
 	}
-	limit, configured, err := h.store.LimitConfigured(ctx, year, wrapper, owner)
+	limit, configured, err := h.store.LimitConfigured(ctx, year, wrapper, ownerUserID)
 	if err != nil {
 		return yearlyStat{}, false, err
 	}
@@ -149,7 +154,7 @@ func (h *Handler) buildYearlyStat(ctx context.Context, year int, wrapper, owner 
 	rem := pyFloat(remaining)
 	pct := pyFloat(math.Round(percentage*10) / 10)
 	return yearlyStat{
-		Year: year, AccountWrapper: wrapper, Owner: owner,
+		Year: year, AccountWrapper: wrapper, OwnerUserID: ownerUserID,
 		LimitAmount:         &lAmt,
 		TotalContributed:    pyFloat(totalF),
 		EmployeeContributed: pyFloat(employeeF),
@@ -165,8 +170,13 @@ func (h *Handler) buildYearlyStat(ctx context.Context, year int, wrapper, owner 
 
 // PPKStats serves GET /api/retirement/ppk-stats.
 func (h *Handler) PPKStats(w http.ResponseWriter, r *http.Request) {
-	owners, err := h.resolveOwners(r.Context(), r.URL.Query().Get("owner"))
+	owners, err := h.resolveOwners(r.Context(), r.URL.Query().Get("owner_user_id"))
 	if err != nil {
+		if errors.Is(err, errBadOwnerParam) {
+			writeValidationError(w, "owner_user_id", "must be an integer",
+				r.URL.Query().Get("owner_user_id"))
+			return
+		}
 		h.logger.Error("resolve owners", "err", err)
 		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
@@ -186,8 +196,8 @@ func (h *Handler) PPKStats(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, out)
 }
 
-func (h *Handler) buildPPKStat(ctx context.Context, owner string) (ppkStat, bool, error) {
-	accountIDs, err := h.store.AccountIDsForWrapper(ctx, "PPK", owner)
+func (h *Handler) buildPPKStat(ctx context.Context, ownerUserID *int) (ppkStat, bool, error) {
+	accountIDs, err := h.store.AccountIDsForWrapper(ctx, "PPK", ownerUserID)
 	if err != nil {
 		return ppkStat{}, false, err
 	}
@@ -217,7 +227,7 @@ func (h *Handler) buildPPKStat(ctx context.Context, owner string) (ppkStat, bool
 	}
 	roiRounded := math.Round(roi*100) / 100
 	return ppkStat{
-		Owner:                 owner,
+		OwnerUserID:           ownerUserID,
 		TotalValue:            pyFloat(totalValue),
 		EmployeeContributed:   pyFloat(employeeF),
 		EmployerContributed:   pyFloat(employerF),
@@ -246,13 +256,13 @@ func (h *Handler) LimitsForYear(w http.ResponseWriter, r *http.Request) {
 		amt, _ := l.LimitAmount.Float64()
 		out = append(out, limitResponse{
 			ID: l.ID, Year: l.Year, AccountWrapper: l.AccountWrapper,
-			Owner: l.Owner, LimitAmount: pyFloat(amt), Notes: l.Notes,
+			OwnerUserID: l.OwnerUserID, LimitAmount: pyFloat(amt), Notes: l.Notes,
 		})
 	}
 	writeJSON(w, http.StatusOK, out)
 }
 
-// UpsertLimit serves PUT /api/retirement/limits/{year}/{wrapper}/{owner}.
+// UpsertLimit serves PUT /api/retirement/limits/{year}/{wrapper}/{owner_user_id}.
 func (h *Handler) UpsertLimit(w http.ResponseWriter, r *http.Request) {
 	year, err := strconv.Atoi(chi.URLParam(r, "year"))
 	if err != nil {
@@ -260,7 +270,17 @@ func (h *Handler) UpsertLimit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	wrapper := chi.URLParam(r, "wrapper")
-	owner := chi.URLParam(r, "owner")
+	ownerParam := chi.URLParam(r, "owner_user_id")
+	// The literal "null" addresses the jointly-owned (Shared) limit row.
+	var ownerUserID *int
+	if ownerParam != "null" {
+		n, err := strconv.Atoi(ownerParam)
+		if err != nil {
+			writeValidationError(w, "owner_user_id", "must be an integer", ownerParam)
+			return
+		}
+		ownerUserID = &n
+	}
 	raw := map[string]json.RawMessage{}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
 		writeValidationError(w, "body", "Invalid JSON body", err.Error())
@@ -271,7 +291,7 @@ func (h *Handler) UpsertLimit(w http.ResponseWriter, r *http.Request) {
 		writePydanticError(w, vErr)
 		return
 	}
-	l, err := h.store.UpsertLimit(r.Context(), year, wrapper, owner, req.LimitAmount, req.Notes)
+	l, err := h.store.UpsertLimit(r.Context(), year, wrapper, ownerUserID, req.LimitAmount, req.Notes)
 	if err != nil {
 		h.logger.Error("upsert limit", "err", err)
 		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
@@ -280,7 +300,7 @@ func (h *Handler) UpsertLimit(w http.ResponseWriter, r *http.Request) {
 	amt, _ := l.LimitAmount.Float64()
 	writeJSON(w, http.StatusOK, limitResponse{
 		ID: l.ID, Year: l.Year, AccountWrapper: l.AccountWrapper,
-		Owner: l.Owner, LimitAmount: pyFloat(amt), Notes: l.Notes,
+		OwnerUserID: l.OwnerUserID, LimitAmount: pyFloat(amt), Notes: l.Notes,
 	})
 }
 
@@ -297,22 +317,23 @@ func (h *Handler) GeneratePPKContributions(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	firstDay := time.Date(req.Year, time.Month(req.Month), 1, 0, 0, 0, 0, time.UTC)
-	gross, err := h.store.CurrentSalaryFor(r.Context(), req.Owner, firstDay)
+	gross, err := h.store.CurrentSalaryFor(r.Context(), req.OwnerUserID, firstDay)
 	if err != nil {
 		if errors.Is(err, ErrNoSalary) {
 			writeDetailError(w, http.StatusBadRequest,
-				fmt.Sprintf("No salary record found for %s in %d/%d", req.Owner, req.Month, req.Year))
+				fmt.Sprintf("No salary record found for user %s in %d/%d",
+					ownerLabel(req.OwnerUserID), req.Month, req.Year))
 			return
 		}
 		h.logger.Error("ppk salary", "err", err)
 		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	employeeRate, employerRate, err := h.store.PersonaPPKRates(r.Context(), req.Owner)
+	employeeRate, employerRate, err := h.store.UserPPKRates(r.Context(), req.OwnerUserID)
 	if err != nil {
-		if errors.Is(err, ErrPersonaNotFound) {
+		if errors.Is(err, ErrUserNotFound) {
 			writeDetailError(w, http.StatusNotFound,
-				fmt.Sprintf("Persona '%s' not found", req.Owner))
+				fmt.Sprintf("User %s not found", ownerLabel(req.OwnerUserID)))
 			return
 		}
 		h.logger.Error("ppk rates", "err", err)
@@ -322,12 +343,13 @@ func (h *Handler) GeneratePPKContributions(w http.ResponseWriter, r *http.Reques
 	hundred := decimal.NewFromInt(100)
 	employeeAmt := gross.Mul(employeeRate).Div(hundred)
 	employerAmt := gross.Mul(employerRate).Div(hundred)
-	accountID, err := h.store.ActivePPKAccountForOwner(r.Context(), req.Owner)
+	accountID, err := h.store.ActivePPKAccountForOwner(r.Context(), req.OwnerUserID)
 	if err != nil {
 		if errors.Is(err, ErrNoPPKAccount) {
 			writeDetailError(w, http.StatusNotFound,
-				fmt.Sprintf("No active PPK account found for %s. "+
-					"Mark one PPK account as receiving contributions.", req.Owner))
+				fmt.Sprintf("No active PPK account found for user %s. "+
+					"Mark one PPK account as receiving contributions.",
+					ownerLabel(req.OwnerUserID)))
 			return
 		}
 		h.logger.Error("ppk account", "err", err)
@@ -337,7 +359,7 @@ func (h *Handler) GeneratePPKContributions(w http.ResponseWriter, r *http.Reques
 	lastDay := time.Date(req.Year, time.Month(req.Month)+1, 0, 0, 0, 0, 0, time.UTC)
 	ids, err := h.store.InsertPPKContributions(r.Context(), PPKContribution{
 		AccountID: accountID, EmployeeAmt: employeeAmt, EmployerAmt: employerAmt,
-		Date: lastDay, Owner: req.Owner,
+		Date: lastDay, OwnerUserID: req.OwnerUserID,
 	})
 	if err != nil {
 		if errors.Is(err, ErrContributionsExist) {
@@ -353,7 +375,7 @@ func (h *Handler) GeneratePPKContributions(w http.ResponseWriter, r *http.Reques
 	empF, _ := employeeAmt.Float64()
 	emprF, _ := employerAmt.Float64()
 	writeJSON(w, http.StatusOK, ppkGenerateResponse{
-		Owner: req.Owner, Month: req.Month, Year: req.Year,
+		OwnerUserID: req.OwnerUserID, Month: req.Month, Year: req.Year,
 		GrossSalary:         pyFloat(grossF),
 		EmployeeAmount:      pyFloat(empF),
 		EmployerAmount:      pyFloat(emprF),
@@ -362,11 +384,35 @@ func (h *Handler) GeneratePPKContributions(w http.ResponseWriter, r *http.Reques
 	})
 }
 
-func (h *Handler) resolveOwners(ctx context.Context, queryOwner string) ([]string, error) {
+// errBadOwnerParam marks a non-integer owner_user_id query value.
+var errBadOwnerParam = errors.New("owner_user_id must be an integer")
+
+func (h *Handler) resolveOwners(ctx context.Context, queryOwner string) ([]*int, error) {
 	if queryOwner != "" {
-		return []string{queryOwner}, nil
+		n, err := strconv.Atoi(queryOwner)
+		if err != nil {
+			return nil, errBadOwnerParam
+		}
+		return []*int{&n}, nil
 	}
-	return h.store.PersonaNames(ctx)
+	ids, err := h.store.UserIDs(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*int, 0, len(ids))
+	for i := range ids {
+		id := ids[i]
+		out = append(out, &id)
+	}
+	return out, nil
+}
+
+// ownerLabel renders an owner_user_id for error messages.
+func ownerLabel(id *int) string {
+	if id == nil {
+		return "Shared"
+	}
+	return strconv.Itoa(*id)
 }
 
 // --- request parsing ---
@@ -374,7 +420,7 @@ func (h *Handler) resolveOwners(ctx context.Context, queryOwner string) ([]strin
 type limitRequest struct {
 	Year           int
 	AccountWrapper string
-	Owner          string
+	OwnerUserID    *int
 	LimitAmount    decimal.Decimal
 	Notes          *string
 }
@@ -399,11 +445,11 @@ func buildLimitRequest(raw map[string]json.RawMessage, now func() time.Time) (li
 	}
 	r.AccountWrapper = wrap
 
-	owner, vErr := requireString(raw, "owner", "Owner cannot be empty")
+	owner, vErr := requireIntOrNull(raw, "owner_user_id")
 	if vErr != nil {
 		return r, vErr
 	}
-	r.Owner = owner
+	r.OwnerUserID = owner
 
 	amt, vErr := requirePositiveDecimal(raw, "limit_amount", "Limit amount must be greater than 0")
 	if vErr != nil {
@@ -422,18 +468,21 @@ func buildLimitRequest(raw map[string]json.RawMessage, now func() time.Time) (li
 }
 
 type generateRequest struct {
-	Owner string
-	Month int
-	Year  int
+	OwnerUserID *int
+	Month       int
+	Year        int
 }
 
 func buildGenerateRequest(raw map[string]json.RawMessage, now func() time.Time) (generateRequest, *validationError) {
 	var r generateRequest
-	owner, vErr := requireString(raw, "owner", "Owner cannot be empty")
+	// PPK contributions are always generated for a specific person — a null
+	// (jointly owned) owner is rejected up front rather than failing later
+	// with a confusing 404.
+	owner, vErr := requireInt(raw, "owner_user_id")
 	if vErr != nil {
 		return r, vErr
 	}
-	r.Owner = owner
+	r.OwnerUserID = &owner
 
 	month, vErr := requireIntRange(raw, "month", 1, 12, "Month must be between 1 and 12")
 	if vErr != nil {
@@ -453,20 +502,34 @@ func buildGenerateRequest(raw map[string]json.RawMessage, now func() time.Time) 
 
 // --- helpers ---
 
-func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string, *validationError) {
+// requireInt reads an integer key that must be present and non-null.
+func requireInt(raw map[string]json.RawMessage, key string) (int, *validationError) {
 	v, ok := raw[key]
 	if !ok || isNull(v) {
-		return "", &validationError{Field: key, Msg: "Field required"}
+		return 0, &validationError{Field: key, Msg: "Field required"}
 	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &validationError{Field: key, Msg: "must be a string"}
+	var n int
+	if err := json.Unmarshal(v, &n); err != nil {
+		return 0, &validationError{Field: key, Msg: "must be an integer"}
 	}
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return "", &validationError{Field: key, Msg: emptyMsg}
+	return n, nil
+}
+
+// requireIntOrNull reads an integer key that must be present; an explicit
+// null is allowed and yields nil (jointly owned).
+func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *validationError) {
+	v, ok := raw[key]
+	if !ok {
+		return nil, &validationError{Field: key, Msg: "Field required"}
 	}
-	return s, nil
+	if isNull(v) {
+		return nil, nil
+	}
+	var n int
+	if err := json.Unmarshal(v, &n); err != nil {
+		return nil, &validationError{Field: key, Msg: "must be an integer"}
+	}
+	return &n, nil
 }
 
 func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *validationError) {

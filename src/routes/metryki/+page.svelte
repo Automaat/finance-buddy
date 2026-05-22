@@ -10,6 +10,7 @@
 		buildWrapperTrendChartOption,
 		buildYearlyRoiChartOption
 	} from '$lib/utils/charts/metryki';
+	import { ownerName, type OwnerOption } from '$lib/types/owners';
 
 	import type { PageData } from './$types';
 
@@ -268,7 +269,9 @@
 	{#if data.ppkStats && data.ppkStats.length > 0}
 		<h2 class="h2">Podsumowanie PPK</h2>
 		{#each data.ppkStats as ppkStat}
-			<h3 class="h4 font-semibold mt-4 mb-3">{ppkStat.owner}</h3>
+			<h3 class="h4 font-semibold mt-4 mb-3">
+				{ownerName((data.owners ?? []) as OwnerOption[], ppkStat.owner_user_id)}
+			</h3>
 			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 				<MetricCard
 					label="PPK - Wartość całkowita"

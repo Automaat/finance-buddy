@@ -153,7 +153,7 @@ func registerLedgerRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger)
 	r.Get("/api/retirement/ppk-stats", retHandler.PPKStats)
 	r.Post("/api/retirement/ppk-contributions/generate", retHandler.GeneratePPKContributions)
 	r.Get("/api/retirement/limits/{year}", retHandler.LimitsForYear)
-	r.Put("/api/retirement/limits/{year}/{wrapper}/{owner}", retHandler.UpsertLimit)
+	r.Put("/api/retirement/limits/{year}/{wrapper}/{owner_user_id}", retHandler.UpsertLimit)
 
 	invHandler := investment.NewHandler(investment.NewStore(pool), logger)
 	r.Get("/api/investment/stock-stats", invHandler.StockStats)

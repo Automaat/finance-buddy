@@ -38,8 +38,9 @@ var lifeExpectancyMonths = map[int]float64{
 }
 
 // Inputs mirrors the Pydantic ZusCalculatorInputs after validation.
+// OwnerUserID is the owning household member; nil means jointly owned.
 type Inputs struct {
-	Owner                     string
+	OwnerUserID               *int
 	BirthYear                 int
 	Gender                    string
 	RetirementAge             int

@@ -80,12 +80,17 @@ func (s *Store) RecomputeForSnapshot(ctx context.Context, tx pgx.Tx, snapshotID 
 		if err != nil {
 			return fmt.Errorf("encode allocation_json: %w", err)
 		}
+		// owner is dual-written from owner_user_id ($3) until the legacy
+		// column is dropped in a later phase.
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO snapshot_aggregates (
-				snapshot_id, month, owner, total_assets, total_liabilities,
-				net_worth, allocation_json, computed_at
-			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-			r.SnapshotID, r.Month, r.Owner,
+				snapshot_id, month, owner, owner_user_id, total_assets,
+				total_liabilities, net_worth, allocation_json, computed_at
+			) VALUES (
+				$1, $2, COALESCE((SELECT name FROM users WHERE id = $3), 'Shared'),
+				$3, $4, $5, $6, $7, $8
+			)`,
+			r.SnapshotID, r.Month, r.OwnerUserID,
 			r.TotalAssets, r.TotalLiabilities, r.NetWorth, allocJSON, now,
 		); err != nil {
 			return fmt.Errorf("insert snapshot_aggregates: %w", err)
@@ -200,7 +205,7 @@ func loadActiveAccounts(ctx context.Context, tx pgx.Tx, ids []int) ([]AccountInp
 		return []AccountInput{}, nil
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT id, owner, type, category
+		SELECT id, owner_user_id, type, category
 		FROM accounts WHERE id = ANY($1) AND is_active = true`,
 		ids,
 	)
@@ -211,7 +216,7 @@ func loadActiveAccounts(ctx context.Context, tx pgx.Tx, ids []int) ([]AccountInp
 	out := []AccountInput{}
 	for rows.Next() {
 		var a AccountInput
-		if err := rows.Scan(&a.ID, &a.Owner, &a.Type, &a.Category); err != nil {
+		if err := rows.Scan(&a.ID, &a.OwnerUserID, &a.Type, &a.Category); err != nil {
 			return nil, fmt.Errorf("scan account: %w", err)
 		}
 		out = append(out, a)
