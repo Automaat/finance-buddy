@@ -475,11 +475,14 @@ type generateRequest struct {
 
 func buildGenerateRequest(raw map[string]json.RawMessage, now func() time.Time) (generateRequest, *validationError) {
 	var r generateRequest
-	owner, vErr := requireIntOrNull(raw, "owner_user_id")
+	// PPK contributions are always generated for a specific person — a null
+	// (jointly owned) owner is rejected up front rather than failing later
+	// with a confusing 404.
+	owner, vErr := requireInt(raw, "owner_user_id")
 	if vErr != nil {
 		return r, vErr
 	}
-	r.OwnerUserID = owner
+	r.OwnerUserID = &owner
 
 	month, vErr := requireIntRange(raw, "month", 1, 12, "Month must be between 1 and 12")
 	if vErr != nil {
@@ -498,6 +501,19 @@ func buildGenerateRequest(raw map[string]json.RawMessage, now func() time.Time) 
 }
 
 // --- helpers ---
+
+// requireInt reads an integer key that must be present and non-null.
+func requireInt(raw map[string]json.RawMessage, key string) (int, *validationError) {
+	v, ok := raw[key]
+	if !ok || isNull(v) {
+		return 0, &validationError{Field: key, Msg: "Field required"}
+	}
+	var n int
+	if err := json.Unmarshal(v, &n); err != nil {
+		return 0, &validationError{Field: key, Msg: "must be an integer"}
+	}
+	return n, nil
+}
 
 // requireIntOrNull reads an integer key that must be present; an explicit
 // null is allowed and yields nil (jointly owned).
