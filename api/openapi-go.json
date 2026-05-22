@@ -204,7 +204,7 @@
             "name": "id",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "integer"
             }
           }
         ],
@@ -225,7 +225,7 @@
             "name": "id",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "integer"
             }
           }
         ],
@@ -385,7 +385,7 @@
             "name": "id",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "integer"
             }
           }
         ],
@@ -406,7 +406,7 @@
             "name": "id",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "integer"
             }
           }
         ],
@@ -478,16 +478,16 @@
                       "type": "integer"
                     },
                     "monthly_expenses": {
-                      "type": "number"
+                      "type": "string"
                     },
                     "monthly_mortgage_payment": {
-                      "type": "number"
+                      "type": "string"
                     },
                     "retirement_age": {
                       "type": "integer"
                     },
                     "retirement_monthly_salary": {
-                      "type": "number"
+                      "type": "string"
                     }
                   },
                   "type": "object"
@@ -527,12 +527,18 @@
                     "format": "date",
                     "type": "string"
                   },
-                  "monthly_expenses": {},
-                  "monthly_mortgage_payment": {},
+                  "monthly_expenses": {
+                    "type": "string"
+                  },
+                  "monthly_mortgage_payment": {
+                    "type": "string"
+                  },
                   "retirement_age": {
                     "type": "integer"
                   },
-                  "retirement_monthly_salary": {}
+                  "retirement_monthly_salary": {
+                    "type": "string"
+                  }
                 },
                 "type": "object"
               }
@@ -569,16 +575,16 @@
                       "type": "integer"
                     },
                     "monthly_expenses": {
-                      "type": "number"
+                      "type": "string"
                     },
                     "monthly_mortgage_payment": {
-                      "type": "number"
+                      "type": "string"
                     },
                     "retirement_age": {
                       "type": "integer"
                     },
                     "retirement_monthly_salary": {
-                      "type": "number"
+                      "type": "string"
                     }
                   },
                   "type": "object"
@@ -1282,7 +1288,7 @@
             "name": "id",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "integer"
             }
           }
         ],
@@ -1303,7 +1309,7 @@
             "name": "id",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "integer"
             }
           }
         ],
@@ -1387,7 +1393,7 @@
             "name": "id",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "integer"
             }
           }
         ],
@@ -1485,10 +1491,10 @@
                         "type": "string"
                       },
                       "ppk_employee_rate": {
-                        "type": "number"
+                        "type": "string"
                       },
                       "ppk_employer_rate": {
-                        "type": "number"
+                        "type": "string"
                       }
                     },
                     "type": "object"
@@ -1515,10 +1521,12 @@
                     "type": "string"
                   },
                   "ppk_employee_rate": {
-                    "nullable": true
+                    "nullable": true,
+                    "type": "string"
                   },
                   "ppk_employer_rate": {
-                    "nullable": true
+                    "nullable": true,
+                    "type": "string"
                   }
                 },
                 "type": "object"
@@ -1544,10 +1552,10 @@
                       "type": "string"
                     },
                     "ppk_employee_rate": {
-                      "type": "number"
+                      "type": "string"
                     },
                     "ppk_employer_rate": {
-                      "type": "number"
+                      "type": "string"
                     }
                   },
                   "type": "object"
@@ -1571,7 +1579,7 @@
             "name": "id",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "integer"
             }
           }
         ],
@@ -1592,7 +1600,7 @@
             "name": "id",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "integer"
             }
           }
         ],
@@ -1606,10 +1614,12 @@
                     "type": "string"
                   },
                   "ppk_employee_rate": {
-                    "nullable": true
+                    "nullable": true,
+                    "type": "string"
                   },
                   "ppk_employer_rate": {
-                    "nullable": true
+                    "nullable": true,
+                    "type": "string"
                   }
                 },
                 "type": "object"
@@ -1635,10 +1645,10 @@
                       "type": "string"
                     },
                     "ppk_employee_rate": {
-                      "type": "number"
+                      "type": "string"
                     },
                     "ppk_employer_rate": {
-                      "type": "number"
+                      "type": "string"
                     }
                   },
                   "type": "object"
@@ -1674,36 +1684,9 @@
                         "nullable": true,
                         "type": "string"
                       },
-                      "values": {
-                        "items": {
-                          "properties": {
-                            "account_id": {
-                              "nullable": true,
-                              "type": "integer"
-                            },
-                            "account_name": {
-                              "nullable": true,
-                              "type": "string"
-                            },
-                            "asset_id": {
-                              "nullable": true,
-                              "type": "integer"
-                            },
-                            "asset_name": {
-                              "nullable": true,
-                              "type": "string"
-                            },
-                            "id": {
-                              "type": "integer"
-                            },
-                            "value": {
-                              "format": "double",
-                              "type": "number"
-                            }
-                          },
-                          "type": "object"
-                        },
-                        "type": "array"
+                      "total_net_worth": {
+                        "format": "double",
+                        "type": "number"
                       }
                     },
                     "type": "object"
@@ -1791,7 +1774,7 @@
             "name": "id",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "integer"
             }
           }
         ],
@@ -1863,7 +1846,7 @@
             "name": "id",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "integer"
             }
           }
         ],

@@ -7,7 +7,7 @@ var APISpec = []apispec.Route{
 	{
 		Method: "GET", Path: "/api/snapshots", Tag: "snapshots",
 		Summary:  "List snapshots",
-		Response: []response{},
+		Response: []listItem{},
 	},
 	{
 		Method: "GET", Path: "/api/snapshots/{id}", Tag: "snapshots",

@@ -97,7 +97,7 @@ func addRoute(doc *openapi3.T, gen *openapi3gen.Generator, rt *apispec.Route) er
 				Name:     p,
 				In:       "path",
 				Required: true,
-				Schema:   openapi3.NewStringSchema().NewRef(),
+				Schema:   pathParamSchema(p),
 			},
 		})
 	}
@@ -148,15 +148,26 @@ func addRoute(doc *openapi3.T, gen *openapi3gen.Generator, rt *apispec.Route) er
 	return nil
 }
 
-// customizeScalar overrides the schema for the wire scalar-wrapper types
-// (pyFloat, isoDate, isoNaive, moneyJSON, ppkRate). Without this, openapi3gen
-// reflects e.g. moneyJSON (underlying decimal.Decimal, a struct) into a
-// meaningless object schema. Match is by type name — the wrappers follow a
-// consistent naming convention across every endpoint package.
+// customizeScalar overrides the schema for the wire scalar-wrapper types.
+// Without it, openapi3gen reflects e.g. moneyJSON (underlying decimal.Decimal,
+// a struct) into a meaningless object schema. Match is by type name — the
+// wrappers follow a consistent naming convention across every package — plus
+// a package-path check for raw decimal.Decimal used in request bodies.
+//
+// moneyJSON and ppkRate marshal as JSON *strings* (quoted decimals), so they
+// are typed string, not number — matching the real wire format.
 func customizeScalar(_ string, t reflect.Type, _ reflect.StructTag, schema *openapi3.Schema) error {
+	if strings.Contains(t.PkgPath(), "shopspring/decimal") {
+		schema.Type = &openapi3.Types{"string"}
+		schema.Properties = nil
+		return nil
+	}
 	switch t.Name() {
-	case "pyFloat", "moneyJSON", "ppkRate":
+	case "pyFloat":
 		schema.Type = &openapi3.Types{"number"}
+		schema.Properties = nil
+	case "moneyJSON", "ppkRate":
+		schema.Type = &openapi3.Types{"string"}
 		schema.Properties = nil
 	case "isoDate":
 		schema.Type = &openapi3.Types{"string"}
@@ -168,6 +179,17 @@ func customizeScalar(_ string, t reflect.Type, _ reflect.StructTag, schema *open
 		schema.Properties = nil
 	}
 	return nil
+}
+
+// pathParamSchema types a path parameter. Numeric ids/years are parsed with
+// strconv.Atoi in the handlers, so they are integer; everything else string.
+func pathParamSchema(name string) *openapi3.SchemaRef {
+	switch name {
+	case "id", "account_id", "transaction_id", "payment_id", "year":
+		return openapi3.NewIntegerSchema().NewRef()
+	default:
+		return openapi3.NewStringSchema().NewRef()
+	}
 }
 
 func pathParams(path string) []string {
