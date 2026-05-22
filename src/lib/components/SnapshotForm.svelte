@@ -4,6 +4,7 @@
 	import { env } from '$env/dynamic/public';
 	import { Wallet, Umbrella, TrendingUp, Home, CreditCard } from 'lucide-svelte';
 	import type { Account, Asset, SnapshotResponse } from '$lib/types';
+	import type { OwnerOption } from '$lib/types/owners';
 	import NewAccountModal from './snapshot/NewAccountModal.svelte';
 	import NewAssetModal from './snapshot/NewAssetModal.svelte';
 	import ValueRow from './snapshot/ValueRow.svelte';
@@ -13,7 +14,7 @@
 		assets: Account[];
 		liabilities: Account[];
 		physicalAssets: Asset[];
-		personas?: Array<{ id: number; name: string }>;
+		owners?: OwnerOption[];
 	}
 
 	let {
@@ -21,7 +22,7 @@
 		assets: assetsProp,
 		liabilities: liabilitiesProp,
 		physicalAssets: physicalAssetsProp,
-		personas = []
+		owners = []
 	}: Props = $props();
 
 	// Accounts/assets created in-component, merged with the prop-provided ones
@@ -147,7 +148,9 @@
 	let newAccountName = $state('');
 	let newAccountCategory = $state('');
 	let newAccountWrapper: '' | 'PPK' | 'IKE' | 'IKZE' = $state('');
-	let newAccountOwner = $state(untrack(() => (personas.length > 0 ? personas[0].name : '')));
+	let newAccountOwnerUserId = $state<number | null>(
+		untrack(() => (owners.length > 0 ? owners[0].id : null))
+	);
 	let newAccountValue = $state(0);
 	let creatingAccount = $state(false);
 	let newAssetName = $state('');
@@ -177,7 +180,7 @@
 					name: newAccountName,
 					type,
 					category,
-					owner: newAccountOwner,
+					owner_user_id: newAccountOwnerUserId,
 					currency: 'PLN',
 					account_wrapper,
 					purpose
@@ -213,7 +216,7 @@
 			newAccountName = '';
 			newAccountCategory = '';
 			newAccountWrapper = '';
-			newAccountOwner = personas.length > 0 ? personas[0].name : '';
+			newAccountOwnerUserId = owners.length > 0 ? owners[0].id : null;
 			newAccountValue = 0;
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Błąd tworzenia konta';
@@ -734,10 +737,10 @@
 			bind:name={newAccountName}
 			bind:category={newAccountCategory}
 			bind:wrapper={newAccountWrapper}
-			bind:owner={newAccountOwner}
+			bind:ownerUserId={newAccountOwnerUserId}
 			bind:value={newAccountValue}
 			creating={creatingAccount}
-			{personas}
+			{owners}
 			onCreate={createNewAccount}
 			onClose={closeNewAccountModal}
 		/>

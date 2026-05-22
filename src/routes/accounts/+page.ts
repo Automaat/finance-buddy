@@ -3,14 +3,14 @@ import { env } from '$env/dynamic/public';
 import { browser } from '$app/environment';
 import type { PageLoad } from './$types';
 import type { Transaction, TransactionsData } from '$lib/types/transactions';
-import type { Persona } from '$lib/types/personas';
+import type { OwnerOption } from '$lib/types/owners';
 
 export interface Account {
 	id: number;
 	name: string;
 	type: string;
 	category: string;
-	owner: string;
+	owner_user_id: number | null;
 	currency: string;
 	account_wrapper: string | null;
 	purpose: string;
@@ -34,12 +34,12 @@ export const load: PageLoad = async ({ fetch }) => {
 		throw error(500, 'API URL is not configured');
 	}
 
-	const personas = (async (): Promise<Persona[]> => {
-		const res = await fetch(`${apiUrl}/api/personas`);
+	const owners = (async (): Promise<OwnerOption[]> => {
+		const res = await fetch(`${apiUrl}/api/users`);
 		if (!res.ok) {
-			throw error(res.status, 'Failed to load personas');
+			throw error(res.status, 'Failed to load owners');
 		}
-		return (await res.json()) as Persona[];
+		return (await res.json()) as OwnerOption[];
 	})();
 
 	const accountsData = (async () => {
@@ -52,6 +52,6 @@ export const load: PageLoad = async ({ fetch }) => {
 
 	return {
 		accountsData,
-		personas
+		owners
 	};
 };

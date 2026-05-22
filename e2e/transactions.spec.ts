@@ -8,7 +8,7 @@ interface ApiAccount {
 	id: number;
 	name: string;
 	category: string;
-	owner: string;
+	owner_user_id: number | null;
 	account_wrapper: string | null;
 }
 
@@ -46,8 +46,6 @@ test.describe('transactions', () => {
 
 		const today = new Date().toISOString().slice(0, 10);
 		await dialog.locator('label:has-text("Data zakupu") input').fill(today);
-
-		await dialog.locator('label:has-text("Właściciel") select').selectOption(account.owner);
 
 		await dialog.getByRole('button', { name: /Dodaj transakcję/ }).click();
 		await expect(dialog).toBeHidden();

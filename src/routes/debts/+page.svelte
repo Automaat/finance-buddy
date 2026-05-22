@@ -6,7 +6,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { onMount, untrack } from 'svelte';
 	import type { Debt, DebtPayment } from './+page';
-	import type { Persona } from '$lib/types/personas';
+	import { ownerName, type OwnerOption } from '$lib/types/owners';
 	import type { PageData } from './$types';
 
 	interface Props {
@@ -16,8 +16,8 @@
 	let { data }: Props = $props();
 
 	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
-	const personas = $derived(data.personas as Persona[]);
-	const defaultOwner = $derived(personas.length > 0 ? personas[0].name : 'Marcin');
+	const owners = $derived(data.owners as OwnerOption[]);
+	const defaultOwnerUserId = $derived(owners.length > 0 ? owners[0].id : null);
 
 	let showForm = $state(false);
 	let editingDebt: Debt | null = $state(null);
@@ -34,7 +34,7 @@
 	let paymentFormData = $state({
 		amount: 0,
 		date: new Date().toISOString().split('T')[0],
-		owner: untrack(() => defaultOwner)
+		owner_user_id: untrack(() => defaultOwnerUserId)
 	});
 	let paymentError = $state('');
 	let savingPayment = $state(false);
@@ -110,13 +110,13 @@
 				endpoint = `${apiUrl}/api/debts/${editingDebt.id}`;
 				method = 'PUT';
 			} else {
-				const accountOwner = defaultOwner;
 				const tempAccount = {
 					name: formData.name,
 					type: 'liability',
 					category: formData.debt_type === 'mortgage' ? 'mortgage' : 'installment',
-					owner: accountOwner,
-					currency: formData.currency
+					owner_user_id: defaultOwnerUserId,
+					currency: formData.currency,
+					purpose: 'general'
 				};
 
 				const accountResponse = await fetch(`${apiUrl}/api/accounts`, {
@@ -252,7 +252,7 @@
 			paymentFormData = {
 				amount: 0,
 				date: new Date().toISOString().split('T')[0],
-				owner: defaultOwner
+				owner_user_id: defaultOwnerUserId
 			};
 
 			await loadPayments();
@@ -373,7 +373,7 @@
 								<td class="font-semibold text-error-600-400">{formatPLN(debt.interest_paid)}</td>
 								<td>{debt.interest_rate}%</td>
 								<td>{formatDate(debt.start_date)}</td>
-								<td>{debt.account_owner}</td>
+								<td>{ownerName(owners, debt.account_owner_user_id)}</td>
 								<td class="text-right whitespace-nowrap">
 									<button
 										type="button"
@@ -441,9 +441,10 @@
 					</label>
 					<label class="label">
 						<span class="font-semibold text-sm">Kto wpłacił</span>
-						<select class="select" bind:value={paymentFormData.owner}>
-							{#each personas as persona}
-								<option value={persona.name}>{persona.name}</option>
+						<select class="select" bind:value={paymentFormData.owner_user_id}>
+							<option value={null}>Wspólne</option>
+							{#each owners as owner}
+								<option value={owner.id}>{owner.name}</option>
 							{/each}
 						</select>
 					</label>
@@ -493,7 +494,7 @@
 								<tr>
 									<td>{formatDate(payment.date)}</td>
 									<td>{formatPLN(payment.amount)}</td>
-									<td>{payment.owner}</td>
+									<td>{ownerName(owners, payment.owner_user_id)}</td>
 									<td class="text-right">
 										<button
 											type="button"

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import type { OwnerOption } from '$lib/types/owners';
+
 	type NewAccountSection = 'financial' | 'retirement' | 'investment' | 'majatek' | 'liabilities';
 
 	interface Props {
@@ -6,10 +8,10 @@
 		name?: string;
 		category?: string;
 		wrapper?: '' | 'PPK' | 'IKE' | 'IKZE';
-		owner?: string;
+		ownerUserId?: number | null;
 		value?: number;
 		creating?: boolean;
-		personas?: Array<{ id: number; name: string }>;
+		owners?: OwnerOption[];
 		onCreate: () => void;
 		onClose: () => void;
 	}
@@ -19,10 +21,10 @@
 		name = $bindable(''),
 		category = $bindable(''),
 		wrapper = $bindable(''),
-		owner = $bindable(''),
+		ownerUserId = $bindable<number | null>(null),
 		value = $bindable(0),
 		creating = false,
-		personas = [],
+		owners = [],
 		onCreate,
 		onClose
 	}: Props = $props();
@@ -120,9 +122,10 @@
 
 			<div class="flex flex-col gap-1">
 				<label for="newAccountOwner" class="text-sm font-semibold">Właściciel</label>
-				<select id="newAccountOwner" bind:value={owner} class="select">
-					{#each personas as persona}
-						<option value={persona.name}>{persona.name}</option>
+				<select id="newAccountOwner" bind:value={ownerUserId} class="select">
+					<option value={null}>Wspólne</option>
+					{#each owners as owner}
+						<option value={owner.id}>{owner.name}</option>
 					{/each}
 				</select>
 			</div>

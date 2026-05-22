@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import NewAccountModal from './NewAccountModal.svelte';
 
-const personas = [
+const owners = [
 	{ id: 1, name: 'Marcin' },
 	{ id: 2, name: 'Ewa' }
 ];
@@ -14,7 +14,7 @@ describe('NewAccountModal', () => {
 				section: 'financial',
 				onCreate: vi.fn(),
 				onClose: vi.fn(),
-				personas
+				owners
 			}
 		});
 		const dialog = screen.getByRole('dialog');
@@ -25,7 +25,7 @@ describe('NewAccountModal', () => {
 
 	it('shows financial category options for the financial section', () => {
 		render(NewAccountModal, {
-			props: { section: 'financial', onCreate: vi.fn(), onClose: vi.fn(), personas }
+			props: { section: 'financial', onCreate: vi.fn(), onClose: vi.fn(), owners }
 		});
 		expect(screen.getByRole('option', { name: 'Konto bankowe' })).toBeTruthy();
 		expect(screen.queryByRole('option', { name: 'Hipoteka' })).toBeNull();
@@ -33,14 +33,14 @@ describe('NewAccountModal', () => {
 
 	it('shows the wrapper select only for the retirement section', () => {
 		render(NewAccountModal, {
-			props: { section: 'retirement', onCreate: vi.fn(), onClose: vi.fn(), personas }
+			props: { section: 'retirement', onCreate: vi.fn(), onClose: vi.fn(), owners }
 		});
 		expect(screen.getByLabelText('Wrapper *')).toBeTruthy();
 	});
 
 	it('hides the wrapper select for non-retirement sections', () => {
 		render(NewAccountModal, {
-			props: { section: 'liabilities', onCreate: vi.fn(), onClose: vi.fn(), personas }
+			props: { section: 'liabilities', onCreate: vi.fn(), onClose: vi.fn(), owners }
 		});
 		expect(screen.queryByLabelText('Wrapper *')).toBeNull();
 	});
@@ -48,7 +48,7 @@ describe('NewAccountModal', () => {
 	it('calls onCreate when the confirm button is clicked', async () => {
 		const onCreate = vi.fn();
 		render(NewAccountModal, {
-			props: { section: 'financial', onCreate, onClose: vi.fn(), personas }
+			props: { section: 'financial', onCreate, onClose: vi.fn(), owners }
 		});
 		await fireEvent.click(screen.getByText('Utwórz konto'));
 		expect(onCreate).toHaveBeenCalledOnce();
@@ -56,7 +56,7 @@ describe('NewAccountModal', () => {
 
 	it('disables the confirm button while creating', () => {
 		render(NewAccountModal, {
-			props: { section: 'financial', creating: true, onCreate: vi.fn(), onClose: vi.fn(), personas }
+			props: { section: 'financial', creating: true, onCreate: vi.fn(), onClose: vi.fn(), owners }
 		});
 		const button = screen.getByText('Tworzenie...') as HTMLButtonElement;
 		expect(button.disabled).toBe(true);
@@ -65,7 +65,7 @@ describe('NewAccountModal', () => {
 	it('closes via the × button', async () => {
 		const onClose = vi.fn();
 		render(NewAccountModal, {
-			props: { section: 'financial', onCreate: vi.fn(), onClose, personas }
+			props: { section: 'financial', onCreate: vi.fn(), onClose, owners }
 		});
 		await fireEvent.click(screen.getByTitle('Zamknij'));
 		expect(onClose).toHaveBeenCalledOnce();
@@ -74,7 +74,7 @@ describe('NewAccountModal', () => {
 	it('closes on Escape', async () => {
 		const onClose = vi.fn();
 		render(NewAccountModal, {
-			props: { section: 'financial', onCreate: vi.fn(), onClose, personas }
+			props: { section: 'financial', onCreate: vi.fn(), onClose, owners }
 		});
 		await fireEvent.keyDown(window, { key: 'Escape' });
 		expect(onClose).toHaveBeenCalledOnce();
@@ -83,7 +83,7 @@ describe('NewAccountModal', () => {
 	it('closes on backdrop click', async () => {
 		const onClose = vi.fn();
 		const { container } = render(NewAccountModal, {
-			props: { section: 'financial', onCreate: vi.fn(), onClose, personas }
+			props: { section: 'financial', onCreate: vi.fn(), onClose, owners }
 		});
 		const backdrop = container.querySelector('[role="presentation"]');
 		expect(backdrop).not.toBeNull();
@@ -94,7 +94,7 @@ describe('NewAccountModal', () => {
 	it('stays open when the dialog body is clicked', async () => {
 		const onClose = vi.fn();
 		render(NewAccountModal, {
-			props: { section: 'financial', onCreate: vi.fn(), onClose, personas }
+			props: { section: 'financial', onCreate: vi.fn(), onClose, owners }
 		});
 		await fireEvent.click(screen.getByRole('dialog'));
 		expect(onClose).not.toHaveBeenCalled();
@@ -102,7 +102,7 @@ describe('NewAccountModal', () => {
 
 	it('renders one owner option per persona', () => {
 		render(NewAccountModal, {
-			props: { section: 'financial', onCreate: vi.fn(), onClose: vi.fn(), personas }
+			props: { section: 'financial', onCreate: vi.fn(), onClose: vi.fn(), owners }
 		});
 		expect(screen.getByRole('option', { name: 'Marcin' })).toBeTruthy();
 		expect(screen.getByRole('option', { name: 'Ewa' })).toBeTruthy();

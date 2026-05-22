@@ -24,7 +24,7 @@ export interface Account {
 	name: string;
 	type: AccountType;
 	category: AccountCategory;
-	owner: string;
+	owner_user_id: number | null;
 	currency: string;
 	account_wrapper: AccountWrapper | null;
 	purpose: AccountPurpose;

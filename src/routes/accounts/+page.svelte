@@ -8,7 +8,7 @@
 	import { onMount, untrack } from 'svelte';
 	import { INVESTMENT_CATEGORIES } from '$lib/constants';
 	import type { Account, TransactionsData } from './+page';
-	import type { Persona } from '$lib/types/personas';
+	import { ownerName, type OwnerOption } from '$lib/types/owners';
 	import type { PageData } from './$types';
 
 	interface Props {
@@ -18,13 +18,13 @@
 	let { data }: Props = $props();
 
 	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
-	let personas: Persona[] = $state([]);
-	const defaultOwner = $derived(personas.length > 0 ? personas[0].name : 'Marcin');
+	let owners: OwnerOption[] = $state([]);
+	const defaultOwnerUserId = $derived(owners.length > 0 ? owners[0].id : null);
 
 	$effect(() => {
 		let cancelled = false;
-		Promise.resolve(data.personas).then((p) => {
-			if (!cancelled) personas = (p ?? []) as Persona[];
+		Promise.resolve(data.owners).then((p) => {
+			if (!cancelled) owners = (p ?? []) as OwnerOption[];
 		});
 		return () => {
 			cancelled = true;
@@ -45,7 +45,7 @@
 	let transactionFormData = $state({
 		amount: 0,
 		date: new Date().toISOString().split('T')[0],
-		owner: untrack(() => defaultOwner),
+		owner_user_id: untrack(() => defaultOwnerUserId),
 		transaction_type: null as string | null
 	});
 	let transactionError = $state('');
@@ -86,7 +86,7 @@
 		name: '',
 		type: 'asset',
 		category: 'bank',
-		owner: untrack(() => defaultOwner),
+		owner_user_id: untrack(() => defaultOwnerUserId),
 		currency: 'PLN',
 		account_wrapper: null as string | null,
 		purpose: 'general',
@@ -103,7 +103,7 @@
 				name: editingAccount.name,
 				type: editingAccount.type,
 				category: editingAccount.category,
-				owner: editingAccount.owner,
+				owner_user_id: editingAccount.owner_user_id,
 				currency: editingAccount.currency,
 				account_wrapper: editingAccount.account_wrapper,
 				purpose: editingAccount.purpose,
@@ -115,7 +115,7 @@
 				name: '',
 				type: 'asset',
 				category: 'bank',
-				owner: defaultOwner,
+				owner_user_id: defaultOwnerUserId,
 				currency: 'PLN',
 				account_wrapper: null,
 				purpose: 'general',
@@ -249,7 +249,7 @@
 		transactionFormData = {
 			amount: 0,
 			date: new Date().toISOString().split('T')[0],
-			owner: defaultOwner,
+			owner_user_id: defaultOwnerUserId,
 			transaction_type: null
 		};
 		transactionError = '';
@@ -276,7 +276,7 @@
 			transactionFormData = {
 				amount: 0,
 				date: new Date().toISOString().split('T')[0],
-				owner: defaultOwner,
+				owner_user_id: defaultOwnerUserId,
 				transaction_type: null
 			};
 
@@ -400,7 +400,7 @@
 								<tr>
 									<td class="font-medium">{account.name}</td>
 									<td>{categoryLabels[account.category] || account.category}</td>
-									<td>{account.owner}</td>
+									<td>{ownerName(owners, account.owner_user_id)}</td>
 									<td class="font-semibold text-primary-600-400"
 										>{formatPLN(account.current_value)}</td
 									>
@@ -465,7 +465,7 @@
 								<tr>
 									<td class="font-medium">{account.name}</td>
 									<td>{categoryLabels[account.category] || account.category}</td>
-									<td>{account.owner}</td>
+									<td>{ownerName(owners, account.owner_user_id)}</td>
 									<td class="font-semibold text-error-600-400"
 										>{formatPLN(account.current_value)}</td
 									>
@@ -568,12 +568,10 @@
 
 			<label class="label">
 				<span class="font-semibold text-sm">Właściciel</span>
-				<select class="select" bind:value={formData.owner} required>
-					{#if !personas.some((p) => p.name === formData.owner)}
-						<option value={formData.owner}>{formData.owner}</option>
-					{/if}
-					{#each personas as persona}
-						<option value={persona.name}>{persona.name}</option>
+				<select class="select" bind:value={formData.owner_user_id}>
+					<option value={null}>Wspólne</option>
+					{#each owners as owner}
+						<option value={owner.id}>{owner.name}</option>
 					{/each}
 				</select>
 			</label>
@@ -683,7 +681,7 @@
 									<td>{new Date(transaction.date).toLocaleDateString('pl-PL')}</td>
 									<td class="font-semibold text-primary-600-400">{formatPLN(transaction.amount)}</td
 									>
-									<td>{transaction.owner}</td>
+									<td>{ownerName(owners, transaction.owner_user_id)}</td>
 									<td class="text-right">
 										<button
 											type="button"
@@ -737,9 +735,10 @@
 
 						<label class="label">
 							<span class="font-semibold text-sm">Właściciel</span>
-							<select class="select" bind:value={transactionFormData.owner} required>
-								{#each personas as persona}
-									<option value={persona.name}>{persona.name}</option>
+							<select class="select" bind:value={transactionFormData.owner_user_id}>
+								<option value={null}>Wspólne</option>
+								{#each owners as owner}
+									<option value={owner.id}>{owner.name}</option>
 								{/each}
 							</select>
 						</label>

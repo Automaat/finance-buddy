@@ -7,7 +7,7 @@ export interface Debt {
 	id: number;
 	account_id: number;
 	account_name: string;
-	account_owner: string;
+	account_owner_user_id: number | null;
 	name: string;
 	debt_type: string;
 	start_date: string;
@@ -29,7 +29,7 @@ export interface DebtPayment {
 	account_name: string;
 	amount: number;
 	date: string;
-	owner: string;
+	owner_user_id: number | null;
 	created_at: string;
 }
 
@@ -42,14 +42,14 @@ export interface DebtsListResponse {
 
 export const load: PageLoad = async ({ fetch }) => {
 	const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
-	const [debtsResponse, personasResponse] = await Promise.all([
+	const [debtsResponse, ownersResponse] = await Promise.all([
 		fetch(`${apiUrl}/api/debts`),
-		fetch(`${apiUrl}/api/personas`)
+		fetch(`${apiUrl}/api/users`)
 	]);
 	if (!debtsResponse.ok) {
 		throw error(debtsResponse.status, 'Failed to load debts');
 	}
 	const debts = await debtsResponse.json();
-	const personas = personasResponse.ok ? await personasResponse.json() : [];
-	return { ...debts, personas };
+	const owners = ownersResponse.ok ? await ownersResponse.json() : [];
+	return { ...debts, owners };
 };
