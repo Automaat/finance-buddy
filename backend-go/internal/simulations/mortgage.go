@@ -9,8 +9,6 @@ import (
 	"math"
 )
 
-const belkaRate = 0.19
-
 // MortgageInputs mirrors MortgageVsInvestInputs after validation.
 type MortgageInputs struct {
 	RemainingPrincipal   float64
@@ -76,7 +74,7 @@ func (e *BudgetTooLowError) Error() string { return "budget below required payme
 // backend/app/services/simulations/mortgage.simulate_mortgage_vs_invest.
 func SimulateMortgageVsInvest(in MortgageInputs) (MortgageResult, error) {
 	monthlyRate := in.AnnualInterestRate / 100 / 12
-	monthlyInvestRate := in.ExpectedAnnualReturn * (1 - belkaRate) / 100 / 12
+	monthlyInvestRate := in.ExpectedAnnualReturn * (1 - capitalGainsTaxRate) / 100 / 12
 	n := in.RemainingMonths
 	p := in.RemainingPrincipal
 
@@ -213,7 +211,7 @@ func mortgageSummary(in MortgageInputs, regularPayment float64, s finalState) Mo
 		MonthsSaved:              monthsSaved,
 		WinningStrategy:          winningStrategy,
 		NetAdvantage:             round(netAdvantage, 2),
-		BreakEvenGrossReturn:     round(in.AnnualInterestRate/(1-belkaRate), 4),
+		BreakEvenGrossReturn:     round(in.AnnualInterestRate/(1-capitalGainsTaxRate), 4),
 	}
 }
 

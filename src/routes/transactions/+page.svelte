@@ -17,7 +17,7 @@
 
 	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
 	const personas = $derived(data.personas as Persona[]);
-	const defaultOwner = $derived(personas.length > 0 ? personas[0].name : 'Marcin');
+	const defaultOwner = $derived(personas.length > 0 ? personas[0].name : '');
 
 	let filterAccountId = $state(untrack(() => data.filters.account_id || ''));
 	let filterOwner = $state(untrack(() => data.filters.owner || ''));
@@ -113,6 +113,11 @@
 	}
 
 	async function generatePPKContributions() {
+		if (!ppkGenerateData.owner) {
+			ppkGenerateError = 'Wybierz właściciela';
+			return;
+		}
+
 		ppkGenerateError = '';
 		ppkGenerating = true;
 
@@ -142,6 +147,11 @@
 	async function createTransaction() {
 		if (!newTransactionData.account_id) {
 			transactionError = 'Wybierz konto';
+			return;
+		}
+
+		if (!newTransactionData.owner) {
+			transactionError = 'Wybierz właściciela';
 			return;
 		}
 

@@ -4,6 +4,7 @@
 	import type { EChartsOption } from 'echarts';
 	import { formatPLN } from '$lib/utils/format';
 	import { isMobile, isTablet } from '$lib/utils/viewport';
+	import { chartPalette, chartAccent, chartAccentGradient } from '$lib/utils/theme';
 
 	interface Props {
 		netWorthHistory: { date: string; value: number }[];
@@ -58,11 +59,11 @@
 					smooth: true,
 					areaStyle: {
 						color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-							{ offset: 0, color: 'rgba(225, 29, 72, 0.5)' },
-							{ offset: 1, color: 'rgba(225, 29, 72, 0.1)' }
+							{ offset: 0, color: chartAccentGradient[0] },
+							{ offset: 1, color: chartAccentGradient[1] }
 						])
 					},
-					lineStyle: { color: '#e11d48', width: 2 }
+					lineStyle: { color: chartAccent, width: 2 }
 				}
 			],
 			grid: gridConfig
@@ -79,16 +80,7 @@
 				textStyle: { fontSize: titleFontSize }
 			},
 			tooltip: { trigger: 'item', formatter: '{b}: {c} PLN ({d}%)' },
-			color: [
-				'#e11d48',
-				'#f43f5e',
-				'#fb7185',
-				'#fda4af',
-				'#881337',
-				'#9f1239',
-				'#be123c',
-				'#be185d'
-			],
+			color: [...chartPalette],
 			series: [
 				{
 					type: 'pie',

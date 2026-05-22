@@ -115,7 +115,6 @@ type BrokerageParams struct {
 // SimulateBrokerageAccount ports simulate_brokerage_account — taxable account
 // with 19% capital-gains tax on positive annual returns.
 func SimulateBrokerageAccount(p BrokerageParams, currentAge, retirementAge, currentYear int, annualReturnRate float64) AccountSimulation {
-	const capitalGainsTaxRate = 19.0
 	years := retirementAge - currentAge
 	balance := p.StartingBalance
 	projections := make([]YearlyProjection, 0, years)
@@ -127,7 +126,7 @@ func SimulateBrokerageAccount(p BrokerageParams, currentAge, retirementAge, curr
 		grossReturns := balance * (annualReturnRate / 100)
 		netReturns := grossReturns
 		if grossReturns > 0 {
-			netReturns = grossReturns * (1 - capitalGainsTaxRate/100)
+			netReturns = grossReturns * (1 - capitalGainsTaxRate)
 		}
 		balance += netReturns
 		cumulativeReturns += netReturns
