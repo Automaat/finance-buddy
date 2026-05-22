@@ -41,123 +41,6 @@ jobs:
       - name: Build
         run: npm run build
 
-  backend:
-    runs-on: ubuntu-24.04
-    services:
-      postgres:
-        image: postgres:18-alpine
-        env:
-          POSTGRES_USER: finance
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: finance
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
-        with:
-          experimental: true
-        env:
-          MISE_PYTHON_COMPILE: '0'
-
-      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
-
-      - name: Install dependencies
-        run: uv sync
-        working-directory: backend
-
-      - name: Run ruff linter
-        run: uv run ruff check .
-        working-directory: backend
-
-      - name: Run ruff formatter
-        run: uv run ruff format --check .
-        working-directory: backend
-
-      - name: Run type checker
-        run: uv run pyrefly check .
-        working-directory: backend
-
-      - name: Run tests with coverage
-        run: uv run pytest
-        working-directory: backend
-        env:
-          DATABASE_URL: postgresql://finance:password@localhost:5432/finance
-          APP_PASSWORD: test
-          CORS_ORIGINS: http://localhost:3000
-
-      - name: OpenAPI drift check
-        run: |
-          uv run python scripts/dump_openapi.py
-          if ! git diff --exit-code ../api/openapi.v1.json; then
-            echo "::error::api/openapi.v1.json is out of date." \
-                 "Regenerate with: (cd backend && uv run python scripts/dump_openapi.py)" \
-                 "and commit the result, or bump to openapi.v2.json if the change is intentional."
-            exit 1
-          fi
-        working-directory: backend
-
-      - name: Upload backend coverage
-        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./backend/coverage.xml
-          flags: backend
-          name: backend-coverage
-
-  bb-tests:
-    runs-on: ubuntu-24.04
-    services:
-      postgres:
-        image: postgres:18-alpine
-        env:
-          POSTGRES_USER: bb
-          POSTGRES_PASSWORD: bb
-          POSTGRES_DB: bb
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
-        with:
-          experimental: true
-        env:
-          MISE_PYTHON_COMPILE: '0'
-
-      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
-
-      - name: Install backend dependencies
-        run: uv sync
-        working-directory: backend
-
-      - name: Install bb-tests dependencies
-        run: uv sync
-        working-directory: backend-bb-tests
-
-      - name: Lint bb-tests
-        run: |
-          uv run --with ruff ruff check .
-          uv run --with ruff ruff format --check .
-        working-directory: backend-bb-tests
-
-      - name: Run black-box tests
-        run: uv run pytest -v
-        working-directory: backend-bb-tests
-        env:
-          BB_DATABASE_URL: postgresql://bb:bb@localhost:5432/bb
-
   bb-tests-go:
     # Black-box parity gate: runs only the endpoints that have been cut over
     # to backend-go. Expand the test list in this job with each cutover PR.
@@ -194,163 +77,80 @@ jobs:
           go-version-file: backend-go/go.mod
           cache-dependency-path: backend-go/go.sum
 
-      - name: Install backend deps (for alembic)
-        run: uv sync
-        working-directory: backend
-
       - name: Install bb-tests deps
         run: uv sync
         working-directory: backend-bb-tests
 
-      - name: Run alembic upgrade head
-        run: uv run alembic upgrade head
-        working-directory: backend
-        env:
-          DATABASE_URL: ${{ env.BB_DSN }}
-          APP_PASSWORD: bb
-          CORS_ORIGINS: http://localhost:3000
-
-      - name: Seed bb fixtures
+      - name: Lint bb-tests
         run: |
-          uv run python -c "
-          import sys
-          sys.path.insert(0, '.')
-          from fixtures.seed import seed
-          seed('${{ env.BB_DSN }}')
-          "
+          uv run --with ruff ruff check .
+          uv run --with ruff ruff format --check .
+        working-directory: backend-bb-tests
+
+      # conftest.py builds + launches backend-go (which applies
+      # internal/db/schema.sql to the empty CI database itself) and seeds the
+      # fixtures — no Alembic, no separate start/seed steps.
+      - name: Run black-box tests against backend-go
+        run: uv run pytest -v
         working-directory: backend-bb-tests
         env:
-          BB_ALLOW_DESTRUCTIVE_SEED: '1'
-
-      - name: Build backend-go
-        run: go build -o /tmp/backend-go ./cmd/api
-        working-directory: backend-go
-
-      - name: Start backend-go
-        run: |
-          /tmp/backend-go &
-          echo $! > /tmp/backend-go.pid
-          for i in $(seq 1 30); do
-            curl -sf http://127.0.0.1:8000/health && break
-            sleep 1
-          done
-        env:
-          DATABASE_URL: ${{ env.BB_DSN }}
-          CORS_ORIGINS: http://localhost:3000
-          FB_ADDR: ':8000'
-
-      - name: Run parity tests against backend-go
-        # Expand this list with each cutover group that lands.
-        run: |
-          uv run pytest -v \
-            tests/test_health.py \
-            tests/test_config.py \
-            tests/test_personas.py \
-            tests/test_personas_mutations.py \
-            tests/test_goals.py \
-            tests/test_company_valuations.py \
-            tests/test_bonus_events.py \
-            tests/test_equity_grants.py \
-            tests/test_cpi.py \
-            tests/test_salary_records.py \
-            tests/test_zus.py \
-            tests/test_accounts.py \
-            tests/test_assets.py \
-            tests/test_snapshots.py \
-            tests/test_transactions.py \
-            tests/test_debt_payments.py \
-            tests/test_debts.py \
-            tests/test_retirement.py \
-            tests/test_investment.py \
-            tests/test_simulations.py \
-            tests/test_dashboard.py
-        working-directory: backend-bb-tests
-        env:
-          BB_BASE_URL: http://127.0.0.1:8000
           BB_DATABASE_URL: ${{ env.BB_DSN }}
-
-      - name: Stop backend-go
-        if: always()
-        run: kill "$(cat /tmp/backend-go.pid)" 2>/dev/null || true
+          BB_ALLOW_DESTRUCTIVE_SEED: '1'
 
   go-tests:
     runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        module:
-          - dir: migration/proxy
-            pkg: github.com/Automaat/finance-buddy/migration/proxy
-          - dir: backend-go
-            pkg: github.com/Automaat/finance-buddy/backend-go
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version-file: ${{ matrix.module.dir }}/go.mod
-          cache-dependency-path: ${{ matrix.module.dir }}/go.sum
+          go-version-file: backend-go/go.mod
+          cache-dependency-path: backend-go/go.sum
 
       - name: go vet
         run: go vet ./...
-        working-directory: ${{ matrix.module.dir }}
+        working-directory: backend-go
 
       - name: go test
         run: go test ./...
-        working-directory: ${{ matrix.module.dir }}
+        working-directory: backend-go
 
   lint-go:
     runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        module:
-          - migration/proxy
-          - backend-go
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version-file: ${{ matrix.module }}/go.mod
-          cache-dependency-path: ${{ matrix.module }}/go.sum
+          go-version-file: backend-go/go.mod
+          cache-dependency-path: backend-go/go.sum
 
       - uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee # v9.2.1
         with:
           version: v2.12.2
-          working-directory: ${{ matrix.module }}
+          working-directory: backend-go
 
   lint-nilaway:
     runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        module:
-          - dir: migration/proxy
-            pkg: github.com/Automaat/finance-buddy/migration/proxy
-          - dir: backend-go
-            pkg: github.com/Automaat/finance-buddy/backend-go
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version-file: ${{ matrix.module.dir }}/go.mod
-          cache-dependency-path: ${{ matrix.module.dir }}/go.sum
+          go-version-file: backend-go/go.mod
+          cache-dependency-path: backend-go/go.sum
 
       - name: Run nilaway
-        run: ./scripts/run-nilaway.sh "${{ matrix.module.dir }}" "${{ matrix.module.pkg }}"
+        run: ./scripts/run-nilaway.sh backend-go github.com/Automaat/finance-buddy/backend-go
 
   docker-publish:
     runs-on: ubuntu-24.04
-    needs: [frontend, backend, bb-tests, bb-tests-go, go-tests, lint-go, lint-nilaway]
+    needs: [frontend, bb-tests-go, go-tests, lint-go, lint-nilaway]
     if: |
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
       always() &&
       needs.frontend.result == 'success' &&
-      (needs.backend.result == 'success' || needs.backend.result == 'skipped') &&
-      needs.bb-tests.result == 'success' &&
       needs.bb-tests-go.result == 'success' &&
       needs.go-tests.result == 'success' &&
       needs.lint-go.result == 'success' &&
@@ -382,17 +182,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and push backend
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
-        with:
-          context: ./backend
-          push: true
-          tags: |
-            ghcr.io/automaat/finance-buddy-backend:latest
-            ghcr.io/automaat/finance-buddy-backend:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
       - name: Build and push backend-go
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
@@ -401,16 +190,5 @@ jobs:
           tags: |
             ghcr.io/automaat/finance-buddy-backend-go:latest
             ghcr.io/automaat/finance-buddy-backend-go:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push proxy
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
-        with:
-          context: ./migration/proxy
-          push: true
-          tags: |
-            ghcr.io/automaat/finance-buddy-proxy:latest
-            ghcr.io/automaat/finance-buddy-proxy:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

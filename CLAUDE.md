@@ -2,11 +2,14 @@
 
 Self-hosted personal finance dashboard for tracking net worth, goals, and investments. Replaces "Finansowa Forteca.xlsx" spreadsheet with automated tracking and visualizations.
 
-**Tech Stack:** SvelteKit 2.60, Svelte 5 (runes), TypeScript 6, FastAPI, Python 3.14, SQLAlchemy 2.0, pandas 2.3, PostgreSQL 18
+**Tech Stack:** SvelteKit 2.60, Svelte 5 (runes), TypeScript 6, Go 1.26 (chi + pgx + shopspring/decimal), PostgreSQL 18
 
 **Purpose:** Track Polish personal finance (IKE/IKZE/PPK retirement accounts), monitor net worth trends, manage financial goals, analyze asset allocation.
 
-> Version numbers below are indicative. `package.json` and `backend/pyproject.toml` are the single source of truth - check them when exact versions matter.
+> The backend was migrated from FastAPI/Python to Go endpoint-by-endpoint; the
+> Python backend has been decommissioned. `migration/` documents that effort.
+
+> Version numbers below are indicative. `package.json` and `backend-go/go.mod` are the single source of truth - check them when exact versions matter.
 
 ---
 
@@ -15,14 +18,17 @@ Self-hosted personal finance dashboard for tracking net worth, goals, and invest
 ### Directory Layout
 
 ```
-/backend/          # FastAPI + SQLAlchemy + pandas
-  /app/
-    /api/          # Routers (dashboard, accounts, snapshots)
-    /models/       # SQLAlchemy ORM (Account, Snapshot, Goal)
-    /schemas/      # Pydantic DTOs
-    /services/     # Business logic + pandas calculations
-    /core/         # Config, database, init_db
-  /tests/          # Pytest tests (test_*.py)
+/backend-go/       # Go backend (chi router + pgx)
+  /cmd/api/        # main — server wiring, scheduler, schema bootstrap
+  /internal/
+    /<domain>/     # one package per endpoint group: store.go (pgx),
+                   # handler.go (chi), validation.go, errors.go
+    /db/           # pool wiring + schema.sql (baseline schema, applied
+                   # on first start) + scheduler-facing helpers
+    /server/       # route registration
+    /scheduler/    # in-process CPI monthly-refresh job
+/backend-bb-tests/ # black-box regression suite (pytest) against backend-go
+/migration/        # migration record: cutover docs + archived proxy
 /src/              # SvelteKit frontend
   /routes/         # File-based routing (+page.svelte, +page.ts)
   /lib/
@@ -34,9 +40,9 @@ Self-hosted personal finance dashboard for tracking net worth, goals, and invest
 
 ### Key Modules
 
-- **Dashboard API** (backend/app/api/dashboard.py) - Net worth endpoint
-- **Dashboard Service** (backend/app/services/dashboard.py) - pandas aggregations for time-series net worth, asset allocation
-- **Snapshot Creation** (backend/app/services/snapshots.py) - Monthly net worth snapshots with account values
+- **Dashboard** (backend-go/internal/dashboard/) - net worth, allocation, time series; aggregate-backed hot path + raw fallback
+- **Snapshots** (backend-go/internal/snapshots/) - monthly net worth snapshots + aggregate recompute
+- **Schema bootstrap** (backend-go/internal/db/schema.go) - applies schema.sql to an empty database on startup
 - **Frontend Dashboard** (src/routes/+page.svelte) - ECharts visualizations, net worth trends
 - **Financial Calculations** (src/lib/utils/calculations.ts) - Net worth, goal progress, month-over-month changes
 
@@ -47,7 +53,7 @@ Self-hosted personal finance dashboard for tracking net worth, goals, and invest
 ### Before Coding
 
 1. **ASK clarifying questions** until 95% confident about requirements
-2. **Research existing patterns** in codebase (especially backend/app/services/* for pandas, src/lib/* for frontend utils)
+2. **Research existing patterns** in codebase (especially backend-go/internal/* for backend, src/lib/* for frontend utils)
 3. **Create plan** and get approval before implementing
 4. **Work incrementally** - one focused task at a time
 
@@ -170,101 +176,41 @@ describe('calculateMonthsRemaining', () => {
 
 ---
 
-## Python Conventions (Backend)
+## Go Conventions (Backend)
 
 ### Code Style
 
-- **Formatter:** ruff format
-- **Linter:** ruff check (line-length: 100, target py3.12+)
-- **Type checker:** pyrefly 1.0
-- **Naming:** snake_case (functions/variables), PascalCase (classes)
-- **Type hints:** Required for all functions
-- **Indentation:** 4 spaces
+- **Formatter:** gofmt
+- **Linter:** golangci-lint (`backend-go/.golangci.yml`) + nilaway
+- **Naming:** Go standard — MixedCaps, exported = PascalCase
+- **No named return values** — enforced by the `nonamedreturns` linter
+- **Indentation:** tabs
 
 ### Linter Errors
 
-Same rules as TypeScript - **NEVER** use `# noqa` or `# type: ignore` comments. Fix issues properly or ASK.
+**NEVER** use linter-suppression directives (enforced by a hook). Fix the
+root cause — sentinel errors instead of `(nil, nil)`, value returns instead
+of pointers for nilaway, etc.
 
 ### Backend Patterns
 
-- **Layered architecture:** models → schemas → api → services
-- **Dependency injection:** FastAPI `Depends()` for database sessions (see backend/app/api/*)
-- **SQLAlchemy 2.0:** Mapped types, declarative base (see backend/app/models/snapshot.py)
-- **Pydantic v2:** Field validators for validation (see backend/app/schemas/snapshots.py)
-- **pandas:** Educational comments for complex operations (see backend/app/services/dashboard.py)
+- **One package per endpoint group** under `internal/<domain>/`: `store.go`
+  (pgx queries), `handler.go` (chi handlers + wire types), `validation.go`,
+  `errors.go` (sentinel errors).
+- **Money:** `shopspring/decimal`, parsed from raw JSON bytes (never via
+  `float64`) to preserve Numeric precision.
+- **Null-vs-missing** PATCH/PUT semantics: `map[string]json.RawMessage`.
+- **Schema:** `internal/db/schema.sql` is the frozen baseline, applied to an
+  empty database on startup by `ApplySchema`. Future schema changes are made
+  directly there.
 
-### Error Handling
+### Testing
 
-```python
-from sqlalchemy.exc import IntegrityError
-from fastapi import HTTPException
-
-try:
-    db.add(snapshot)
-    db.commit()
-    db.refresh(snapshot)
-except IntegrityError as e:
-    db.rollback()
-    raise HTTPException(
-        status_code=400,
-        detail=f"Snapshot for date {data.date} already exists"
-    ) from e
-```
-
-### Testing (pytest)
-
-- **Framework:** pytest 9.0
-- **Style:** Function-based tests with fixtures
-- **Location:** backend/tests/test_*.py
-- **Fixtures:** conftest.py (test_db_session)
-- **Integration tests:** testcontainers[postgres] for PostgreSQL tests
-- **Coverage threshold:** 80%
-
-**Test Pattern:**
-
-```python
-import pytest
-from fastapi import HTTPException
-from app.models import Account
-from app.services.snapshots import create_snapshot
-from app.schemas.snapshots import SnapshotCreate, SnapshotValueInput
-
-def test_create_snapshot_success(test_db_session):
-    """Test creating a snapshot with account values"""
-    # Create test accounts
-    account = Account(
-        name="Test Bank", type="asset", category="bank",
-        owner="Test", currency="PLN"
-    )
-    test_db_session.add(account)
-    test_db_session.commit()
-
-    # Create snapshot
-    data = SnapshotCreate(
-        date=date(2024, 1, 31),
-        notes="Test snapshot",
-        values=[SnapshotValueInput(account_id=account.id, value=10000.50)]
-    )
-
-    result = create_snapshot(test_db_session, data)
-
-    assert result.date == date(2024, 1, 31)
-    assert len(result.values) == 1
-
-def test_create_snapshot_invalid_account(test_db_session):
-    """Test creating snapshot with invalid account ID fails"""
-    data = SnapshotCreate(
-        date=date(2024, 1, 31),
-        notes="Test",
-        values=[SnapshotValueInput(account_id=999, value=1000)]
-    )
-
-    with pytest.raises(HTTPException) as exc_info:
-        create_snapshot(test_db_session, data)
-
-    assert exc_info.value.status_code == 404
-    assert "not found" in exc_info.value.detail
-```
+- **Go unit tests:** `go test ./...` in `backend-go/`.
+- **Black-box suite:** `backend-bb-tests/` (pytest) drives a real backend-go
+  over HTTP against a real Postgres — the regression oracle. conftest builds
+  + launches backend-go and seeds fixtures; `golden/` snapshots gate response
+  shape. Run with `cd backend-bb-tests && uv run pytest`.
 
 ---
 
@@ -289,7 +235,7 @@ def test_create_snapshot_invalid_account(test_db_session):
 - Three similar lines > premature abstraction
 - Only introduce complexity if clearly justified
 - Make minimal, surgical changes
-- Examine codebase for similar patterns FIRST (especially backend/app/services/* and src/lib/utils/*)
+- Examine codebase for similar patterns FIRST (especially backend-go/internal/* and src/lib/utils/*)
 - Reuse existing components/utilities/logic
 - Consistency > perfection
 
@@ -305,13 +251,13 @@ def test_create_snapshot_invalid_account(test_db_session):
 
 ### Pattern Drift Threats
 
-**pandas calculations:**
-- Keep educational comments for complex operations (see backend/app/services/dashboard.py)
-- Prefer simple iterrows() for small datasets over complex vectorization
+**Backend calculations:**
+- Keep aggregation code straightforward — plain loops over small datasets
+  (monthly snapshots) beat clever optimization
 - Don't over-optimize - readability > performance for small data
 
 **API handlers:**
-- Keep simple: validate → call service → return response
+- Keep simple: validate → call store → return response
 - No middleware unless explicitly needed
 - Don't add caching/retry logic without clear requirements
 
@@ -356,7 +302,6 @@ def test_create_snapshot_invalid_account(test_db_session):
 
 ```bash
 mise run dev       # Start all services (docker-compose.dev.yml)
-mise run backend   # Backend only (port 8000)
 mise run frontend  # Frontend only (port 5173)
 mise run down      # Stop all services
 ```
@@ -374,17 +319,22 @@ npm run format           # prettier --write
 npm run check            # svelte-check (types)
 ```
 
-### Backend
+### Backend (Go)
 
 ```bash
-cd backend
-uv sync                  # Install dependencies
-uv run pytest            # Run tests
-uv run pytest --cov      # Tests with coverage
-uv run ruff check .      # Lint
-uv run ruff format .     # Format
-uv run pyrefly check .   # Type check
-uv run uvicorn app.main:app --reload  # Dev server (port 8000)
+cd backend-go
+go build ./cmd/api       # Build
+go test ./...            # Unit tests
+gofmt -w .               # Format
+golangci-lint run ./...  # Lint
+go run ./cmd/api         # Dev server (port 8000; needs DATABASE_URL)
+```
+
+### Black-box tests
+
+```bash
+cd backend-bb-tests
+uv run pytest            # Builds + launches backend-go, seeds, runs the suite
 ```
 
 ### Docker
@@ -432,27 +382,27 @@ docker-compose -f docker-compose.dev.yml down        # Stop
 - **ROR:** Rate of Return on investments
 
 **Financial Calculations:**
-- Net worth trends (time-series pandas aggregations)
-- Asset allocation percentages (groupby category, owner)
+- Net worth trends (time-series aggregations)
+- Asset allocation percentages (grouped by category, owner)
 - Goal progress + monthly contribution requirements
 - Month-over-month changes
 
 ### Known Issues & Gotchas
 
-- **Database migrations:** Alembic (backend/alembic/) with versioned, reversible revisions. `init_db` (backend/app/core/init_db.py) runs `alembic upgrade head` on startup; pre-Alembic databases are auto-stamped at the `0001` baseline. New schema changes: `uv run alembic revision --autogenerate -m "..."`
+- **Database schema:** `backend-go/internal/db/schema.sql` is the frozen baseline (a pg_dump of the final Alembic head). `ApplySchema` applies it to an empty database on startup and no-ops when tables already exist, so production is never re-DDL'd. Future schema changes are made directly in `schema.sql`.
 - **Polish labels:** All UI labels in Polish - no i18n/internationalization needed
-- **testcontainers:** PostgreSQL integration tests slower due to container startup (acceptable trade-off)
-- **pandas iterrows():** Acceptable for small datasets (monthly snapshots) - readability > performance
-- **Educational comments:** Encourage for complex pandas operations (see backend/app/services/dashboard.py lines 36-42, 44-46)
+- **testcontainers:** the black-box suite spins a real Postgres — slower startup, acceptable trade-off
 - **Currency:** All values stored as PLN (Polish Złoty) - no multi-currency support yet
+- **CPI scheduler:** `internal/scheduler` refreshes CPI from GUS monthly (16th, 04:00 Europe/Warsaw) + on startup if stale — single-instance only.
 
 ### Integration Points
 
-- **PostgreSQL 18:** Database via SQLAlchemy 2.0 (connection pooling, async support via asyncio.to_thread)
+- **PostgreSQL 18:** Database via pgx (connection pooling)
 - **ECharts 6.0:** Frontend visualizations (line charts for net worth trends)
 - **OpenProps 1.7:** CSS design tokens (var(--size-*), var(--color-*))
-- **Docker Compose:** Local development environment (PostgreSQL + backend + frontend)
-- **mise:** Tool version management (node 24, python 3.14, uv) + task runner
+- **Docker Compose:** Local development environment (PostgreSQL + backend-go + frontend)
+- **mise:** Tool version management (node 24, go 1.26) + task runner
+- **GUS BDL API:** monthly CPI source for inflation math
 
 ---
 

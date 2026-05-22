@@ -5,24 +5,27 @@ Self-hosted personal finance web app - beautiful dashboard for tracking net wort
 ## Tech Stack
 
 - **Frontend:** SvelteKit 2.60 + Svelte 5 (runes) + TypeScript 6
-- **Backend:** FastAPI + SQLAlchemy 2.0 + pandas (Python 3.14)
-- **Database:** PostgreSQL 18, Alembic migrations
+- **Backend:** Go (chi + pgx) — `backend-go/`
+- **Database:** PostgreSQL 18
 - **UI:** Tailwind CSS + OpenProps design tokens
 - **Charts:** Apache ECharts 6
 - **Deployment:** Docker Compose
 
-> Exact versions live in `package.json` and `backend/pyproject.toml` -
+> Exact versions live in `package.json` and `backend-go/go.mod` -
 > those manifests are the single source of truth.
+
+> The backend was originally FastAPI/Python; it was migrated to Go
+> endpoint-by-endpoint and the Python backend has been decommissioned.
+> `migration/` documents that effort.
 
 ## Development
 
 ### Prerequisites
 
 - Node.js 24+
-- Python 3.14+
+- Go 1.26+
 - PostgreSQL 18 (or use Docker Compose)
 - [mise](https://mise.jdx.dev/) - manages tool versions and runs tasks
-- [uv](https://docs.astral.sh/uv/) - Python dependency manager
 
 ### Setup
 
@@ -32,10 +35,10 @@ Self-hosted personal finance web app - beautiful dashboard for tracking net wort
 npm install
 ```
 
-2. Install backend dependencies:
+2. Build the backend:
 
 ```bash
-cd backend && uv sync && cd ..
+cd backend-go && go build ./... && cd ..
 ```
 
 3. Copy environment variables:
@@ -70,8 +73,9 @@ npm run dev
 
 ### Docker Compose
 
-`docker-compose.yml` runs the frontend, backend, and PostgreSQL together
-from the published `ghcr.io/automaat/finance-buddy-*` images.
+`docker-compose.yml` runs the frontend, backend-go, and PostgreSQL together
+from the published `ghcr.io/automaat/finance-buddy-*` images. backend-go
+applies the database schema on first start.
 
 ```bash
 # Required env vars (no defaults - the stack fails fast without them)

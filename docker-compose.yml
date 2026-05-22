@@ -1,15 +1,4 @@
 services:
-  backend:
-    image: ghcr.io/automaat/finance-buddy-backend:latest
-    container_name: finance-backend
-    environment:
-      - DATABASE_URL=${DATABASE_URL:-postgresql://finance:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/finance}
-      - APP_PASSWORD=${APP_PASSWORD:?APP_PASSWORD must be set}
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
-    restart: unless-stopped
-    depends_on:
-      - postgres
-
   backend-go:
     image: ghcr.io/automaat/finance-buddy-backend-go:latest
     container_name: finance-backend-go
@@ -17,19 +6,11 @@ services:
       - DATABASE_URL=${DATABASE_URL:-postgresql://finance:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/finance}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
       - FB_ADDR=:8000
+    ports:
+      - '8000:8000'
     restart: unless-stopped
     depends_on:
       - postgres
-
-  proxy:
-    image: ghcr.io/automaat/finance-buddy-proxy:latest
-    container_name: finance-proxy
-    ports:
-      - '8080:8080'
-    restart: unless-stopped
-    depends_on:
-      - backend
-      - backend-go
 
   frontend:
     image: ghcr.io/automaat/finance-buddy-frontend:latest
@@ -37,13 +18,13 @@ services:
     ports:
       - '3000:3000'
     environment:
-      - PUBLIC_API_URL=http://proxy:8080
-      - PUBLIC_API_URL_BROWSER=${PUBLIC_API_URL_BROWSER:-http://localhost:8080}
+      - PUBLIC_API_URL=http://backend-go:8000
+      - PUBLIC_API_URL_BROWSER=${PUBLIC_API_URL_BROWSER:-http://localhost:8000}
       - ORIGIN=${ORIGIN:-http://localhost:3000}
       - APP_PASSWORD=${APP_PASSWORD:?APP_PASSWORD must be set}
     restart: unless-stopped
     depends_on:
-      - proxy
+      - backend-go
 
   postgres:
     image: postgres:18-alpine

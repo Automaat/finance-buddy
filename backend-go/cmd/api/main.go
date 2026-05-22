@@ -88,6 +88,11 @@ func run() int {
 		deps.Pool = pool
 		logger.Info("db pool ready")
 
+		if err := db.ApplySchema(ctx, pool); err != nil {
+			logger.Error("apply schema", "err", err)
+			return 2
+		}
+
 		// CPI monthly-refresh scheduler — replaces the Python APScheduler job.
 		sched := scheduler.NewCPIScheduler(cpi.NewStore(pool), cpi.NewGUSFetcher(), logger)
 		go sched.Run(ctx)

@@ -43,6 +43,10 @@ Finansowa Forteca.xlsx
 *.bak
 data/
 
+# backend-go's baseline schema is source (embedded via //go:embed) — track it
+# despite the *.sql ignore above.
+!backend-go/internal/db/schema.sql
+
 # Python build artifacts
 *.egg-info/
 
