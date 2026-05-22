@@ -1,10 +1,10 @@
 # backend-bb-tests
 
-Black-box test harness for the Finance Buddy backend. Boots a real HTTP server against a real Postgres and serves the same suite as a parity oracle during the Python→Go migration.
+Black-box regression suite for the Finance Buddy Go backend. Builds + boots `backend-go` against a real Postgres and exercises every endpoint over HTTP.
 
 ## Why this exists
 
-During per-endpoint Python→Go cutover, this suite is the contract: a Go endpoint is only ready when it passes the same tests that pass against Python. The suite is language-agnostic — it talks to the backend over HTTP and seeds Postgres directly.
+This suite was the contract for the per-endpoint Python→Go cutover: a Go endpoint was only ready when it passed the same tests that passed against Python. The Python backend is now decommissioned; the suite remains as the regression oracle for `backend-go`. It is language-agnostic — it talks to the backend over HTTP and seeds Postgres directly.
 
 ## Run
 
@@ -20,14 +20,15 @@ Requires Docker (testcontainers spins up Postgres) and `uv`.
 
 All optional, all via env:
 
-| Var                | Purpose                                                                                               |
-| ------------------ | ----------------------------------------------------------------------------------------------------- |
-| `BB_BASE_URL`      | Hit this URL instead of launching uvicorn. Used to point the suite at the Go backend.                 |
-| `BB_DATABASE_URL`  | Use this DSN instead of testcontainers Postgres. Required when `BB_BASE_URL` is set.                  |
-| `BB_BACKEND_DIR`   | Override the FastAPI backend directory used to launch uvicorn. Defaults to `../backend`.              |
-| `BB_UPDATE_GOLDEN` | Truthy → overwrite `golden/*.json` with the current live response. Use after intentional API changes. |
+| Var                | Purpose                                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------------------------- |
+| `BB_BASE_URL`      | Hit this URL instead of building + launching backend-go. Point the suite at an already-running backend. |
+| `BB_DATABASE_URL`  | Use this DSN instead of testcontainers Postgres. Required when `BB_BASE_URL` is set.                    |
+| `BB_UPDATE_GOLDEN` | Truthy → overwrite `golden/*.json` with the current live response. Use after intentional API changes.   |
 
-Example — run the suite against a Go backend on `:9000` writing to the same Postgres:
+backend-go applies the baseline schema (`internal/db/schema.sql`) to an empty database itself on startup — there is no separate migration step.
+
+Example — run the suite against an already-running backend-go on `:9000`:
 
 ```bash
 BB_BASE_URL=http://localhost:9000 BB_DATABASE_URL=postgresql://... uv run pytest
@@ -38,7 +39,7 @@ BB_BASE_URL=http://localhost:9000 BB_DATABASE_URL=postgresql://... uv run pytest
 ```
 backend-bb-tests/
 ├── pyproject.toml      # uv project
-├── conftest.py         # session fixtures: postgres, alembic, seed, uvicorn, client
+├── conftest.py         # session fixtures: postgres, build+launch backend-go, seed, client
 ├── _golden.py          # assert_matches_golden() helper
 ├── fixtures/
 │   └── seed.py         # deterministic seed (truncate + insert via psycopg2)
@@ -112,4 +113,4 @@ Current status is intentionally minimal — the goal of the initial harness PR i
 
 ## CI
 
-Runs as a separate `bb-tests` job in `.github/workflows/ci.yml`. Postgres is provided by a GitHub Actions `services:` container (not testcontainers — testcontainers is used only for local runs), and the harness honors `BB_DATABASE_URL` to talk to it directly.
+Runs as the `bb-tests-go` job in `.github/workflows/ci.yml`. Postgres is provided by a GitHub Actions `services:` container (not testcontainers — testcontainers is used only for local runs); the harness honors `BB_DATABASE_URL` to talk to it directly and builds + launches backend-go itself.

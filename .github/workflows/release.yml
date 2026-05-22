@@ -81,17 +81,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and push backend
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
-        with:
-          context: ./backend
-          push: true
-          tags: |
-            ghcr.io/automaat/finance-buddy-backend:latest
-            ghcr.io/automaat/finance-buddy-backend:v${{ env.VERSION }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
       - name: Build and push backend-go
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
@@ -100,16 +89,5 @@ jobs:
           tags: |
             ghcr.io/automaat/finance-buddy-backend-go:latest
             ghcr.io/automaat/finance-buddy-backend-go:v${{ env.VERSION }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push proxy
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
-        with:
-          context: ./migration/proxy
-          push: true
-          tags: |
-            ghcr.io/automaat/finance-buddy-proxy:latest
-            ghcr.io/automaat/finance-buddy-proxy:v${{ env.VERSION }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

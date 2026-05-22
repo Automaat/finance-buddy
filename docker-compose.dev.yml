@@ -16,42 +16,12 @@ services:
       timeout: 3s
       retries: 5
 
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.dev
-    container_name: finance-backend
-    volumes:
-      - ./backend:/app
-    expose:
-      - '8000'
-    environment:
-      - DATABASE_URL=postgresql://finance:${POSTGRES_PASSWORD:-password}@postgres:5432/finance
-      - APP_PASSWORD=${APP_PASSWORD:-changeme}
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5174,http://localhost:3000}
-      - SEED_DEV_DATA=${SEED_DEV_DATA:-true}
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test:
-        [
-          'CMD',
-          'python',
-          '-c',
-          'import urllib.request; urllib.request.urlopen("http://localhost:8000/health")'
-        ]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-      start_period: 10s
-
   backend-go:
     build:
       context: ./backend-go
     container_name: finance-backend-go
-    expose:
-      - '8000'
+    ports:
+      - '8000:8000'
     environment:
       - DATABASE_URL=postgresql://finance:${POSTGRES_PASSWORD:-password}@postgres:5432/finance
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5174,http://localhost:3000}
@@ -66,20 +36,6 @@ services:
       retries: 5
       start_period: 10s
 
-  proxy:
-    build:
-      context: ./migration/proxy
-    container_name: finance-proxy
-    ports:
-      - '8080:8080'
-    volumes:
-      - ./migration/proxy/routes.yaml:/etc/proxy/routes.yaml:ro
-    depends_on:
-      backend:
-        condition: service_healthy
-      backend-go:
-        condition: service_healthy
-
   frontend:
     build:
       context: .
@@ -91,10 +47,11 @@ services:
     ports:
       - '5174:5173'
     environment:
-      - PUBLIC_API_URL=http://proxy:8080
-      - PUBLIC_API_URL_BROWSER=http://localhost:8080
+      - PUBLIC_API_URL=http://backend-go:8000
+      - PUBLIC_API_URL_BROWSER=http://localhost:8000
     depends_on:
-      - proxy
+      backend-go:
+        condition: service_healthy
 
 volumes:
   postgres-data:

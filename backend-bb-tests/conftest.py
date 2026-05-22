@@ -1,24 +1,22 @@
-"""Black-box test harness for the Finance Buddy backend.
+"""Black-box test harness for the Finance Buddy Go backend.
 
-Boots a real HTTP server against a real Postgres (testcontainers) and serves
-the same suite as a parity oracle for both the Python and Go backends.
+Boots backend-go against a real Postgres (testcontainers) and runs the suite
+as a regression oracle. (Pre-decommission this also served the Python
+backend; that backend is gone — backend-go is the only target now.)
 
 Knobs (all optional, all via environment):
-    BB_BASE_URL       Skip launching uvicorn; hit this URL instead. Useful when
-                      pointing the suite at a running Go backend during cutover.
+    BB_BASE_URL       Skip launching backend-go; hit this URL instead. Useful
+                      when the suite drives an already-running backend-go.
     BB_DATABASE_URL   Skip launching Postgres; use this DSN. Required if
                       BB_BASE_URL is set (so seed can talk to the same DB).
-    BB_BACKEND_DIR    Override the backend source directory used to launch
-                      uvicorn. Defaults to ../backend relative to this file.
     BB_UPDATE_GOLDEN  Truthy → overwrite the golden/ snapshots with the live
                       response (used to refresh after intentional changes).
 
 Default flow (everything unset) — one-time per session:
     1. Start a Postgres testcontainer.
-    2. Run `alembic upgrade head` against it.
+    2. Build + launch backend-go (it applies internal/db/schema.sql itself).
     3. Seed deterministic fixtures.
-    4. Launch uvicorn pointed at that Postgres.
-    5. Yield an httpx client to tests.
+    4. Yield an httpx client to tests.
 """
 
 from __future__ import annotations
@@ -38,7 +36,7 @@ from testcontainers.postgres import PostgresContainer
 from fixtures.seed import seed
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_BACKEND_DIR = REPO_ROOT / "backend"
+BACKEND_GO_DIR = REPO_ROOT / "backend-go"
 STARTUP_TIMEOUT_S = 30
 
 
@@ -89,68 +87,37 @@ def database_url() -> Iterator[str]:
 
 
 @pytest.fixture(scope="session")
-def backend_dir() -> Path:
-    override = os.environ.get("BB_BACKEND_DIR")
-    return Path(override).resolve() if override else DEFAULT_BACKEND_DIR
-
-
-@pytest.fixture(scope="session")
-def _migrated_db(database_url: str, backend_dir: Path) -> str:
-    """Run alembic upgrade head once per session."""
-    if os.environ.get("BB_BASE_URL"):
-        # Backend is external; assume it already manages its own schema.
-        return database_url
-    env = {
-        **os.environ,
-        "DATABASE_URL": database_url,
-        "APP_PASSWORD": "bb",
-        "CORS_ORIGINS": "http://localhost:3000",
-    }
+def _go_binary() -> Path:
+    """Build the backend-go binary once per session."""
+    binary = Path(subprocess.check_output(["mktemp"], text=True).strip())
     subprocess.run(
-        ["uv", "run", "alembic", "upgrade", "head"],
-        cwd=backend_dir,
-        env=env,
+        ["go", "build", "-o", str(binary), "./cmd/api"],
+        cwd=BACKEND_GO_DIR,
         check=True,
     )
-    return database_url
+    return binary
 
 
 @pytest.fixture(scope="session")
-def seeded_db(_migrated_db: str) -> str:
-    """Seed deterministic fixture data once per session."""
-    seed(_migrated_db)
-    return _migrated_db
-
-
-@pytest.fixture(scope="session")
-def base_url(seeded_db: str, backend_dir: Path) -> Iterator[str]:
-    """Yield the base URL for the API — externally supplied or locally launched."""
+def base_url(database_url: str, _go_binary: Path) -> Iterator[str]:
+    """Yield the base URL — externally supplied, or a locally launched
+    backend-go. backend-go applies the baseline schema on startup, then the
+    fixtures are seeded against the now-migrated database."""
     external = os.environ.get("BB_BASE_URL")
     if external:
+        seed(database_url)
         yield external.rstrip("/")
         return
 
     port = _pick_free_port()
     env = {
         **os.environ,
-        "DATABASE_URL": seeded_db,
-        "APP_PASSWORD": "bb",
+        "DATABASE_URL": database_url,
         "CORS_ORIGINS": "http://localhost:3000",
+        "FB_ADDR": f":{port}",
     }
     proc = subprocess.Popen(
-        [
-            "uv",
-            "run",
-            "uvicorn",
-            "app.main:app",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            str(port),
-            "--log-level",
-            "warning",
-        ],
-        cwd=backend_dir,
+        [str(_go_binary)],
         env=env,
         stdout=sys.stdout,
         stderr=sys.stderr,
@@ -158,6 +125,7 @@ def base_url(seeded_db: str, backend_dir: Path) -> Iterator[str]:
     url = f"http://127.0.0.1:{port}"
     try:
         _wait_for_http(f"{url}/health", STARTUP_TIMEOUT_S)
+        seed(database_url)
         yield url
     finally:
         proc.terminate()

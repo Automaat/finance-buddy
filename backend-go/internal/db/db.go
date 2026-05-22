@@ -1,7 +1,11 @@
-// Package db owns the Postgres connection pool wiring.
+// Package db owns the Postgres connection pool wiring and the baseline
+// schema.
 //
-// Alembic owns the schema (migration prep decision); this layer only opens
-// connections and executes queries.
+// Since the Python backend (which ran Alembic) was decommissioned, the Go
+// backend owns the schema. schema.sql is the frozen baseline — a pg_dump of
+// the final Alembic head. ApplySchema bootstraps a fresh database with it
+// and no-ops when the schema already exists, so production is never touched.
+// Future schema changes are made directly here.
 package db
 
 import (

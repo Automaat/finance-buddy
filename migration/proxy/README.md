@@ -1,6 +1,11 @@
-# Cutover proxy
+# Cutover proxy — ARCHIVED
 
-A tiny reverse proxy that flips individual endpoints from the Python backend to the Go backend, one at a time, during the migration. Now active in both `docker-compose.dev.yml` and `docker-compose.yml`: the frontend hits the proxy on `:8080`; the proxy forwards each request to either `backend` (Python) or `backend-go` based on `routes.yaml`.
+> **Archived.** The Python→Go migration is complete; every endpoint is on
+> `backend-go` and the Python backend has been decommissioned. This proxy is
+> no longer built, deployed, or wired into any docker-compose file. The
+> source is kept only as a record of how the cutover was done.
+
+A tiny reverse proxy that flipped individual endpoints from the Python backend to the Go backend, one at a time, during the migration. The frontend hit the proxy on `:8080`; the proxy forwarded each request to either `backend` (Python) or `backend-go` based on `routes.yaml`.
 
 ## How it works
 
