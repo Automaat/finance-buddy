@@ -94,15 +94,7 @@ func (s *Service) GetRateToPLN(ctx context.Context, currency string, onDate time
 	}
 	if cached != nil {
 		ageDays := int(target.Sub(cached.Date).Hours() / 24)
-		// A cached rate close enough to the target wins outright. For a
-		// *historical* target (older than the tolerance window) any cached
-		// rate ≤ target is final too: NBP only publishes business-day rates,
-		// so a prior fetch already persisted everything that exists for that
-		// period — re-fetching can never return a rate closer to a fixed
-		// past date. Without this guard a list endpoint re-hits NBP on every
-		// request for grants/bonuses dated more than a week ago.
-		targetIsRecent := time.Since(target) <= cacheToleranceDay*24*time.Hour
-		if ageDays <= cacheToleranceDay || !targetIsRecent {
+		if ageDays <= cacheToleranceDay {
 			return Result{Rate: cached.RatePLN, Found: true}, nil
 		}
 	}
