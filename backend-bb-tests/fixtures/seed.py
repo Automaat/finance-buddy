@@ -474,7 +474,13 @@ def _seed_equity_grants(cur: psycopg2.extensions.cursor) -> None:
 
 
 def _seed_fx_rates(cur: psycopg2.extensions.cursor) -> None:
+    # USD rows on the company-valuation date (2025-06-30) and the USD sign-on
+    # bonus date (2025-07-01) keep the equity-grant + bonus FX lookups as pure
+    # cache hits — without them every list request would miss the cache and
+    # block on a synchronous NBP fetch.
     rows = [
+        (date(2025, 6, 30), "USD", Decimal("3.720000")),
+        (date(2025, 7, 1), "USD", Decimal("3.730000")),
         (date(2026, 1, 31), "USD", Decimal("4.150000")),
         (date(2026, 1, 31), "EUR", Decimal("4.350000")),
     ]

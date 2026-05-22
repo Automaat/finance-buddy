@@ -55,3 +55,4 @@ backend-bb-tests/golden
 
 # Perf baseline — Python re-serializes sorted; prettier disagrees on formatting
 migration/perf/baseline.json
+migration/perf/go-baseline.json
