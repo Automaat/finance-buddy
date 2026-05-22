@@ -32,6 +32,7 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/personas"
 	"github.com/Automaat/finance-buddy/backend-go/internal/retirement"
 	"github.com/Automaat/finance-buddy/backend-go/internal/salaries"
+	"github.com/Automaat/finance-buddy/backend-go/internal/simulations"
 	"github.com/Automaat/finance-buddy/backend-go/internal/snapshots"
 	"github.com/Automaat/finance-buddy/backend-go/internal/transactions"
 	"github.com/Automaat/finance-buddy/backend-go/internal/zus"
@@ -128,6 +129,11 @@ func registerLedgerRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger)
 	invHandler := investment.NewHandler(investment.NewStore(pool), logger)
 	r.Get("/api/investment/stock-stats", invHandler.StockStats)
 	r.Get("/api/investment/bond-stats", invHandler.BondStats)
+
+	simHandler := simulations.NewHandler(simulations.NewStore(pool), logger)
+	r.Post("/api/simulations/mortgage-vs-invest", simHandler.MortgageVsInvest)
+	r.Post("/api/simulations/retirement", simHandler.Retirement)
+	r.Get("/api/simulations/prefill", simHandler.Prefill)
 }
 
 func registerCoreRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {

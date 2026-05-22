@@ -182,3 +182,11 @@ rules:
   - method: GET
     path_prefix: /api/investment
     upstream: http://backend-go:8000
+  # Group 12 — /api/simulations cut over to Go (mortgage-vs-invest, retirement
+  # projection, form prefill).
+  - method: GET
+    path_prefix: /api/simulations
+    upstream: http://backend-go:8000
+  - method: POST
+    path_prefix: /api/simulations
+    upstream: http://backend-go:8000

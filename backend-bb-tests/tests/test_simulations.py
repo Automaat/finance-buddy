@@ -109,7 +109,31 @@ def test_post_simulate_retirement_matches_golden(client: httpx.Client, update_go
     }
     response = client.post("/api/simulations/retirement", json=payload)
     assert response.status_code == 200, response.text
-    assert_matches_golden("simulations_retirement", response.json(), update=update_golden)
+    # 30-year compound projection leaves intermediate fields (annual_limit,
+    # limit_utilized_pct, balances) unrounded. Python's float ** int and Go's
+    # math.Pow diverge in the last ULP; compounded over 30 years that's a
+    # ~1e-6 PLN gap — far below the 0.01 PLN tolerance this endpoint targets.
+    # Round to 2 dp (== the documented tolerance) so the golden is
+    # backend-agnostic. (_golden.py sanctions per-test normalization.)
+    assert_matches_golden(
+        "simulations_retirement", _round_floats(response.json()), update=update_golden
+    )
+
+
+def _round_floats(value: object) -> object:
+    """Recursively round every float to 2 dp, leaving ints + bools intact —
+    erases backend float-precision noise within the 0.01 PLN tolerance."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, float):
+        return round(value, 2)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, dict):
+        return {k: _round_floats(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_round_floats(v) for v in value]
+    return value
 
 
 def test_post_simulate_retirement_happy_path(client: httpx.Client) -> None:
