@@ -26,8 +26,7 @@ beforeAll(() => {
 vi.mock('$env/dynamic/public', () => ({
 	env: {
 		PUBLIC_API_URL_BROWSER: 'http://localhost:8000',
-		PUBLIC_API_URL: 'http://localhost:8000',
-		PUBLIC_DEFAULT_OWNER: 'Marcin'
+		PUBLIC_API_URL: 'http://localhost:8000'
 	}
 }));
 

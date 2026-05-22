@@ -126,17 +126,14 @@ func (s *Store) Get(ctx context.Context, id int) (*BonusEvent, error) {
 	return b, nil
 }
 
-// Create inserts a row. The owner string is dual-written from owner_user_id
-// ($6) until a later phase drops the legacy column.
+// Create inserts a row.
 func (s *Store) Create(ctx context.Context, b *BonusEvent) (*BonusEvent, error) {
 	row := s.pool.QueryRow(ctx, `
 		INSERT INTO bonus_events (
-			date, amount, currency, type, company, owner, owner_user_id,
+			date, amount, currency, type, company, owner_user_id,
 			contract_type, notes, is_active, created_at
 		) VALUES (
-			$1, $2, $3, $4, $5,
-			COALESCE((SELECT name FROM users WHERE id = $6), 'Shared'),
-			$6, $7, $8, true, $9
+			$1, $2, $3, $4, $5, $6, $7, $8, true, $9
 		)
 		RETURNING `+selectColumns,
 		b.Date, b.Amount, b.Currency, b.Type, b.Company, b.OwnerUserID,
@@ -188,12 +185,9 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*BonusEvent,
 	if p.Notes != nil {
 		b.Notes = p.Notes
 	}
-	// owner is dual-written from owner_user_id ($6) until the legacy column
-	// is dropped.
 	row := s.pool.QueryRow(ctx, `
 		UPDATE bonus_events SET
 			date = $1, amount = $2, currency = $3, type = $4, company = $5,
-			owner = COALESCE((SELECT name FROM users WHERE id = $6), 'Shared'),
 			owner_user_id = $6, contract_type = $7, notes = $8
 		WHERE id = $9 AND is_active = true
 		RETURNING `+selectColumns,

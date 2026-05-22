@@ -80,15 +80,12 @@ func (s *Store) RecomputeForSnapshot(ctx context.Context, tx pgx.Tx, snapshotID 
 		if err != nil {
 			return fmt.Errorf("encode allocation_json: %w", err)
 		}
-		// owner is dual-written from owner_user_id ($3) until the legacy
-		// column is dropped in a later phase.
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO snapshot_aggregates (
-				snapshot_id, month, owner, owner_user_id, total_assets,
+				snapshot_id, month, owner_user_id, total_assets,
 				total_liabilities, net_worth, allocation_json, computed_at
 			) VALUES (
-				$1, $2, COALESCE((SELECT name FROM users WHERE id = $3), 'Shared'),
-				$3, $4, $5, $6, $7, $8
+				$1, $2, $3, $4, $5, $6, $7, $8
 			)`,
 			r.SnapshotID, r.Month, r.OwnerUserID,
 			r.TotalAssets, r.TotalLiabilities, r.NetWorth, allocJSON, now,

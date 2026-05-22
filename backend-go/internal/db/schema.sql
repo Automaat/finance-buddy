@@ -18,7 +18,7 @@ CREATE TABLE public.accounts (
     name character varying(255) NOT NULL,
     type character varying(50) NOT NULL,
     category character varying(100) NOT NULL,
-    owner character varying(100) NOT NULL,
+    owner_user_id integer,
     currency character varying(10) NOT NULL,
     account_wrapper character varying(50),
     purpose character varying(50) NOT NULL,
@@ -55,6 +55,27 @@ ALTER SEQUENCE public.accounts_id_seq OWNED BY public.accounts.id;
 
 CREATE TABLE public.alembic_version (
     version_num character varying(32) NOT NULL
+);
+
+
+--
+-- Name: users; Type: TABLE; Schema: public; Owner: -
+--
+-- Kept in sync with auth.Store.EnsureSchema, which runs the same CREATE TABLE
+-- IF NOT EXISTS against pre-existing databases. Declared here so the
+-- owner_user_id foreign keys below resolve when schema.sql bootstraps an
+-- empty database.
+
+CREATE TABLE public.users (
+    id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    username character varying(100) NOT NULL UNIQUE,
+    password_hash text NOT NULL,
+    is_admin boolean NOT NULL DEFAULT false,
+    name character varying(100),
+    surname character varying(100),
+    ppk_employee_rate numeric(5,2),
+    ppk_employer_rate numeric(5,2),
+    created_at timestamp without time zone NOT NULL DEFAULT (now() AT TIME ZONE 'utc')
 );
 
 
@@ -141,7 +162,7 @@ CREATE TABLE public.bonus_events (
     currency character varying(3) NOT NULL,
     type character varying(20) NOT NULL,
     company character varying(200) NOT NULL,
-    owner character varying(100) NOT NULL,
+    owner_user_id integer,
     contract_type character varying(50) NOT NULL,
     notes character varying(500),
     is_active boolean NOT NULL,
@@ -250,7 +271,7 @@ CREATE TABLE public.debt_payments (
     account_id integer NOT NULL,
     amount numeric(15,2) NOT NULL,
     date date NOT NULL,
-    owner character varying(100) NOT NULL,
+    owner_user_id integer,
     is_active boolean NOT NULL,
     created_at timestamp without time zone NOT NULL
 );
@@ -324,7 +345,7 @@ CREATE TABLE public.equity_grants (
     grant_date date NOT NULL,
     type character varying(20) NOT NULL,
     company character varying(200) NOT NULL,
-    owner character varying(100) NOT NULL,
+    owner_user_id integer,
     total_shares integer NOT NULL,
     strike_price numeric(15,4),
     currency character varying(3) NOT NULL,
@@ -434,39 +455,6 @@ ALTER SEQUENCE public.goals_id_seq OWNED BY public.goals.id;
 
 
 --
--- Name: personas; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.personas (
-    id integer NOT NULL,
-    name character varying(100) NOT NULL,
-    ppk_employee_rate numeric(5,2) NOT NULL,
-    ppk_employer_rate numeric(5,2) NOT NULL,
-    created_at timestamp without time zone NOT NULL
-);
-
-
---
--- Name: personas_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.personas_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: personas_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.personas_id_seq OWNED BY public.personas.id;
-
-
---
 -- Name: retirement_limits; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -474,7 +462,7 @@ CREATE TABLE public.retirement_limits (
     id integer NOT NULL,
     year integer NOT NULL,
     account_wrapper character varying(10) NOT NULL,
-    owner character varying(100) NOT NULL,
+    owner_user_id integer,
     limit_amount numeric(15,2) NOT NULL,
     notes character varying(255)
 );
@@ -510,7 +498,7 @@ CREATE TABLE public.salary_records (
     gross_amount numeric(15,2) NOT NULL,
     contract_type character varying(50) NOT NULL,
     company character varying(200) NOT NULL,
-    owner character varying(100) NOT NULL,
+    owner_user_id integer,
     is_active boolean NOT NULL,
     created_at timestamp without time zone NOT NULL
 );
@@ -544,7 +532,7 @@ CREATE TABLE public.snapshot_aggregates (
     id integer NOT NULL,
     snapshot_id integer NOT NULL,
     month date NOT NULL,
-    owner character varying(100) NOT NULL,
+    owner_user_id integer,
     total_assets numeric(15,2) NOT NULL,
     total_liabilities numeric(15,2) NOT NULL,
     net_worth numeric(15,2) NOT NULL,
@@ -648,7 +636,7 @@ CREATE TABLE public.transactions (
     account_id integer NOT NULL,
     amount numeric(15,2) NOT NULL,
     date date NOT NULL,
-    owner character varying(100) NOT NULL,
+    owner_user_id integer,
     transaction_type character varying(20),
     is_active boolean NOT NULL,
     created_at timestamp without time zone NOT NULL
@@ -750,13 +738,6 @@ ALTER TABLE ONLY public.fx_rates ALTER COLUMN id SET DEFAULT nextval('public.fx_
 --
 
 ALTER TABLE ONLY public.goals ALTER COLUMN id SET DEFAULT nextval('public.goals_id_seq'::regclass);
-
-
---
--- Name: personas id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.personas ALTER COLUMN id SET DEFAULT nextval('public.personas_id_seq'::regclass);
 
 
 --
@@ -898,22 +879,6 @@ ALTER TABLE ONLY public.goals
 
 
 --
--- Name: personas personas_name_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.personas
-    ADD CONSTRAINT personas_name_key UNIQUE (name);
-
-
---
--- Name: personas personas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.personas
-    ADD CONSTRAINT personas_pkey PRIMARY KEY (id);
-
-
---
 -- Name: retirement_limits retirement_limits_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -982,7 +947,7 @@ ALTER TABLE ONLY public.snapshot_values
 --
 
 ALTER TABLE ONLY public.snapshot_aggregates
-    ADD CONSTRAINT uix_snapshot_agg_snapshot_owner UNIQUE (snapshot_id, owner);
+    ADD CONSTRAINT uix_snapshot_agg_snapshot_owner UNIQUE NULLS NOT DISTINCT (snapshot_id, owner_user_id);
 
 
 --
@@ -1014,14 +979,7 @@ ALTER TABLE ONLY public.fx_rates
 --
 
 ALTER TABLE ONLY public.retirement_limits
-    ADD CONSTRAINT uq_year_wrapper_owner UNIQUE (year, account_wrapper, owner);
-
-
---
--- Name: ix_accounts_owner; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX ix_accounts_owner ON public.accounts USING btree (owner);
+    ADD CONSTRAINT uq_year_wrapper_owner UNIQUE NULLS NOT DISTINCT (year, account_wrapper, owner_user_id);
 
 
 --
@@ -1107,6 +1065,35 @@ ALTER TABLE ONLY public.snapshot_values
 
 ALTER TABLE ONLY public.transactions
     ADD CONSTRAINT transactions_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.accounts(id) ON DELETE CASCADE;
+
+
+--
+-- Name: owner_user_id foreign keys; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.accounts
+    ADD CONSTRAINT accounts_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.users(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.transactions
+    ADD CONSTRAINT transactions_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.users(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.salary_records
+    ADD CONSTRAINT salary_records_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.users(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.debt_payments
+    ADD CONSTRAINT debt_payments_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.users(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.bonus_events
+    ADD CONSTRAINT bonus_events_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.users(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.equity_grants
+    ADD CONSTRAINT equity_grants_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.users(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.retirement_limits
+    ADD CONSTRAINT retirement_limits_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.users(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.snapshot_aggregates
+    ADD CONSTRAINT snapshot_aggregates_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.users(id) ON DELETE RESTRICT;
 
 
 --

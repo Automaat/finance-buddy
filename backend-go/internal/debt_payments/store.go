@@ -174,8 +174,8 @@ func (s *Store) Create(ctx context.Context, p *DebtPayment) (*DebtPayment, error
 		return nil, fmt.Errorf("check duplicate payment: %w", err)
 	}
 	row := s.pool.QueryRow(ctx, `
-		INSERT INTO debt_payments (account_id, amount, date, owner, owner_user_id, is_active, created_at)
-		VALUES ($1, $2, $3, COALESCE((SELECT name FROM users WHERE id = $4), 'Shared'), $4, true, $5)
+		INSERT INTO debt_payments (account_id, amount, date, owner_user_id, is_active, created_at)
+		VALUES ($1, $2, $3, $4, true, $5)
 		RETURNING `+paymentCols,
 		p.AccountID, p.Amount, p.Date, p.OwnerUserID, time.Now().UTC(),
 	)

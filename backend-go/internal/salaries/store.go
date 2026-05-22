@@ -125,9 +125,7 @@ func (s *Store) Get(ctx context.Context, id int) (*SalaryRecord, error) {
 }
 
 // Create inserts a row. Returns ErrDuplicate when (owner_user_id, date)
-// already has an active record — matches Python's 409 contract. The owner
-// string is dual-written from owner_user_id ($5) until a later phase drops
-// the legacy column.
+// already has an active record — matches Python's 409 contract.
 func (s *Store) Create(ctx context.Context, r *SalaryRecord) (*SalaryRecord, error) {
 	var existing int
 	err := s.pool.QueryRow(ctx, `
@@ -144,11 +142,10 @@ func (s *Store) Create(ctx context.Context, r *SalaryRecord) (*SalaryRecord, err
 	}
 	row := s.pool.QueryRow(ctx, `
 		INSERT INTO salary_records (
-			date, gross_amount, contract_type, company, owner, owner_user_id,
+			date, gross_amount, contract_type, company, owner_user_id,
 			is_active, created_at
 		) VALUES (
-			$1, $2, $3, $4, COALESCE((SELECT name FROM users WHERE id = $5), 'Shared'),
-			$5, true, $6
+			$1, $2, $3, $4, $5, true, $6
 		)
 		RETURNING `+selectColumns,
 		r.Date, r.GrossAmount, r.ContractType, r.Company, r.OwnerUserID, time.Now().UTC(),
@@ -203,12 +200,9 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*SalaryRecor
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return nil, fmt.Errorf("check duplicate on update: %w", err)
 	}
-	// owner is dual-written from owner_user_id ($5) until the legacy column
-	// is dropped.
 	row := s.pool.QueryRow(ctx, `
 		UPDATE salary_records SET
 			date = $1, gross_amount = $2, contract_type = $3, company = $4,
-			owner = COALESCE((SELECT name FROM users WHERE id = $5), 'Shared'),
 			owner_user_id = $5
 		WHERE id = $6 AND is_active = true
 		RETURNING `+selectColumns,

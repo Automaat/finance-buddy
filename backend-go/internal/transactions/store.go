@@ -199,8 +199,8 @@ func (s *Store) Create(ctx context.Context, t *Transaction) (*Transaction, error
 		return nil, fmt.Errorf("check duplicate transaction: %w", err)
 	}
 	row := s.pool.QueryRow(ctx, `
-		INSERT INTO transactions (account_id, amount, date, owner, owner_user_id, transaction_type, is_active, created_at)
-		VALUES ($1, $2, $3, COALESCE((SELECT name FROM users WHERE id = $4), 'Shared'), $4, $5, true, $6)
+		INSERT INTO transactions (account_id, amount, date, owner_user_id, transaction_type, is_active, created_at)
+		VALUES ($1, $2, $3, $4, $5, true, $6)
 		RETURNING `+txCols,
 		t.AccountID, t.Amount, t.Date, t.OwnerUserID, t.TransactionType, time.Now().UTC(),
 	)

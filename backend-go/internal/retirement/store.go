@@ -247,19 +247,15 @@ func (s *Store) LimitConfigured(ctx context.Context, year int, wrapper string, o
 }
 
 // UpsertLimit creates the (year, wrapper, owner_user_id) row or updates
-// limit_amount + notes when it exists. The legacy owner string is
-// dual-written from owner_user_id ($3) until the column is dropped; the
-// uq_year_wrapper_owner constraint still keys on it.
+// limit_amount + notes when it exists. The conflict target keys on
+// owner_user_id; the unique constraint uses NULLS NOT DISTINCT so the
+// jointly-owned (NULL) bucket stays unique.
 func (s *Store) UpsertLimit(ctx context.Context, year int, wrapper string, ownerUserID *int, amount decimal.Decimal, notes *string) (*Limit, error) {
 	row := s.pool.QueryRow(ctx, `
-		INSERT INTO retirement_limits (year, account_wrapper, owner, owner_user_id, limit_amount, notes)
-		VALUES (
-			$1, $2, COALESCE((SELECT name FROM users WHERE id = $3), 'Shared'),
-			$3, $4, $5
-		)
-		ON CONFLICT (year, account_wrapper, owner) DO UPDATE
+		INSERT INTO retirement_limits (year, account_wrapper, owner_user_id, limit_amount, notes)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (year, account_wrapper, owner_user_id) DO UPDATE
 		SET limit_amount = EXCLUDED.limit_amount,
-		    owner_user_id = EXCLUDED.owner_user_id,
 		    notes = COALESCE(EXCLUDED.notes, retirement_limits.notes)
 		RETURNING id, year, account_wrapper, owner_user_id, limit_amount, notes`,
 		year, wrapper, ownerUserID, amount, notes,
@@ -383,14 +379,9 @@ func (s *Store) InsertPPKContributions(ctx context.Context, c PPKContribution) (
 	}
 	now := time.Now().UTC()
 	var empID, emprID int
-	// owner is dual-written from owner_user_id ($4) until the legacy column
-	// is dropped in a later phase.
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO transactions (account_id, amount, date, owner, owner_user_id, transaction_type, is_active, created_at)
-		VALUES (
-			$1, $2, $3, COALESCE((SELECT name FROM users WHERE id = $4), 'Shared'),
-			$4, 'employee', true, $5
-		)
+		INSERT INTO transactions (account_id, amount, date, owner_user_id, transaction_type, is_active, created_at)
+		VALUES ($1, $2, $3, $4, 'employee', true, $5)
 		RETURNING id`,
 		c.AccountID, c.EmployeeAmt, c.Date, c.OwnerUserID, now,
 	).Scan(&empID); err != nil {
@@ -400,11 +391,8 @@ func (s *Store) InsertPPKContributions(ctx context.Context, c PPKContribution) (
 		return nil, fmt.Errorf("insert employee txn: %w", err)
 	}
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO transactions (account_id, amount, date, owner, owner_user_id, transaction_type, is_active, created_at)
-		VALUES (
-			$1, $2, $3, COALESCE((SELECT name FROM users WHERE id = $4), 'Shared'),
-			$4, 'employer', true, $5
-		)
+		INSERT INTO transactions (account_id, amount, date, owner_user_id, transaction_type, is_active, created_at)
+		VALUES ($1, $2, $3, $4, 'employer', true, $5)
 		RETURNING id`,
 		c.AccountID, c.EmployerAmt, c.Date, c.OwnerUserID, now,
 	).Scan(&emprID); err != nil {
