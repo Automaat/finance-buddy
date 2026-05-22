@@ -36,13 +36,13 @@ test.describe('backend API', () => {
 		}
 	});
 
-	test('GET /api/personas returns seeded personas', async ({ request }) => {
-		const res = await request.get(`${apiUrl}/api/personas`);
+	test('GET /api/users returns owner-picker options', async ({ request }) => {
+		const res = await request.get(`${apiUrl}/api/users`);
 		expect(res.status()).toBe(200);
-		const personas = await res.json();
-		expect(Array.isArray(personas)).toBe(true);
-		expect(personas.length).toBeGreaterThan(0);
-		const names = personas.map((p: { name: string }) => p.name);
+		const users = await res.json();
+		expect(Array.isArray(users)).toBe(true);
+		expect(users.length).toBeGreaterThan(0);
+		const names = users.map((u: { name: string }) => u.name);
 		expect(names).toContain('Marcin');
 	});
 
