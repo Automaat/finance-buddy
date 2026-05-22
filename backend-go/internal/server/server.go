@@ -107,6 +107,7 @@ func registerRoutes(r chi.Router, cfg Config, pool *pgxpool.Pool, logger *slog.L
 	r.Group(func(r chi.Router) {
 		r.Use(auth.Authenticate(tokens))
 		r.Get("/api/auth/me", authHandler.Me)
+		r.Get("/api/users", authHandler.ListOwners)
 		r.With(auth.RequireAdmin).Get("/api/auth/users", authHandler.ListUsers)
 		r.With(auth.RequireAdmin).Post("/api/auth/users", authHandler.CreateUser)
 		r.With(auth.RequireAdmin).Put("/api/auth/users/{id}", authHandler.UpdateUser)
