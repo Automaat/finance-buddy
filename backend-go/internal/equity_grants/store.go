@@ -14,12 +14,13 @@ import (
 )
 
 // EquityGrant mirrors backend/app/models/equity_grant.EquityGrant.
+// OwnerUserID is the owning household member; nil means jointly owned.
 type EquityGrant struct {
 	ID                     int
 	GrantDate              time.Time
 	Type                   string
 	Company                string
-	Owner                  string
+	OwnerUserID            *int
 	TotalShares            int
 	StrikePrice            *decimal.Decimal
 	Currency               string
@@ -53,8 +54,8 @@ func (e *InvariantError) Error() string {
 
 // ListFilter narrows the active rows.
 type ListFilter struct {
-	Owner   *string
-	Company *string
+	OwnerUserID *int
+	Company     *string
 }
 
 // Store is the persistence boundary.
@@ -68,7 +69,7 @@ func NewStore(pool *pgxpool.Pool) *Store {
 }
 
 const selectColumns = `
-	id, grant_date, type, company, owner, total_shares, strike_price, currency,
+	id, grant_date, type, company, owner_user_id, total_shares, strike_price, currency,
 	vest_start_date, vest_cliff_months, vest_total_months, vest_frequency,
 	vest_custom_schedule, requires_liquidity_event, liquidity_event_date,
 	tax_treatment, notes, is_active, created_at
@@ -78,9 +79,9 @@ const selectColumns = `
 func (s *Store) List(ctx context.Context, f ListFilter) ([]EquityGrant, []string, error) {
 	conds := []string{"is_active = true"}
 	args := []any{}
-	if f.Owner != nil {
-		args = append(args, *f.Owner)
-		conds = append(conds, fmt.Sprintf("owner = $%d", len(args)))
+	if f.OwnerUserID != nil {
+		args = append(args, *f.OwnerUserID)
+		conds = append(conds, fmt.Sprintf("owner_user_id = $%d", len(args)))
 	}
 	if f.Company != nil {
 		args = append(args, *f.Company)
@@ -136,17 +137,21 @@ func (s *Store) Create(ctx context.Context, g *EquityGrant) (*EquityGrant, error
 	if err != nil {
 		return nil, fmt.Errorf("encode schedule: %w", err)
 	}
+	// owner ($4-derived) is dual-written from owner_user_id until a later
+	// phase drops the legacy owner string column.
 	row := s.pool.QueryRow(ctx, `
 		INSERT INTO equity_grants (
-			grant_date, type, company, owner, total_shares, strike_price, currency,
+			grant_date, type, company, owner, owner_user_id, total_shares,
+			strike_price, currency,
 			vest_start_date, vest_cliff_months, vest_total_months, vest_frequency,
 			vest_custom_schedule, requires_liquidity_event, liquidity_event_date,
 			tax_treatment, notes, is_active, created_at
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
+			$1, $2, $3, COALESCE((SELECT name FROM users WHERE id = $4), 'Shared'),
+			$4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
 			true, $17
 		) RETURNING `+selectColumns,
-		g.GrantDate, g.Type, g.Company, g.Owner, g.TotalShares, g.StrikePrice, g.Currency,
+		g.GrantDate, g.Type, g.Company, g.OwnerUserID, g.TotalShares, g.StrikePrice, g.Currency,
 		g.VestStartDate, g.VestCliffMonths, g.VestTotalMonths, g.VestFrequency,
 		customJSON, g.RequiresLiquidityEvent, g.LiquidityEventDate,
 		g.TaxTreatment, g.Notes, time.Now().UTC(),
@@ -159,7 +164,8 @@ type UpdatePatch struct {
 	GrantDate              *time.Time
 	Type                   *string
 	Company                *string
-	Owner                  *string
+	OwnerUserIDSet         bool
+	OwnerUserID            *int
 	TotalShares            *int
 	StrikePrice            *decimal.Decimal
 	Currency               *string
@@ -204,9 +210,13 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*EquityGrant
 	if err != nil {
 		return nil, fmt.Errorf("encode schedule: %w", err)
 	}
+	// owner is dual-written from owner_user_id ($4) until the legacy column
+	// is dropped.
 	row := s.pool.QueryRow(ctx, `
 		UPDATE equity_grants SET
-			grant_date = $1, type = $2, company = $3, owner = $4,
+			grant_date = $1, type = $2, company = $3,
+			owner = COALESCE((SELECT name FROM users WHERE id = $4), 'Shared'),
+			owner_user_id = $4,
 			total_shares = $5, strike_price = $6, currency = $7,
 			vest_start_date = $8, vest_cliff_months = $9, vest_total_months = $10,
 			vest_frequency = $11, vest_custom_schedule = $12,
@@ -214,7 +224,7 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*EquityGrant
 			tax_treatment = $15, notes = $16
 		WHERE id = $17 AND is_active = true
 		RETURNING `+selectColumns,
-		g.GrantDate, g.Type, g.Company, g.Owner,
+		g.GrantDate, g.Type, g.Company, g.OwnerUserID,
 		g.TotalShares, g.StrikePrice, g.Currency,
 		g.VestStartDate, g.VestCliffMonths, g.VestTotalMonths,
 		g.VestFrequency, customJSON,
@@ -273,7 +283,7 @@ func scanGrant(row pgx.Row) (*EquityGrant, error) {
 	var g EquityGrant
 	var customJSON []byte
 	err := row.Scan(
-		&g.ID, &g.GrantDate, &g.Type, &g.Company, &g.Owner,
+		&g.ID, &g.GrantDate, &g.Type, &g.Company, &g.OwnerUserID,
 		&g.TotalShares, &g.StrikePrice, &g.Currency,
 		&g.VestStartDate, &g.VestCliffMonths, &g.VestTotalMonths,
 		&g.VestFrequency, &customJSON,
@@ -312,8 +322,8 @@ func applyPatch(g *EquityGrant, p UpdatePatch) {
 	if p.Company != nil {
 		g.Company = *p.Company
 	}
-	if p.Owner != nil {
-		g.Owner = *p.Owner
+	if p.OwnerUserIDSet {
+		g.OwnerUserID = p.OwnerUserID
 	}
 	if p.TotalShares != nil {
 		g.TotalShares = *p.TotalShares

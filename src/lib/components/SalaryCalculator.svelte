@@ -4,6 +4,7 @@
 	import * as echarts from 'echarts';
 	import type { EChartsOption } from 'echarts';
 	import type { SalaryRecord } from '$lib/types/salaries';
+	import { type OwnerOption, ownerName } from '$lib/types/owners';
 	import {
 		type OfferInput,
 		type OfferBreakdown,
@@ -15,7 +16,7 @@
 	} from '$lib/utils/compensation';
 
 	interface Props {
-		data: { latestSalaries: SalaryRecord[] };
+		data: { latestSalaries: SalaryRecord[]; owners: OwnerOption[] };
 	}
 
 	let { data }: Props = $props();
@@ -351,7 +352,9 @@
 									}}
 								>
 									{#each data.latestSalaries as sal, si}
-										<option value={si}>{sal.owner} — {sal.company}</option>
+										<option value={si}>
+											{ownerName(data.owners, sal.owner_user_id)} — {sal.company}
+										</option>
 									{/each}
 								</select>
 							</label>

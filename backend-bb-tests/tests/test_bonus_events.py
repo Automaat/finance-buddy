@@ -8,13 +8,13 @@ import pytest
 from fixtures.seed import COMPANY_MARCIN_EMPLOYER, PERSONA_MARCIN
 
 
-def test_list_bonuses_includes_seeded(client: httpx.Client) -> None:
+def test_list_bonuses_includes_seeded(client: httpx.Client, owner_ids: dict[str, int]) -> None:
     response = client.get("/api/bonuses")
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["total_count"] >= 2
-    owners = {r["owner"] for r in body["bonus_events"]}
-    assert PERSONA_MARCIN in owners
+    owners = {r["owner_user_id"] for r in body["bonus_events"]}
+    assert owner_ids[PERSONA_MARCIN] in owners
     assert COMPANY_MARCIN_EMPLOYER in body["available_companies"]
 
 
@@ -25,7 +25,7 @@ def test_get_bonus_by_id_returns_seeded_record(client: httpx.Client) -> None:
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["id"] == sample["id"]
-    assert body["owner"] == sample["owner"]
+    assert body["owner_user_id"] == sample["owner_user_id"]
     assert body["amount"] == sample["amount"]
 
 
@@ -35,7 +35,9 @@ def test_get_bonus_not_found(client: httpx.Client) -> None:
     assert "detail" in response.json()
 
 
-def test_create_bonus_happy_path(client: httpx.Client, request: pytest.FixtureRequest) -> None:
+def test_create_bonus_happy_path(
+    client: httpx.Client, request: pytest.FixtureRequest, owner_ids: dict[str, int]
+) -> None:
     created_id: int | None = None
     try:
         payload = {
@@ -44,7 +46,7 @@ def test_create_bonus_happy_path(client: httpx.Client, request: pytest.FixtureRe
             "currency": "PLN",
             "type": "spot",
             "company": f"bb-test-{request.node.name}",
-            "owner": PERSONA_MARCIN,
+            "owner_user_id": owner_ids[PERSONA_MARCIN],
             "contract_type": "UOP",
             "notes": "test spot bonus",
         }
@@ -55,20 +57,21 @@ def test_create_bonus_happy_path(client: httpx.Client, request: pytest.FixtureRe
         assert body["amount"] == 3000.0
         assert body["currency"] == "PLN"
         assert body["type"] == "spot"
+        assert body["owner_user_id"] == owner_ids[PERSONA_MARCIN]
         assert body["is_active"] is True
     finally:
         if created_id is not None:
             client.delete(f"/api/bonuses/{created_id}")
 
 
-def test_create_bonus_validation_error(client: httpx.Client) -> None:
+def test_create_bonus_validation_error(client: httpx.Client, owner_ids: dict[str, int]) -> None:
     payload = {
         "date": "2025-09-15",
         "amount": 1000.0,
         "currency": "ZZZ",
         "type": "spot",
         "company": "bb-test-bad-currency",
-        "owner": PERSONA_MARCIN,
+        "owner_user_id": owner_ids[PERSONA_MARCIN],
         "contract_type": "UOP",
     }
     response = client.post("/api/bonuses", json=payload)
@@ -76,7 +79,9 @@ def test_create_bonus_validation_error(client: httpx.Client) -> None:
     assert "detail" in response.json()
 
 
-def test_update_bonus_happy_path(client: httpx.Client, request: pytest.FixtureRequest) -> None:
+def test_update_bonus_happy_path(
+    client: httpx.Client, request: pytest.FixtureRequest, owner_ids: dict[str, int]
+) -> None:
     created_id: int | None = None
     try:
         create_payload = {
@@ -85,7 +90,7 @@ def test_update_bonus_happy_path(client: httpx.Client, request: pytest.FixtureRe
             "currency": "PLN",
             "type": "spot",
             "company": f"bb-test-{request.node.name}",
-            "owner": PERSONA_MARCIN,
+            "owner_user_id": owner_ids[PERSONA_MARCIN],
             "contract_type": "UOP",
         }
         created = client.post("/api/bonuses", json=create_payload)
@@ -106,7 +111,7 @@ def test_update_bonus_happy_path(client: httpx.Client, request: pytest.FixtureRe
 
 
 def test_update_bonus_validation_error(
-    client: httpx.Client, request: pytest.FixtureRequest
+    client: httpx.Client, request: pytest.FixtureRequest, owner_ids: dict[str, int]
 ) -> None:
     created_id: int | None = None
     try:
@@ -116,7 +121,7 @@ def test_update_bonus_validation_error(
             "currency": "PLN",
             "type": "spot",
             "company": f"bb-test-{request.node.name}",
-            "owner": PERSONA_MARCIN,
+            "owner_user_id": owner_ids[PERSONA_MARCIN],
             "contract_type": "UOP",
         }
         created = client.post("/api/bonuses", json=create_payload)
@@ -134,14 +139,16 @@ def test_update_bonus_validation_error(
             client.delete(f"/api/bonuses/{created_id}")
 
 
-def test_delete_bonus_happy_path(client: httpx.Client, request: pytest.FixtureRequest) -> None:
+def test_delete_bonus_happy_path(
+    client: httpx.Client, request: pytest.FixtureRequest, owner_ids: dict[str, int]
+) -> None:
     create_payload = {
         "date": "2025-10-12",
         "amount": 1500.0,
         "currency": "PLN",
         "type": "spot",
         "company": f"bb-test-{request.node.name}",
-        "owner": PERSONA_MARCIN,
+        "owner_user_id": owner_ids[PERSONA_MARCIN],
         "contract_type": "UOP",
     }
     created = client.post("/api/bonuses", json=create_payload)

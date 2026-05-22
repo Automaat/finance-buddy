@@ -35,8 +35,8 @@
 		ValuationSource,
 		VestingFrequency
 	} from '$lib/types/salaries';
-	import type { Persona } from '$lib/types/personas';
 	import type { CpiSeries } from '$lib/types/cpi';
+	import { type OwnerOption, ownerName } from '$lib/types/owners';
 	import type { PageData } from './$types';
 
 	interface Props {
@@ -46,8 +46,8 @@
 	let { data }: Props = $props();
 
 	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
-	const personas = $derived(data.personas as Persona[]);
-	const defaultOwner = $derived(personas.length > 0 ? personas[0].name : 'Marcin');
+	const owners = $derived(data.owners as OwnerOption[]);
+	const defaultOwnerId = $derived<number | null>(owners.length > 0 ? owners[0].id : null);
 	const cpiSeries = $derived(data.cpiSeries as CpiSeries);
 	const inflationContext = $derived(data.salaries.inflation_context ?? {});
 	const inflationEntries = $derived(Object.values(inflationContext));
@@ -90,7 +90,9 @@
 	let chartContainer: HTMLDivElement;
 	let chart: echarts.ECharts | undefined;
 
-	let filterOwner = $state(untrack(() => data.filters.owner || ''));
+	let filterOwnerUserId = $state<number | null>(
+		untrack(() => (data.filters.owner_user_id ? Number(data.filters.owner_user_id) : null))
+	);
 	let filterDateFrom = $state(untrack(() => data.filters.date_from || ''));
 	let filterDateTo = $state(untrack(() => data.filters.date_to || ''));
 	let filterCompany = $state(untrack(() => data.filters.company || ''));
@@ -102,7 +104,7 @@
 		gross_amount: 0,
 		contract_type: 'UOP',
 		company: '',
-		owner: untrack(() => defaultOwner)
+		owner_user_id: untrack(() => defaultOwnerId)
 	});
 	let salaryError = $state('');
 	let savingSalary = $state(false);
@@ -110,15 +112,15 @@
 	const currentYear = new Date().getFullYear();
 
 	const latestContractByOwner = $derived.by(() => {
-		const map = new Map<string, string>();
+		const map = new Map<number | null, string>();
 		for (const r of data.salaries.salary_records) {
-			if (!map.has(r.owner)) map.set(r.owner, r.contract_type);
+			if (!map.has(r.owner_user_id)) map.set(r.owner_user_id, r.contract_type);
 		}
 		return map;
 	});
 
-	function netMonthlyForOwner(owner: string, grossMonthly: number): number | null {
-		const ct = latestContractByOwner.get(owner);
+	function netMonthlyForOwner(ownerUserId: number | null, grossMonthly: number): number | null {
+		const ct = latestContractByOwner.get(ownerUserId);
 		if (!ct) return null;
 		const allowed: PlContractType[] = ['UOP', 'B2B', 'UZ', 'UoD'];
 		if (!allowed.includes(ct as PlContractType)) return null;
@@ -133,11 +135,14 @@
 	};
 
 	const currentSalaryRows = $derived.by<CurrentSalaryRow[]>(() =>
-		Object.entries(data.salaries.current_salaries).map(([name, salary]) => ({
-			name,
-			salary,
-			net: salary !== null ? netMonthlyForOwner(name, salary) : null
-		}))
+		Object.entries(data.salaries.current_salaries).map(([key, salary]) => {
+			const ownerUserId = Number(key);
+			return {
+				name: ownerName(owners, ownerUserId),
+				salary,
+				net: salary !== null ? netMonthlyForOwner(ownerUserId, salary) : null
+			};
+		})
 	);
 
 	const allYears = $derived.by(() => {
@@ -149,11 +154,11 @@
 	});
 
 	let totalCompYear = $state(new Date().getFullYear());
-	let totalCompOwner = $state(untrack(() => defaultOwner));
+	let totalCompOwner = $state<number | null>(untrack(() => defaultOwnerId));
 	let includeEquityInTotal = $state(false);
 
 	type OwnerCompSummary = {
-		owner: string;
+		ownerUserId: number | null;
 		baseAnnualGross: number;
 		baseAnnualNet: number;
 		bonusesPln: number;
@@ -183,12 +188,12 @@
 	}
 
 	const compSummary = $derived.by<OwnerCompSummary | null>(() => {
-		if (!totalCompOwner) return null;
-		const owner = totalCompOwner;
+		if (totalCompOwner === null) return null;
+		const ownerUserId = totalCompOwner;
 		const yearEndIso = isoDateLocal(new Date(totalCompYear, 11, 31));
 
 		const latestSalary = data.salaries.salary_records.find(
-			(r) => r.owner === owner && r.date <= yearEndIso
+			(r) => r.owner_user_id === ownerUserId && r.date <= yearEndIso
 		);
 		const baseMonthly = latestSalary?.gross_amount ?? 0;
 		const baseAnnualGross = baseMonthly * 12;
@@ -202,7 +207,9 @@
 			: 0;
 
 		const bonusesPln = (data.bonuses?.bonus_events ?? [])
-			.filter((b) => b.owner === owner && new Date(b.date).getFullYear() === totalCompYear)
+			.filter(
+				(b) => b.owner_user_id === ownerUserId && new Date(b.date).getFullYear() === totalCompYear
+			)
 			.reduce((s, b) => s + (b.amount_pln ?? (b.currency === 'PLN' ? b.amount : 0)), 0);
 
 		// Net for bonuses: treat as additional gross in the same year and take the
@@ -218,7 +225,7 @@
 		let equityPaperHighPln = 0;
 		let hasEquityWithoutFx = false;
 		for (const g of data.equity?.equity_grants ?? []) {
-			if (g.owner !== owner) continue;
+			if (g.owner_user_id !== ownerUserId) continue;
 			if (g.paper_value_base_pln === null && g.paper_value_base !== null) {
 				hasEquityWithoutFx = true;
 				continue;
@@ -234,7 +241,7 @@
 		const equityNetPln = equityPaperPln * (1 - EQUITY_CAPITAL_GAINS_RATE);
 
 		return {
-			owner,
+			ownerUserId,
 			baseAnnualGross,
 			baseAnnualNet,
 			bonusesPln,
@@ -285,7 +292,7 @@
 		currency: 'PLN',
 		type: 'annual' as BonusType,
 		company: '',
-		owner: untrack(() => defaultOwner),
+		owner_user_id: untrack(() => defaultOwnerId),
 		contract_type: 'UOP',
 		notes: ''
 	});
@@ -305,7 +312,7 @@
 			currency: 'PLN',
 			type: 'annual',
 			company: '',
-			owner: defaultOwner,
+			owner_user_id: defaultOwnerId,
 			contract_type: 'UOP',
 			notes: ''
 		};
@@ -321,7 +328,7 @@
 			currency: bonus.currency,
 			type: bonus.type,
 			company: bonus.company,
-			owner: bonus.owner,
+			owner_user_id: bonus.owner_user_id,
 			contract_type: bonus.contract_type,
 			notes: bonus.notes ?? ''
 		};
@@ -549,7 +556,7 @@
 		grant_date: new Date().toISOString().split('T')[0],
 		type: 'rsu' as EquityGrantType,
 		company: '',
-		owner: untrack(() => defaultOwner),
+		owner_user_id: untrack(() => defaultOwnerId),
 		total_shares: 0,
 		strike_price: null as number | null,
 		currency: 'USD',
@@ -590,7 +597,7 @@
 			grant_date: new Date().toISOString().split('T')[0],
 			type: 'rsu',
 			company: '',
-			owner: defaultOwner,
+			owner_user_id: defaultOwnerId,
 			total_shares: 0,
 			strike_price: null,
 			currency: 'USD',
@@ -638,7 +645,7 @@
 			grant_date: grant.grant_date,
 			type: grant.type,
 			company: grant.company,
-			owner: grant.owner,
+			owner_user_id: grant.owner_user_id,
 			total_shares: grant.total_shares,
 			strike_price: grant.strike_price,
 			currency: grant.currency,
@@ -694,7 +701,7 @@
 				grant_date: equityFormData.grant_date,
 				type: equityFormData.type,
 				company: equityFormData.company,
-				owner: equityFormData.owner,
+				owner_user_id: equityFormData.owner_user_id,
 				total_shares: equityFormData.total_shares,
 				strike_price: equityFormData.type === 'option' ? equityFormData.strike_price : null,
 				currency: equityFormData.currency,
@@ -926,17 +933,17 @@
 		}
 	}
 
-	function getPreviousCompany(owner: string, date: string | null): string | null {
+	function getPreviousCompany(ownerUserId: number | null, date: string | null): string | null {
 		if (!date) return null;
 		return (
-			data.salaries.salary_records.find((r) => r.owner === owner && r.date === date)?.company ??
-			null
+			data.salaries.salary_records.find((r) => r.owner_user_id === ownerUserId && r.date === date)
+				?.company ?? null
 		);
 	}
 
 	function applyFilters() {
 		const params = new URLSearchParams();
-		if (filterOwner) params.set('owner', filterOwner);
+		if (filterOwnerUserId !== null) params.set('owner_user_id', String(filterOwnerUserId));
 		if (filterDateFrom) params.set('date_from', filterDateFrom);
 		if (filterDateTo) params.set('date_to', filterDateTo);
 		if (filterCompany) params.set('company', filterCompany);
@@ -945,7 +952,7 @@
 	}
 
 	function clearFilters() {
-		filterOwner = '';
+		filterOwnerUserId = null;
 		filterDateFrom = '';
 		filterDateTo = '';
 		filterCompany = '';
@@ -959,7 +966,7 @@
 			gross_amount: 0,
 			contract_type: 'UOP',
 			company: '',
-			owner: defaultOwner
+			owner_user_id: defaultOwnerId
 		};
 		salaryError = '';
 		showNewSalaryModal = true;
@@ -972,7 +979,7 @@
 			gross_amount: record.gross_amount,
 			contract_type: record.contract_type,
 			company: record.company,
-			owner: record.owner
+			owner_user_id: record.owner_user_id
 		};
 		salaryError = '';
 		showNewSalaryModal = true;
@@ -1265,8 +1272,8 @@
 				<label class="label">
 					<span class="text-xs">Właściciel</span>
 					<select class="select" bind:value={totalCompOwner}>
-						{#each personas as persona}
-							<option value={persona.name}>{persona.name}</option>
+						{#each owners as owner (owner.id)}
+							<option value={owner.id}>{owner.name}</option>
 						{/each}
 					</select>
 				</label>
@@ -1371,14 +1378,14 @@
 			</p>
 		{:else}
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-				{#each inflationEntries as ctx (ctx.owner)}
+				{#each inflationEntries as ctx (ctx.owner_user_id)}
 					<div class="card preset-tonal-surface p-4 space-y-2">
 						<div class="flex items-baseline justify-between flex-wrap gap-2">
-							<strong class="text-lg">{ctx.owner}</strong>
+							<strong class="text-lg">{ownerName(owners, ctx.owner_user_id)}</strong>
 							<span class="text-xs text-surface-700-300">
 								od {new Date(ctx.last_change_date).toLocaleDateString('pl-PL')}
-								{#if getPreviousCompany(ctx.owner, ctx.previous_change_date)}
-									· {getPreviousCompany(ctx.owner, ctx.previous_change_date)}
+								{#if getPreviousCompany(ctx.owner_user_id, ctx.previous_change_date)}
+									· {getPreviousCompany(ctx.owner_user_id, ctx.previous_change_date)}
 								{/if}
 							</span>
 						</div>
@@ -1455,10 +1462,10 @@
 			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 				<label class="label">
 					<span class="font-semibold text-sm">Właściciel</span>
-					<select class="select" bind:value={filterOwner}>
-						<option value="">Wszystkie</option>
-						{#each personas as persona}
-							<option value={persona.name}>{persona.name}</option>
+					<select class="select" bind:value={filterOwnerUserId}>
+						<option value={null}>Wszystkie</option>
+						{#each owners as owner (owner.id)}
+							<option value={owner.id}>{owner.name}</option>
 						{/each}
 					</select>
 				</label>
@@ -1518,7 +1525,7 @@
 						{#each data.salaries.salary_records as record}
 							<tr>
 								<td>{new Date(record.date).toLocaleDateString('pl-PL')}</td>
-								<td>{record.owner}</td>
+								<td>{ownerName(owners, record.owner_user_id)}</td>
 								<td>{record.company}</td>
 								<td class="font-semibold text-primary-600-400">{formatPLN(record.gross_amount)}</td>
 								<td>{record.contract_type}</td>
@@ -1594,7 +1601,7 @@
 										<tr>
 											<td>{new Date(bonus.date).toLocaleDateString('pl-PL')}</td>
 											<td>{bonusTypeLabels[bonus.type]}</td>
-											<td>{bonus.owner}</td>
+											<td>{ownerName(owners, bonus.owner_user_id)}</td>
 											<td class="font-semibold text-primary-600-400">
 												{formatBonusAmount(bonus.amount, bonus.currency)}
 												{#if bonus.currency !== 'PLN' && bonus.amount_pln !== null}
@@ -1695,7 +1702,7 @@
 										<tr>
 											<td>{new Date(grant.grant_date).toLocaleDateString('pl-PL')}</td>
 											<td>{equityTypeLabels[grant.type]}</td>
-											<td>{grant.owner}</td>
+											<td>{ownerName(owners, grant.owner_user_id)}</td>
 											<td class="font-semibold">
 												{formatShares(grant.vested_shares_today)} /
 												{formatShares(grant.total_shares)}
@@ -1927,9 +1934,9 @@
 
 		<label class="label">
 			<span class="font-semibold text-sm">Właściciel*</span>
-			<select class="select" bind:value={salaryFormData.owner} required>
-				{#each personas as persona}
-					<option value={persona.name}>{persona.name}</option>
+			<select class="select" bind:value={salaryFormData.owner_user_id} required>
+				{#each owners as owner (owner.id)}
+					<option value={owner.id}>{owner.name}</option>
 				{/each}
 			</select>
 		</label>
@@ -2007,9 +2014,9 @@
 
 		<label class="label">
 			<span class="font-semibold text-sm">Właściciel*</span>
-			<select class="select" bind:value={bonusFormData.owner} required>
-				{#each personas as persona}
-					<option value={persona.name}>{persona.name}</option>
+			<select class="select" bind:value={bonusFormData.owner_user_id} required>
+				{#each owners as owner (owner.id)}
+					<option value={owner.id}>{owner.name}</option>
 				{/each}
 			</select>
 		</label>
@@ -2088,9 +2095,9 @@
 
 		<label class="label">
 			<span class="font-semibold text-sm">Właściciel*</span>
-			<select class="select" bind:value={equityFormData.owner} required>
-				{#each personas as persona}
-					<option value={persona.name}>{persona.name}</option>
+			<select class="select" bind:value={equityFormData.owner_user_id} required>
+				{#each owners as owner (owner.id)}
+					<option value={owner.id}>{owner.name}</option>
 				{/each}
 			</select>
 		</label>

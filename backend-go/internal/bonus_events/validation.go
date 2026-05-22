@@ -52,11 +52,11 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *validat
 	}
 	r.Company = company
 
-	owner, vErr := requireString(raw, "owner", "Owner cannot be empty")
+	ownerID, vErr := requireIntOrNull(raw, "owner_user_id")
 	if vErr != nil {
 		return r, vErr
 	}
-	r.Owner = owner
+	r.OwnerUserID = ownerID
 
 	r.ContractType, vErr = requireEnumString(raw, "contract_type", validContractTypes)
 	if vErr != nil {
@@ -133,16 +133,17 @@ func patchScalars(raw map[string]json.RawMessage, p *UpdatePatch) *validationErr
 		}
 		p.Company = &s
 	}
-	if v, ok := raw["owner"]; ok && !isNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return &validationError{Field: "owner", Msg: "must be a string"}
+	if v, ok := raw["owner_user_id"]; ok {
+		p.OwnerUserIDSet = true
+		if isNull(v) {
+			p.OwnerUserID = nil
+		} else {
+			var n int
+			if err := json.Unmarshal(v, &n); err != nil {
+				return &validationError{Field: "owner_user_id", Msg: "must be an integer"}
+			}
+			p.OwnerUserID = &n
 		}
-		s = strings.TrimSpace(s)
-		if s == "" {
-			return &validationError{Field: "owner", Msg: "Owner cannot be empty"}
-		}
-		p.Owner = &s
 	}
 	if v, ok := raw["notes"]; ok && !isNull(v) {
 		var s string
@@ -256,6 +257,23 @@ func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[s
 		return "", &validationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
 	}
 	return s, nil
+}
+
+// requireIntOrNull reads an integer key that must be present; an explicit
+// null is allowed and yields nil (jointly owned).
+func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *validationError) {
+	v, ok := raw[key]
+	if !ok {
+		return nil, &validationError{Field: key, Msg: "Field required"}
+	}
+	if isNull(v) {
+		return nil, nil
+	}
+	var n int
+	if err := json.Unmarshal(v, &n); err != nil {
+		return nil, &validationError{Field: key, Msg: "must be an integer"}
+	}
+	return &n, nil
 }
 
 func today() time.Time {

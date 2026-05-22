@@ -19,6 +19,7 @@ import (
 )
 
 // BonusEvent mirrors backend/app/models/bonus_event.BonusEvent.
+// OwnerUserID is the owning household member; nil means jointly owned.
 type BonusEvent struct {
 	ID           int
 	Date         time.Time
@@ -26,7 +27,7 @@ type BonusEvent struct {
 	Currency     string
 	Type         string
 	Company      string
-	Owner        string
+	OwnerUserID  *int
 	ContractType string
 	Notes        *string
 	IsActive     bool
@@ -39,10 +40,10 @@ var ErrNotFound = errors.New("bonus event not found")
 
 // ListFilter constrains the active rows returned by List.
 type ListFilter struct {
-	Owner    *string
-	DateFrom *time.Time
-	DateTo   *time.Time
-	Company  *string
+	OwnerUserID *int
+	DateFrom    *time.Time
+	DateTo      *time.Time
+	Company     *string
 }
 
 // Store is the persistence boundary.
@@ -56,7 +57,7 @@ func NewStore(pool *pgxpool.Pool) *Store {
 }
 
 const selectColumns = `
-	id, date, amount, currency, type, company, owner,
+	id, date, amount, currency, type, company, owner_user_id,
 	contract_type, notes, is_active, created_at
 `
 
@@ -65,9 +66,9 @@ const selectColumns = `
 func (s *Store) List(ctx context.Context, f ListFilter) ([]BonusEvent, []string, error) {
 	conds := []string{"is_active = true"}
 	args := []any{}
-	if f.Owner != nil {
-		args = append(args, *f.Owner)
-		conds = append(conds, fmt.Sprintf("owner = $%d", len(args)))
+	if f.OwnerUserID != nil {
+		args = append(args, *f.OwnerUserID)
+		conds = append(conds, fmt.Sprintf("owner_user_id = $%d", len(args)))
 	}
 	if f.DateFrom != nil {
 		args = append(args, *f.DateFrom)
@@ -125,15 +126,20 @@ func (s *Store) Get(ctx context.Context, id int) (*BonusEvent, error) {
 	return b, nil
 }
 
-// Create inserts a row.
+// Create inserts a row. The owner string is dual-written from owner_user_id
+// ($6) until a later phase drops the legacy column.
 func (s *Store) Create(ctx context.Context, b *BonusEvent) (*BonusEvent, error) {
 	row := s.pool.QueryRow(ctx, `
 		INSERT INTO bonus_events (
-			date, amount, currency, type, company, owner,
+			date, amount, currency, type, company, owner, owner_user_id,
 			contract_type, notes, is_active, created_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9)
+		) VALUES (
+			$1, $2, $3, $4, $5,
+			COALESCE((SELECT name FROM users WHERE id = $6), 'Shared'),
+			$6, $7, $8, true, $9
+		)
 		RETURNING `+selectColumns,
-		b.Date, b.Amount, b.Currency, b.Type, b.Company, b.Owner,
+		b.Date, b.Amount, b.Currency, b.Type, b.Company, b.OwnerUserID,
 		b.ContractType, b.Notes, time.Now().UTC(),
 	)
 	return scanBonus(row)
@@ -141,14 +147,15 @@ func (s *Store) Create(ctx context.Context, b *BonusEvent) (*BonusEvent, error) 
 
 // UpdatePatch is a sparse update.
 type UpdatePatch struct {
-	Date         *time.Time
-	Amount       *decimal.Decimal
-	Currency     *string
-	Type         *string
-	Company      *string
-	Owner        *string
-	ContractType *string
-	Notes        *string
+	Date           *time.Time
+	Amount         *decimal.Decimal
+	Currency       *string
+	Type           *string
+	Company        *string
+	OwnerUserIDSet bool
+	OwnerUserID    *int
+	ContractType   *string
+	Notes          *string
 }
 
 // Update applies the patch and returns the refreshed bonus.
@@ -172,8 +179,8 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*BonusEvent,
 	if p.Company != nil {
 		b.Company = *p.Company
 	}
-	if p.Owner != nil {
-		b.Owner = *p.Owner
+	if p.OwnerUserIDSet {
+		b.OwnerUserID = p.OwnerUserID
 	}
 	if p.ContractType != nil {
 		b.ContractType = *p.ContractType
@@ -181,13 +188,16 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*BonusEvent,
 	if p.Notes != nil {
 		b.Notes = p.Notes
 	}
+	// owner is dual-written from owner_user_id ($6) until the legacy column
+	// is dropped.
 	row := s.pool.QueryRow(ctx, `
 		UPDATE bonus_events SET
-			date = $1, amount = $2, currency = $3, type = $4,
-			company = $5, owner = $6, contract_type = $7, notes = $8
+			date = $1, amount = $2, currency = $3, type = $4, company = $5,
+			owner = COALESCE((SELECT name FROM users WHERE id = $6), 'Shared'),
+			owner_user_id = $6, contract_type = $7, notes = $8
 		WHERE id = $9 AND is_active = true
 		RETURNING `+selectColumns,
-		b.Date, b.Amount, b.Currency, b.Type, b.Company, b.Owner,
+		b.Date, b.Amount, b.Currency, b.Type, b.Company, b.OwnerUserID,
 		b.ContractType, b.Notes, id,
 	)
 	updated, err := scanBonus(row)
@@ -242,7 +252,7 @@ func scanBonus(row pgx.Row) (*BonusEvent, error) {
 	var b BonusEvent
 	if err := row.Scan(
 		&b.ID, &b.Date, &b.Amount, &b.Currency, &b.Type, &b.Company,
-		&b.Owner, &b.ContractType, &b.Notes, &b.IsActive, &b.CreatedAt,
+		&b.OwnerUserID, &b.ContractType, &b.Notes, &b.IsActive, &b.CreatedAt,
 	); err != nil {
 		return nil, err
 	}

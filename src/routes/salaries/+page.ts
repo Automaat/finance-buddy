@@ -9,6 +9,7 @@ import type {
 	SalariesData
 } from '$lib/types/salaries';
 import type { CpiSeries } from '$lib/types/cpi';
+import type { OwnerOption } from '$lib/types/owners';
 
 const EMPTY_CPI: CpiSeries = { points: [], base_year: null, latest_year: null, source: '' };
 const EMPTY_BONUSES: BonusEventsData = {
@@ -34,13 +35,13 @@ export const load: PageLoad = async ({ fetch, url }) => {
 			throw error(500, 'API URL is not configured');
 		}
 
-		const owner = url.searchParams.get('owner');
+		const ownerUserId = url.searchParams.get('owner_user_id');
 		const dateFrom = url.searchParams.get('date_from');
 		const dateTo = url.searchParams.get('date_to');
 		const company = url.searchParams.get('company');
 
 		const params = new URLSearchParams();
-		if (owner) params.set('owner', owner);
+		if (ownerUserId) params.set('owner_user_id', ownerUserId);
 		if (dateFrom) params.set('date_from', dateFrom);
 		if (dateTo) params.set('date_to', dateTo);
 		if (company) params.set('company', company);
@@ -50,14 +51,14 @@ export const load: PageLoad = async ({ fetch, url }) => {
 		// so it needs the full dataset to switch personas without re-loading.
 		const [
 			salariesResponse,
-			personasResponse,
+			ownersResponse,
 			cpiResponse,
 			bonusesResponse,
 			equityResponse,
 			valuationsResponse
 		] = await Promise.all([
 			fetch(`${apiUrl}/api/salaries?${params.toString()}`),
-			fetch(`${apiUrl}/api/personas`),
+			fetch(`${apiUrl}/api/users`),
 			fetch(`${apiUrl}/api/cpi/series`),
 			fetch(`${apiUrl}/api/bonuses`),
 			fetch(`${apiUrl}/api/equity-grants`),
@@ -69,7 +70,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 		}
 
 		const data: SalariesData = await salariesResponse.json();
-		const personas = personasResponse.ok ? await personasResponse.json() : [];
+		const owners: OwnerOption[] = ownersResponse.ok ? await ownersResponse.json() : [];
 		const cpiSeries: CpiSeries = cpiResponse.ok ? await cpiResponse.json() : EMPTY_CPI;
 		const bonuses: BonusEventsData = bonusesResponse.ok
 			? await bonusesResponse.json()
@@ -82,12 +83,12 @@ export const load: PageLoad = async ({ fetch, url }) => {
 		return {
 			salaries: data,
 			filters: {
-				owner,
+				owner_user_id: ownerUserId,
 				date_from: dateFrom,
 				date_to: dateTo,
 				company
 			},
-			personas,
+			owners,
 			cpiSeries,
 			bonuses,
 			equity,

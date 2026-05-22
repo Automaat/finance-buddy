@@ -4,13 +4,13 @@ export interface SalaryRecord {
 	gross_amount: number;
 	contract_type: string;
 	company: string;
-	owner: string;
+	owner_user_id: number | null;
 	is_active: boolean;
 	created_at: string;
 }
 
 export interface InflationContext {
-	owner: string;
+	owner_user_id: number;
 	last_change_date: string;
 	previous_change_date: string | null;
 	previous_salary: number | null;
@@ -38,7 +38,7 @@ export interface BonusEvent {
 	currency: string;
 	type: BonusType;
 	company: string;
-	owner: string;
+	owner_user_id: number | null;
 	contract_type: string;
 	notes: string | null;
 	is_active: boolean;
@@ -67,7 +67,7 @@ export interface EquityGrant {
 	grant_date: string;
 	type: EquityGrantType;
 	company: string;
-	owner: string;
+	owner_user_id: number | null;
 	total_shares: number;
 	strike_price: number | null;
 	currency: string;

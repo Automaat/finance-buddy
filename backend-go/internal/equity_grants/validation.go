@@ -16,7 +16,7 @@ type createRequest struct {
 	GrantDate              time.Time
 	Type                   string
 	Company                string
-	Owner                  string
+	OwnerUserID            *int
 	TotalShares            int
 	StrikePrice            *decimal.Decimal
 	Currency               string
@@ -36,7 +36,7 @@ func requestToGrant(req createRequest) *EquityGrant {
 		GrantDate:              req.GrantDate,
 		Type:                   req.Type,
 		Company:                req.Company,
-		Owner:                  req.Owner,
+		OwnerUserID:            req.OwnerUserID,
 		TotalShares:            req.TotalShares,
 		StrikePrice:            req.StrikePrice,
 		Currency:               req.Currency,
@@ -101,11 +101,11 @@ func requireGrantBasics(raw map[string]json.RawMessage, r *createRequest) *valid
 	}
 	r.Company = company
 
-	owner, vErr := requireString(raw, "owner", "Owner cannot be empty")
+	ownerID, vErr := requireIntOrNull(raw, "owner_user_id")
 	if vErr != nil {
 		return vErr
 	}
-	r.Owner = owner
+	r.OwnerUserID = ownerID
 
 	totalShares, vErr := requirePositiveInt(raw, "total_shares", "Total shares must be greater than 0")
 	if vErr != nil {
@@ -225,7 +225,7 @@ func patchStrings(raw map[string]json.RawMessage, p *UpdatePatch) *validationErr
 	if vErr := patchNonEmptyString(raw, "company", "Company cannot be empty", &p.Company); vErr != nil {
 		return vErr
 	}
-	if vErr := patchNonEmptyString(raw, "owner", "Owner cannot be empty", &p.Owner); vErr != nil {
+	if vErr := patchOwnerUserID(raw, p); vErr != nil {
 		return vErr
 	}
 	if vErr := patchCurrency(raw, &p.Currency); vErr != nil {
@@ -591,6 +591,43 @@ func patchNonNegativeIntPtr(raw map[string]json.RawMessage, key, msg string, des
 		return &validationError{Field: key, Msg: msg}
 	}
 	*dest = &n
+	return nil
+}
+
+// requireIntOrNull reads an integer key that must be present; an explicit
+// null is allowed and yields nil (jointly owned).
+func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *validationError) {
+	v, ok := raw[key]
+	if !ok {
+		return nil, &validationError{Field: key, Msg: "Field required"}
+	}
+	if isNull(v) {
+		return nil, nil
+	}
+	var n int
+	if err := json.Unmarshal(v, &n); err != nil {
+		return nil, &validationError{Field: key, Msg: "must be an integer"}
+	}
+	return &n, nil
+}
+
+// patchOwnerUserID reads owner_user_id from a PATCH body: present marks the
+// field set; explicit null clears it (jointly owned).
+func patchOwnerUserID(raw map[string]json.RawMessage, p *UpdatePatch) *validationError {
+	v, ok := raw["owner_user_id"]
+	if !ok {
+		return nil
+	}
+	p.OwnerUserIDSet = true
+	if isNull(v) {
+		p.OwnerUserID = nil
+		return nil
+	}
+	var n int
+	if err := json.Unmarshal(v, &n); err != nil {
+		return &validationError{Field: "owner_user_id", Msg: "must be an integer"}
+	}
+	p.OwnerUserID = &n
 	return nil
 }
 
