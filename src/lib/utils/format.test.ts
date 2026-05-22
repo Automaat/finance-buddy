@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { formatSignedPLN, formatSignedPercent } from './format';
+import {
+	calculateChange,
+	formatDate,
+	formatPLN,
+	formatPercent,
+	formatSignedPLN,
+	formatSignedPercent
+} from './format';
 
 describe('formatSignedPLN', () => {
 	it('prefixes positive value with +', () => {
@@ -59,5 +66,70 @@ describe('formatSignedPercent', () => {
 
 	it('returns — for NaN', () => {
 		expect(formatSignedPercent(NaN)).toBe('—');
+	});
+});
+
+describe('formatPLN', () => {
+	it('formats a number as PLN currency', () => {
+		expect(formatPLN(1234)).toContain('1');
+	});
+
+	it('returns — for null, undefined and NaN', () => {
+		expect(formatPLN(null)).toBe('—');
+		expect(formatPLN(undefined)).toBe('—');
+		expect(formatPLN(NaN)).toBe('—');
+	});
+});
+
+describe('formatPercent', () => {
+	it('formats a number as a percentage', () => {
+		expect(formatPercent(50)).toMatch(/50/);
+	});
+
+	it('returns — for null, undefined and NaN', () => {
+		expect(formatPercent(null)).toBe('—');
+		expect(formatPercent(undefined)).toBe('—');
+		expect(formatPercent(NaN)).toBe('—');
+	});
+});
+
+describe('formatDate', () => {
+	it('formats an ISO date string', () => {
+		expect(formatDate('2024-03-15')).toMatch(/2024/);
+	});
+
+	it('formats a Date instance', () => {
+		expect(formatDate(new Date('2024-03-15'))).toMatch(/2024/);
+	});
+
+	it('returns — for empty and invalid input', () => {
+		expect(formatDate(null)).toBe('—');
+		expect(formatDate(undefined)).toBe('—');
+		expect(formatDate('')).toBe('—');
+		expect(formatDate('not-a-date')).toBe('—');
+	});
+});
+
+describe('calculateChange', () => {
+	it('reports an upward change', () => {
+		expect(calculateChange(150, 100)).toEqual({
+			absolute: 50,
+			percent: 50,
+			direction: 'up'
+		});
+	});
+
+	it('reports a downward change', () => {
+		const change = calculateChange(80, 100);
+		expect(change.absolute).toBe(-20);
+		expect(change.direction).toBe('down');
+	});
+
+	it('reports a flat change and guards against division by zero', () => {
+		expect(calculateChange(0, 0)).toEqual({
+			absolute: 0,
+			percent: 0,
+			direction: 'flat'
+		});
 	});
 });
