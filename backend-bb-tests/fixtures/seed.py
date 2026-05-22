@@ -173,8 +173,7 @@ def _backfill_owner_user_id(cur: psycopg2.extensions.cursor) -> None:
     from the fixed _OWNER_TABLES tuple, not request input."""
     for table in _OWNER_TABLES:
         cur.execute(
-            f"UPDATE {table} AS t SET owner_user_id = u.id "
-            "FROM users u WHERE t.owner = u.name"
+            f"UPDATE {table} AS t SET owner_user_id = u.id FROM users u WHERE t.owner = u.name"
         )
 
 

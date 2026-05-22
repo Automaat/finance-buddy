@@ -44,8 +44,9 @@
                           "name": {
                             "type": "string"
                           },
-                          "owner": {
-                            "type": "string"
+                          "owner_user_id": {
+                            "nullable": true,
+                            "type": "integer"
                           },
                           "purpose": {
                             "type": "string"
@@ -96,8 +97,9 @@
                           "name": {
                             "type": "string"
                           },
-                          "owner": {
-                            "type": "string"
+                          "owner_user_id": {
+                            "nullable": true,
+                            "type": "integer"
                           },
                           "purpose": {
                             "type": "string"
@@ -165,8 +167,9 @@
                     "name": {
                       "type": "string"
                     },
-                    "owner": {
-                      "type": "string"
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
                     },
                     "purpose": {
                       "type": "string"
@@ -220,8 +223,9 @@
                     "account_name": {
                       "type": "string"
                     },
-                    "account_owner": {
-                      "type": "string"
+                    "account_owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
                     },
                     "created_at": {
                       "format": "date-time",
@@ -335,8 +339,9 @@
                           "id": {
                             "type": "integer"
                           },
-                          "owner": {
-                            "type": "string"
+                          "owner_user_id": {
+                            "nullable": true,
+                            "type": "integer"
                           }
                         },
                         "type": "object"
@@ -398,8 +403,9 @@
                     "id": {
                       "type": "integer"
                     },
-                    "owner": {
-                      "type": "string"
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
                     }
                   },
                   "type": "object"
@@ -495,8 +501,9 @@
                           "id": {
                             "type": "integer"
                           },
-                          "owner": {
-                            "type": "string"
+                          "owner_user_id": {
+                            "nullable": true,
+                            "type": "integer"
                           },
                           "transaction_type": {
                             "nullable": true,
@@ -558,8 +565,9 @@
                     "id": {
                       "type": "integer"
                     },
-                    "owner": {
-                      "type": "string"
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
                     },
                     "transaction_type": {
                       "nullable": true,
@@ -676,8 +684,9 @@
                     "name": {
                       "type": "string"
                     },
-                    "owner": {
-                      "type": "string"
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
                     },
                     "purpose": {
                       "type": "string"
@@ -2290,8 +2299,9 @@
                           "account_name": {
                             "type": "string"
                           },
-                          "account_owner": {
-                            "type": "string"
+                          "account_owner_user_id": {
+                            "nullable": true,
+                            "type": "integer"
                           },
                           "created_at": {
                             "format": "date-time",
@@ -2417,8 +2427,9 @@
                     "account_name": {
                       "type": "string"
                     },
-                    "account_owner": {
-                      "type": "string"
+                    "account_owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
                     },
                     "created_at": {
                       "format": "date-time",
@@ -2509,8 +2520,9 @@
                     "account_name": {
                       "type": "string"
                     },
-                    "account_owner": {
-                      "type": "string"
+                    "account_owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
                     },
                     "created_at": {
                       "format": "date-time",
@@ -3763,8 +3775,9 @@
                           "id": {
                             "type": "integer"
                           },
-                          "owner": {
-                            "type": "string"
+                          "owner_user_id": {
+                            "nullable": true,
+                            "type": "integer"
                           }
                         },
                         "type": "object"
@@ -5097,8 +5110,9 @@
                           "id": {
                             "type": "integer"
                           },
-                          "owner": {
-                            "type": "string"
+                          "owner_user_id": {
+                            "nullable": true,
+                            "type": "integer"
                           },
                           "transaction_type": {
                             "nullable": true,

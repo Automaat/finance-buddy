@@ -56,9 +56,7 @@ def test_get_account_transactions_invalid_account_type(client: httpx.Client) -> 
 
 
 @pytest.mark.mutates
-def test_create_transaction_happy_path(
-    client: httpx.Client, owner_ids: dict[str, int]
-) -> None:
+def test_create_transaction_happy_path(client: httpx.Client, owner_ids: dict[str, int]) -> None:
     account_id = _account_id_by_name(client, ACCOUNT_MARCIN_IKE)
     payload = {
         "amount": 750.0,
@@ -97,9 +95,7 @@ def test_create_transaction_validation_error(client: httpx.Client) -> None:
 
 
 @pytest.mark.mutates
-def test_delete_transaction_happy_path(
-    client: httpx.Client, owner_ids: dict[str, int]
-) -> None:
+def test_delete_transaction_happy_path(client: httpx.Client, owner_ids: dict[str, int]) -> None:
     account_id = _account_id_by_name(client, ACCOUNT_MARCIN_IKE)
     create_resp = client.post(
         f"/api/accounts/{account_id}/transactions",
