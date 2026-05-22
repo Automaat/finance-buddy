@@ -17,6 +17,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Automaat/finance-buddy/backend-go/internal/auth"
 	"github.com/Automaat/finance-buddy/backend-go/internal/cpi"
 	"github.com/Automaat/finance-buddy/backend-go/internal/db"
 	"github.com/Automaat/finance-buddy/backend-go/internal/scheduler"
@@ -63,9 +64,23 @@ func run() int {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(logger)
 
+	jwtSecret := os.Getenv("FB_JWT_SECRET")
+	if jwtSecret == "" {
+		logger.Error("FB_JWT_SECRET is required")
+		return 2
+	}
+	adminUsername := envOr("FB_ADMIN_USERNAME", "admin")
+	adminPassword := os.Getenv("FB_ADMIN_PASSWORD")
+	if adminPassword == "" {
+		logger.Error("FB_ADMIN_PASSWORD is required")
+		return 2
+	}
+
 	cfg := server.Config{
-		Addr:        envOr("FB_ADDR", ":8000"),
-		CORSOrigins: envOrPresent("CORS_ORIGINS", "http://localhost:3000"),
+		Addr:         envOr("FB_ADDR", ":8000"),
+		CORSOrigins:  envOrPresent("CORS_ORIGINS", "http://localhost:3000"),
+		JWTSecret:    jwtSecret,
+		CookieSecure: envOr("FB_COOKIE_SECURE", "false") == "true",
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -92,6 +107,24 @@ func run() int {
 			logger.Error("apply schema", "err", err)
 			return 2
 		}
+
+		// The users table is additive — schema.sql is only applied to empty
+		// databases, so it needs its own idempotent DDL plus admin seeding.
+		authStore := auth.NewStore(pool)
+		if err := authStore.EnsureSchema(ctx); err != nil {
+			logger.Error("ensure users schema", "err", err)
+			return 2
+		}
+		adminHash, err := auth.HashPassword(adminPassword)
+		if err != nil {
+			logger.Error("hash admin password", "err", err)
+			return 2
+		}
+		if err := authStore.UpsertAdmin(ctx, adminUsername, adminHash); err != nil {
+			logger.Error("seed admin user", "err", err)
+			return 2
+		}
+		logger.Info("admin user ready", "username", adminUsername)
 
 		// CPI monthly-refresh scheduler — replaces the Python APScheduler job.
 		sched := scheduler.NewCPIScheduler(cpi.NewStore(pool), cpi.NewGUSFetcher(), logger)

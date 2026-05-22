@@ -19,6 +19,7 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/accounts"
 	"github.com/Automaat/finance-buddy/backend-go/internal/aggregates"
 	"github.com/Automaat/finance-buddy/backend-go/internal/assets"
+	"github.com/Automaat/finance-buddy/backend-go/internal/auth"
 	bonusevents "github.com/Automaat/finance-buddy/backend-go/internal/bonus_events"
 	companyvaluations "github.com/Automaat/finance-buddy/backend-go/internal/company_valuations"
 	"github.com/Automaat/finance-buddy/backend-go/internal/config"
@@ -52,6 +53,11 @@ type Config struct {
 	// split on "," verbatim (no trimming, no wildcard fallback) to match
 	// the Python backend's `settings.cors_origins.split(",")`.
 	CORSOrigins string
+	// JWTSecret signs and verifies session tokens (FB_JWT_SECRET).
+	JWTSecret string
+	// CookieSecure marks the session cookie Secure (FB_COOKIE_SECURE).
+	// Off by default so plain-HTTP local/LAN deploys work.
+	CookieSecure bool
 }
 
 // Deps bundles the runtime dependencies the router needs to construct
@@ -81,10 +87,30 @@ func New(cfg Config, logger *slog.Logger, deps Deps) http.Handler {
 	r.Get("/health", healthHandler(logger))
 
 	if deps.Pool != nil {
-		registerAPIRoutes(r, deps.Pool, logger)
+		registerRoutes(r, cfg, deps.Pool, logger)
 	}
 
 	return r
+}
+
+// registerRoutes wires the public auth endpoints, then gates every other
+// /api route behind a valid session.
+func registerRoutes(r chi.Router, cfg Config, pool *pgxpool.Pool, logger *slog.Logger) {
+	tokens := auth.NewTokenService(cfg.JWTSecret)
+	authHandler := auth.NewHandler(auth.NewStore(pool), tokens, cfg.CookieSecure, logger)
+
+	// Public — reachable without a session.
+	r.Post("/api/auth/login", authHandler.Login)
+	r.Post("/api/auth/logout", authHandler.Logout)
+
+	// Everything else requires authentication.
+	r.Group(func(r chi.Router) {
+		r.Use(auth.Authenticate(tokens))
+		r.Get("/api/auth/me", authHandler.Me)
+		r.With(auth.RequireAdmin).Get("/api/auth/users", authHandler.ListUsers)
+		r.With(auth.RequireAdmin).Post("/api/auth/users", authHandler.CreateUser)
+		registerAPIRoutes(r, pool, logger)
+	})
 }
 
 func registerAPIRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {

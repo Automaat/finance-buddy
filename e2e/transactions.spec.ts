@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { INVESTMENT_CATEGORIES } from '../src/lib/constants';
+import { openDialog } from './utils';
 
 const apiUrl = process.env.E2E_API_URL ?? 'http://127.0.0.1:8000';
 
@@ -35,7 +36,7 @@ test.describe('transactions', () => {
 		const account = await pickInvestmentAccount(request);
 
 		await page.goto('/transactions');
-		await page.getByRole('button', { name: /Nowa Transakcja/ }).click();
+		await openDialog(page, /Nowa Transakcja/);
 
 		const dialog = page.getByRole('dialog').filter({ hasText: 'Nowa Transakcja' });
 		await expect(dialog).toBeVisible();

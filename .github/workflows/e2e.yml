@@ -31,7 +31,12 @@ jobs:
       APP_PASSWORD: test
       CORS_ORIGINS: http://127.0.0.1:4173,http://localhost:4173
       PUBLIC_API_URL: http://127.0.0.1:8000
-      PUBLIC_API_URL_BROWSER: http://127.0.0.1:8000
+      PUBLIC_API_URL_BROWSER: http://127.0.0.1:4173
+      API_PROXY_TARGET: http://127.0.0.1:8000
+      FB_JWT_SECRET: e2e-test-jwt-secret
+      FB_ADMIN_USERNAME: e2e-admin
+      FB_ADMIN_PASSWORD: e2e-admin-password
+      FB_COOKIE_SECURE: 'false'
       E2E_BASE_URL: http://127.0.0.1:4173
       E2E_API_URL: http://127.0.0.1:8000
       E2E_FRONTEND_PORT: '4173'

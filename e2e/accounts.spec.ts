@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { uniqueName } from './utils';
+import { openDialog, uniqueName } from './utils';
 
 test.describe('accounts CRUD', () => {
 	test('create asset account then soft-delete it', async ({ page }) => {
@@ -8,10 +8,8 @@ test.describe('accounts CRUD', () => {
 
 		const name = uniqueName('e2e-bank');
 
-		await page.getByRole('button', { name: /Nowe Konto/ }).click();
-
+		await openDialog(page, /Nowe Konto/);
 		const dialog = page.getByRole('dialog');
-		await expect(dialog).toBeVisible();
 
 		await dialog.locator('label:has-text("Nazwa") input').fill(name);
 		await dialog.locator('label:has-text("Typ") select').selectOption('asset');

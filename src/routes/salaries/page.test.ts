@@ -36,6 +36,7 @@ vi.mock('echarts', () => ({
 }));
 
 const baseData = {
+	user: null,
 	salaries: {
 		salary_records: [],
 		total_count: 0,
