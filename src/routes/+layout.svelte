@@ -85,7 +85,7 @@
 				<div class="p-3 border-t border-surface-200-800 space-y-2">
 					<div class="flex items-center gap-2 px-1 text-sm text-surface-700-300">
 						<User size={16} />
-						<span class="truncate">{data.user.username}</span>
+						<span class="truncate">{data.user.name || data.user.username}</span>
 					</div>
 					<form method="POST" action="/logout">
 						<button

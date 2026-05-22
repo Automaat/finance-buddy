@@ -16,6 +16,7 @@ import (
 type Claims struct {
 	UserID   int    `json:"uid"`
 	Username string `json:"username"`
+	Name     string `json:"name"`
 	IsAdmin  bool   `json:"is_admin"`
 	jwt.RegisteredClaims
 }
@@ -30,12 +31,14 @@ func NewTokenService(secret string) *TokenService {
 	return &TokenService{secret: []byte(secret)}
 }
 
-// Sign issues a token for the user that expires after ttl.
-func (t *TokenService) Sign(userID int, username string, isAdmin bool, ttl time.Duration) (string, error) {
+// Sign issues a token for the user that expires after ttl. name is the
+// display name carried for the UI; it may be empty.
+func (t *TokenService) Sign(userID int, username, name string, isAdmin bool, ttl time.Duration) (string, error) {
 	now := time.Now().UTC()
 	claims := Claims{
 		UserID:   userID,
 		Username: username,
+		Name:     name,
 		IsAdmin:  isAdmin,
 		RegisteredClaims: jwt.RegisteredClaims{
 			IssuedAt:  jwt.NewNumericDate(now),
