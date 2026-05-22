@@ -8,6 +8,7 @@
 		buildRetirementProjectionOption,
 		type AccountSimulation
 	} from '$lib/utils/charts/simulations';
+	import { ownerName, type OwnerOption } from '$lib/types/owners';
 
 	interface SimulationSummary {
 		total_final_balance: number;
@@ -28,7 +29,7 @@
 	interface IkeIkzeConfig {
 		enabled: boolean;
 		wrapper: string;
-		owner: string;
+		ownerUserId: number;
 		balance: number;
 		autoFill: boolean;
 		monthly: number;
@@ -37,7 +38,7 @@
 
 	interface PpkConfig {
 		enabled: boolean;
-		owner: string;
+		ownerUserId: number;
 		balance: number;
 		salary: number;
 		employeeRate: number;
@@ -48,7 +49,7 @@
 
 	interface BrokerageConfig {
 		enabled: boolean;
-		owner: string;
+		ownerUserId: number;
 		balance: number;
 		monthly: number;
 	}
@@ -61,12 +62,12 @@
 
 	let { data }: Props = $props();
 
-	const personas = $derived((data.personas || []) as Array<{ name: string }>);
+	const owners = $derived((data.owners || []) as OwnerOption[]);
 
 	let currentAge = $state(untrack(() => data.current_age));
 	let retirementAge = $state(untrack(() => data.retirement_age));
 
-	// Dynamic IKE/IKZE accounts - one per persona per wrapper
+	// Dynamic IKE/IKZE accounts - one per owner per wrapper
 	let ikeIkzeAccounts: IkeIkzeConfig[] = $state([]);
 	let ppkAccounts: PpkConfig[] = $state([]);
 	let brokerageAccounts: BrokerageConfig[] = $state([]);
@@ -76,15 +77,15 @@
 		ppkAccounts = [];
 		brokerageAccounts = [];
 
-		for (const persona of personas) {
-			const ownerLower = persona.name.toLowerCase();
+		for (const owner of owners) {
+			const key = String(owner.id);
 
 			for (const wrapper of ['IKE', 'IKZE']) {
-				const balanceKey = `${wrapper.toLowerCase()}_${ownerLower}`;
+				const balanceKey = `${wrapper.toLowerCase()}_${key}`;
 				ikeIkzeAccounts.push({
 					enabled: true,
 					wrapper,
-					owner: persona.name,
+					ownerUserId: owner.id,
 					balance: data.balances?.[balanceKey] ?? 0,
 					autoFill: false,
 					monthly: 0,
@@ -94,18 +95,18 @@
 
 			ppkAccounts.push({
 				enabled: false,
-				owner: persona.name,
-				balance: data.ppk_balances?.[ownerLower] ?? 0,
-				salary: data.monthly_salaries?.[ownerLower] ?? 10000,
-				employeeRate: data.ppk_rates?.[ownerLower]?.employee ?? 2.0,
-				employerRate: data.ppk_rates?.[ownerLower]?.employer ?? 1.5,
+				ownerUserId: owner.id,
+				balance: data.ppk_balances?.[key] ?? 0,
+				salary: data.monthly_salaries?.[key] ?? 10000,
+				employeeRate: data.ppk_rates?.[key]?.employee ?? 2.0,
+				employerRate: data.ppk_rates?.[key]?.employer ?? 1.5,
 				belowThreshold: false,
 				includeSubsidies: true
 			});
 
 			brokerageAccounts.push({
 				enabled: false,
-				owner: persona.name,
+				ownerUserId: owner.id,
 				balance: 0,
 				monthly: 0
 			});
@@ -113,7 +114,7 @@
 	}
 
 	$effect(() => {
-		if (personas.length > 0 && ikeIkzeAccounts.length === 0) {
+		if (owners.length > 0 && ikeIkzeAccounts.length === 0) {
 			initAccounts();
 		}
 	});
@@ -142,18 +143,19 @@
 			// Validate PPK inputs
 			for (const ppk of ppkAccounts) {
 				if (!ppk.enabled) continue;
+				const label = ownerName(owners, ppk.ownerUserId);
 				if (ppk.salary > SALARY_THRESHOLD_2026 && ppk.belowThreshold) {
-					error = `PPK ${ppk.owner}: Wynagrodzenie przekracza próg (${SALARY_THRESHOLD_2026} PLN)`;
+					error = `PPK ${label}: Wynagrodzenie przekracza próg (${SALARY_THRESHOLD_2026} PLN)`;
 					loading = false;
 					return;
 				}
 				if (ppk.employeeRate < 0.5 || ppk.employeeRate > 4.0) {
-					error = `PPK ${ppk.owner}: Składka pracownika musi być w zakresie 0.5-4%`;
+					error = `PPK ${label}: Składka pracownika musi być w zakresie 0.5-4%`;
 					loading = false;
 					return;
 				}
 				if (ppk.employerRate < 1.5 || ppk.employerRate > 4.0) {
-					error = `PPK ${ppk.owner}: Składka pracodawcy musi być w zakresie 1.5-4%`;
+					error = `PPK ${label}: Składka pracodawcy musi być w zakresie 1.5-4%`;
 					loading = false;
 					return;
 				}
@@ -168,7 +170,7 @@
 				ike_ikze_accounts: ikeIkzeAccounts.map((a) => ({
 					enabled: a.enabled,
 					wrapper: a.wrapper,
-					owner: a.owner,
+					owner_user_id: a.ownerUserId,
 					balance: a.balance,
 					auto_fill_limit: a.autoFill,
 					monthly_contribution: a.monthly,
@@ -177,7 +179,7 @@
 				ppk_accounts: ppkAccounts
 					.filter((p) => p.enabled)
 					.map((p) => ({
-						owner: p.owner,
+						owner_user_id: p.ownerUserId,
 						enabled: true,
 						starting_balance: p.balance,
 						monthly_gross_salary: p.salary,
@@ -189,7 +191,7 @@
 					})),
 				brokerage_accounts: brokerageAccounts.map((b) => ({
 					enabled: b.enabled,
-					owner: b.owner,
+					owner_user_id: b.ownerUserId,
 					balance: b.balance,
 					monthly_contribution: b.monthly
 				})),
@@ -281,7 +283,9 @@
 					<div class="card preset-tonal-surface p-4 flex flex-col gap-2">
 						<label class="flex items-center gap-2 cursor-pointer">
 							<input type="checkbox" bind:checked={ikeIkzeAccounts[i].enabled} class="checkbox" />
-							<span class="text-sm font-semibold">{account.wrapper} ({account.owner})</span>
+							<span class="text-sm font-semibold"
+								>{account.wrapper} ({ownerName(owners, account.ownerUserId)})</span
+							>
 						</label>
 						{#if account.enabled}
 							<label class="label">
@@ -335,7 +339,7 @@
 					<div class="card preset-tonal-surface p-4 flex flex-col gap-2">
 						<label class="flex items-center gap-2 cursor-pointer">
 							<input type="checkbox" bind:checked={ppkAccounts[i].enabled} class="checkbox" />
-							<span class="text-sm font-semibold">PPK ({ppk.owner})</span>
+							<span class="text-sm font-semibold">PPK ({ownerName(owners, ppk.ownerUserId)})</span>
 						</label>
 						{#if ppk.enabled}
 							<label class="label">
@@ -419,7 +423,9 @@
 					<div class="card preset-tonal-surface p-4 flex flex-col gap-2">
 						<label class="flex items-center gap-2 cursor-pointer">
 							<input type="checkbox" bind:checked={brokerageAccounts[i].enabled} class="checkbox" />
-							<span class="text-sm font-semibold">Rachunek maklerski ({brokerage.owner})</span>
+							<span class="text-sm font-semibold"
+								>Rachunek maklerski ({ownerName(owners, brokerage.ownerUserId)})</span
+							>
 						</label>
 						{#if brokerage.enabled}
 							<label class="label">

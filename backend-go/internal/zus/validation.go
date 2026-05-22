@@ -19,7 +19,7 @@ type calculateInputs struct {
 func buildInputs(raw map[string]json.RawMessage, now func() time.Time) (calculateInputs, *validationError) {
 	var c calculateInputs
 	var err *validationError
-	c.Inputs.Owner, err = requireString(raw, "owner", "Owner cannot be empty")
+	c.Inputs.OwnerUserID, err = requireIntOrNull(raw, "owner_user_id")
 	if err != nil {
 		return c, err
 	}
@@ -147,19 +147,21 @@ func validateAgeRelationship(birth time.Time, retirementAge int, now func() time
 
 // --- helpers ---
 
-func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string, *validationError) {
+// requireIntOrNull reads an integer key that must be present; an explicit
+// null is allowed and yields nil (jointly owned).
+func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *validationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
-		return "", &validationError{Field: key, Msg: "Field required"}
+	if !ok {
+		return nil, &validationError{Field: key, Msg: "Field required"}
 	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &validationError{Field: key, Msg: "must be a string"}
+	if isNull(v) {
+		return nil, nil
 	}
-	if s == "" {
-		return "", &validationError{Field: key, Msg: emptyMsg}
+	var n int
+	if err := json.Unmarshal(v, &n); err != nil {
+		return nil, &validationError{Field: key, Msg: "must be an integer"}
 	}
-	return s, nil
+	return &n, nil
 }
 
 func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *validationError) {

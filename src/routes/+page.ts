@@ -10,8 +10,8 @@ export async function load({ fetch }) {
 
 	const currentYear = new Date().getFullYear();
 
-	const personas = (async () => {
-		const res = await fetch(`${apiUrl}/api/personas`);
+	const owners = (async () => {
+		const res = await fetch(`${apiUrl}/api/users`);
 		return res.ok ? await res.json() : [];
 	})();
 
@@ -43,7 +43,7 @@ export async function load({ fetch }) {
 
 	return {
 		dashboardData,
-		personas,
+		owners,
 		currentYear
 	};
 }

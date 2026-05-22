@@ -5,7 +5,7 @@
     "employer_contributed": 0.0,
     "is_warning": false,
     "limit_amount": 23472.0,
-    "owner": "Marcin",
+    "owner_user_id": 2,
     "percentage_used": 6.4,
     "remaining": 21972.0,
     "total_contributed": 1500.0,

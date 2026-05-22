@@ -9,16 +9,18 @@ from fixtures.seed import PERSONA_MARCIN
 
 
 @pytest.mark.golden
-def test_get_zus_prefill_matches_golden(client: httpx.Client, update_golden: bool) -> None:
+def test_get_zus_prefill_matches_golden(
+    client: httpx.Client, update_golden: bool, owner_ids: dict[str, int]
+) -> None:
     from _golden import assert_matches_golden
 
-    response = client.get("/api/zus/prefill", params={"owner": PERSONA_MARCIN})
+    response = client.get("/api/zus/prefill", params={"owner_user_id": owner_ids[PERSONA_MARCIN]})
     assert response.status_code == 200, response.text
     assert_matches_golden("zus_prefill_marcin", response.json(), update=update_golden)
 
 
-def test_get_zus_prefill_shape(client: httpx.Client) -> None:
-    response = client.get("/api/zus/prefill", params={"owner": PERSONA_MARCIN})
+def test_get_zus_prefill_shape(client: httpx.Client, owner_ids: dict[str, int]) -> None:
+    response = client.get("/api/zus/prefill", params={"owner_user_id": owner_ids[PERSONA_MARCIN]})
     assert response.status_code == 200, response.text
     body = response.json()
     required = {
@@ -26,18 +28,21 @@ def test_get_zus_prefill_shape(client: httpx.Client) -> None:
         "retirement_age",
         "gender",
         "current_gross_monthly_salary",
+        "owner_user_id",
         "salary_history",
     }
     assert required.issubset(body.keys())
 
 
 @pytest.mark.golden
-def test_post_zus_calculate_matches_golden(client: httpx.Client, update_golden: bool) -> None:
+def test_post_zus_calculate_matches_golden(
+    client: httpx.Client, update_golden: bool, owner_ids: dict[str, int]
+) -> None:
     from _golden import assert_matches_golden
 
     # Deterministic input — no DB reads in calculate, pure computation.
     payload = {
-        "owner": PERSONA_MARCIN,
+        "owner_user_id": owner_ids[PERSONA_MARCIN],
         "birth_date": "1990-06-15",
         "gender": "M",
         "retirement_age": 65,
@@ -56,9 +61,9 @@ def test_post_zus_calculate_matches_golden(client: httpx.Client, update_golden: 
     assert_matches_golden("zus_calculate_marcin", response.json(), update=update_golden)
 
 
-def test_post_zus_calculate_happy_path(client: httpx.Client) -> None:
+def test_post_zus_calculate_happy_path(client: httpx.Client, owner_ids: dict[str, int]) -> None:
     payload = {
-        "owner": PERSONA_MARCIN,
+        "owner_user_id": owner_ids[PERSONA_MARCIN],
         "birth_date": "1990-06-15",
         "gender": "M",
         "retirement_age": 65,
@@ -82,10 +87,12 @@ def test_post_zus_calculate_happy_path(client: httpx.Client) -> None:
     assert required.issubset(body.keys())
 
 
-def test_post_zus_calculate_validation_error(client: httpx.Client) -> None:
+def test_post_zus_calculate_validation_error(
+    client: httpx.Client, owner_ids: dict[str, int]
+) -> None:
     # Invalid gender → validator raises
     payload = {
-        "owner": PERSONA_MARCIN,
+        "owner_user_id": owner_ids[PERSONA_MARCIN],
         "birth_date": "1990-06-15",
         "gender": "X",
         "retirement_age": 65,

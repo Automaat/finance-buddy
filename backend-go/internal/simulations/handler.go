@@ -224,18 +224,24 @@ func (h *Handler) Retirement(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) runSimulation(ctx context.Context, in simulationInputs) ([]AccountSimulation, error) {
 	yearsToRetirement := in.RetirementAge - in.CurrentAge
 	currentYear := h.now().UTC().Year()
+	userNames, err := h.store.UserNames(ctx)
+	if err != nil {
+		return nil, err
+	}
 	sims := []AccountSimulation{}
 
 	for _, acc := range in.IkeIkzeAccounts {
 		if !acc.Enabled {
 			continue
 		}
-		baseLimit, err := h.store.LimitForYear(ctx, currentYear, acc.Wrapper, acc.Owner)
+		baseLimit, err := h.store.LimitForYear(ctx, currentYear, acc.Wrapper, acc.OwnerUserID)
 		if err != nil {
 			return nil, err
 		}
 		sims = append(sims, SimulateAccount(IkeIkzeParams{
-			Wrapper: acc.Wrapper, Owner: acc.Owner,
+			Wrapper:         acc.Wrapper,
+			OwnerUserID:     acc.OwnerUserID,
+			OwnerName:       ownerLabel(userNames, acc.OwnerUserID),
 			StartingBalance: acc.Balance, AutoFillLimit: acc.AutoFillLimit,
 			MonthlyContribution: acc.MonthlyContribution, TaxRate: acc.TaxRate,
 			BaseLimit: baseLimit,
@@ -246,7 +252,9 @@ func (h *Handler) runSimulation(ctx context.Context, in simulationInputs) ([]Acc
 			continue
 		}
 		sims = append(sims, SimulatePPKAccount(PPKParams{
-			Owner: ppk.Owner, StartingBalance: ppk.StartingBalance,
+			OwnerUserID:        ppk.OwnerUserID,
+			OwnerName:          ownerLabel(userNames, ppk.OwnerUserID),
+			StartingBalance:    ppk.StartingBalance,
 			MonthlyGrossSalary: ppk.MonthlyGrossSalary,
 			EmployeeRate:       ppk.EmployeeRate, EmployerRate: ppk.EmployerRate,
 			SalaryBelowThreshold: ppk.SalaryBelowThreshold,
@@ -259,11 +267,25 @@ func (h *Handler) runSimulation(ctx context.Context, in simulationInputs) ([]Acc
 			continue
 		}
 		sims = append(sims, SimulateBrokerageAccount(BrokerageParams{
-			Owner: brk.Owner, StartingBalance: brk.Balance,
+			OwnerUserID:         brk.OwnerUserID,
+			OwnerName:           ownerLabel(userNames, brk.OwnerUserID),
+			StartingBalance:     brk.Balance,
 			MonthlyContribution: brk.MonthlyContribution,
 		}, in.CurrentAge, in.RetirementAge, currentYear, in.AnnualReturnRate))
 	}
 	return sims, nil
+}
+
+// ownerLabel resolves an owner_user_id to a display name for AccountName.
+// A nil id (jointly owned) renders as "Wspólne".
+func ownerLabel(names map[int]string, id *int) string {
+	if id == nil {
+		return "Wspólne"
+	}
+	if n, ok := names[*id]; ok {
+		return n
+	}
+	return "—"
 }
 
 func (h *Handler) buildSimulationResponse(in simulationInputs, sims []AccountSimulation) map[string]any {

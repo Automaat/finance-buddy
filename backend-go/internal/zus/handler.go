@@ -34,7 +34,7 @@ type salaryHistoryEntry struct {
 }
 
 type inputsResponse struct {
-	Owner                     string               `json:"owner"`
+	OwnerUserID               *int                 `json:"owner_user_id"`
 	BirthDate                 isoDate              `json:"birth_date"`
 	Gender                    string               `json:"gender"`
 	RetirementAge             int                  `json:"retirement_age"`
@@ -90,7 +90,7 @@ type prefillResponse struct {
 	RetirementAge             int                  `json:"retirement_age"`
 	Gender                    string               `json:"gender"`
 	CurrentGrossMonthlySalary *pyFloat             `json:"current_gross_monthly_salary"`
-	Owner                     *string              `json:"owner"`
+	OwnerUserID               *int                 `json:"owner_user_id"`
 	SalaryHistory             []salaryHistoryEntry `json:"salary_history"`
 	WorkStartYear             *int                 `json:"work_start_year"`
 }
@@ -113,7 +113,7 @@ func (h *Handler) Calculate(w http.ResponseWriter, r *http.Request) {
 	hist := historyAsList(req.Inputs.SalaryHistory)
 	resp := calculateResponse{
 		Inputs: inputsResponse{
-			Owner:                     req.Inputs.Owner,
+			OwnerUserID:               req.Inputs.OwnerUserID,
 			BirthDate:                 isoDate(req.BirthDate),
 			Gender:                    req.Inputs.Gender,
 			RetirementAge:             req.Inputs.RetirementAge,
@@ -166,15 +166,16 @@ func (h *Handler) Calculate(w http.ResponseWriter, r *http.Request) {
 
 // Prefill serves GET /api/zus/prefill.
 func (h *Handler) Prefill(w http.ResponseWriter, r *http.Request) {
-	// Mirror Python's `if not owner` semantics: empty string from the query
-	// param falls through to the first-persona fallback exactly like Python's
-	// `Query(None)` default. Don't TrimSpace — Python doesn't.
-	var ownerHint *string
-	if r.URL.Query().Has("owner") {
-		v := r.URL.Query().Get("owner")
-		if v != "" {
-			ownerHint = &v
+	// An empty owner_user_id query value falls through to the first-user
+	// fallback, mirroring Python's `Query(None)` default.
+	var ownerHint *int
+	if v := r.URL.Query().Get("owner_user_id"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			writeValidationError(w, "owner_user_id", "must be an integer", v)
+			return
 		}
+		ownerHint = &n
 	}
 	data, err := h.store.LoadPrefill(r.Context(), ownerHint)
 	if err != nil {
@@ -190,10 +191,7 @@ func (h *Handler) Prefill(w http.ResponseWriter, r *http.Request) {
 		d := isoDate(*data.BirthDate)
 		resp.BirthDate = &d
 	}
-	if data.Owner != nil {
-		o := *data.Owner
-		resp.Owner = &o
-	}
+	resp.OwnerUserID = data.OwnerUserID
 	if data.CurrentGrossMonthlySalary != nil {
 		v := pyFloat(*data.CurrentGrossMonthlySalary)
 		resp.CurrentGrossMonthlySalary = &v

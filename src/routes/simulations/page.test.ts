@@ -34,7 +34,10 @@ vi.mock('echarts', () => ({
 const mockData = {
 	current_age: 35,
 	retirement_age: 65,
-	personas: [{ name: 'Marcin' }, { name: 'Ewa' }],
+	owners: [
+		{ id: 1, name: 'Marcin' },
+		{ id: 2, name: 'Ewa' }
+	],
 	balances: {},
 	ppk_balances: {},
 	monthly_salaries: {},

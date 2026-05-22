@@ -20,11 +20,12 @@ type Store struct{ pool *pgxpool.Pool }
 // NewStore wraps a pool.
 func NewStore(pool *pgxpool.Pool) *Store { return &Store{pool: pool} }
 
-// AggregateRow mirrors a snapshot_aggregates row.
+// AggregateRow mirrors a snapshot_aggregates row. OwnerUserID is nil for
+// the jointly-owned ("Shared") bucket.
 type AggregateRow struct {
 	SnapshotID       int
 	Month            time.Time
-	Owner            string
+	OwnerUserID      *int
 	TotalAssets      decimal.Decimal
 	TotalLiabilities decimal.Decimal
 	NetWorth         decimal.Decimal
@@ -38,12 +39,13 @@ type AllocationJSONItem struct {
 }
 
 // Account mirrors the columns the dashboard reads from accounts.
+// OwnerUserID is nil for jointly-owned accounts.
 type Account struct {
 	ID             int
 	Name           string
 	Type           string
 	Category       string
-	Owner          string
+	OwnerUserID    *int
 	AccountWrapper *string
 	Purpose        string
 	SquareMeters   *decimal.Decimal
@@ -83,7 +85,7 @@ type SnapshotMeta struct {
 // LoadAggregateRows returns every snapshot_aggregates row.
 func (s *Store) LoadAggregateRows(ctx context.Context) ([]AggregateRow, error) {
 	rows, err := s.pool.Query(ctx, `
-		SELECT snapshot_id, month, owner, total_assets, total_liabilities,
+		SELECT snapshot_id, month, owner_user_id, total_assets, total_liabilities,
 		       net_worth, allocation_json
 		FROM snapshot_aggregates`,
 	)
@@ -96,7 +98,7 @@ func (s *Store) LoadAggregateRows(ctx context.Context) ([]AggregateRow, error) {
 		var r AggregateRow
 		var allocJSON []byte
 		if err := rows.Scan(
-			&r.SnapshotID, &r.Month, &r.Owner,
+			&r.SnapshotID, &r.Month, &r.OwnerUserID,
 			&r.TotalAssets, &r.TotalLiabilities, &r.NetWorth, &allocJSON,
 		); err != nil {
 			return nil, fmt.Errorf("scan aggregate: %w", err)
@@ -163,7 +165,7 @@ func (s *Store) AllSnapshots(ctx context.Context) ([]SnapshotMeta, error) {
 // ActiveAccounts returns every active account.
 func (s *Store) ActiveAccounts(ctx context.Context) ([]Account, error) {
 	rows, err := s.pool.Query(ctx, `
-		SELECT id, name, type, category, owner, account_wrapper, purpose, square_meters
+		SELECT id, name, type, category, owner_user_id, account_wrapper, purpose, square_meters
 		FROM accounts WHERE is_active = true`,
 	)
 	if err != nil {
@@ -174,7 +176,7 @@ func (s *Store) ActiveAccounts(ctx context.Context) ([]Account, error) {
 	for rows.Next() {
 		var a Account
 		if err := rows.Scan(
-			&a.ID, &a.Name, &a.Type, &a.Category, &a.Owner,
+			&a.ID, &a.Name, &a.Type, &a.Category, &a.OwnerUserID,
 			&a.AccountWrapper, &a.Purpose, &a.SquareMeters,
 		); err != nil {
 			return nil, fmt.Errorf("scan account: %w", err)

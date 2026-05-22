@@ -74,7 +74,7 @@ func buildMortgageInputs(raw map[string]json.RawMessage) (MortgageInputs, *valid
 type ikeIkzeInput struct {
 	Enabled             bool
 	Wrapper             string
-	Owner               string
+	OwnerUserID         *int
 	Balance             float64
 	AutoFillLimit       bool
 	MonthlyContribution float64
@@ -82,7 +82,7 @@ type ikeIkzeInput struct {
 }
 
 type ppkInput struct {
-	Owner                string
+	OwnerUserID          *int
 	Enabled              bool
 	StartingBalance      float64
 	MonthlyGrossSalary   float64
@@ -95,7 +95,7 @@ type ppkInput struct {
 
 type brokerageInput struct {
 	Enabled             bool
-	Owner               string
+	OwnerUserID         *int
 	Balance             float64
 	MonthlyContribution float64
 }
@@ -121,7 +121,7 @@ func (s simulationInputs) echo() map[string]any {
 		ike = append(ike, map[string]any{
 			"enabled":              a.Enabled,
 			"wrapper":              a.Wrapper,
-			"owner":                a.Owner,
+			"owner_user_id":        a.OwnerUserID,
 			"balance":              pyFloat(a.Balance),
 			"auto_fill_limit":      a.AutoFillLimit,
 			"monthly_contribution": pyFloat(a.MonthlyContribution),
@@ -131,7 +131,7 @@ func (s simulationInputs) echo() map[string]any {
 	ppk := make([]map[string]any, 0, len(s.PPKAccounts))
 	for _, a := range s.PPKAccounts {
 		ppk = append(ppk, map[string]any{
-			"owner":                  a.Owner,
+			"owner_user_id":          a.OwnerUserID,
 			"enabled":                a.Enabled,
 			"starting_balance":       pyFloat(a.StartingBalance),
 			"monthly_gross_salary":   pyFloat(a.MonthlyGrossSalary),
@@ -146,7 +146,7 @@ func (s simulationInputs) echo() map[string]any {
 	for _, a := range s.BrokerageAccounts {
 		brk = append(brk, map[string]any{
 			"enabled":              a.Enabled,
-			"owner":                a.Owner,
+			"owner_user_id":        a.OwnerUserID,
 			"balance":              pyFloat(a.Balance),
 			"monthly_contribution": pyFloat(a.MonthlyContribution),
 		})
@@ -273,11 +273,11 @@ func parseIkeIkze(raw json.RawMessage) ([]ikeIkzeInput, *validationError) {
 			return nil, vErr
 		}
 		a.Wrapper = wrapper
-		owner, vErr := requiredStringField(e, "owner")
+		owner, vErr := requiredIntOrNullField(e, "owner_user_id")
 		if vErr != nil {
 			return nil, vErr
 		}
-		a.Owner = owner
+		a.OwnerUserID = owner
 		a.Balance = floatField(e, "balance")
 		a.AutoFillLimit = boolField(e, "auto_fill_limit")
 		a.MonthlyContribution = floatField(e, "monthly_contribution")
@@ -304,11 +304,11 @@ func parsePPK(raw json.RawMessage) ([]ppkInput, *validationError) {
 	out := make([]ppkInput, 0, len(entries))
 	for _, e := range entries {
 		var a ppkInput
-		owner, vErr := requiredStringField(e, "owner")
+		owner, vErr := requiredIntOrNullField(e, "owner_user_id")
 		if vErr != nil {
 			return nil, vErr
 		}
-		a.Owner = owner
+		a.OwnerUserID = owner
 		a.Enabled = boolField(e, "enabled")
 		a.StartingBalance = floatField(e, "starting_balance")
 		a.MonthlyGrossSalary = floatField(e, "monthly_gross_salary")
@@ -349,11 +349,11 @@ func parseBrokerage(raw json.RawMessage) ([]brokerageInput, *validationError) {
 	for _, e := range entries {
 		var a brokerageInput
 		a.Enabled = boolField(e, "enabled")
-		owner, vErr := requiredStringField(e, "owner")
+		owner, vErr := requiredIntOrNullField(e, "owner_user_id")
 		if vErr != nil {
 			return nil, vErr
 		}
-		a.Owner = owner
+		a.OwnerUserID = owner
 		a.Balance = floatField(e, "balance")
 		a.MonthlyContribution = floatField(e, "monthly_contribution")
 		if a.Balance < 0 || a.MonthlyContribution < 0 {
@@ -414,7 +414,7 @@ func isNullRaw(v json.RawMessage) bool {
 }
 
 // requiredStringField enforces a non-empty string for fields the Pydantic
-// schema marks required (wrapper, owner) — missing/wrong-type/empty -> 422.
+// schema marks required (wrapper) — missing/wrong-type/empty -> 422.
 func requiredStringField(m map[string]any, key string) (string, *validationError) {
 	v, ok := m[key]
 	if !ok || v == nil {
@@ -428,6 +428,25 @@ func requiredStringField(m map[string]any, key string) (string, *validationError
 		return "", &validationError{Field: key, Msg: key + " cannot be empty"}
 	}
 	return s, nil
+}
+
+// requiredIntOrNullField reads an integer key that must be present; an
+// explicit null is allowed and yields nil (jointly owned). JSON numbers
+// decode into map[string]any as float64.
+func requiredIntOrNullField(m map[string]any, key string) (*int, *validationError) {
+	v, ok := m[key]
+	if !ok {
+		return nil, &validationError{Field: key, Msg: "Field required"}
+	}
+	if v == nil {
+		return nil, nil
+	}
+	f, ok := v.(float64)
+	if !ok || f != float64(int(f)) {
+		return nil, &validationError{Field: key, Msg: "must be an integer"}
+	}
+	n := int(f)
+	return &n, nil
 }
 
 func floatField(m map[string]any, key string) float64 {

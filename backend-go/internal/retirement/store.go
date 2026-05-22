@@ -19,22 +19,23 @@ import (
 // Sentinel errors.
 var (
 	ErrNoSalary           = errors.New("no salary record for owner")
-	ErrPersonaNotFound    = errors.New("persona not found")
+	ErrUserNotFound       = errors.New("user not found")
 	ErrNoPPKAccount       = errors.New("no active PPK account for owner")
 	ErrContributionsExist = errors.New("contributions already exist for month")
 )
 
 // errNoLimit is the internal sentinel for "no retirement_limit row matches
-// (year, wrapper, owner)" — unexported because callers use the (nil, err)
-// branch directly.
+// (year, wrapper, owner_user_id)" — unexported because callers use the
+// (nil, err) branch directly.
 var errNoLimit = errors.New("no limit configured for wrapper")
 
 // Limit mirrors backend/app/models/retirement_limit.RetirementLimit.
+// OwnerUserID is the owning household member; nil means jointly owned.
 type Limit struct {
 	ID             int
 	Year           int
 	AccountWrapper string
-	Owner          string
+	OwnerUserID    *int
 	LimitAmount    decimal.Decimal
 	Notes          *string
 }
@@ -45,33 +46,38 @@ type Store struct{ pool *pgxpool.Pool }
 // NewStore wraps a pool.
 func NewStore(pool *pgxpool.Pool) *Store { return &Store{pool: pool} }
 
-// PersonaNames returns persona names alphabetically.
-func (s *Store) PersonaNames(ctx context.Context) ([]string, error) {
-	rows, err := s.pool.Query(ctx, `SELECT name FROM personas ORDER BY name`)
+// UserIDs returns every named user id ordered by name — the owner set used
+// when the request omits an owner filter. Unnamed accounts (e.g. admin) are
+// skipped: they hold no IKE/IKZE/PPK accounts.
+func (s *Store) UserIDs(ctx context.Context) ([]int, error) {
+	rows, err := s.pool.Query(ctx, `SELECT id FROM users WHERE name IS NOT NULL ORDER BY name`)
 	if err != nil {
-		return nil, fmt.Errorf("personas: %w", err)
+		return nil, fmt.Errorf("users: %w", err)
 	}
 	defer rows.Close()
-	out := []string{}
+	out := []int{}
 	for rows.Next() {
-		var n string
-		if err := rows.Scan(&n); err != nil {
-			return nil, fmt.Errorf("scan persona: %w", err)
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan user id: %w", err)
 		}
-		out = append(out, n)
+		out = append(out, id)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate personas: %w", err)
+		return nil, fmt.Errorf("iterate users: %w", err)
 	}
 	return out, nil
 }
 
-// AccountIDsForWrapper returns the active account IDs for one wrapper+owner.
-func (s *Store) AccountIDsForWrapper(ctx context.Context, wrapper, owner string) ([]int, error) {
+// AccountIDsForWrapper returns the active account IDs for one
+// wrapper + owner_user_id.
+func (s *Store) AccountIDsForWrapper(ctx context.Context, wrapper string, ownerUserID *int) ([]int, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT id FROM accounts
-		WHERE account_wrapper = $1 AND owner = $2 AND is_active = true`,
-		wrapper, owner,
+		WHERE account_wrapper = $1
+		  AND owner_user_id IS NOT DISTINCT FROM $2
+		  AND is_active = true`,
+		wrapper, ownerUserID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("account ids: %w", err)
@@ -183,7 +189,7 @@ func (s *Store) LatestSnapshotValueSum(ctx context.Context, accountIDs []int) (d
 // LimitsForYear returns all RetirementLimit rows for a year, ordered by id.
 func (s *Store) LimitsForYear(ctx context.Context, year int) ([]Limit, error) {
 	rows, err := s.pool.Query(ctx, `
-		SELECT id, year, account_wrapper, owner, limit_amount, notes
+		SELECT id, year, account_wrapper, owner_user_id, limit_amount, notes
 		FROM retirement_limits WHERE year = $1
 		ORDER BY id`,
 		year,
@@ -195,7 +201,7 @@ func (s *Store) LimitsForYear(ctx context.Context, year int) ([]Limit, error) {
 	out := []Limit{}
 	for rows.Next() {
 		var l Limit
-		if err := rows.Scan(&l.ID, &l.Year, &l.AccountWrapper, &l.Owner, &l.LimitAmount, &l.Notes); err != nil {
+		if err := rows.Scan(&l.ID, &l.Year, &l.AccountWrapper, &l.OwnerUserID, &l.LimitAmount, &l.Notes); err != nil {
 			return nil, fmt.Errorf("scan limit: %w", err)
 		}
 		out = append(out, l)
@@ -206,17 +212,19 @@ func (s *Store) LimitsForYear(ctx context.Context, year int) ([]Limit, error) {
 	return out, nil
 }
 
-// LimitFor returns the Limit row for (year, wrapper, owner). errNoLimit
-// when the row is absent — callers handle that as "no limit configured".
-func (s *Store) LimitFor(ctx context.Context, year int, wrapper, owner string) (*Limit, error) {
+// LimitFor returns the Limit row for (year, wrapper, owner_user_id).
+// errNoLimit when the row is absent — callers handle that as "no limit
+// configured".
+func (s *Store) LimitFor(ctx context.Context, year int, wrapper string, ownerUserID *int) (*Limit, error) {
 	row := s.pool.QueryRow(ctx, `
-		SELECT id, year, account_wrapper, owner, limit_amount, notes
+		SELECT id, year, account_wrapper, owner_user_id, limit_amount, notes
 		FROM retirement_limits
-		WHERE year = $1 AND account_wrapper = $2 AND owner = $3`,
-		year, wrapper, owner,
+		WHERE year = $1 AND account_wrapper = $2
+		  AND owner_user_id IS NOT DISTINCT FROM $3`,
+		year, wrapper, ownerUserID,
 	)
 	var l Limit
-	if err := row.Scan(&l.ID, &l.Year, &l.AccountWrapper, &l.Owner, &l.LimitAmount, &l.Notes); err != nil {
+	if err := row.Scan(&l.ID, &l.Year, &l.AccountWrapper, &l.OwnerUserID, &l.LimitAmount, &l.Notes); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errNoLimit
 		}
@@ -227,8 +235,8 @@ func (s *Store) LimitFor(ctx context.Context, year int, wrapper, owner string) (
 
 // LimitConfigured wraps LimitFor with the "no row" branch surfaced via the
 // bool — callers can ignore the sentinel and not worry about a nil deref.
-func (s *Store) LimitConfigured(ctx context.Context, year int, wrapper, owner string) (Limit, bool, error) {
-	l, err := s.LimitFor(ctx, year, wrapper, owner)
+func (s *Store) LimitConfigured(ctx context.Context, year int, wrapper string, ownerUserID *int) (Limit, bool, error) {
+	l, err := s.LimitFor(ctx, year, wrapper, ownerUserID)
 	if err != nil {
 		if errors.Is(err, errNoLimit) {
 			return Limit{}, false, nil
@@ -238,33 +246,39 @@ func (s *Store) LimitConfigured(ctx context.Context, year int, wrapper, owner st
 	return *l, true, nil
 }
 
-// UpsertLimit creates the (year, wrapper, owner) row or updates limit_amount
-// + notes when it exists. Mirrors Python's update_limit fall-through.
-func (s *Store) UpsertLimit(ctx context.Context, year int, wrapper, owner string, amount decimal.Decimal, notes *string) (*Limit, error) {
+// UpsertLimit creates the (year, wrapper, owner_user_id) row or updates
+// limit_amount + notes when it exists. The legacy owner string is
+// dual-written from owner_user_id ($3) until the column is dropped; the
+// uq_year_wrapper_owner constraint still keys on it.
+func (s *Store) UpsertLimit(ctx context.Context, year int, wrapper string, ownerUserID *int, amount decimal.Decimal, notes *string) (*Limit, error) {
 	row := s.pool.QueryRow(ctx, `
-		INSERT INTO retirement_limits (year, account_wrapper, owner, limit_amount, notes)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO retirement_limits (year, account_wrapper, owner, owner_user_id, limit_amount, notes)
+		VALUES (
+			$1, $2, COALESCE((SELECT name FROM users WHERE id = $3), 'Shared'),
+			$3, $4, $5
+		)
 		ON CONFLICT (year, account_wrapper, owner) DO UPDATE
 		SET limit_amount = EXCLUDED.limit_amount,
+		    owner_user_id = EXCLUDED.owner_user_id,
 		    notes = COALESCE(EXCLUDED.notes, retirement_limits.notes)
-		RETURNING id, year, account_wrapper, owner, limit_amount, notes`,
-		year, wrapper, owner, amount, notes,
+		RETURNING id, year, account_wrapper, owner_user_id, limit_amount, notes`,
+		year, wrapper, ownerUserID, amount, notes,
 	)
 	var l Limit
-	if err := row.Scan(&l.ID, &l.Year, &l.AccountWrapper, &l.Owner, &l.LimitAmount, &l.Notes); err != nil {
+	if err := row.Scan(&l.ID, &l.Year, &l.AccountWrapper, &l.OwnerUserID, &l.LimitAmount, &l.Notes); err != nil {
 		return nil, fmt.Errorf("upsert limit: %w", err)
 	}
 	return &l, nil
 }
 
 // CurrentSalaryFor returns the latest active gross_amount on/before asOfDate
-// for one owner.
-func (s *Store) CurrentSalaryFor(ctx context.Context, owner string, asOfDate time.Time) (decimal.Decimal, error) {
+// for one owner_user_id.
+func (s *Store) CurrentSalaryFor(ctx context.Context, ownerUserID *int, asOfDate time.Time) (decimal.Decimal, error) {
 	row := s.pool.QueryRow(ctx, `
 		SELECT gross_amount FROM salary_records
-		WHERE owner = $1 AND is_active = true AND date <= $2
+		WHERE owner_user_id IS NOT DISTINCT FROM $1 AND is_active = true AND date <= $2
 		ORDER BY date DESC LIMIT 1`,
-		owner, asOfDate,
+		ownerUserID, asOfDate,
 	)
 	var v decimal.Decimal
 	if err := row.Scan(&v); err != nil {
@@ -276,18 +290,22 @@ func (s *Store) CurrentSalaryFor(ctx context.Context, owner string, asOfDate tim
 	return v, nil
 }
 
-// PersonaPPKRates returns (employee_rate, employer_rate) percentages from
-// the personas table or ErrPersonaNotFound.
-func (s *Store) PersonaPPKRates(ctx context.Context, owner string) (decimal.Decimal, decimal.Decimal, error) {
+// UserPPKRates returns (employee_rate, employer_rate) percentages from the
+// users table or ErrUserNotFound. A user with NULL PPK rates yields zero
+// rates (treated as "configured but not contributing").
+func (s *Store) UserPPKRates(ctx context.Context, ownerUserID *int) (decimal.Decimal, decimal.Decimal, error) {
+	if ownerUserID == nil {
+		return decimal.Zero, decimal.Zero, ErrUserNotFound
+	}
 	row := s.pool.QueryRow(ctx, `
-		SELECT ppk_employee_rate, ppk_employer_rate
-		FROM personas WHERE name = $1`,
-		owner,
+		SELECT COALESCE(ppk_employee_rate, 0), COALESCE(ppk_employer_rate, 0)
+		FROM users WHERE id = $1`,
+		*ownerUserID,
 	)
 	var employee, employer decimal.Decimal
 	if err := row.Scan(&employee, &employer); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return decimal.Zero, decimal.Zero, ErrPersonaNotFound
+			return decimal.Zero, decimal.Zero, ErrUserNotFound
 		}
 		return decimal.Zero, decimal.Zero, fmt.Errorf("ppk rates: %w", err)
 	}
@@ -295,13 +313,13 @@ func (s *Store) PersonaPPKRates(ctx context.Context, owner string) (decimal.Deci
 }
 
 // ActivePPKAccountForOwner returns the receiving PPK account or ErrNoPPKAccount.
-func (s *Store) ActivePPKAccountForOwner(ctx context.Context, owner string) (int, error) {
+func (s *Store) ActivePPKAccountForOwner(ctx context.Context, ownerUserID *int) (int, error) {
 	row := s.pool.QueryRow(ctx, `
 		SELECT id FROM accounts
-		WHERE account_wrapper = 'PPK' AND owner = $1
+		WHERE account_wrapper = 'PPK' AND owner_user_id IS NOT DISTINCT FROM $1
 		  AND is_active = true AND receives_contributions = true
 		LIMIT 1`,
-		owner,
+		ownerUserID,
 	)
 	var id int
 	if err := row.Scan(&id); err != nil {
@@ -319,7 +337,7 @@ type PPKContribution struct {
 	EmployeeAmt decimal.Decimal
 	EmployerAmt decimal.Decimal
 	Date        time.Time
-	Owner       string
+	OwnerUserID *int
 }
 
 // InsertPPKContributions writes the employee + employer transactions
@@ -365,11 +383,16 @@ func (s *Store) InsertPPKContributions(ctx context.Context, c PPKContribution) (
 	}
 	now := time.Now().UTC()
 	var empID, emprID int
+	// owner is dual-written from owner_user_id ($4) until the legacy column
+	// is dropped in a later phase.
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO transactions (account_id, amount, date, owner, transaction_type, is_active, created_at)
-		VALUES ($1, $2, $3, $4, 'employee', true, $5)
+		INSERT INTO transactions (account_id, amount, date, owner, owner_user_id, transaction_type, is_active, created_at)
+		VALUES (
+			$1, $2, $3, COALESCE((SELECT name FROM users WHERE id = $4), 'Shared'),
+			$4, 'employee', true, $5
+		)
 		RETURNING id`,
-		c.AccountID, c.EmployeeAmt, c.Date, c.Owner, now,
+		c.AccountID, c.EmployeeAmt, c.Date, c.OwnerUserID, now,
 	).Scan(&empID); err != nil {
 		if isUniqueViolation(err) {
 			return nil, ErrContributionsExist
@@ -377,10 +400,13 @@ func (s *Store) InsertPPKContributions(ctx context.Context, c PPKContribution) (
 		return nil, fmt.Errorf("insert employee txn: %w", err)
 	}
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO transactions (account_id, amount, date, owner, transaction_type, is_active, created_at)
-		VALUES ($1, $2, $3, $4, 'employer', true, $5)
+		INSERT INTO transactions (account_id, amount, date, owner, owner_user_id, transaction_type, is_active, created_at)
+		VALUES (
+			$1, $2, $3, COALESCE((SELECT name FROM users WHERE id = $4), 'Shared'),
+			$4, 'employer', true, $5
+		)
 		RETURNING id`,
-		c.AccountID, c.EmployerAmt, c.Date, c.Owner, now,
+		c.AccountID, c.EmployerAmt, c.Date, c.OwnerUserID, now,
 	).Scan(&emprID); err != nil {
 		if isUniqueViolation(err) {
 			return nil, ErrContributionsExist

@@ -11,11 +11,12 @@ import (
 )
 
 // AccountInput is the subset of Account columns the spec consumes.
+// OwnerUserID is the owning household member; nil means jointly owned.
 type AccountInput struct {
-	ID       int
-	Owner    string
-	Type     string
-	Category string
+	ID          int
+	OwnerUserID *int
+	Type        string
+	Category    string
 }
 
 // SnapshotValueInput is one row from snapshot_values.
@@ -37,15 +38,38 @@ type AllocationEntry struct {
 	Value    decimal.Decimal
 }
 
-// AggregateRow is one precomputed row per (snapshot_id, owner).
+// AggregateRow is one precomputed row per (snapshot_id, owner_user_id).
+// OwnerUserID is nil for the jointly-owned ("Shared") bucket.
 type AggregateRow struct {
 	SnapshotID       int
 	Month            time.Time
-	Owner            string
+	OwnerUserID      *int
 	TotalAssets      decimal.Decimal
 	TotalLiabilities decimal.Decimal
 	NetWorth         decimal.Decimal
 	Allocation       []AllocationEntry
+}
+
+// ownerKey is a comparable map key for owner buckets. A nil owner_user_id
+// (jointly owned / asset-table rows) maps to {shared: true}.
+type ownerKey struct {
+	id     int
+	shared bool
+}
+
+func keyFor(ownerUserID *int) ownerKey {
+	if ownerUserID == nil {
+		return ownerKey{shared: true}
+	}
+	return ownerKey{id: *ownerUserID}
+}
+
+func (k ownerKey) ownerUserID() *int {
+	if k.shared {
+		return nil
+	}
+	id := k.id
+	return &id
 }
 
 // ComputeAggregates is the pure-math port of aggregate_spec.compute_aggregates.
@@ -66,13 +90,13 @@ func ComputeAggregates(
 		liabilities decimal.Decimal
 		alloc       map[string]decimal.Decimal
 	}
-	totals := map[string]*bucket{}
-	getBucket := func(owner string) *bucket {
-		if b, ok := totals[owner]; ok {
+	totals := map[ownerKey]*bucket{}
+	getBucket := func(k ownerKey) *bucket {
+		if b, ok := totals[k]; ok {
 			return b
 		}
 		b := &bucket{alloc: map[string]decimal.Decimal{}}
-		totals[owner] = b
+		totals[k] = b
 		return b
 	}
 
@@ -81,7 +105,7 @@ func ComputeAggregates(
 		switch {
 		case sv.AssetID != nil:
 			if _, active := activeAssetIDs[*sv.AssetID]; active {
-				b := getBucket("Shared")
+				b := getBucket(ownerKey{shared: true})
 				b.assets = b.assets.Add(v)
 			}
 		case sv.AccountID != nil:
@@ -89,7 +113,7 @@ func ComputeAggregates(
 			if !ok {
 				continue
 			}
-			b := getBucket(acc.Owner)
+			b := getBucket(keyFor(acc.OwnerUserID))
 			if acc.Type == "asset" {
 				b.assets = b.assets.Add(v)
 				b.alloc[acc.Category] = b.alloc[acc.Category].Add(v)
@@ -102,21 +126,27 @@ func ComputeAggregates(
 	month := firstOfMonth(snap.Date)
 	if len(totals) == 0 {
 		return []AggregateRow{{
-			SnapshotID: snap.ID,
-			Month:      month,
-			Owner:      "Shared",
-			Allocation: []AllocationEntry{},
+			SnapshotID:  snap.ID,
+			Month:       month,
+			OwnerUserID: nil,
+			Allocation:  []AllocationEntry{},
 		}}
 	}
 
-	owners := make([]string, 0, len(totals))
-	for o := range totals {
-		owners = append(owners, o)
+	keys := make([]ownerKey, 0, len(totals))
+	for k := range totals {
+		keys = append(keys, k)
 	}
-	sort.Strings(owners)
-	out := make([]AggregateRow, 0, len(owners))
-	for _, owner := range owners {
-		b, ok := totals[owner]
+	// Deterministic order: the jointly-owned (Shared) bucket first, then by id.
+	sort.Slice(keys, func(i, j int) bool {
+		if keys[i].shared != keys[j].shared {
+			return keys[i].shared
+		}
+		return keys[i].id < keys[j].id
+	})
+	out := make([]AggregateRow, 0, len(keys))
+	for _, k := range keys {
+		b, ok := totals[k]
 		if !ok || b == nil {
 			continue
 		}
@@ -132,7 +162,7 @@ func ComputeAggregates(
 		out = append(out, AggregateRow{
 			SnapshotID:       snap.ID,
 			Month:            month,
-			Owner:            owner,
+			OwnerUserID:      k.ownerUserID(),
 			TotalAssets:      b.assets,
 			TotalLiabilities: b.liabilities,
 			NetWorth:         b.assets.Sub(b.liabilities),

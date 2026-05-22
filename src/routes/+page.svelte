@@ -17,7 +17,7 @@
 	import { env } from '$env/dynamic/public';
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from '$lib/stores/toast.svelte';
-	import type { Persona } from '$lib/types/personas';
+	import { ownerName, type OwnerOption } from '$lib/types/owners';
 	import type { PageData } from './$types';
 
 	interface Props {
@@ -26,12 +26,12 @@
 
 	let { data }: Props = $props();
 
-	let personas: Persona[] = $state([]);
+	let owners: OwnerOption[] = $state([]);
 
 	$effect(() => {
 		let cancelled = false;
-		Promise.resolve(data.personas).then((p) => {
-			if (!cancelled) personas = (p ?? []) as Persona[];
+		Promise.resolve(data.owners).then((o) => {
+			if (!cancelled) owners = (o ?? []) as OwnerOption[];
 		});
 		return () => {
 			cancelled = true;
@@ -44,7 +44,7 @@
 
 	type RetirementStat = {
 		account_wrapper: string;
-		owner: string;
+		owner_user_id: number | null;
 		total_contributed: number;
 		limit_amount: number;
 		remaining: number;
@@ -53,13 +53,13 @@
 
 	function openLimitsModal(retirementStats: RetirementStat[]) {
 		limits = {};
-		for (const persona of personas) {
+		for (const owner of owners) {
 			for (const wrapper of ['IKE', 'IKZE']) {
-				limits[`${wrapper}_${persona.name}`] = 0;
+				limits[`${wrapper}_${owner.id}`] = 0;
 			}
 		}
 		for (const stat of retirementStats) {
-			const key = `${stat.account_wrapper}_${stat.owner}`;
+			const key = `${stat.account_wrapper}_${stat.owner_user_id}`;
 			if (key in limits) {
 				limits[key] = stat.limit_amount || 0;
 			}
@@ -73,21 +73,18 @@
 			const requests = Object.entries(limits).map(([key, amount]) => {
 				const sep = key.indexOf('_');
 				const wrapper = key.slice(0, sep);
-				const owner = key.slice(sep + 1);
-				return fetch(
-					`${apiUrl}/api/retirement/limits/${limitsYear}/${wrapper}/${encodeURIComponent(owner)}`,
-					{
-						method: 'PUT',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({
-							year: limitsYear,
-							account_wrapper: wrapper,
-							owner: owner,
-							limit_amount: amount,
-							notes: ''
-						})
-					}
-				);
+				const ownerUserId = Number(key.slice(sep + 1));
+				return fetch(`${apiUrl}/api/retirement/limits/${limitsYear}/${wrapper}/${ownerUserId}`, {
+					method: 'PUT',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						year: limitsYear,
+						account_wrapper: wrapper,
+						owner_user_id: ownerUserId,
+						limit_amount: amount,
+						notes: ''
+					})
+				});
 			});
 
 			const responses = await Promise.all(requests);
@@ -227,7 +224,9 @@
 					{#each dashboard.retirementStats as stat}
 						<div class="card preset-tonal-surface p-4 space-y-2">
 							<div class="flex items-start justify-between gap-2">
-								<h4 class="font-bold">{stat.account_wrapper} ({stat.owner})</h4>
+								<h4 class="font-bold">
+									{stat.account_wrapper} ({ownerName(owners, stat.owner_user_id)})
+								</h4>
 								<span class="text-sm font-semibold whitespace-nowrap">
 									{formatPLN(stat.total_contributed)} / {formatPLN(stat.limit_amount)}
 								</span>
@@ -279,6 +278,7 @@
 		<DashboardCharts
 			netWorthHistory={dashboard.net_worth_history}
 			allocation={dashboard.allocation}
+			{owners}
 		/>
 	{:catch err}
 		<div class="card preset-filled-error-500 p-4">
@@ -313,13 +313,13 @@
 
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 			{#each ['IKE', 'IKZE'] as wrapper}
-				{#each personas as persona}
+				{#each owners as owner}
 					<label class="label">
-						<span class="font-semibold text-sm">{wrapper} {persona.name} (PLN)</span>
+						<span class="font-semibold text-sm">{wrapper} {owner.name} (PLN)</span>
 						<input
 							type="number"
 							class="input"
-							bind:value={limits[`${wrapper}_${persona.name}`]}
+							bind:value={limits[`${wrapper}_${owner.id}`]}
 							step="0.01"
 							required
 						/>

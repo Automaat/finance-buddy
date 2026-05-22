@@ -3,7 +3,7 @@
     "employee_contributed": 0.0,
     "employer_contributed": 400.0,
     "government_contributed": 250.0,
-    "owner": "Marcin",
+    "owner_user_id": 2,
     "returns": 12950.0,
     "roi_percentage": 1992.31,
     "total_contributed": 650.0,

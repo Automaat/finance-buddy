@@ -14,9 +14,9 @@ type netWorthPoint struct {
 
 // allocationItem mirrors AllocationItem.
 type allocationItem struct {
-	Category string
-	Owner    *string
-	Value    float64
+	Category    string
+	OwnerUserID *int
+	Value       float64
 }
 
 // metricCards mirrors MetricCards. The four ratio fields are nil-able.
@@ -189,19 +189,20 @@ func latestSnapshotByDate(rows []mergedRow) (int, time.Time, bool) {
 	return bestID, bestDate, found
 }
 
-// sortAllocation orders allocation items by (category, owner).
+// sortAllocation orders allocation items by (category, owner_user_id).
+// A nil owner_user_id (jointly owned) sorts before any concrete id.
 func sortAllocation(items []allocationItem) {
 	sort.Slice(items, func(i, j int) bool {
 		if items[i].Category != items[j].Category {
 			return items[i].Category < items[j].Category
 		}
-		oi, oj := "", ""
-		if items[i].Owner != nil {
-			oi = *items[i].Owner
+		oi, oj := items[i].OwnerUserID, items[j].OwnerUserID
+		if (oi == nil) != (oj == nil) {
+			return oi == nil
 		}
-		if items[j].Owner != nil {
-			oj = *items[j].Owner
+		if oi == nil {
+			return false
 		}
-		return oi < oj
+		return *oi < *oj
 	})
 }

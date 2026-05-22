@@ -1823,9 +1823,9 @@
                           "category": {
                             "type": "string"
                           },
-                          "owner": {
+                          "owner_user_id": {
                             "nullable": true,
-                            "type": "string"
+                            "type": "integer"
                           },
                           "value": {
                             "format": "double",
@@ -4059,8 +4059,9 @@
                         "nullable": true,
                         "type": "string"
                       },
-                      "owner": {
-                        "type": "string"
+                      "owner_user_id": {
+                        "nullable": true,
+                        "type": "integer"
                       },
                       "year": {
                         "type": "integer"
@@ -4081,7 +4082,7 @@
         ]
       }
     },
-    "/api/retirement/limits/{year}/{wrapper}/{owner}": {
+    "/api/retirement/limits/{year}/{wrapper}/{owner_user_id}": {
       "put": {
         "parameters": [
           {
@@ -4102,7 +4103,7 @@
           },
           {
             "in": "path",
-            "name": "owner",
+            "name": "owner_user_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -4129,8 +4130,9 @@
                       "nullable": true,
                       "type": "string"
                     },
-                    "owner": {
-                      "type": "string"
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
                     },
                     "year": {
                       "type": "integer"
@@ -4172,8 +4174,9 @@
                     "month": {
                       "type": "integer"
                     },
-                    "owner": {
-                      "type": "string"
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
                     },
                     "total_amount": {
                       "format": "double",
@@ -4223,8 +4226,9 @@
                         "format": "double",
                         "type": "number"
                       },
-                      "owner": {
-                        "type": "string"
+                      "owner_user_id": {
+                        "nullable": true,
+                        "type": "integer"
                       },
                       "returns": {
                         "format": "double",
@@ -4286,8 +4290,9 @@
                         "nullable": true,
                         "type": "number"
                       },
-                      "owner": {
-                        "type": "string"
+                      "owner_user_id": {
+                        "nullable": true,
+                        "type": "integer"
                       },
                       "percentage_used": {
                         "format": "double",
@@ -5204,8 +5209,9 @@
                           "format": "double",
                           "type": "number"
                         },
-                        "owner": {
-                          "type": "string"
+                        "owner_user_id": {
+                          "nullable": true,
+                          "type": "integer"
                         },
                         "retirement_age": {
                           "type": "integer"
@@ -5386,9 +5392,9 @@
                     "gender": {
                       "type": "string"
                     },
-                    "owner": {
+                    "owner_user_id": {
                       "nullable": true,
-                      "type": "string"
+                      "type": "integer"
                     },
                     "retirement_age": {
                       "type": "integer"

@@ -16,7 +16,7 @@ import (
 // not part of the package API.
 var errNoSalary = errors.New("no salary record for owner")
 
-// Store reads salary records + persona + app_config for prefill.
+// Store reads salary records + users + app_config for prefill.
 type Store struct {
 	pool *pgxpool.Pool
 }
@@ -28,8 +28,9 @@ func NewStore(pool *pgxpool.Pool) *Store {
 
 // PrefillData bundles everything prefill needs in a single struct so the
 // handler can compose the response without per-field branching.
+// OwnerUserID is the resolved household member; nil means jointly owned.
 type PrefillData struct {
-	Owner                     *string
+	OwnerUserID               *int
 	BirthDate                 *time.Time
 	RetirementAge             int
 	CurrentGrossMonthlySalary *float64
@@ -39,10 +40,10 @@ type PrefillData struct {
 
 // LoadPrefill fetches the data Python's get_zus_prefill assembles:
 // - config (birth_date + retirement_age)
-// - resolved owner (passed-in or first persona alphabetically)
+// - resolved owner (passed-in owner_user_id or first user alphabetically)
 // - latest active salary for owner -> current_gross_monthly_salary
 // - all active salaries for owner -> yearly history (latest record per year)
-func (s *Store) LoadPrefill(ctx context.Context, ownerHint *string) (PrefillData, error) {
+func (s *Store) LoadPrefill(ctx context.Context, ownerHint *int) (PrefillData, error) {
 	data := PrefillData{RetirementAge: 65, YearlySalaryHistory: map[int]float64{}}
 
 	birth, ra, err := s.loadConfig(ctx)
@@ -56,20 +57,20 @@ func (s *Store) LoadPrefill(ctx context.Context, ownerHint *string) (PrefillData
 		data.RetirementAge = ra
 	}
 
-	owner := ""
-	if ownerHint != nil && *ownerHint != "" {
-		owner = *ownerHint
+	var owner *int
+	if ownerHint != nil {
+		owner = ownerHint
 	} else {
-		first, err := s.firstPersona(ctx)
+		first, found, err := s.firstUser(ctx)
 		if err != nil {
 			return data, err
 		}
-		owner = first
+		if !found {
+			return data, nil
+		}
+		owner = &first
 	}
-	if owner == "" {
-		return data, nil
-	}
-	data.Owner = &owner
+	data.OwnerUserID = owner
 
 	current, err := s.latestSalary(ctx, owner)
 	if err != nil && !errors.Is(err, errNoSalary) {
@@ -105,26 +106,29 @@ func (s *Store) loadConfig(ctx context.Context) (*time.Time, int, error) {
 	return birth, ra, nil
 }
 
-func (s *Store) firstPersona(ctx context.Context) (string, error) {
+// firstUser returns the id of the first named user ordered by name. The
+// bool is false when no named users exist. Unnamed accounts (e.g. admin)
+// are skipped — the ZUS prefill owner picker only covers household members.
+func (s *Store) firstUser(ctx context.Context) (int, bool, error) {
 	row := s.pool.QueryRow(ctx,
-		`SELECT name FROM personas ORDER BY name LIMIT 1`,
+		`SELECT id FROM users WHERE name IS NOT NULL ORDER BY name LIMIT 1`,
 	)
-	var n string
-	if err := row.Scan(&n); err != nil {
+	var id int
+	if err := row.Scan(&id); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return "", nil
+			return 0, false, nil
 		}
-		return "", fmt.Errorf("select first persona: %w", err)
+		return 0, false, fmt.Errorf("select first user: %w", err)
 	}
-	return n, nil
+	return id, true, nil
 }
 
-func (s *Store) latestSalary(ctx context.Context, owner string) (*float64, error) {
+func (s *Store) latestSalary(ctx context.Context, ownerUserID *int) (*float64, error) {
 	row := s.pool.QueryRow(ctx, `
 		SELECT gross_amount FROM salary_records
-		WHERE owner = $1 AND is_active = true
+		WHERE owner_user_id IS NOT DISTINCT FROM $1 AND is_active = true
 		ORDER BY date DESC LIMIT 1`,
-		owner,
+		ownerUserID,
 	)
 	var v float64
 	if err := row.Scan(&v); err != nil {
@@ -136,12 +140,12 @@ func (s *Store) latestSalary(ctx context.Context, owner string) (*float64, error
 	return &v, nil
 }
 
-func (s *Store) yearlyHistory(ctx context.Context, owner string) (map[int]float64, *int, error) {
+func (s *Store) yearlyHistory(ctx context.Context, ownerUserID *int) (map[int]float64, *int, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT date, gross_amount FROM salary_records
-		WHERE owner = $1 AND is_active = true
+		WHERE owner_user_id IS NOT DISTINCT FROM $1 AND is_active = true
 		ORDER BY date`,
-		owner,
+		ownerUserID,
 	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("select salary history: %w", err)

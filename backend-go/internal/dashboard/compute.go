@@ -22,11 +22,11 @@ type mergedRow struct {
 	Value      float64
 
 	// account columns (nil when account_id is nil or account inactive)
-	AccType  *string
-	Category *string
-	Owner    *string
-	Wrapper  *string
-	Purpose  *string
+	AccType     *string
+	Category    *string
+	OwnerUserID *int
+	Wrapper     *string
+	Purpose     *string
 }
 
 // signedValue mirrors the pandas vectorized sign rule:
@@ -80,11 +80,10 @@ func buildMergedRows(
 			if acc, ok := accounts[*v.AccountID]; ok {
 				t := acc.Type
 				c := acc.Category
-				o := acc.Owner
 				p := acc.Purpose
 				row.AccType = &t
 				row.Category = &c
-				row.Owner = &o
+				row.OwnerUserID = acc.OwnerUserID
 				row.Purpose = &p
 				row.Wrapper = acc.AccountWrapper
 			}

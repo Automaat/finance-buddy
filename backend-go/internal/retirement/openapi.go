@@ -8,5 +8,5 @@ var APISpec = []apispec.Route{
 	{Method: "GET", Path: "/api/retirement/ppk-stats", Tag: "retirement", Summary: "PPK stats per owner", Response: []ppkStat{}},
 	{Method: "POST", Path: "/api/retirement/ppk-contributions/generate", Tag: "retirement", Summary: "Generate monthly PPK contributions", Response: ppkGenerateResponse{}},
 	{Method: "GET", Path: "/api/retirement/limits/{year}", Tag: "retirement", Summary: "Contribution limits for a year", Response: []limitResponse{}},
-	{Method: "PUT", Path: "/api/retirement/limits/{year}/{wrapper}/{owner}", Tag: "retirement", Summary: "Upsert a contribution limit", Response: limitResponse{}},
+	{Method: "PUT", Path: "/api/retirement/limits/{year}/{wrapper}/{owner_user_id}", Tag: "retirement", Summary: "Upsert a contribution limit", Response: limitResponse{}},
 }
