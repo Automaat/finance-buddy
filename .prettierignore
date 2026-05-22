@@ -47,6 +47,9 @@ api/openapi.v1.json
 # Generated OpenAPI spec — gen-openapi owns its format; CI drift check enforces it
 api/openapi-go.json
 
+# Generated frontend API types — openapi-typescript owns the format
+src/lib/types/api.generated.ts
+
 # Black-box test golden snapshots — Python's json.dump owns the format
 backend-bb-tests/golden
 

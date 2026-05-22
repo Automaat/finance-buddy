@@ -14,7 +14,8 @@
 		"test:e2e:ui": "playwright test --ui",
 		"test:e2e:report": "playwright show-report",
 		"lint": "oxlint && prettier --check .",
-		"format": "prettier --write ."
+		"format": "prettier --write .",
+		"gen:api-types": "openapi-typescript api/openapi-go.json -o src/lib/types/api.generated.ts"
 	},
 	"devDependencies": {
 		"@playwright/test": "^1.60.0",
@@ -26,6 +27,7 @@
 		"@testing-library/svelte": "^5.3.1",
 		"@vitest/coverage-v8": "^4.0.17",
 		"jsdom": "^29.0.0",
+		"openapi-typescript": "^7.13.0",
 		"oxlint": "1.66.0",
 		"postcss": "^8.4.41",
 		"prettier": "3.8.3",
