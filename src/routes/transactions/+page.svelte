@@ -113,6 +113,11 @@
 	}
 
 	async function generatePPKContributions() {
+		if (!ppkGenerateData.owner) {
+			ppkGenerateError = 'Wybierz właściciela';
+			return;
+		}
+
 		ppkGenerateError = '';
 		ppkGenerating = true;
 
@@ -142,6 +147,11 @@
 	async function createTransaction() {
 		if (!newTransactionData.account_id) {
 			transactionError = 'Wybierz konto';
+			return;
+		}
+
+		if (!newTransactionData.owner) {
+			transactionError = 'Wybierz właściciela';
 			return;
 		}
 
