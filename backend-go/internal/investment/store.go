@@ -29,24 +29,14 @@ type CategoryStats struct {
 //     exist (uncapped otherwise).
 //   - total_value: sum of snapshot_values at that latest snapshot date.
 //
-// Returns HasAccounts=false when the category has no active accounts so the
-// handler can emit the all-zero response Python produces.
+// Single round-trip: the cat_accounts CTE drives the has-accounts flag, the
+// transactions sum and the value sum. HasAccounts=false makes the handler
+// emit the all-zero response Python produces for an empty category.
+//
+// The "uncapped when no snapshot" behavior is the `latest.d IS NULL OR
+// t.date <= latest.d` predicate — when no snapshot row exists, latest.d is
+// NULL and the date bound drops out.
 func (s *Store) StatsForCategory(ctx context.Context, category string) (CategoryStats, error) {
-	var accountCount int
-	if err := s.pool.QueryRow(ctx,
-		`SELECT COUNT(*) FROM accounts WHERE category = $1 AND is_active = true`,
-		category,
-	).Scan(&accountCount); err != nil {
-		return CategoryStats{}, fmt.Errorf("count category accounts: %w", err)
-	}
-	if accountCount == 0 {
-		return CategoryStats{HasAccounts: false}, nil
-	}
-
-	// total_contributed + total_value in a single query. The latest snapshot
-	// date is the MAX(s.date) over snapshots that hold a value for any active
-	// account in this category; when no snapshot exists the date subquery is
-	// NULL and the transactions sum is left uncapped (COALESCE on the bound).
 	row := s.pool.QueryRow(ctx, `
 		WITH cat_accounts AS (
 			SELECT id FROM accounts WHERE category = $1 AND is_active = true
@@ -58,6 +48,7 @@ func (s *Store) StatsForCategory(ctx context.Context, category string) (Category
 			WHERE sv.account_id IN (SELECT id FROM cat_accounts)
 		)
 		SELECT
+			EXISTS (SELECT 1 FROM cat_accounts) AS has_accounts,
 			(SELECT COALESCE(SUM(t.amount), 0)
 			 FROM transactions t, latest
 			 WHERE t.account_id IN (SELECT id FROM cat_accounts)
@@ -74,8 +65,7 @@ func (s *Store) StatsForCategory(ctx context.Context, category string) (Category
 		category,
 	)
 	var stats CategoryStats
-	stats.HasAccounts = true
-	if err := row.Scan(&stats.TotalContributed, &stats.TotalValue); err != nil {
+	if err := row.Scan(&stats.HasAccounts, &stats.TotalContributed, &stats.TotalValue); err != nil {
 		return CategoryStats{}, fmt.Errorf("category stats: %w", err)
 	}
 	return stats, nil
