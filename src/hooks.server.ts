@@ -12,13 +12,25 @@ interface SessionUser {
 function decodeUser(token: string): SessionUser | null {
 	try {
 		const payload = token.split('.')[1];
-		const pad = payload.length % 4 === 0 ? '' : '='.repeat(4 - (payload.length % 4));
-		const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/') + pad);
-		const claims = JSON.parse(json) as { username?: string; is_admin?: boolean; exp?: number };
-		if (typeof claims.exp === 'number' && claims.exp * 1000 < Date.now()) {
+		if (!payload) {
 			return null;
 		}
-		return { username: claims.username ?? '', isAdmin: claims.is_admin ?? false };
+		const pad = payload.length % 4 === 0 ? '' : '='.repeat(4 - (payload.length % 4));
+		const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/') + pad);
+		const claims = JSON.parse(json) as { username?: unknown; is_admin?: unknown; exp?: unknown };
+		// Reject malformed claims. The backend still verifies the signature on
+		// every API call — this only stops a bogus token from looking
+		// logged-in to the page-level gating.
+		if (typeof claims.exp !== 'number' || claims.exp * 1000 < Date.now()) {
+			return null;
+		}
+		if (typeof claims.username !== 'string' || claims.username === '') {
+			return null;
+		}
+		if (typeof claims.is_admin !== 'boolean') {
+			return null;
+		}
+		return { username: claims.username, isAdmin: claims.is_admin };
 	} catch {
 		return null;
 	}

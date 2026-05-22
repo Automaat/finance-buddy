@@ -36,7 +36,7 @@
 						: 'Nie udało się utworzyć użytkownika';
 				throw new Error(detail);
 			}
-			toast.success(`Użytkownik „${username}" został utworzony`);
+			toast.success(`Użytkownik „${username}” został utworzony`);
 			username = '';
 			password = '';
 			await invalidateAll();

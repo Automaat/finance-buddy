@@ -68,8 +68,9 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user, err := h.store.GetByUsername(r.Context(), strings.TrimSpace(req.Username))
-	if err != nil || !checkPassword(user.PasswordHash, req.Password) {
-		// Uniform message — don't reveal whether the username exists.
+	// The user == nil guard short-circuits before checkPassword on the error
+	// path; the uniform message avoids revealing whether the username exists.
+	if err != nil || user == nil || !checkPassword(user.PasswordHash, req.Password) {
 		writeDetailError(w, http.StatusUnauthorized, "Invalid username or password")
 		return
 	}

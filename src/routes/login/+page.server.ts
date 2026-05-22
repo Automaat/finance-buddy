@@ -20,8 +20,15 @@ export const actions: Actions = {
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ username, password, remember_me: rememberMe })
 		});
-		if (!response.ok) {
+		if (response.status === 401) {
 			return fail(401, { error: 'Nieprawidłowa nazwa użytkownika lub hasło', username });
+		}
+		if (!response.ok) {
+			// A non-401 failure is a backend/network problem, not bad credentials.
+			return fail(response.status, {
+				error: 'Logowanie chwilowo niedostępne — spróbuj ponownie później',
+				username
+			});
 		}
 
 		const { token } = (await response.json()) as { token: string };

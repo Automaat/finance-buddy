@@ -29,6 +29,9 @@ const proxy: RequestHandler = async ({ request, params, cookies, url, fetch }) =
 
 	const upstream = await fetch(backendURL(params.path, url.search), init);
 	const body = await upstream.arrayBuffer();
+	// Only content-type is forwarded. Set-Cookie in particular is dropped on
+	// purpose — the backend's own session cookie must never reach the browser;
+	// frontend sessions are managed by the /login and /logout routes.
 	const responseHeaders = new Headers();
 	const responseType = upstream.headers.get('content-type');
 	if (responseType) {
