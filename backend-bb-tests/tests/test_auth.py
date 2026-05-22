@@ -79,3 +79,59 @@ def test_non_admin_cannot_manage_users(client: httpx.Client, base_url: str) -> N
             ).status_code
             == 403
         )
+        assert http.patch("/api/auth/users/1", json={}).status_code == 403
+
+
+def test_create_user_with_profile_and_default_ppk(client: httpx.Client) -> None:
+    explicit = client.post(
+        "/api/auth/users",
+        json={
+            "username": "bb-profile",
+            "password": "profile-pass-1",
+            "name": "Profile",
+            "surname": "Tester",
+            "ppk_employee_rate": 3,
+            "ppk_employer_rate": 2.5,
+        },
+    )
+    assert explicit.status_code == 201
+    body = explicit.json()
+    assert body["name"] == "Profile"
+    assert body["surname"] == "Tester"
+    assert body["ppk_employee_rate"] == "3.00"
+    assert body["ppk_employer_rate"] == "2.50"
+
+    # Omitted rates fall back to the defaults.
+    defaulted = client.post(
+        "/api/auth/users",
+        json={"username": "bb-defaults", "password": "defaults-pass-1"},
+    )
+    assert defaulted.status_code == 201
+    assert defaulted.json()["ppk_employee_rate"] == "2.00"
+    assert defaulted.json()["ppk_employer_rate"] == "1.50"
+
+
+def test_admin_updates_user_profile(client: httpx.Client) -> None:
+    created = client.post(
+        "/api/auth/users",
+        json={"username": "bb-editable", "password": "editable-pass-1"},
+    )
+    assert created.status_code == 201
+    user_id = created.json()["id"]
+
+    updated = client.patch(
+        f"/api/auth/users/{user_id}",
+        json={
+            "name": "Edited",
+            "surname": "Name",
+            "ppk_employee_rate": 1.5,
+            "ppk_employer_rate": 1,
+        },
+    )
+    assert updated.status_code == 200
+    body = updated.json()
+    assert body["name"] == "Edited"
+    assert body["surname"] == "Name"
+    assert body["ppk_employee_rate"] == "1.50"
+
+    assert client.patch("/api/auth/users/999999", json={}).status_code == 404

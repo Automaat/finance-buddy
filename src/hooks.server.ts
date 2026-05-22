@@ -3,6 +3,7 @@ import { env } from '$env/dynamic/public';
 
 interface SessionUser {
 	username: string;
+	name: string;
 	isAdmin: boolean;
 }
 
@@ -17,7 +18,12 @@ function decodeUser(token: string): SessionUser | null {
 		}
 		const pad = payload.length % 4 === 0 ? '' : '='.repeat(4 - (payload.length % 4));
 		const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/') + pad);
-		const claims = JSON.parse(json) as { username?: unknown; is_admin?: unknown; exp?: unknown };
+		const claims = JSON.parse(json) as {
+			username?: unknown;
+			name?: unknown;
+			is_admin?: unknown;
+			exp?: unknown;
+		};
 		// Reject malformed claims. The backend still verifies the signature on
 		// every API call — this only stops a bogus token from looking
 		// logged-in to the page-level gating.
@@ -30,7 +36,12 @@ function decodeUser(token: string): SessionUser | null {
 		if (typeof claims.is_admin !== 'boolean') {
 			return null;
 		}
-		return { username: claims.username, isAdmin: claims.is_admin };
+		// name is optional — tokens issued before the persona merge lack it.
+		return {
+			username: claims.username,
+			name: typeof claims.name === 'string' ? claims.name : '',
+			isAdmin: claims.is_admin
+		};
 	} catch {
 		return null;
 	}

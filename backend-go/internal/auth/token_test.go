@@ -7,7 +7,7 @@ import (
 
 func TestTokenSignVerifyRoundtrip(t *testing.T) {
 	ts := NewTokenService("test-secret")
-	token, err := ts.Sign(42, "marcin", true, time.Hour)
+	token, err := ts.Sign(42, "marcin", "Marcin", true, time.Hour)
 	if err != nil {
 		t.Fatalf("Sign: %v", err)
 	}
@@ -15,14 +15,14 @@ func TestTokenSignVerifyRoundtrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Verify: %v", err)
 	}
-	if claims.UserID != 42 || claims.Username != "marcin" || !claims.IsAdmin {
+	if claims.UserID != 42 || claims.Username != "marcin" || claims.Name != "Marcin" || !claims.IsAdmin {
 		t.Fatalf("claims mismatch: %+v", claims)
 	}
 }
 
 func TestTokenVerifyRejectsExpired(t *testing.T) {
 	ts := NewTokenService("test-secret")
-	token, err := ts.Sign(1, "ewa", false, -time.Minute)
+	token, err := ts.Sign(1, "ewa", "Ewa", false, -time.Minute)
 	if err != nil {
 		t.Fatalf("Sign: %v", err)
 	}
@@ -32,7 +32,7 @@ func TestTokenVerifyRejectsExpired(t *testing.T) {
 }
 
 func TestTokenVerifyRejectsWrongSecret(t *testing.T) {
-	token, err := NewTokenService("secret-a").Sign(1, "ewa", false, time.Hour)
+	token, err := NewTokenService("secret-a").Sign(1, "ewa", "Ewa", false, time.Hour)
 	if err != nil {
 		t.Fatalf("Sign: %v", err)
 	}
