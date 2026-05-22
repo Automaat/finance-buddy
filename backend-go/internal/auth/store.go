@@ -126,6 +126,36 @@ func (s *Store) List(ctx context.Context) ([]User, error) {
 	return out, nil
 }
 
+// OwnerRef is the minimal user identity behind the owner-picker endpoint.
+type OwnerRef struct {
+	ID       int
+	Username string
+	Name     *string
+}
+
+// ListOwners returns every user's id + names, ordered by username. It is a
+// lean query — no password hash loaded — for the frequently-hit, non-admin
+// owner-picker endpoint.
+func (s *Store) ListOwners(ctx context.Context) ([]OwnerRef, error) {
+	rows, err := s.pool.Query(ctx, `SELECT id, username, name FROM users ORDER BY username`)
+	if err != nil {
+		return nil, fmt.Errorf("select owners: %w", err)
+	}
+	defer rows.Close()
+	out := []OwnerRef{}
+	for rows.Next() {
+		var o OwnerRef
+		if err := rows.Scan(&o.ID, &o.Username, &o.Name); err != nil {
+			return nil, fmt.Errorf("scan owner: %w", err)
+		}
+		out = append(out, o)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate owners: %w", err)
+	}
+	return out, nil
+}
+
 // Create inserts a non-admin user; ErrNameConflict on duplicate username.
 func (s *Store) Create(ctx context.Context, p CreateParams) (*User, error) {
 	row := s.pool.QueryRow(ctx, `

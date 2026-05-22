@@ -174,19 +174,19 @@ type ownerOption struct {
 // it carries no sensitive fields. The display name falls back to the
 // username when no name is set.
 func (h *Handler) ListOwners(w http.ResponseWriter, r *http.Request) {
-	users, err := h.store.List(r.Context())
+	owners, err := h.store.ListOwners(r.Context())
 	if err != nil {
 		h.logger.Error("list owners", "err", err)
 		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	out := make([]ownerOption, 0, len(users))
-	for i := range users {
-		name := users[i].Username
-		if users[i].Name != nil && *users[i].Name != "" {
-			name = *users[i].Name
+	out := make([]ownerOption, 0, len(owners))
+	for i := range owners {
+		name := owners[i].Username
+		if owners[i].Name != nil && *owners[i].Name != "" {
+			name = *owners[i].Name
 		}
-		out = append(out, ownerOption{ID: users[i].ID, Name: name})
+		out = append(out, ownerOption{ID: owners[i].ID, Name: name})
 	}
 	writeJSON(w, http.StatusOK, out)
 }
