@@ -43,6 +43,22 @@ func (s *Store) LoadYoYMap(ctx context.Context) (map[int]decimal.Decimal, error)
 	return out, nil
 }
 
+// NeedsRefresh reports whether the CPI table is empty or its freshest
+// fetched_at is older than staleAfter. Mirrors inflation.needs_refresh.
+func (s *Store) NeedsRefresh(ctx context.Context, staleAfter time.Duration) (bool, error) {
+	row := s.pool.QueryRow(ctx,
+		`SELECT fetched_at FROM cpi_index ORDER BY fetched_at DESC LIMIT 1`,
+	)
+	var latest time.Time
+	if err := row.Scan(&latest); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return true, nil
+		}
+		return false, fmt.Errorf("cpi staleness check: %w", err)
+	}
+	return time.Since(latest) > staleAfter, nil
+}
+
 // LatestKnownYear returns the highest year present in cpi_index, or (0, false)
 // when the table is empty.
 func (s *Store) LatestKnownYear(ctx context.Context) (int, bool, error) {

@@ -48,3 +48,16 @@ Total jobs registered: **1** (plus 1 one-shot startup task that uses the same fu
    Pros: dead-simple, no in-process scheduler, decouples scheduling from app lifecycle; OS cron handles restarts/timezones; easy to run ad-hoc (`finance-buddy cpi refresh`). Cons: requires host-level cron (Docker needs a cron sidecar or supervisor); startup-staleness check must move into app boot anyway; logs scattered between cron and app; harder to ship as a single artifact.
 
 **Recommendation:** Option 1 — port to Go with `go-co-op/gocron` (or `robfig/cron`). Single binary preserves current single-instance model, the job is tiny (one HTTP call + upsert) and a clean Go port is cheaper than maintaining a Python sidecar or external cron plumbing.
+
+## Decision (chosen path)
+
+**Option 1 — ported to Go, in-process.** Implemented in `backend-go/internal/scheduler` and started from `cmd/api/main.go` when a DB pool is configured.
+
+One deviation from the recommendation: **no cron library.** A single monthly trigger plus a startup-staleness check is ~30 lines of hand-rolled `time.Timer` logic — adding `gocron`/`robfig/cron` as a dependency (with the Renovate manager wiring that implies) wasn't worth it for one job. The behaviour is identical to the APScheduler original:
+
+- **Monthly job:** 16th of each month, 04:00 `Europe/Warsaw` (falls back to UTC if tzdata is missing). `nextRefresh` computes the next occurrence; a `time.Timer` waits for it; `ctx` cancellation stops the loop cleanly.
+- **Startup refresh:** `Store.NeedsRefresh` (no rows, or freshest `fetched_at` older than 7 days) triggers an immediate refresh on boot — mirrors `_startup_refresh_if_stale`.
+- **Job body:** `GUSFetcher.Fetch` → `Store.Upsert`, the same code path as `POST /api/cpi/refresh`. Transient GUS failures are logged and swallowed, never crash the process.
+- **Single-instance only**, exactly as before — no leader election.
+
+The Python `scheduler_lifespan()` is removed when the Python backend is decommissioned (see umbrella #435).
