@@ -24,16 +24,22 @@
 	let password = $state('');
 	let name = $state('');
 	let surname = $state('');
-	let ppkEmployee = $state(2);
-	let ppkEmployer = $state(1.5);
+	let ppkEmployee = $state<number | null>(2);
+	let ppkEmployer = $state<number | null>(1.5);
 	let creating = $state(false);
 
 	let editUser = $state<AppUser | null>(null);
 	let editName = $state('');
 	let editSurname = $state('');
-	let editPpkEmployee = $state(2);
-	let editPpkEmployer = $state(1.5);
+	let editPpkEmployee = $state<number | null>(2);
+	let editPpkEmployer = $state<number | null>(1.5);
 	let editSaving = $state(false);
+
+	// A number input bound to a cleared field yields null/NaN — normalize so
+	// the backend either applies its default (create) or stores NULL (update).
+	function ppkValue(raw: number | null): number | null {
+		return typeof raw === 'number' && Number.isFinite(raw) ? raw : null;
+	}
 
 	async function request(method: string, path: string, body: unknown): Promise<void> {
 		const response = await fetch(`${apiUrl}${path}`, {
@@ -60,8 +66,8 @@
 				password,
 				name: name.trim() || null,
 				surname: surname.trim() || null,
-				ppk_employee_rate: ppkEmployee,
-				ppk_employer_rate: ppkEmployer
+				ppk_employee_rate: ppkValue(ppkEmployee),
+				ppk_employer_rate: ppkValue(ppkEmployer)
 			});
 			toast.success(`Użytkownik „${username}” został utworzony`);
 			username = '';
@@ -92,11 +98,11 @@
 		}
 		editSaving = true;
 		try {
-			await request('PATCH', `/api/auth/users/${editUser.id}`, {
+			await request('PUT', `/api/auth/users/${editUser.id}`, {
 				name: editName.trim() || null,
 				surname: editSurname.trim() || null,
-				ppk_employee_rate: editPpkEmployee,
-				ppk_employer_rate: editPpkEmployer
+				ppk_employee_rate: ppkValue(editPpkEmployee),
+				ppk_employer_rate: ppkValue(editPpkEmployer)
 			});
 			toast.success('Zapisano zmiany');
 			editUser = null;
@@ -157,7 +163,7 @@
 				<tr>
 					<th>Nazwa użytkownika</th>
 					<th>Imię i nazwisko</th>
-					<th>PPK (prac. / prac.)</th>
+					<th>PPK (prac. / pracod.)</th>
 					<th>Rola</th>
 					<th>Utworzono</th>
 					<th></th>

@@ -79,7 +79,7 @@ def test_non_admin_cannot_manage_users(client: httpx.Client, base_url: str) -> N
             ).status_code
             == 403
         )
-        assert http.patch("/api/auth/users/1", json={}).status_code == 403
+        assert http.put("/api/auth/users/1", json={}).status_code == 403
 
 
 def test_create_user_with_profile_and_default_ppk(client: httpx.Client) -> None:
@@ -119,7 +119,7 @@ def test_admin_updates_user_profile(client: httpx.Client) -> None:
     assert created.status_code == 201
     user_id = created.json()["id"]
 
-    updated = client.patch(
+    updated = client.put(
         f"/api/auth/users/{user_id}",
         json={
             "name": "Edited",
@@ -134,4 +134,4 @@ def test_admin_updates_user_profile(client: httpx.Client) -> None:
     assert body["surname"] == "Name"
     assert body["ppk_employee_rate"] == "1.50"
 
-    assert client.patch("/api/auth/users/999999", json={}).status_code == 404
+    assert client.put("/api/auth/users/999999", json={}).status_code == 404

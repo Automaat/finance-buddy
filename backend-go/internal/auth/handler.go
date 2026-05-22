@@ -230,8 +230,10 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, toUserResponse(user))
 }
 
-// UpdateUser serves PATCH /api/auth/users/{id} (admin only). It updates the
+// UpdateUser serves PUT /api/auth/users/{id} (admin only). It replaces the
 // display name, surname and PPK rates — not username, password or admin flag.
+// PUT (not PATCH): the request always carries the full editable set, so an
+// omitted field clears the value rather than leaving it unchanged.
 func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
