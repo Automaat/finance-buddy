@@ -105,6 +105,7 @@ function buildData(
 				});
 
 	return {
+		user: null,
 		dashboardData,
 		personas: Promise.resolve(overrides.personas ?? []),
 		currentYear: overrides.currentYear ?? 2024

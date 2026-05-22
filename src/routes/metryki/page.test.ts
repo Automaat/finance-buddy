@@ -48,6 +48,7 @@ const metricCards = {
 };
 
 const mockData = {
+	user: null,
 	metricCards,
 	allocationAnalysis: {
 		by_category: [],
@@ -108,6 +109,7 @@ describe('Metryki Page', () => {
 
 describe('Metryki Page with populated data', () => {
 	const populatedData = {
+		user: null,
 		metricCards: {
 			property_sqm: 42,
 			emergency_fund_months: 8,

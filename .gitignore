@@ -62,6 +62,7 @@ playwright-report/
 test-results/
 playwright/.cache/
 blob-report/
+e2e/.auth/
 
 # Misc
 .vercel

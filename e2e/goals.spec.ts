@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { uniqueName } from './utils';
+import { openDialog, uniqueName } from './utils';
 
 test.describe('goals CRUD', () => {
 	test('create, verify, then delete a goal', async ({ page }) => {
@@ -8,10 +8,8 @@ test.describe('goals CRUD', () => {
 
 		const name = uniqueName('e2e-goal');
 
-		await page.getByRole('button', { name: /Nowy cel/ }).click();
-
+		await openDialog(page, /Nowy cel/);
 		const dialog = page.getByRole('dialog');
-		await expect(dialog).toBeVisible();
 
 		await dialog.locator('label:has-text("Nazwa") input').fill(name);
 		await dialog.locator('label:has-text("Cel (PLN)") input').fill('25000');

@@ -6,6 +6,10 @@ services:
       - DATABASE_URL=${DATABASE_URL:-postgresql://finance:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/finance}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
       - FB_ADDR=:8000
+      - FB_JWT_SECRET=${FB_JWT_SECRET:?FB_JWT_SECRET must be set}
+      - FB_ADMIN_USERNAME=${FB_ADMIN_USERNAME:-admin}
+      - FB_ADMIN_PASSWORD=${FB_ADMIN_PASSWORD:?FB_ADMIN_PASSWORD must be set}
+      - FB_COOKIE_SECURE=${FB_COOKIE_SECURE:-false}
     ports:
       - '8000:8000'
     restart: unless-stopped
@@ -19,9 +23,11 @@ services:
       - '3000:3000'
     environment:
       - PUBLIC_API_URL=http://backend-go:8000
-      - PUBLIC_API_URL_BROWSER=${PUBLIC_API_URL_BROWSER:-http://localhost:8000}
+      - PUBLIC_API_URL_BROWSER=${ORIGIN:-http://localhost:3000}
+      - API_PROXY_TARGET=http://backend-go:8000
       - ORIGIN=${ORIGIN:-http://localhost:3000}
       - APP_PASSWORD=${APP_PASSWORD:?APP_PASSWORD must be set}
+      - FB_COOKIE_SECURE=${FB_COOKIE_SECURE:-false}
     restart: unless-stopped
     depends_on:
       - backend-go

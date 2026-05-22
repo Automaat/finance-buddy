@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { ADMIN_USERNAME, ADMIN_PASSWORD, JWT_SECRET, STORAGE_STATE } from './e2e/credentials';
 
 const PORT = Number(process.env.E2E_FRONTEND_PORT ?? 4173);
 const BASE_URL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${PORT}`;
@@ -30,11 +31,19 @@ export default defineConfig({
 		navigationTimeout: 30_000
 	},
 	projects: [
-		{ name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+		// Logs in once; the test projects reuse its storageState.
+		{ name: 'setup', testMatch: /auth\.setup\.ts/ },
+		{
+			name: 'chromium',
+			use: { ...devices['Desktop Chrome'], storageState: STORAGE_STATE },
+			testIgnore: /auth\.setup\.ts/,
+			dependencies: ['setup']
+		},
 		{
 			name: 'mobile-chrome',
-			use: { ...devices['Pixel 7'] },
-			testMatch: /navigation\.spec\.ts$/
+			use: { ...devices['Pixel 7'], storageState: STORAGE_STATE },
+			testMatch: /navigation\.spec\.ts$/,
+			dependencies: ['setup']
 		}
 	],
 	webServer: skipWebServer
@@ -53,7 +62,10 @@ export default defineConfig({
 					env: {
 						DATABASE_URL,
 						FB_ADDR: '127.0.0.1:8000',
-						CORS_ORIGINS: `${BASE_URL},http://localhost:${PORT},http://127.0.0.1:${PORT}`
+						CORS_ORIGINS: `${BASE_URL},http://localhost:${PORT},http://127.0.0.1:${PORT}`,
+						FB_JWT_SECRET: JWT_SECRET,
+						FB_ADMIN_USERNAME: ADMIN_USERNAME,
+						FB_ADMIN_PASSWORD: ADMIN_PASSWORD
 					}
 				},
 				{
@@ -68,8 +80,12 @@ export default defineConfig({
 						PORT: String(PORT),
 						HOST: '127.0.0.1',
 						ORIGIN: BASE_URL,
+						// SSR talks straight to the backend; the browser routes
+						// through the SvelteKit /api proxy at its own origin.
 						PUBLIC_API_URL: API_URL,
-						PUBLIC_API_URL_BROWSER: API_URL
+						PUBLIC_API_URL_BROWSER: BASE_URL,
+						API_PROXY_TARGET: API_URL,
+						FB_COOKIE_SECURE: 'false'
 					}
 				}
 			]

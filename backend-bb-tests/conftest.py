@@ -39,6 +39,13 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 BACKEND_GO_DIR = REPO_ROOT / "backend-go"
 STARTUP_TIMEOUT_S = 30
 
+# backend-go now requires auth config to start and gates every /api route.
+# The suite launches it with these credentials and logs in once per session;
+# overridable when driving an externally-running backend via BB_BASE_URL.
+ADMIN_USERNAME = os.environ.get("BB_ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.environ.get("BB_ADMIN_PASSWORD", "bb-test-admin-pw")
+JWT_SECRET = os.environ.get("BB_JWT_SECRET", "bb-test-jwt-secret")
+
 
 def _truthy(value: str | None) -> bool:
     return value is not None and value.lower() in {"1", "true", "yes", "on"}
@@ -115,6 +122,9 @@ def base_url(database_url: str, _go_binary: Path) -> Iterator[str]:
         "DATABASE_URL": database_url,
         "CORS_ORIGINS": "http://localhost:3000",
         "FB_ADDR": f":{port}",
+        "FB_JWT_SECRET": JWT_SECRET,
+        "FB_ADMIN_USERNAME": ADMIN_USERNAME,
+        "FB_ADMIN_PASSWORD": ADMIN_PASSWORD,
     }
     proc = subprocess.Popen(
         [str(_go_binary)],
@@ -138,8 +148,14 @@ def base_url(database_url: str, _go_binary: Path) -> Iterator[str]:
 
 @pytest.fixture(scope="session")
 def client(base_url: str) -> Iterator[httpx.Client]:
-    """Session-scoped httpx client pointed at the live backend."""
+    """Session-scoped httpx client, logged in as admin so the session cookie
+    rides every request to the now-gated /api routes."""
     with httpx.Client(base_url=base_url, timeout=10.0) as http:
+        response = http.post(
+            "/api/auth/login",
+            json={"username": ADMIN_USERNAME, "password": ADMIN_PASSWORD},
+        )
+        response.raise_for_status()
         yield http
 
 
