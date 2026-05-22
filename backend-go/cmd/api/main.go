@@ -126,6 +126,12 @@ func run() int {
 		}
 		logger.Info("admin user ready", "username", adminUsername)
 
+		// In-progress personas->users migration (idempotent, runs every start).
+		if err := db.Migrate(ctx, pool); err != nil {
+			logger.Error("run migration", "err", err)
+			return 2
+		}
+
 		// CPI monthly-refresh scheduler — replaces the Python APScheduler job.
 		sched := scheduler.NewCPIScheduler(cpi.NewStore(pool), cpi.NewGUSFetcher(), logger)
 		go sched.Run(ctx)
