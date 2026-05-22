@@ -268,8 +268,16 @@ func parseIkeIkze(raw json.RawMessage) ([]ikeIkzeInput, *validationError) {
 	for _, e := range entries {
 		var a ikeIkzeInput
 		a.Enabled = boolField(e, "enabled")
-		a.Wrapper = stringField(e, "wrapper")
-		a.Owner = stringField(e, "owner")
+		wrapper, vErr := requiredStringField(e, "wrapper")
+		if vErr != nil {
+			return nil, vErr
+		}
+		a.Wrapper = wrapper
+		owner, vErr := requiredStringField(e, "owner")
+		if vErr != nil {
+			return nil, vErr
+		}
+		a.Owner = owner
 		a.Balance = floatField(e, "balance")
 		a.AutoFillLimit = boolField(e, "auto_fill_limit")
 		a.MonthlyContribution = floatField(e, "monthly_contribution")
@@ -296,7 +304,11 @@ func parsePPK(raw json.RawMessage) ([]ppkInput, *validationError) {
 	out := make([]ppkInput, 0, len(entries))
 	for _, e := range entries {
 		var a ppkInput
-		a.Owner = stringField(e, "owner")
+		owner, vErr := requiredStringField(e, "owner")
+		if vErr != nil {
+			return nil, vErr
+		}
+		a.Owner = owner
 		a.Enabled = boolField(e, "enabled")
 		a.StartingBalance = floatField(e, "starting_balance")
 		a.MonthlyGrossSalary = floatField(e, "monthly_gross_salary")
@@ -337,7 +349,11 @@ func parseBrokerage(raw json.RawMessage) ([]brokerageInput, *validationError) {
 	for _, e := range entries {
 		var a brokerageInput
 		a.Enabled = boolField(e, "enabled")
-		a.Owner = stringField(e, "owner")
+		owner, vErr := requiredStringField(e, "owner")
+		if vErr != nil {
+			return nil, vErr
+		}
+		a.Owner = owner
 		a.Balance = floatField(e, "balance")
 		a.MonthlyContribution = floatField(e, "monthly_contribution")
 		if a.Balance < 0 || a.MonthlyContribution < 0 {
@@ -397,11 +413,21 @@ func isNullRaw(v json.RawMessage) bool {
 	return string(v) == "null"
 }
 
-func stringField(m map[string]any, key string) string {
-	if s, ok := m[key].(string); ok {
-		return s
+// requiredStringField enforces a non-empty string for fields the Pydantic
+// schema marks required (wrapper, owner) — missing/wrong-type/empty -> 422.
+func requiredStringField(m map[string]any, key string) (string, *validationError) {
+	v, ok := m[key]
+	if !ok || v == nil {
+		return "", &validationError{Field: key, Msg: "Field required"}
 	}
-	return ""
+	s, ok := v.(string)
+	if !ok {
+		return "", &validationError{Field: key, Msg: "must be a string"}
+	}
+	if s == "" {
+		return "", &validationError{Field: key, Msg: key + " cannot be empty"}
+	}
+	return s, nil
 }
 
 func floatField(m map[string]any, key string) float64 {
