@@ -160,5 +160,13 @@ def client(base_url: str) -> Iterator[httpx.Client]:
 
 
 @pytest.fixture(scope="session")
+def owner_ids(client: httpx.Client) -> dict[str, int]:
+    """Map household-member display name -> user id, for owner_user_id fields."""
+    response = client.get("/api/users")
+    response.raise_for_status()
+    return {u["name"]: u["id"] for u in response.json()}
+
+
+@pytest.fixture(scope="session")
 def update_golden() -> bool:
     return _truthy(os.environ.get("BB_UPDATE_GOLDEN"))

@@ -41,7 +41,9 @@ def test_get_accounts_buckets_assets_and_liabilities(client: httpx.Client) -> No
     assert ACCOUNT_MARCIN_MORTGAGE in liability_names
 
 
-def test_create_account_happy_path(client: httpx.Client, request: pytest.FixtureRequest) -> None:
+def test_create_account_happy_path(
+    client: httpx.Client, request: pytest.FixtureRequest, owner_ids: dict[str, int]
+) -> None:
     unique_name = f"bb-test-{request.node.name}-account"
     created_id: int | None = None
     try:
@@ -51,7 +53,7 @@ def test_create_account_happy_path(client: httpx.Client, request: pytest.Fixture
                 "name": unique_name,
                 "type": "asset",
                 "category": "bank",
-                "owner": PERSONA_MARCIN,
+                "owner_user_id": owner_ids[PERSONA_MARCIN],
                 "currency": "PLN",
                 "purpose": "general",
                 "receives_contributions": True,
@@ -63,7 +65,7 @@ def test_create_account_happy_path(client: httpx.Client, request: pytest.Fixture
         assert body["name"] == unique_name
         assert body["type"] == "asset"
         assert body["category"] == "bank"
-        assert body["owner"] == PERSONA_MARCIN
+        assert body["owner_user_id"] == owner_ids[PERSONA_MARCIN]
         assert body["is_active"] is True
         assert body["current_value"] == 0.0
     finally:
@@ -78,7 +80,7 @@ def test_create_account_validation_error(client: httpx.Client) -> None:
             "name": "   ",
             "type": "asset",
             "category": "bank",
-            "owner": PERSONA_MARCIN,
+            "owner_user_id": None,
             "purpose": "general",
         },
     )
@@ -86,7 +88,9 @@ def test_create_account_validation_error(client: httpx.Client) -> None:
     assert "detail" in response.json()
 
 
-def test_update_account_happy_path(client: httpx.Client, request: pytest.FixtureRequest) -> None:
+def test_update_account_happy_path(
+    client: httpx.Client, request: pytest.FixtureRequest, owner_ids: dict[str, int]
+) -> None:
     unique_name = f"bb-test-{request.node.name}-account"
     renamed = f"{unique_name}-renamed"
     create_response = client.post(
@@ -95,7 +99,7 @@ def test_update_account_happy_path(client: httpx.Client, request: pytest.Fixture
             "name": unique_name,
             "type": "asset",
             "category": "bank",
-            "owner": PERSONA_MARCIN,
+            "owner_user_id": owner_ids[PERSONA_MARCIN],
             "currency": "PLN",
             "purpose": "general",
         },
@@ -124,7 +128,9 @@ def test_update_account_validation_error(client: httpx.Client) -> None:
     assert "detail" in response.json()
 
 
-def test_delete_account_happy_path(client: httpx.Client, request: pytest.FixtureRequest) -> None:
+def test_delete_account_happy_path(
+    client: httpx.Client, request: pytest.FixtureRequest, owner_ids: dict[str, int]
+) -> None:
     unique_name = f"bb-test-{request.node.name}-account"
     create_response = client.post(
         "/api/accounts",
@@ -132,7 +138,7 @@ def test_delete_account_happy_path(client: httpx.Client, request: pytest.Fixture
             "name": unique_name,
             "type": "asset",
             "category": "bank",
-            "owner": PERSONA_MARCIN,
+            "owner_user_id": owner_ids[PERSONA_MARCIN],
             "currency": "PLN",
             "purpose": "general",
         },

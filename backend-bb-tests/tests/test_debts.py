@@ -28,12 +28,12 @@ def _hard_delete_account_and_debt(dsn: str, account_id: int) -> None:
         cur.execute("DELETE FROM accounts WHERE id = %s", (account_id,))
 
 
-def _create_temp_liability_account(client: httpx.Client, name: str) -> int:
+def _create_temp_liability_account(client: httpx.Client, name: str, owner_id: int) -> int:
     payload = {
         "name": name,
         "type": "liability",
         "category": "installment",
-        "owner": PERSONA_MARCIN,
+        "owner_user_id": owner_id,
         "currency": "PLN",
         "purpose": "general",
         "receives_contributions": False,
@@ -80,8 +80,12 @@ def test_get_debt_not_found(client: httpx.Client) -> None:
 
 
 @pytest.mark.mutates
-def test_create_debt_happy_path(client: httpx.Client, database_url: str) -> None:
-    account_id = _create_temp_liability_account(client, "BB Temp Debt Account")
+def test_create_debt_happy_path(
+    client: httpx.Client, database_url: str, owner_ids: dict[str, int]
+) -> None:
+    account_id = _create_temp_liability_account(
+        client, "BB Temp Debt Account", owner_ids[PERSONA_MARCIN]
+    )
     try:
         payload = {
             "name": "BB Test Loan",
@@ -120,8 +124,12 @@ def test_create_debt_validation_error(client: httpx.Client) -> None:
 
 
 @pytest.mark.mutates
-def test_update_debt_happy_path(client: httpx.Client, database_url: str) -> None:
-    account_id = _create_temp_liability_account(client, "BB Temp Update Account")
+def test_update_debt_happy_path(
+    client: httpx.Client, database_url: str, owner_ids: dict[str, int]
+) -> None:
+    account_id = _create_temp_liability_account(
+        client, "BB Temp Update Account", owner_ids[PERSONA_MARCIN]
+    )
     create_resp = client.post(
         f"/api/accounts/{account_id}/debts",
         json={
@@ -161,8 +169,12 @@ def test_update_debt_validation_error(client: httpx.Client) -> None:
 
 
 @pytest.mark.mutates
-def test_delete_debt_happy_path(client: httpx.Client, database_url: str) -> None:
-    account_id = _create_temp_liability_account(client, "BB Temp Delete Account")
+def test_delete_debt_happy_path(
+    client: httpx.Client, database_url: str, owner_ids: dict[str, int]
+) -> None:
+    account_id = _create_temp_liability_account(
+        client, "BB Temp Delete Account", owner_ids[PERSONA_MARCIN]
+    )
     create_resp = client.post(
         f"/api/accounts/{account_id}/debts",
         json={

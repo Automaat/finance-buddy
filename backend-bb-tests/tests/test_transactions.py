@@ -56,12 +56,14 @@ def test_get_account_transactions_invalid_account_type(client: httpx.Client) -> 
 
 
 @pytest.mark.mutates
-def test_create_transaction_happy_path(client: httpx.Client) -> None:
+def test_create_transaction_happy_path(
+    client: httpx.Client, owner_ids: dict[str, int]
+) -> None:
     account_id = _account_id_by_name(client, ACCOUNT_MARCIN_IKE)
     payload = {
         "amount": 750.0,
         "date": "2025-06-15",
-        "owner": PERSONA_MARCIN,
+        "owner_user_id": owner_ids[PERSONA_MARCIN],
         "transaction_type": "employee",
     }
     created_id: int | None = None
@@ -73,7 +75,7 @@ def test_create_transaction_happy_path(client: httpx.Client) -> None:
         assert body["account_id"] == account_id
         assert body["amount"] == pytest.approx(750.0)
         assert body["date"] == "2025-06-15"
-        assert body["owner"] == PERSONA_MARCIN
+        assert body["owner_user_id"] == owner_ids[PERSONA_MARCIN]
         assert body["transaction_type"] == "employee"
     finally:
         if created_id is not None:
@@ -86,7 +88,7 @@ def test_create_transaction_validation_error(client: httpx.Client) -> None:
     payload = {
         "amount": -100.0,
         "date": "2025-06-20",
-        "owner": PERSONA_MARCIN,
+        "owner_user_id": None,
         "transaction_type": "employee",
     }
     response = client.post(f"/api/accounts/{account_id}/transactions", json=payload)
@@ -95,14 +97,16 @@ def test_create_transaction_validation_error(client: httpx.Client) -> None:
 
 
 @pytest.mark.mutates
-def test_delete_transaction_happy_path(client: httpx.Client) -> None:
+def test_delete_transaction_happy_path(
+    client: httpx.Client, owner_ids: dict[str, int]
+) -> None:
     account_id = _account_id_by_name(client, ACCOUNT_MARCIN_IKE)
     create_resp = client.post(
         f"/api/accounts/{account_id}/transactions",
         json={
             "amount": 123.45,
             "date": "2025-08-15",
-            "owner": PERSONA_MARCIN,
+            "owner_user_id": owner_ids[PERSONA_MARCIN],
             "transaction_type": "employee",
         },
     )

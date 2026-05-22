@@ -135,6 +135,49 @@ def _truncate_seeded(cur: psycopg2.extensions.cursor) -> None:
     cur.execute(f"TRUNCATE {quoted} RESTART IDENTITY CASCADE")
 
 
+# Owner-bearing tables whose owner_user_id is backfilled from the owner
+# string after seeding (mirrors the backend's db.Migrate step).
+_OWNER_TABLES = (
+    "accounts",
+    "transactions",
+    "debt_payments",
+    "salary_records",
+    "bonus_events",
+    "equity_grants",
+    "retirement_limits",
+)
+
+
+def _seed_users(cur: psycopg2.extensions.cursor) -> None:
+    """Insert Marcin/Ewa as users so owner_user_id can reference them.
+
+    The users table is not truncated (it holds the backend-seeded admin),
+    so the insert is idempotent on username.
+    """
+    cur.executemany(
+        """
+        INSERT INTO users (username, password_hash, name, is_admin, created_at)
+        VALUES (%s, %s, %s, FALSE, %s)
+        ON CONFLICT (username) DO UPDATE SET name = EXCLUDED.name
+        """,
+        [
+            ("marcin", "!seed-no-login", PERSONA_MARCIN, SEED_CREATED_AT),
+            ("ewa", "!seed-no-login", PERSONA_EWA, SEED_CREATED_AT),
+        ],
+    )
+
+
+def _backfill_owner_user_id(cur: psycopg2.extensions.cursor) -> None:
+    """Point owner_user_id at the user whose name equals the owner string;
+    rows owned by "Shared" (no matching user) keep NULL. Table names come
+    from the fixed _OWNER_TABLES tuple, not request input."""
+    for table in _OWNER_TABLES:
+        cur.execute(
+            f"UPDATE {table} AS t SET owner_user_id = u.id "
+            "FROM users u WHERE t.owner = u.name"
+        )
+
+
 def _seed_personas(cur: psycopg2.extensions.cursor) -> None:
     cur.executemany(
         """
@@ -657,6 +700,7 @@ def seed(dsn: str) -> None:
     _assert_safe_to_truncate(dsn)
     with _connect(dsn) as conn, conn.cursor() as cur:
         _truncate_seeded(cur)
+        _seed_users(cur)
         _seed_personas(cur)
         _seed_config(cur)
         account_ids = _seed_accounts(cur)
@@ -674,3 +718,4 @@ def seed(dsn: str) -> None:
         _seed_salary_records(cur)
         _seed_goals(cur, account_ids)
         _seed_retirement_limits(cur)
+        _backfill_owner_user_id(cur)
