@@ -58,8 +58,9 @@ func NewCPIScheduler(store *cpi.Store, fetcher *cpi.GUSFetcher, logger *slog.Log
 func (s *CPIScheduler) Run(ctx context.Context) {
 	s.startupRefresh(ctx)
 	for {
-		next := nextRefresh(s.now().In(s.loc))
-		wait := time.Until(next)
+		now := s.now().In(s.loc)
+		next := nextRefresh(now)
+		wait := max(next.Sub(now), 0)
 		s.logger.Info("scheduler: next CPI refresh", "at", next.Format(time.RFC3339))
 		timer := time.NewTimer(wait)
 		select {
