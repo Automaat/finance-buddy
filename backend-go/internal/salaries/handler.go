@@ -25,20 +25,21 @@ var (
 )
 
 // response mirrors backend/app/schemas/salary_records.SalaryRecordResponse.
+// OwnerUserID is the owning household member; nil means jointly owned.
 type response struct {
 	ID           int      `json:"id"`
 	Date         isoDate  `json:"date"`
 	GrossAmount  pyFloat  `json:"gross_amount"`
 	ContractType string   `json:"contract_type"`
 	Company      string   `json:"company"`
-	Owner        string   `json:"owner"`
+	OwnerUserID  *int     `json:"owner_user_id"`
 	IsActive     bool     `json:"is_active"`
 	CreatedAt    isoNaive `json:"created_at"`
 }
 
 // inflationContext mirrors backend/app/schemas/salary_records.InflationContext.
 type inflationContext struct {
-	Owner                    string   `json:"owner"`
+	OwnerUserID              int      `json:"owner_user_id"`
 	LastChangeDate           isoDate  `json:"last_change_date"`
 	PreviousChangeDate       *isoDate `json:"previous_change_date"`
 	PreviousSalary           *pyFloat `json:"previous_salary"`
@@ -49,12 +50,14 @@ type inflationContext struct {
 	CPIAsOfYear              int      `json:"cpi_as_of_year"`
 }
 
+// listResponse keys current_salaries and inflation_context by owner_user_id
+// (JSON serialises the integer keys as strings).
 type listResponse struct {
-	SalaryRecords      []response                  `json:"salary_records"`
-	TotalCount         int                         `json:"total_count"`
-	CurrentSalaries    map[string]*pyFloat         `json:"current_salaries"`
-	InflationContext   map[string]inflationContext `json:"inflation_context"`
-	AvailableCompanies []string                    `json:"available_companies"`
+	SalaryRecords      []response               `json:"salary_records"`
+	TotalCount         int                      `json:"total_count"`
+	CurrentSalaries    map[int]*pyFloat         `json:"current_salaries"`
+	InflationContext   map[int]inflationContext `json:"inflation_context"`
+	AvailableCompanies []string                 `json:"available_companies"`
 }
 
 // Handler is the HTTP boundary for /api/salaries.
@@ -82,7 +85,7 @@ func toResponse(r *SalaryRecord) response {
 		GrossAmount:  pyFloat(gross),
 		ContractType: r.ContractType,
 		Company:      r.Company,
-		Owner:        r.Owner,
+		OwnerUserID:  r.OwnerUserID,
 		IsActive:     r.IsActive,
 		CreatedAt:    isoNaive(r.CreatedAt.UTC()),
 	}
@@ -102,19 +105,19 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	today := truncateDay(h.now().UTC())
-	personas, err := h.store.ActivePersonaNames(r.Context())
+	userIDs, err := h.store.ActiveOwnerUserIDs(r.Context())
 	if err != nil {
-		h.logger.Error("persona names", "err", err)
+		h.logger.Error("owner user ids", "err", err)
 		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	currentSalaries, err := h.store.CurrentSalaryByPersona(r.Context(), personas, today)
+	currentSalaries, err := h.store.CurrentSalaryByUser(r.Context(), userIDs, today)
 	if err != nil {
 		h.logger.Error("current salaries", "err", err)
 		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	inflationCtx, err := h.buildInflationContext(r.Context(), personas, today)
+	inflationCtx, err := h.buildInflationContext(r.Context(), userIDs, today)
 	if err != nil {
 		h.logger.Error("inflation context", "err", err)
 		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
@@ -123,7 +126,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	out := listResponse{
 		SalaryRecords:      make([]response, 0, len(rows)),
 		TotalCount:         len(rows),
-		CurrentSalaries:    salariesToFloatMap(personas, currentSalaries),
+		CurrentSalaries:    salariesToFloatMap(userIDs, currentSalaries),
 		InflationContext:   inflationCtx,
 		AvailableCompanies: companies,
 	}
@@ -164,13 +167,13 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		GrossAmount:  req.GrossAmount,
 		ContractType: req.ContractType,
 		Company:      req.Company,
-		Owner:        req.Owner,
+		OwnerUserID:  req.OwnerUserID,
 	})
 	if err != nil {
 		if errors.Is(err, ErrDuplicate) {
 			writeDetailError(w, http.StatusConflict,
-				fmt.Sprintf("Salary record for %s on %s already exists",
-					req.Owner, req.Date.Format("2006-01-02")))
+				fmt.Sprintf("A salary record on %s already exists for this owner",
+					req.Date.Format("2006-01-02")))
 			return
 		}
 		h.logger.Error("create salary", "err", err)
@@ -199,16 +202,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	updated, err := h.store.Update(r.Context(), id, patch)
 	if err != nil {
 		if errors.Is(err, ErrDuplicate) {
-			// Need the merged record's (owner, date) for the message; refetch.
+			// Need the merged record's date for the message; refetch.
 			current, getErr := h.store.Get(r.Context(), id)
-			owner := ""
 			date := ""
 			if getErr == nil {
-				if patch.Owner != nil {
-					owner = *patch.Owner
-				} else {
-					owner = current.Owner
-				}
 				if patch.Date != nil {
 					date = patch.Date.Format("2006-01-02")
 				} else {
@@ -216,8 +213,8 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			writeDetailError(w, http.StatusConflict,
-				fmt.Sprintf("Salary record for %s on %s conflicts with existing record",
-					owner, date))
+				fmt.Sprintf("A salary record on %s conflicts with an existing record",
+					date))
 			return
 		}
 		h.writeStoreError(w, err, id)
@@ -253,10 +250,10 @@ func (h *Handler) writeStoreError(w http.ResponseWriter, err error, id int) {
 // persona with at least two recent records, compute previous_salary_in_today_pln
 // via the CPI index, then derive real_change_pln / pct.
 func (h *Handler) buildInflationContext(
-	ctx context.Context, personaNames []string, today time.Time,
-) (map[string]inflationContext, error) {
-	if len(personaNames) == 0 {
-		return map[string]inflationContext{}, nil
+	ctx context.Context, userIDs []int, today time.Time,
+) (map[int]inflationContext, error) {
+	if len(userIDs) == 0 {
+		return map[int]inflationContext{}, nil
 	}
 	asOfYear, hasYear, err := h.cpiStore.LatestKnownYear(ctx)
 	if err != nil {
@@ -267,15 +264,15 @@ func (h *Handler) buildInflationContext(
 		return nil, err
 	}
 	if !hasYear || len(yoyMap) == 0 {
-		return map[string]inflationContext{}, nil
+		return map[int]inflationContext{}, nil
 	}
 	indexMap := cpi.CumulativeIndex(yoyMap)
-	recent, err := h.store.RecentTwoByPersona(ctx, personaNames, today)
+	recent, err := h.store.RecentTwoByUser(ctx, userIDs, today)
 	if err != nil {
 		return nil, err
 	}
-	out := map[string]inflationContext{}
-	for owner, recs := range recent {
+	out := map[int]inflationContext{}
+	for ownerID, recs := range recent {
 		if len(recs) < 2 {
 			continue
 		}
@@ -297,8 +294,8 @@ func (h *Handler) buildInflationContext(
 		prevSalary := pyFloat(prevAmount)
 		prevTodayPLN := pyFloat(prevInToday)
 		realChange := pyFloat(realChangePLN)
-		out[owner] = inflationContext{
-			Owner:                    owner,
+		out[ownerID] = inflationContext{
+			OwnerUserID:              ownerID,
 			LastChangeDate:           isoDate(current.Date),
 			PreviousChangeDate:       &prevDate,
 			PreviousSalary:           &prevSalary,
@@ -313,27 +310,30 @@ func (h *Handler) buildInflationContext(
 }
 
 func salariesToFloatMap(
-	personaNames []string, values map[string]decimal.Decimal,
-) map[string]*pyFloat {
-	out := map[string]*pyFloat{}
-	for _, name := range personaNames {
-		v, ok := values[name]
+	userIDs []int, values map[int]decimal.Decimal,
+) map[int]*pyFloat {
+	out := map[int]*pyFloat{}
+	for _, id := range userIDs {
+		v, ok := values[id]
 		if !ok {
-			out[name] = nil
+			out[id] = nil
 			continue
 		}
 		f, _ := v.Float64()
 		pf := pyFloat(f)
-		out[name] = &pf
+		out[id] = &pf
 	}
 	return out
 }
 
 func parseListFilter(q map[string][]string) (ListFilter, *validationError) {
 	f := ListFilter{}
-	if v := first(q["owner"]); v != "" {
-		s := v
-		f.Owner = &s
+	if v := first(q["owner_user_id"]); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			return f, &validationError{Field: "owner_user_id", Msg: "must be an integer"}
+		}
+		f.OwnerUserID = &n
 	}
 	if v := first(q["company"]); v != "" {
 		s := v

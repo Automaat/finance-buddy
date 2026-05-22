@@ -685,7 +685,7 @@ export interface paths {
                                 id?: number;
                                 is_active?: boolean;
                                 notes?: string | null;
-                                owner?: string;
+                                owner_user_id?: number | null;
                                 type?: string;
                             }[];
                             total_count?: number;
@@ -728,7 +728,7 @@ export interface paths {
                             id?: number;
                             is_active?: boolean;
                             notes?: string | null;
-                            owner?: string;
+                            owner_user_id?: number | null;
                             type?: string;
                         };
                     };
@@ -783,7 +783,7 @@ export interface paths {
                             id?: number;
                             is_active?: boolean;
                             notes?: string | null;
-                            owner?: string;
+                            owner_user_id?: number | null;
                             type?: string;
                         };
                     };
@@ -850,7 +850,7 @@ export interface paths {
                             id?: number;
                             is_active?: boolean;
                             notes?: string | null;
-                            owner?: string;
+                            owner_user_id?: number | null;
                             type?: string;
                         };
                     };
@@ -1768,7 +1768,7 @@ export interface paths {
                                 /** Format: date */
                                 liquidity_event_date?: string | null;
                                 notes?: string | null;
-                                owner?: string;
+                                owner_user_id?: number | null;
                                 /** Format: double */
                                 paper_value_base?: number | null;
                                 /** Format: double */
@@ -1842,7 +1842,7 @@ export interface paths {
                             /** Format: date */
                             liquidity_event_date?: string | null;
                             notes?: string | null;
-                            owner?: string;
+                            owner_user_id?: number | null;
                             /** Format: double */
                             paper_value_base?: number | null;
                             /** Format: double */
@@ -1928,7 +1928,7 @@ export interface paths {
                             /** Format: date */
                             liquidity_event_date?: string | null;
                             notes?: string | null;
-                            owner?: string;
+                            owner_user_id?: number | null;
                             /** Format: double */
                             paper_value_base?: number | null;
                             /** Format: double */
@@ -2026,7 +2026,7 @@ export interface paths {
                             /** Format: date */
                             liquidity_event_date?: string | null;
                             notes?: string | null;
-                            owner?: string;
+                            owner_user_id?: number | null;
                             /** Format: double */
                             paper_value_base?: number | null;
                             /** Format: double */
@@ -2934,7 +2934,7 @@ export interface paths {
                                     current_salary?: number;
                                     /** Format: date */
                                     last_change_date?: string;
-                                    owner?: string;
+                                    owner_user_id?: number;
                                     /** Format: date */
                                     previous_change_date?: string | null;
                                     /** Format: double */
@@ -2958,7 +2958,7 @@ export interface paths {
                                 gross_amount?: number;
                                 id?: number;
                                 is_active?: boolean;
-                                owner?: string;
+                                owner_user_id?: number | null;
                             }[];
                             total_count?: number;
                         };
@@ -2994,7 +2994,7 @@ export interface paths {
                             gross_amount?: number;
                             id?: number;
                             is_active?: boolean;
-                            owner?: string;
+                            owner_user_id?: number | null;
                         };
                     };
                 };
@@ -3042,7 +3042,7 @@ export interface paths {
                             gross_amount?: number;
                             id?: number;
                             is_active?: boolean;
-                            owner?: string;
+                            owner_user_id?: number | null;
                         };
                     };
                 };
@@ -3102,7 +3102,7 @@ export interface paths {
                             gross_amount?: number;
                             id?: number;
                             is_active?: boolean;
-                            owner?: string;
+                            owner_user_id?: number | null;
                         };
                     };
                 };

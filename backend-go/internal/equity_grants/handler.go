@@ -41,7 +41,7 @@ type response struct {
 	GrantDate              isoDate               `json:"grant_date"`
 	Type                   string                `json:"type"`
 	Company                string                `json:"company"`
-	Owner                  string                `json:"owner"`
+	OwnerUserID            *int                  `json:"owner_user_id"`
 	TotalShares            int                   `json:"total_shares"`
 	StrikePrice            *pyFloat              `json:"strike_price"`
 	Currency               string                `json:"currency"`
@@ -139,7 +139,7 @@ func (h *Handler) toResponse(ctx context.Context, g *EquityGrant) (response, err
 		GrantDate:              isoDate(g.GrantDate),
 		Type:                   g.Type,
 		Company:                g.Company,
-		Owner:                  g.Owner,
+		OwnerUserID:            g.OwnerUserID,
 		TotalShares:            g.TotalShares,
 		Currency:               g.Currency,
 		VestStartDate:          isoDate(g.VestStartDate),
@@ -228,8 +228,13 @@ func pln(amount *decimal.Decimal, currency string, rate fx.Result) *pyFloat {
 // List serves GET /api/equity-grants.
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	filter := ListFilter{}
-	if v := strings.TrimSpace(r.URL.Query().Get("owner")); v != "" {
-		filter.Owner = &v
+	if v := strings.TrimSpace(r.URL.Query().Get("owner_user_id")); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			writeValidationError(w, "owner_user_id", "must be an integer", v)
+			return
+		}
+		filter.OwnerUserID = &n
 	}
 	if v := strings.TrimSpace(r.URL.Query().Get("company")); v != "" {
 		filter.Company = &v

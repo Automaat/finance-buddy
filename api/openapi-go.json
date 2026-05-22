@@ -928,8 +928,9 @@
                             "nullable": true,
                             "type": "string"
                           },
-                          "owner": {
-                            "type": "string"
+                          "owner_user_id": {
+                            "nullable": true,
+                            "type": "integer"
                           },
                           "type": {
                             "type": "string"
@@ -1003,8 +1004,9 @@
                       "nullable": true,
                       "type": "string"
                     },
-                    "owner": {
-                      "type": "string"
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
                     },
                     "type": {
                       "type": "string"
@@ -1103,8 +1105,9 @@
                       "nullable": true,
                       "type": "string"
                     },
-                    "owner": {
-                      "type": "string"
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
                     },
                     "type": {
                       "type": "string"
@@ -1180,8 +1183,9 @@
                       "nullable": true,
                       "type": "string"
                     },
-                    "owner": {
-                      "type": "string"
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
                     },
                     "type": {
                       "type": "string"
@@ -2642,8 +2646,9 @@
                             "nullable": true,
                             "type": "string"
                           },
-                          "owner": {
-                            "type": "string"
+                          "owner_user_id": {
+                            "nullable": true,
+                            "type": "integer"
                           },
                           "paper_value_base": {
                             "format": "double",
@@ -2802,8 +2807,9 @@
                       "nullable": true,
                       "type": "string"
                     },
-                    "owner": {
-                      "type": "string"
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
                     },
                     "paper_value_base": {
                       "format": "double",
@@ -2987,8 +2993,9 @@
                       "nullable": true,
                       "type": "string"
                     },
-                    "owner": {
-                      "type": "string"
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
                     },
                     "paper_value_base": {
                       "format": "double",
@@ -3149,8 +3156,9 @@
                       "nullable": true,
                       "type": "string"
                     },
-                    "owner": {
-                      "type": "string"
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
                     },
                     "paper_value_base": {
                       "format": "double",
@@ -4350,8 +4358,8 @@
                             "format": "date",
                             "type": "string"
                           },
-                          "owner": {
-                            "type": "string"
+                          "owner_user_id": {
+                            "type": "integer"
                           },
                           "previous_change_date": {
                             "format": "date",
@@ -4410,8 +4418,9 @@
                           "is_active": {
                             "type": "boolean"
                           },
-                          "owner": {
-                            "type": "string"
+                          "owner_user_id": {
+                            "nullable": true,
+                            "type": "integer"
                           }
                         },
                         "type": "object"
@@ -4465,8 +4474,9 @@
                     "is_active": {
                       "type": "boolean"
                     },
-                    "owner": {
-                      "type": "string"
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
                     }
                   },
                   "type": "object"
@@ -4545,8 +4555,9 @@
                     "is_active": {
                       "type": "boolean"
                     },
-                    "owner": {
-                      "type": "string"
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
                     }
                   },
                   "type": "object"
@@ -4602,8 +4613,9 @@
                     "is_active": {
                       "type": "boolean"
                     },
-                    "owner": {
-                      "type": "string"
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
                     }
                   },
                   "type": "object"

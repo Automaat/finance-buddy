@@ -43,7 +43,7 @@ type response struct {
 	Currency     string   `json:"currency"`
 	Type         string   `json:"type"`
 	Company      string   `json:"company"`
-	Owner        string   `json:"owner"`
+	OwnerUserID  *int     `json:"owner_user_id"`
 	ContractType string   `json:"contract_type"`
 	Notes        *string  `json:"notes"`
 	IsActive     bool     `json:"is_active"`
@@ -65,7 +65,7 @@ type createRequest struct {
 	Currency     string
 	Type         string
 	Company      string
-	Owner        string
+	OwnerUserID  *int
 	ContractType string
 	Notes        *string
 }
@@ -100,7 +100,7 @@ func (h *Handler) toResponse(ctx context.Context, b *BonusEvent) (response, erro
 		Currency:     b.Currency,
 		Type:         b.Type,
 		Company:      b.Company,
-		Owner:        b.Owner,
+		OwnerUserID:  b.OwnerUserID,
 		ContractType: b.ContractType,
 		Notes:        b.Notes,
 		IsActive:     b.IsActive,
@@ -181,7 +181,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		Currency:     req.Currency,
 		Type:         req.Type,
 		Company:      req.Company,
-		Owner:        req.Owner,
+		OwnerUserID:  req.OwnerUserID,
 		ContractType: req.ContractType,
 		Notes:        req.Notes,
 	}
@@ -255,9 +255,12 @@ func (h *Handler) writeStoreError(w http.ResponseWriter, err error, id int) {
 
 func parseListFilter(q map[string][]string) (ListFilter, *validationError) {
 	f := ListFilter{}
-	if v := first(q["owner"]); v != "" {
-		s := v
-		f.Owner = &s
+	if v := first(q["owner_user_id"]); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			return f, &validationError{Field: "owner_user_id", Msg: "must be an integer"}
+		}
+		f.OwnerUserID = &n
 	}
 	if v := first(q["company"]); v != "" {
 		s := v

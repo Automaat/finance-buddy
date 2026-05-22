@@ -40,12 +40,12 @@ const baseData = {
 	salaries: {
 		salary_records: [],
 		total_count: 0,
-		current_salaries: { Marcin: null },
+		current_salaries: { '1': null },
 		inflation_context: {},
 		available_companies: []
 	},
-	filters: { owner: null, date_from: null, date_to: null, company: null },
-	personas: [{ id: 1, name: 'Marcin', ppk_employee_rate: 2, ppk_employer_rate: 1.5 }],
+	filters: { owner_user_id: null, date_from: null, date_to: null, company: null },
+	owners: [{ id: 1, name: 'Marcin' }],
 	cpiSeries: { points: [], base_year: null, latest_year: null, source: '' },
 	bonuses: { bonus_events: [], total_count: 0, available_companies: [] },
 	equity: { equity_grants: [], total_count: 0, available_companies: [] },
@@ -229,7 +229,7 @@ describe('Salaries page — saveSalary validation & error display', () => {
 			gross_amount: 5000,
 			contract_type: 'UOP',
 			company: 'ACME',
-			owner: 'Marcin'
+			owner_user_id: 1
 		});
 		await waitFor(() => expect(invalidateAll).toHaveBeenCalled());
 	});

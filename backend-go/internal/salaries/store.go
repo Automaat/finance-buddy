@@ -19,13 +19,14 @@ import (
 )
 
 // SalaryRecord mirrors backend/app/models/salary_record.SalaryRecord.
+// OwnerUserID is the owning household member; nil means jointly owned.
 type SalaryRecord struct {
 	ID           int
 	Date         time.Time
 	GrossAmount  decimal.Decimal
 	ContractType string
 	Company      string
-	Owner        string
+	OwnerUserID  *int
 	IsActive     bool
 	CreatedAt    time.Time
 }
@@ -33,15 +34,16 @@ type SalaryRecord struct {
 // ErrNotFound is returned for missing or soft-deleted rows.
 var ErrNotFound = errors.New("salary record not found")
 
-// ErrDuplicate is returned when (owner, date) already has an active record.
+// ErrDuplicate is returned when (owner_user_id, date) already has an
+// active record.
 var ErrDuplicate = errors.New("salary record duplicate")
 
 // ListFilter narrows the active rows.
 type ListFilter struct {
-	Owner    *string
-	DateFrom *time.Time
-	DateTo   *time.Time
-	Company  *string
+	OwnerUserID *int
+	DateFrom    *time.Time
+	DateTo      *time.Time
+	Company     *string
 }
 
 // Store is the persistence boundary.
@@ -55,7 +57,7 @@ func NewStore(pool *pgxpool.Pool) *Store {
 }
 
 const selectColumns = `
-	id, date, gross_amount, contract_type, company, owner, is_active, created_at
+	id, date, gross_amount, contract_type, company, owner_user_id, is_active, created_at
 `
 
 // List returns active rows ordered by date desc + the distinct active-company
@@ -63,9 +65,9 @@ const selectColumns = `
 func (s *Store) List(ctx context.Context, f ListFilter) ([]SalaryRecord, []string, error) {
 	conds := []string{"is_active = true"}
 	args := []any{}
-	if f.Owner != nil {
-		args = append(args, *f.Owner)
-		conds = append(conds, fmt.Sprintf("owner = $%d", len(args)))
+	if f.OwnerUserID != nil {
+		args = append(args, *f.OwnerUserID)
+		conds = append(conds, fmt.Sprintf("owner_user_id = $%d", len(args)))
 	}
 	if f.DateFrom != nil {
 		args = append(args, *f.DateFrom)
@@ -122,15 +124,17 @@ func (s *Store) Get(ctx context.Context, id int) (*SalaryRecord, error) {
 	return r, nil
 }
 
-// Create inserts a row. Returns ErrDuplicate when (owner, date) already
-// has an active record — matches Python's 409 contract.
+// Create inserts a row. Returns ErrDuplicate when (owner_user_id, date)
+// already has an active record — matches Python's 409 contract. The owner
+// string is dual-written from owner_user_id ($5) until a later phase drops
+// the legacy column.
 func (s *Store) Create(ctx context.Context, r *SalaryRecord) (*SalaryRecord, error) {
 	var existing int
 	err := s.pool.QueryRow(ctx, `
 		SELECT id FROM salary_records
-		WHERE owner = $1 AND date = $2 AND is_active = true
+		WHERE owner_user_id IS NOT DISTINCT FROM $1 AND date = $2 AND is_active = true
 		LIMIT 1`,
-		r.Owner, r.Date,
+		r.OwnerUserID, r.Date,
 	).Scan(&existing)
 	if err == nil {
 		return nil, ErrDuplicate
@@ -140,21 +144,26 @@ func (s *Store) Create(ctx context.Context, r *SalaryRecord) (*SalaryRecord, err
 	}
 	row := s.pool.QueryRow(ctx, `
 		INSERT INTO salary_records (
-			date, gross_amount, contract_type, company, owner, is_active, created_at
-		) VALUES ($1, $2, $3, $4, $5, true, $6)
+			date, gross_amount, contract_type, company, owner, owner_user_id,
+			is_active, created_at
+		) VALUES (
+			$1, $2, $3, $4, COALESCE((SELECT name FROM users WHERE id = $5), 'Shared'),
+			$5, true, $6
+		)
 		RETURNING `+selectColumns,
-		r.Date, r.GrossAmount, r.ContractType, r.Company, r.Owner, time.Now().UTC(),
+		r.Date, r.GrossAmount, r.ContractType, r.Company, r.OwnerUserID, time.Now().UTC(),
 	)
 	return scanRecord(row)
 }
 
 // UpdatePatch is the sparse update set; nil = no-op.
 type UpdatePatch struct {
-	Date         *time.Time
-	GrossAmount  *decimal.Decimal
-	ContractType *string
-	Company      *string
-	Owner        *string
+	Date           *time.Time
+	GrossAmount    *decimal.Decimal
+	ContractType   *string
+	Company        *string
+	OwnerUserIDSet bool
+	OwnerUserID    *int
 }
 
 // Update applies the patch and returns the refreshed row.
@@ -177,15 +186,16 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*SalaryRecor
 	if p.Company != nil {
 		r.Company = *p.Company
 	}
-	if p.Owner != nil {
-		r.Owner = *p.Owner
+	if p.OwnerUserIDSet {
+		r.OwnerUserID = p.OwnerUserID
 	}
 	var conflict int
 	err = s.pool.QueryRow(ctx, `
 		SELECT id FROM salary_records
-		WHERE owner = $1 AND date = $2 AND id <> $3 AND is_active = true
+		WHERE owner_user_id IS NOT DISTINCT FROM $1 AND date = $2
+		  AND id <> $3 AND is_active = true
 		LIMIT 1`,
-		r.Owner, r.Date, id,
+		r.OwnerUserID, r.Date, id,
 	).Scan(&conflict)
 	if err == nil {
 		return nil, ErrDuplicate
@@ -193,13 +203,16 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*SalaryRecor
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return nil, fmt.Errorf("check duplicate on update: %w", err)
 	}
+	// owner is dual-written from owner_user_id ($5) until the legacy column
+	// is dropped.
 	row := s.pool.QueryRow(ctx, `
 		UPDATE salary_records SET
-			date = $1, gross_amount = $2, contract_type = $3,
-			company = $4, owner = $5
+			date = $1, gross_amount = $2, contract_type = $3, company = $4,
+			owner = COALESCE((SELECT name FROM users WHERE id = $5), 'Shared'),
+			owner_user_id = $5
 		WHERE id = $6 AND is_active = true
 		RETURNING `+selectColumns,
-		r.Date, r.GrossAmount, r.ContractType, r.Company, r.Owner, id,
+		r.Date, r.GrossAmount, r.ContractType, r.Company, r.OwnerUserID, id,
 	)
 	updated, err := scanRecord(row)
 	if err != nil {
@@ -226,35 +239,35 @@ func (s *Store) Delete(ctx context.Context, id int) error {
 	return nil
 }
 
-// CurrentSalaryByPersona returns the latest active gross_amount on/before
-// asOfDate for each persona name in the input list. Personas without any
+// CurrentSalaryByUser returns the latest active gross_amount on/before
+// asOfDate for each owner_user_id in the input list. Users without any
 // matching record are absent from the map (and rendered as null in the
 // response).
-func (s *Store) CurrentSalaryByPersona(
-	ctx context.Context, personaNames []string, asOfDate time.Time,
-) (map[string]decimal.Decimal, error) {
-	if len(personaNames) == 0 {
-		return map[string]decimal.Decimal{}, nil
+func (s *Store) CurrentSalaryByUser(
+	ctx context.Context, userIDs []int, asOfDate time.Time,
+) (map[int]decimal.Decimal, error) {
+	if len(userIDs) == 0 {
+		return map[int]decimal.Decimal{}, nil
 	}
 	rows, err := s.pool.Query(ctx, `
-		SELECT DISTINCT ON (owner) owner, gross_amount
+		SELECT DISTINCT ON (owner_user_id) owner_user_id, gross_amount
 		FROM salary_records
-		WHERE is_active = true AND owner = ANY($1) AND date <= $2
-		ORDER BY owner, date DESC`,
-		personaNames, asOfDate,
+		WHERE is_active = true AND owner_user_id = ANY($1) AND date <= $2
+		ORDER BY owner_user_id, date DESC`,
+		userIDs, asOfDate,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("select current salaries: %w", err)
 	}
 	defer rows.Close()
-	out := map[string]decimal.Decimal{}
+	out := map[int]decimal.Decimal{}
 	for rows.Next() {
-		var owner string
+		var ownerID int
 		var amount decimal.Decimal
-		if err := rows.Scan(&owner, &amount); err != nil {
+		if err := rows.Scan(&ownerID, &amount); err != nil {
 			return nil, fmt.Errorf("scan current salary: %w", err)
 		}
-		out[owner] = amount
+		out[ownerID] = amount
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate current salaries: %w", err)
@@ -262,38 +275,40 @@ func (s *Store) CurrentSalaryByPersona(
 	return out, nil
 }
 
-// RecentTwoByPersona returns up to two most-recent active records per owner
-// on/before asOfDate, ordered by date desc per owner. Used to compute
-// inflation_context (current vs previous salary).
-func (s *Store) RecentTwoByPersona(
-	ctx context.Context, personaNames []string, asOfDate time.Time,
-) (map[string][]SalaryRecord, error) {
-	if len(personaNames) == 0 {
-		return map[string][]SalaryRecord{}, nil
+// RecentTwoByUser returns up to two most-recent active records per
+// owner_user_id on/before asOfDate, ordered by date desc per owner. Used to
+// compute inflation_context (current vs previous salary).
+func (s *Store) RecentTwoByUser(
+	ctx context.Context, userIDs []int, asOfDate time.Time,
+) (map[int][]SalaryRecord, error) {
+	if len(userIDs) == 0 {
+		return map[int][]SalaryRecord{}, nil
 	}
 	rows, err := s.pool.Query(ctx, `
 		WITH ranked AS (
-			SELECT id, date, gross_amount, contract_type, company, owner, is_active, created_at,
-			       ROW_NUMBER() OVER (PARTITION BY owner ORDER BY date DESC) AS rn
+			SELECT id, date, gross_amount, contract_type, company, owner_user_id, is_active, created_at,
+			       ROW_NUMBER() OVER (PARTITION BY owner_user_id ORDER BY date DESC) AS rn
 			FROM salary_records
-			WHERE is_active = true AND owner = ANY($1) AND date <= $2
+			WHERE is_active = true AND owner_user_id = ANY($1) AND date <= $2
 		)
-		SELECT id, date, gross_amount, contract_type, company, owner, is_active, created_at
+		SELECT id, date, gross_amount, contract_type, company, owner_user_id, is_active, created_at
 		FROM ranked WHERE rn <= 2
-		ORDER BY owner, date DESC`,
-		personaNames, asOfDate,
+		ORDER BY owner_user_id, date DESC`,
+		userIDs, asOfDate,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("select recent salaries: %w", err)
 	}
 	defer rows.Close()
-	out := map[string][]SalaryRecord{}
+	out := map[int][]SalaryRecord{}
 	for rows.Next() {
 		r, err := scanRecord(rows)
 		if err != nil {
 			return nil, fmt.Errorf("scan recent salary: %w", err)
 		}
-		out[r.Owner] = append(out[r.Owner], *r)
+		if r.OwnerUserID != nil {
+			out[*r.OwnerUserID] = append(out[*r.OwnerUserID], *r)
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate recent salaries: %w", err)
@@ -301,23 +316,25 @@ func (s *Store) RecentTwoByPersona(
 	return out, nil
 }
 
-// ActivePersonaNames returns the persona names sorted alphabetically.
-func (s *Store) ActivePersonaNames(ctx context.Context) ([]string, error) {
-	rows, err := s.pool.Query(ctx, `SELECT name FROM personas ORDER BY name`)
+// ActiveOwnerUserIDs returns every household member's user id, ordered by
+// username — the set the current-salary and inflation-context maps are
+// keyed by.
+func (s *Store) ActiveOwnerUserIDs(ctx context.Context) ([]int, error) {
+	rows, err := s.pool.Query(ctx, `SELECT id FROM users ORDER BY username`)
 	if err != nil {
-		return nil, fmt.Errorf("select persona names: %w", err)
+		return nil, fmt.Errorf("select owner user ids: %w", err)
 	}
 	defer rows.Close()
-	out := []string{}
+	out := []int{}
 	for rows.Next() {
-		var n string
-		if err := rows.Scan(&n); err != nil {
-			return nil, fmt.Errorf("scan persona name: %w", err)
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan owner user id: %w", err)
 		}
-		out = append(out, n)
+		out = append(out, id)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate persona names: %w", err)
+		return nil, fmt.Errorf("iterate owner user ids: %w", err)
 	}
 	return out, nil
 }
@@ -349,7 +366,7 @@ func scanRecord(row pgx.Row) (*SalaryRecord, error) {
 	var r SalaryRecord
 	if err := row.Scan(
 		&r.ID, &r.Date, &r.GrossAmount, &r.ContractType,
-		&r.Company, &r.Owner, &r.IsActive, &r.CreatedAt,
+		&r.Company, &r.OwnerUserID, &r.IsActive, &r.CreatedAt,
 	); err != nil {
 		return nil, err
 	}
