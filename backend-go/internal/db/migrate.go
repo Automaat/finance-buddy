@@ -94,6 +94,12 @@ func dropOwnerColumn(ctx context.Context, pool *pgxpool.Pool, table string) erro
 	if !exists {
 		return nil
 	}
+	// Guard against a database that still has `owner` but never reached
+	// phase B — the backfill below would otherwise fail on a missing column.
+	if _, err := pool.Exec(ctx,
+		`ALTER TABLE `+table+` ADD COLUMN IF NOT EXISTS owner_user_id integer`); err != nil {
+		return fmt.Errorf("ensure owner_user_id on %s: %w", table, err)
+	}
 	if _, err := pool.Exec(ctx, `
 		UPDATE `+table+` AS t
 		SET owner_user_id = u.id
