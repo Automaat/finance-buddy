@@ -111,6 +111,31 @@ def test_create_user_with_profile_and_default_ppk(client: httpx.Client) -> None:
     assert defaulted.json()["ppk_employer_rate"] == "1.50"
 
 
+def test_owner_picker_list(client: httpx.Client, base_url: str) -> None:
+    created = client.post(
+        "/api/auth/users",
+        json={"username": "bb-owner", "password": "owner-pass-1", "name": "Owner One"},
+    )
+    assert created.status_code == 201
+
+    response = client.get("/api/users")
+    assert response.status_code == 200
+    options = response.json()
+    assert isinstance(options, list)
+    entry = next(o for o in options if o["id"] == created.json()["id"])
+    assert entry == {"id": created.json()["id"], "name": "Owner One"}
+    # Every option exposes only id + display name.
+    assert all(set(o.keys()) == {"id", "name"} for o in options)
+
+    # Reachable by a non-admin user too.
+    with httpx.Client(base_url=base_url, timeout=10.0) as http:
+        http.post(
+            "/api/auth/login",
+            json={"username": "bb-owner", "password": "owner-pass-1"},
+        )
+        assert http.get("/api/users").status_code == 200
+
+
 def test_admin_updates_user_profile(client: httpx.Client) -> None:
     created = client.post(
         "/api/auth/users",

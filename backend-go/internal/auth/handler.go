@@ -163,6 +163,34 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, toUserResponse(user))
 }
 
+// ownerOption is a household member offered as an owner-picker choice.
+type ownerOption struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+// ListOwners serves GET /api/users — every household member as an
+// owner-picker option (id + display name). Authenticated, not admin-only;
+// it carries no sensitive fields. The display name falls back to the
+// username when no name is set.
+func (h *Handler) ListOwners(w http.ResponseWriter, r *http.Request) {
+	users, err := h.store.List(r.Context())
+	if err != nil {
+		h.logger.Error("list owners", "err", err)
+		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	out := make([]ownerOption, 0, len(users))
+	for i := range users {
+		name := users[i].Username
+		if users[i].Name != nil && *users[i].Name != "" {
+			name = *users[i].Name
+		}
+		out = append(out, ownerOption{ID: users[i].ID, Name: name})
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
 // ListUsers serves GET /api/auth/users (admin only).
 func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := h.store.List(r.Context())
