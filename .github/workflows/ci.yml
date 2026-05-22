@@ -260,7 +260,8 @@ jobs:
             tests/test_transactions.py \
             tests/test_debt_payments.py \
             tests/test_debts.py \
-            tests/test_retirement.py
+            tests/test_retirement.py \
+            tests/test_investment.py
         working-directory: backend-bb-tests
         env:
           BB_BASE_URL: http://127.0.0.1:8000
