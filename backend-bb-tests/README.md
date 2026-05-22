@@ -20,13 +20,11 @@ Requires Docker (testcontainers spins up Postgres) and `uv`.
 
 All optional, all via env:
 
-All optional, all via env:
-
-| Var                | Purpose                                                                                               |
-| ------------------ | ----------------------------------------------------------------------------------------------------- |
+| Var                | Purpose                                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------------------------- |
 | `BB_BASE_URL`      | Hit this URL instead of building + launching backend-go. Point the suite at an already-running backend. |
-| `BB_DATABASE_URL`  | Use this DSN instead of testcontainers Postgres. Required when `BB_BASE_URL` is set.                  |
-| `BB_UPDATE_GOLDEN` | Truthy → overwrite `golden/*.json` with the current live response. Use after intentional API changes. |
+| `BB_DATABASE_URL`  | Use this DSN instead of testcontainers Postgres. Required when `BB_BASE_URL` is set.                    |
+| `BB_UPDATE_GOLDEN` | Truthy → overwrite `golden/*.json` with the current live response. Use after intentional API changes.   |
 
 backend-go applies the baseline schema (`internal/db/schema.sql`) to an empty database itself on startup — there is no separate migration step.
 

@@ -41,8 +41,10 @@ export default defineConfig({
 		? undefined
 		: [
 				{
-					command: 'uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 --log-level warning',
-					cwd: 'backend',
+					// backend-go applies internal/db/schema.sql to an empty database
+					// itself; for a local run seed fixtures separately if needed.
+					command: 'go run ./cmd/api',
+					cwd: 'backend-go',
 					url: 'http://127.0.0.1:8000/health',
 					reuseExistingServer: !process.env.CI,
 					timeout: 120_000,
@@ -50,9 +52,8 @@ export default defineConfig({
 					stderr: 'pipe',
 					env: {
 						DATABASE_URL,
-						APP_PASSWORD: process.env.APP_PASSWORD ?? 'test',
-						CORS_ORIGINS: `${BASE_URL},http://localhost:${PORT},http://127.0.0.1:${PORT}`,
-						SEED_DEV_DATA: process.env.SEED_DEV_DATA ?? 'true'
+						FB_ADDR: '127.0.0.1:8000',
+						CORS_ORIGINS: `${BASE_URL},http://localhost:${PORT},http://127.0.0.1:${PORT}`
 					}
 				},
 				{
