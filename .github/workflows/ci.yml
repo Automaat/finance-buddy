@@ -115,6 +115,17 @@ jobs:
         run: go test ./...
         working-directory: backend-go
 
+      - name: OpenAPI spec drift check
+        run: |
+          go run ./cmd/gen-openapi
+          if ! git diff --exit-code ../api/openapi-go.json; then
+            echo "::error::api/openapi-go.json is stale." \
+                 "Regenerate with: (cd backend-go && go run ./cmd/gen-openapi)" \
+                 "and commit the result."
+            exit 1
+          fi
+        working-directory: backend-go
+
   lint-go:
     runs-on: ubuntu-24.04
     steps:

@@ -1,68 +1,94 @@
 # backend-go
 
-Phase 5 of the Python→Go migration. This is the skeleton for the Go backend that will eventually replace `backend/`. Ships only `/health` and the HTTP plumbing every later endpoint will reuse.
+The Finance Buddy backend — chi router + pgx, the successor to the original
+FastAPI/Python backend (now decommissioned; see `migration/`).
 
 ## Run
 
 ```bash
 cd backend-go
-go run ./cmd/api
-# → 2026-… INFO backend-go listening addr=:8000
+DATABASE_URL=postgresql://finance:password@localhost:5432/finance go run ./cmd/api
+# → INFO backend-go listening addr=:8000
 curl -s http://localhost:8000/health
 # {"status":"ok"}
 ```
 
-Environment variables (mirrors `backend/`):
+On startup backend-go applies `internal/db/schema.sql` to an empty database
+(no-op when the schema already exists) and starts the CPI refresh scheduler.
 
-| Var            | Default                 | Purpose                         |
-| -------------- | ----------------------- | ------------------------------- |
-| `FB_ADDR`      | `:8000`                 | Listen address                  |
-| `CORS_ORIGINS` | `http://localhost:3000` | Comma-separated allowed origins |
+Environment variables:
+
+| Var            | Default                 | Purpose                                        |
+| -------------- | ----------------------- | ---------------------------------------------- |
+| `FB_ADDR`      | `:8000`                 | Listen address                                 |
+| `CORS_ORIGINS` | `http://localhost:3000` | Comma-separated allowed origins                |
+| `DATABASE_URL` | —                       | Postgres DSN (or use the `PG*` libpq env vars) |
 
 ## Layout
 
 ```
 backend-go/
-├── go.mod
 ├── cmd/
-│   └── api/main.go            # process entry: signals, http.Server lifecycle
+│   ├── api/                   # process entry: signals, http.Server, scheduler
+│   └── gen-openapi/           # OpenAPI spec generator (see below)
 ├── internal/
-│   └── server/                # router + middleware + handlers
-│       ├── server.go
-│       └── server_test.go
-├── Dockerfile
+│   ├── server/                # route registration
+│   ├── db/                    # pgx pool + schema.sql bootstrap
+│   ├── scheduler/             # in-process CPI monthly refresh
+│   ├── apispec/               # OpenAPI route-registry types
+│   └── <domain>/              # one package per endpoint group
 └── README.md
 ```
 
-`cmd/api/main.go` only handles process concerns (signals, shutdown). All HTTP routing lives under `internal/server/` so it can be exercised via `httptest` without a real network bind.
+Each `internal/<domain>/` package holds `store.go` (pgx queries), `handler.go`
+(chi handlers + wire types), `validation.go`, `errors.go`, and `openapi.go`.
 
-## What's intentionally missing
+## OpenAPI spec
 
-- **No DB connection yet.** `/health` is static — same shape Python emits. The pgx pool wiring lands with the first endpoint that needs it (Group 1 in `migration/coupling.md`: `/api/config`).
-- **No business logic.** The cutover protocol is one endpoint at a time, gated on `backend-bb-tests/` parity. Adding more handlers here without that gate defeats the point.
-- **No migrations.** Alembic owns the schema during the migration (per the plan); `backend-go` reads but never writes structural DDL.
+`api/openapi-go.json` is generated from the route registry — never edit it by
+hand. CI fails if the committed spec drifts from the generator output.
+
+```bash
+cd backend-go && go run ./cmd/gen-openapi   # rewrites api/openapi-go.json
+```
+
+### The registry pattern
+
+`cmd/gen-openapi` reflects each endpoint's request/response Go structs (their
+JSON tags) into OpenAPI schemas. It learns the endpoints from a **registry**:
+every endpoint-group package exports `APISpec []apispec.Route`.
+
+**To expose a new endpoint in the spec**, add a `Route` to the owning
+package's `openapi.go` with zero values of its request/response wire types:
+
+```go
+// internal/widgets/openapi.go
+var APISpec = []apispec.Route{
+    {
+        Method: "POST", Path: "/api/widgets", Tag: "widgets",
+        Summary:  "Create a widget",
+        Request:  createRequest{}, // unexported wire types are fine —
+        Response: response{},      // reflection sees the concrete type
+        Status:   201,
+    },
+}
+```
+
+Then add the package to `allRoutes()` in `cmd/gen-openapi/routes.go` and
+re-run the generator. The scalar wrapper types (`pyFloat`, `isoDate`,
+`isoNaive`, `moneyJSON`, `ppkRate`) are mapped to the right primitive schema
+by `customizeScalar` in `cmd/gen-openapi/main.go`.
 
 ## Tests
 
 ```bash
-go test ./...
+go test ./...                             # Go unit tests
+cd ../backend-bb-tests && uv run pytest   # black-box regression suite
 ```
-
-The black-box suite under `backend-bb-tests/` is the parity oracle. Point it at the Go backend:
-
-```bash
-cd backend-go && go run ./cmd/api &
-cd ../backend-bb-tests
-BB_BASE_URL=http://localhost:8000 BB_DATABASE_URL=postgresql://... uv run pytest
-```
-
-Currently only `tests/test_health.py` is expected to pass against Go.
 
 ## Lint
 
-The repo-wide `.golangci.yml` (copied from `~/sideprojects/sybra`) applies. Pinned `golangci-lint v2.12.2` via `.mise.toml`; nilaway runs via `scripts/run-nilaway.sh`.
-
 ```bash
 golangci-lint run ./...
-../scripts/run-nilaway.sh . "github.com/Automaat/finance-buddy/backend-go"
+../scripts/run-nilaway.sh backend-go github.com/Automaat/finance-buddy/backend-go
 ```

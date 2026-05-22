@@ -1,0 +1,1958 @@
+{
+  "info": {
+    "description": "Generated from backend-go route registry — do not edit by hand.",
+    "title": "Finance Buddy API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/api/accounts": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "assets": {
+                      "items": {
+                        "properties": {
+                          "account_wrapper": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "category": {
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "current_value": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "id": {
+                            "type": "integer"
+                          },
+                          "is_active": {
+                            "type": "boolean"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "owner": {
+                            "type": "string"
+                          },
+                          "purpose": {
+                            "type": "string"
+                          },
+                          "receives_contributions": {
+                            "type": "boolean"
+                          },
+                          "square_meters": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "type": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "liabilities": {
+                      "items": {
+                        "properties": {
+                          "account_wrapper": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "category": {
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "current_value": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "id": {
+                            "type": "integer"
+                          },
+                          "is_active": {
+                            "type": "boolean"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "owner": {
+                            "type": "string"
+                          },
+                          "purpose": {
+                            "type": "string"
+                          },
+                          "receives_contributions": {
+                            "type": "boolean"
+                          },
+                          "square_meters": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "type": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List accounts",
+        "tags": [
+          "accounts"
+        ]
+      },
+      "post": {
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "account_wrapper": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "category": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "current_value": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "is_active": {
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "owner": {
+                      "type": "string"
+                    },
+                    "purpose": {
+                      "type": "string"
+                    },
+                    "receives_contributions": {
+                      "type": "boolean"
+                    },
+                    "square_meters": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "summary": "Create an account",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/api/accounts/{id}": {
+      "delete": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "summary": "Delete an account",
+        "tags": [
+          "accounts"
+        ]
+      },
+      "put": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "account_wrapper": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "category": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "current_value": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "is_active": {
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "owner": {
+                      "type": "string"
+                    },
+                    "purpose": {
+                      "type": "string"
+                    },
+                    "receives_contributions": {
+                      "type": "boolean"
+                    },
+                    "square_meters": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Update an account",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/api/assets": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "assets": {
+                      "items": {
+                        "properties": {
+                          "created_at": {
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "current_value": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "id": {
+                            "type": "integer"
+                          },
+                          "is_active": {
+                            "type": "boolean"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List assets",
+        "tags": [
+          "assets"
+        ]
+      },
+      "post": {
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "current_value": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "is_active": {
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "summary": "Create an asset",
+        "tags": [
+          "assets"
+        ]
+      }
+    },
+    "/api/assets/{id}": {
+      "delete": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "summary": "Delete an asset",
+        "tags": [
+          "assets"
+        ]
+      },
+      "put": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "current_value": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "is_active": {
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Update an asset",
+        "tags": [
+          "assets"
+        ]
+      }
+    },
+    "/api/config": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "allocation_bonds": {
+                      "type": "integer"
+                    },
+                    "allocation_commodities": {
+                      "type": "integer"
+                    },
+                    "allocation_gold": {
+                      "type": "integer"
+                    },
+                    "allocation_real_estate": {
+                      "type": "integer"
+                    },
+                    "allocation_stocks": {
+                      "type": "integer"
+                    },
+                    "birth_date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "monthly_expenses": {
+                      "type": "number"
+                    },
+                    "monthly_mortgage_payment": {
+                      "type": "number"
+                    },
+                    "retirement_age": {
+                      "type": "integer"
+                    },
+                    "retirement_monthly_salary": {
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get application configuration",
+        "tags": [
+          "config"
+        ]
+      },
+      "put": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "allocation_bonds": {
+                    "type": "integer"
+                  },
+                  "allocation_commodities": {
+                    "type": "integer"
+                  },
+                  "allocation_gold": {
+                    "type": "integer"
+                  },
+                  "allocation_real_estate": {
+                    "type": "integer"
+                  },
+                  "allocation_stocks": {
+                    "type": "integer"
+                  },
+                  "birth_date": {
+                    "format": "date",
+                    "type": "string"
+                  },
+                  "monthly_expenses": {},
+                  "monthly_mortgage_payment": {},
+                  "retirement_age": {
+                    "type": "integer"
+                  },
+                  "retirement_monthly_salary": {}
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "allocation_bonds": {
+                      "type": "integer"
+                    },
+                    "allocation_commodities": {
+                      "type": "integer"
+                    },
+                    "allocation_gold": {
+                      "type": "integer"
+                    },
+                    "allocation_real_estate": {
+                      "type": "integer"
+                    },
+                    "allocation_stocks": {
+                      "type": "integer"
+                    },
+                    "birth_date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "monthly_expenses": {
+                      "type": "number"
+                    },
+                    "monthly_mortgage_payment": {
+                      "type": "number"
+                    },
+                    "retirement_age": {
+                      "type": "integer"
+                    },
+                    "retirement_monthly_salary": {
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Update application configuration",
+        "tags": [
+          "config"
+        ]
+      }
+    },
+    "/api/dashboard": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "allocation": {
+                      "items": {
+                        "properties": {
+                          "category": {
+                            "type": "string"
+                          },
+                          "owner": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "value": {
+                            "format": "double",
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "allocation_analysis": {
+                      "properties": {
+                        "by_category": {
+                          "items": {
+                            "properties": {
+                              "category": {
+                                "type": "string"
+                              },
+                              "current_percentage": {
+                                "format": "double",
+                                "type": "number"
+                              },
+                              "current_value": {
+                                "format": "double",
+                                "type": "number"
+                              },
+                              "difference": {
+                                "format": "double",
+                                "type": "number"
+                              },
+                              "target_percentage": {
+                                "format": "double",
+                                "type": "number"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "by_wrapper": {
+                          "items": {
+                            "properties": {
+                              "percentage": {
+                                "format": "double",
+                                "type": "number"
+                              },
+                              "value": {
+                                "format": "double",
+                                "type": "number"
+                              },
+                              "wrapper": {
+                                "type": "string"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "rebalancing": {
+                          "items": {
+                            "properties": {
+                              "action": {
+                                "type": "string"
+                              },
+                              "amount": {
+                                "format": "double",
+                                "type": "number"
+                              },
+                              "category": {
+                                "type": "string"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "total_investment_value": {
+                          "format": "double",
+                          "type": "number"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "category_time_series": {
+                      "properties": {
+                        "bond": {
+                          "items": {
+                            "properties": {
+                              "contributions": {
+                                "format": "double",
+                                "type": "number"
+                              },
+                              "date": {
+                                "format": "date",
+                                "type": "string"
+                              },
+                              "returns": {
+                                "format": "double",
+                                "type": "number"
+                              },
+                              "value": {
+                                "format": "double",
+                                "type": "number"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "stock": {
+                          "items": {
+                            "properties": {
+                              "contributions": {
+                                "format": "double",
+                                "type": "number"
+                              },
+                              "date": {
+                                "format": "date",
+                                "type": "string"
+                              },
+                              "returns": {
+                                "format": "double",
+                                "type": "number"
+                              },
+                              "value": {
+                                "format": "double",
+                                "type": "number"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "change_vs_last_month": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "current_net_worth": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "investment_time_series": {
+                      "items": {
+                        "properties": {
+                          "contributions": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "date": {
+                            "format": "date",
+                            "type": "string"
+                          },
+                          "returns": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "value": {
+                            "format": "double",
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "metric_cards": {
+                      "properties": {
+                        "debt_to_income_ratio": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "emergency_fund_months": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "hour_of_life_cost": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "hour_of_work_cost": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "investment_contributions": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "investment_returns": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "mortgage_months_left": {
+                          "type": "integer"
+                        },
+                        "mortgage_remaining": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "mortgage_years_left": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "property_sqm": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "retirement_income_monthly": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "retirement_total": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "savings_rate": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "net_worth_history": {
+                      "items": {
+                        "properties": {
+                          "date": {
+                            "format": "date",
+                            "type": "string"
+                          },
+                          "value": {
+                            "format": "double",
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "retirement_account_value": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "tile_deltas": {
+                      "properties": {
+                        "assets": {
+                          "properties": {
+                            "mom": {
+                              "nullable": true,
+                              "properties": {
+                                "absolute": {
+                                  "format": "double",
+                                  "type": "number"
+                                },
+                                "percentage": {
+                                  "format": "double",
+                                  "nullable": true,
+                                  "type": "number"
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "yoy": {
+                              "nullable": true,
+                              "properties": {
+                                "absolute": {
+                                  "format": "double",
+                                  "type": "number"
+                                },
+                                "percentage": {
+                                  "format": "double",
+                                  "nullable": true,
+                                  "type": "number"
+                                }
+                              },
+                              "type": "object"
+                            }
+                          },
+                          "type": "object"
+                        },
+                        "liabilities": {
+                          "properties": {
+                            "mom": {
+                              "nullable": true,
+                              "properties": {
+                                "absolute": {
+                                  "format": "double",
+                                  "type": "number"
+                                },
+                                "percentage": {
+                                  "format": "double",
+                                  "nullable": true,
+                                  "type": "number"
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "yoy": {
+                              "nullable": true,
+                              "properties": {
+                                "absolute": {
+                                  "format": "double",
+                                  "type": "number"
+                                },
+                                "percentage": {
+                                  "format": "double",
+                                  "nullable": true,
+                                  "type": "number"
+                                }
+                              },
+                              "type": "object"
+                            }
+                          },
+                          "type": "object"
+                        },
+                        "net_worth": {
+                          "properties": {
+                            "mom": {
+                              "nullable": true,
+                              "properties": {
+                                "absolute": {
+                                  "format": "double",
+                                  "type": "number"
+                                },
+                                "percentage": {
+                                  "format": "double",
+                                  "nullable": true,
+                                  "type": "number"
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "yoy": {
+                              "nullable": true,
+                              "properties": {
+                                "absolute": {
+                                  "format": "double",
+                                  "type": "number"
+                                },
+                                "percentage": {
+                                  "format": "double",
+                                  "nullable": true,
+                                  "type": "number"
+                                }
+                              },
+                              "type": "object"
+                            }
+                          },
+                          "type": "object"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "total_assets": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "total_liabilities": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "wrapper_time_series": {
+                      "properties": {
+                        "ike": {
+                          "items": {
+                            "properties": {
+                              "contributions": {
+                                "format": "double",
+                                "type": "number"
+                              },
+                              "date": {
+                                "format": "date",
+                                "type": "string"
+                              },
+                              "returns": {
+                                "format": "double",
+                                "type": "number"
+                              },
+                              "value": {
+                                "format": "double",
+                                "type": "number"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "ikze": {
+                          "items": {
+                            "properties": {
+                              "contributions": {
+                                "format": "double",
+                                "type": "number"
+                              },
+                              "date": {
+                                "format": "date",
+                                "type": "string"
+                              },
+                              "returns": {
+                                "format": "double",
+                                "type": "number"
+                              },
+                              "value": {
+                                "format": "double",
+                                "type": "number"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "ppk": {
+                          "items": {
+                            "properties": {
+                              "contributions": {
+                                "format": "double",
+                                "type": "number"
+                              },
+                              "date": {
+                                "format": "date",
+                                "type": "string"
+                              },
+                              "returns": {
+                                "format": "double",
+                                "type": "number"
+                              },
+                              "value": {
+                                "format": "double",
+                                "type": "number"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Dashboard — net worth, allocation, time series, deltas",
+        "tags": [
+          "dashboard"
+        ]
+      }
+    },
+    "/api/goals": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "completed_count": {
+                      "type": "integer"
+                    },
+                    "goals": {
+                      "items": {
+                        "properties": {
+                          "account_id": {
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "account_name": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "category": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "current_amount": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "id": {
+                            "type": "integer"
+                          },
+                          "is_completed": {
+                            "type": "boolean"
+                          },
+                          "monthly_contribution": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "progress_percent": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "projected_hit_date": {
+                            "format": "date",
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "remaining_amount": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "target_amount": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "target_date": {
+                            "format": "date",
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "total_count": {
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List goals",
+        "tags": [
+          "goals"
+        ]
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "account_id": {
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "category": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "current_amount": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "is_completed": {
+                    "type": "boolean"
+                  },
+                  "monthly_contribution": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "target_amount": {
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "target_date": {
+                    "format": "date",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "account_id": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "account_name": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "category": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "current_amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "is_completed": {
+                      "type": "boolean"
+                    },
+                    "monthly_contribution": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "progress_percent": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "projected_hit_date": {
+                      "format": "date",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "remaining_amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "target_amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "target_date": {
+                      "format": "date",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "summary": "Create a goal",
+        "tags": [
+          "goals"
+        ]
+      }
+    },
+    "/api/goals/{id}": {
+      "delete": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "summary": "Delete a goal",
+        "tags": [
+          "goals"
+        ]
+      },
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "account_id": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "account_name": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "category": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "current_amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "is_completed": {
+                      "type": "boolean"
+                    },
+                    "monthly_contribution": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "progress_percent": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "projected_hit_date": {
+                      "format": "date",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "remaining_amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "target_amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "target_date": {
+                      "format": "date",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get a goal",
+        "tags": [
+          "goals"
+        ]
+      },
+      "put": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "account_id": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "account_name": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "category": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "current_amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "is_completed": {
+                      "type": "boolean"
+                    },
+                    "monthly_contribution": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "progress_percent": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "projected_hit_date": {
+                      "format": "date",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "remaining_amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "target_amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "target_date": {
+                      "format": "date",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Update a goal",
+        "tags": [
+          "goals"
+        ]
+      }
+    },
+    "/api/personas": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "properties": {
+                      "created_at": {
+                        "format": "date-time",
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "integer"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "ppk_employee_rate": {
+                        "type": "number"
+                      },
+                      "ppk_employer_rate": {
+                        "type": "number"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List personas",
+        "tags": [
+          "personas"
+        ]
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "ppk_employee_rate": {
+                    "nullable": true
+                  },
+                  "ppk_employer_rate": {
+                    "nullable": true
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "ppk_employee_rate": {
+                      "type": "number"
+                    },
+                    "ppk_employer_rate": {
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "summary": "Create a persona",
+        "tags": [
+          "personas"
+        ]
+      }
+    },
+    "/api/personas/{id}": {
+      "delete": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "summary": "Delete a persona",
+        "tags": [
+          "personas"
+        ]
+      },
+      "put": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "name": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "ppk_employee_rate": {
+                    "nullable": true
+                  },
+                  "ppk_employer_rate": {
+                    "nullable": true
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "ppk_employee_rate": {
+                      "type": "number"
+                    },
+                    "ppk_employer_rate": {
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Update a persona",
+        "tags": [
+          "personas"
+        ]
+      }
+    },
+    "/api/snapshots": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "properties": {
+                      "date": {
+                        "format": "date",
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "integer"
+                      },
+                      "notes": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "values": {
+                        "items": {
+                          "properties": {
+                            "account_id": {
+                              "nullable": true,
+                              "type": "integer"
+                            },
+                            "account_name": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "asset_id": {
+                              "nullable": true,
+                              "type": "integer"
+                            },
+                            "asset_name": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "id": {
+                              "type": "integer"
+                            },
+                            "value": {
+                              "format": "double",
+                              "type": "number"
+                            }
+                          },
+                          "type": "object"
+                        },
+                        "type": "array"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List snapshots",
+        "tags": [
+          "snapshots"
+        ]
+      },
+      "post": {
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "notes": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "values": {
+                      "items": {
+                        "properties": {
+                          "account_id": {
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "account_name": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "asset_id": {
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "asset_name": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "integer"
+                          },
+                          "value": {
+                            "format": "double",
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "summary": "Create a snapshot",
+        "tags": [
+          "snapshots"
+        ]
+      }
+    },
+    "/api/snapshots/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "notes": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "values": {
+                      "items": {
+                        "properties": {
+                          "account_id": {
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "account_name": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "asset_id": {
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "asset_name": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "integer"
+                          },
+                          "value": {
+                            "format": "double",
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get a snapshot",
+        "tags": [
+          "snapshots"
+        ]
+      },
+      "put": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "notes": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "values": {
+                      "items": {
+                        "properties": {
+                          "account_id": {
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "account_name": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "asset_id": {
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "asset_name": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "integer"
+                          },
+                          "value": {
+                            "format": "double",
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Update a snapshot",
+        "tags": [
+          "snapshots"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Liveness probe",
+        "tags": [
+          "system"
+        ]
+      }
+    }
+  }
+}
