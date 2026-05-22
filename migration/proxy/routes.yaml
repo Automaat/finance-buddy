@@ -190,3 +190,8 @@ rules:
   - method: POST
     path_prefix: /api/simulations
     upstream: http://backend-go:8000
+  # Group 13 — /api/dashboard cut over to Go. Final cutover: aggregate-backed
+  # hot path + raw fallback, MoM/YoY deltas, allocation analysis, time series.
+  - method: GET
+    path_prefix: /api/dashboard
+    upstream: http://backend-go:8000
