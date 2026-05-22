@@ -4,11 +4,23 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/accounts"
 	"github.com/Automaat/finance-buddy/backend-go/internal/apispec"
 	"github.com/Automaat/finance-buddy/backend-go/internal/assets"
+	bonusevents "github.com/Automaat/finance-buddy/backend-go/internal/bonus_events"
+	companyvaluations "github.com/Automaat/finance-buddy/backend-go/internal/company_valuations"
 	"github.com/Automaat/finance-buddy/backend-go/internal/config"
+	"github.com/Automaat/finance-buddy/backend-go/internal/cpi"
 	"github.com/Automaat/finance-buddy/backend-go/internal/dashboard"
+	debtpayments "github.com/Automaat/finance-buddy/backend-go/internal/debt_payments"
+	"github.com/Automaat/finance-buddy/backend-go/internal/debts"
+	equitygrants "github.com/Automaat/finance-buddy/backend-go/internal/equity_grants"
 	"github.com/Automaat/finance-buddy/backend-go/internal/goals"
+	"github.com/Automaat/finance-buddy/backend-go/internal/investment"
 	"github.com/Automaat/finance-buddy/backend-go/internal/personas"
+	"github.com/Automaat/finance-buddy/backend-go/internal/retirement"
+	"github.com/Automaat/finance-buddy/backend-go/internal/salaries"
+	"github.com/Automaat/finance-buddy/backend-go/internal/simulations"
 	"github.com/Automaat/finance-buddy/backend-go/internal/snapshots"
+	"github.com/Automaat/finance-buddy/backend-go/internal/transactions"
+	"github.com/Automaat/finance-buddy/backend-go/internal/zus"
 )
 
 // healthResponse mirrors the inline /health payload (it has no endpoint
@@ -27,12 +39,29 @@ func allRoutes() []apispec.Route {
 			Response: healthResponse{},
 		},
 	}
-	routes = append(routes, config.APISpec...)
-	routes = append(routes, personas.APISpec...)
-	routes = append(routes, goals.APISpec...)
-	routes = append(routes, accounts.APISpec...)
-	routes = append(routes, assets.APISpec...)
-	routes = append(routes, snapshots.APISpec...)
-	routes = append(routes, dashboard.APISpec...)
+	specs := [][]apispec.Route{
+		config.APISpec,
+		personas.APISpec,
+		goals.APISpec,
+		accounts.APISpec,
+		assets.APISpec,
+		snapshots.APISpec,
+		dashboard.APISpec,
+		companyvaluations.APISpec,
+		bonusevents.APISpec,
+		equitygrants.APISpec,
+		cpi.APISpec,
+		salaries.APISpec,
+		zus.APISpec,
+		retirement.APISpec,
+		investment.APISpec,
+		simulations.APISpec,
+		transactions.APISpec,
+		debtpayments.APISpec,
+		debts.APISpec,
+	}
+	for _, s := range specs {
+		routes = append(routes, s...)
+	}
 	return sortedRoutes(routes)
 }

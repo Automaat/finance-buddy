@@ -196,6 +196,503 @@
         ]
       }
     },
+    "/api/accounts/{account_id}/debts": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "Currency": {
+                    "type": "string"
+                  },
+                  "DebtType": {
+                    "type": "string"
+                  },
+                  "InitialAmount": {
+                    "type": "string"
+                  },
+                  "InterestRate": {
+                    "type": "string"
+                  },
+                  "Name": {
+                    "type": "string"
+                  },
+                  "Notes": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "StartDate": {
+                    "format": "date-time",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "account_id": {
+                      "type": "integer"
+                    },
+                    "account_name": {
+                      "type": "string"
+                    },
+                    "account_owner": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "debt_type": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "initial_amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "interest_paid": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "interest_rate": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "is_active": {
+                      "type": "boolean"
+                    },
+                    "latest_balance": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "latest_balance_date": {
+                      "format": "date",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "notes": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "start_date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "total_paid": {
+                      "format": "double",
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "summary": "Create a debt",
+        "tags": [
+          "debts"
+        ]
+      }
+    },
+    "/api/accounts/{account_id}/payments": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "payment_count": {
+                      "type": "integer"
+                    },
+                    "payments": {
+                      "items": {
+                        "properties": {
+                          "account_id": {
+                            "type": "integer"
+                          },
+                          "account_name": {
+                            "type": "string"
+                          },
+                          "amount": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "created_at": {
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "date": {
+                            "format": "date",
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "integer"
+                          },
+                          "owner": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "total_paid": {
+                      "format": "double",
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List an account's debt payments",
+        "tags": [
+          "debt-payments"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "Amount": {
+                    "type": "string"
+                  },
+                  "Date": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "Owner": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "account_id": {
+                      "type": "integer"
+                    },
+                    "account_name": {
+                      "type": "string"
+                    },
+                    "amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "owner": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "summary": "Create a debt payment",
+        "tags": [
+          "debt-payments"
+        ]
+      }
+    },
+    "/api/accounts/{account_id}/payments/{payment_id}": {
+      "delete": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "payment_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "summary": "Delete a debt payment",
+        "tags": [
+          "debt-payments"
+        ]
+      }
+    },
+    "/api/accounts/{account_id}/transactions": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "total_invested": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "transaction_count": {
+                      "type": "integer"
+                    },
+                    "transactions": {
+                      "items": {
+                        "properties": {
+                          "account_id": {
+                            "type": "integer"
+                          },
+                          "account_name": {
+                            "type": "string"
+                          },
+                          "amount": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "created_at": {
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "date": {
+                            "format": "date",
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "integer"
+                          },
+                          "owner": {
+                            "type": "string"
+                          },
+                          "transaction_type": {
+                            "nullable": true,
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List an account's transactions",
+        "tags": [
+          "transactions"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "Amount": {
+                    "type": "string"
+                  },
+                  "Date": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "Owner": {
+                    "type": "string"
+                  },
+                  "TransactionType": {
+                    "nullable": true,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "account_id": {
+                      "type": "integer"
+                    },
+                    "account_name": {
+                      "type": "string"
+                    },
+                    "amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "owner": {
+                      "type": "string"
+                    },
+                    "transaction_type": {
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "summary": "Create a transaction",
+        "tags": [
+          "transactions"
+        ]
+      }
+    },
+    "/api/accounts/{account_id}/transactions/{transaction_id}": {
+      "delete": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "transaction_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "summary": "Delete a transaction",
+        "tags": [
+          "transactions"
+        ]
+      }
+    },
     "/api/accounts/{id}": {
       "delete": {
         "parameters": [
@@ -447,6 +944,744 @@
         ]
       }
     },
+    "/api/bonuses": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "available_companies": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "bonus_events": {
+                      "items": {
+                        "properties": {
+                          "amount": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "amount_pln": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "company": {
+                            "type": "string"
+                          },
+                          "contract_type": {
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "date": {
+                            "format": "date",
+                            "type": "string"
+                          },
+                          "fx_rate": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "id": {
+                            "type": "integer"
+                          },
+                          "is_active": {
+                            "type": "boolean"
+                          },
+                          "notes": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "owner": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "total_count": {
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List bonus events",
+        "tags": [
+          "bonuses"
+        ]
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "Amount": {
+                    "type": "string"
+                  },
+                  "Company": {
+                    "type": "string"
+                  },
+                  "ContractType": {
+                    "type": "string"
+                  },
+                  "Currency": {
+                    "type": "string"
+                  },
+                  "Date": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "Notes": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "Owner": {
+                    "type": "string"
+                  },
+                  "Type": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "amount_pln": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "company": {
+                      "type": "string"
+                    },
+                    "contract_type": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "fx_rate": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "is_active": {
+                      "type": "boolean"
+                    },
+                    "notes": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "owner": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "summary": "Create a bonus event",
+        "tags": [
+          "bonuses"
+        ]
+      }
+    },
+    "/api/bonuses/{id}": {
+      "delete": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "summary": "Delete a bonus event",
+        "tags": [
+          "bonuses"
+        ]
+      },
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "amount_pln": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "company": {
+                      "type": "string"
+                    },
+                    "contract_type": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "fx_rate": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "is_active": {
+                      "type": "boolean"
+                    },
+                    "notes": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "owner": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get a bonus event",
+        "tags": [
+          "bonuses"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "amount_pln": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "company": {
+                      "type": "string"
+                    },
+                    "contract_type": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "fx_rate": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "is_active": {
+                      "type": "boolean"
+                    },
+                    "notes": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "owner": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Update a bonus event",
+        "tags": [
+          "bonuses"
+        ]
+      }
+    },
+    "/api/company-valuations": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "available_companies": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "company_valuations": {
+                      "items": {
+                        "properties": {
+                          "common_stock_discount_pct": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "company": {
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "date": {
+                            "format": "date",
+                            "type": "string"
+                          },
+                          "fmv_high": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "fmv_low": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "fmv_per_share": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "id": {
+                            "type": "integer"
+                          },
+                          "is_active": {
+                            "type": "boolean"
+                          },
+                          "notes": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "source": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "total_count": {
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List company valuations",
+        "tags": [
+          "company-valuations"
+        ]
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "CommonStockDiscountPct": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "Company": {
+                    "type": "string"
+                  },
+                  "Currency": {
+                    "type": "string"
+                  },
+                  "Date": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "FMVHigh": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "FMVLow": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "FMVPerShare": {
+                    "type": "string"
+                  },
+                  "Notes": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "Source": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "common_stock_discount_pct": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "company": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "fmv_high": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "fmv_low": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "fmv_per_share": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "is_active": {
+                      "type": "boolean"
+                    },
+                    "notes": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "summary": "Create a company valuation",
+        "tags": [
+          "company-valuations"
+        ]
+      }
+    },
+    "/api/company-valuations/{id}": {
+      "delete": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "summary": "Delete a company valuation",
+        "tags": [
+          "company-valuations"
+        ]
+      },
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "common_stock_discount_pct": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "company": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "fmv_high": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "fmv_low": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "fmv_per_share": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "is_active": {
+                      "type": "boolean"
+                    },
+                    "notes": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get a company valuation",
+        "tags": [
+          "company-valuations"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "common_stock_discount_pct": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "company": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "fmv_high": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "fmv_low": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "fmv_per_share": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "is_active": {
+                      "type": "boolean"
+                    },
+                    "notes": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Update a company valuation",
+        "tags": [
+          "company-valuations"
+        ]
+      }
+    },
     "/api/config": {
       "get": {
         "responses": {
@@ -597,6 +1832,132 @@
         "summary": "Update application configuration",
         "tags": [
           "config"
+        ]
+      }
+    },
+    "/api/cpi/adjust": {
+      "post": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "adjusted_amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "as_of_year": {
+                      "type": "integer"
+                    },
+                    "factor": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "from_date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "original_amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "to_date": {
+                      "format": "date",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Inflation-adjust an amount between two dates",
+        "tags": [
+          "cpi"
+        ]
+      }
+    },
+    "/api/cpi/refresh": {
+      "post": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "latest_year": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "rows_written": {
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Refresh CPI data from GUS",
+        "tags": [
+          "cpi"
+        ]
+      }
+    },
+    "/api/cpi/series": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "base_year": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "latest_year": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "points": {
+                      "items": {
+                        "properties": {
+                          "cumulative_index": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "year": {
+                            "type": "integer"
+                          },
+                          "yoy_rate": {
+                            "format": "double",
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "source": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get the CPI year-over-year series",
+        "tags": [
+          "cpi"
         ]
       }
     },
@@ -1074,6 +2435,985 @@
         ]
       }
     },
+    "/api/debts": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "active_debts_count": {
+                      "type": "integer"
+                    },
+                    "debts": {
+                      "items": {
+                        "properties": {
+                          "account_id": {
+                            "type": "integer"
+                          },
+                          "account_name": {
+                            "type": "string"
+                          },
+                          "account_owner": {
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "debt_type": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "integer"
+                          },
+                          "initial_amount": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "interest_paid": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "interest_rate": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "is_active": {
+                            "type": "boolean"
+                          },
+                          "latest_balance": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "latest_balance_date": {
+                            "format": "date",
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "notes": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "start_date": {
+                            "format": "date",
+                            "type": "string"
+                          },
+                          "total_paid": {
+                            "format": "double",
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "total_count": {
+                      "type": "integer"
+                    },
+                    "total_initial_amount": {
+                      "format": "double",
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List debts",
+        "tags": [
+          "debts"
+        ]
+      }
+    },
+    "/api/debts/{id}": {
+      "delete": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "summary": "Delete a debt",
+        "tags": [
+          "debts"
+        ]
+      },
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "account_id": {
+                      "type": "integer"
+                    },
+                    "account_name": {
+                      "type": "string"
+                    },
+                    "account_owner": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "debt_type": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "initial_amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "interest_paid": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "interest_rate": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "is_active": {
+                      "type": "boolean"
+                    },
+                    "latest_balance": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "latest_balance_date": {
+                      "format": "date",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "notes": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "start_date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "total_paid": {
+                      "format": "double",
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get a debt",
+        "tags": [
+          "debts"
+        ]
+      },
+      "put": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "account_id": {
+                      "type": "integer"
+                    },
+                    "account_name": {
+                      "type": "string"
+                    },
+                    "account_owner": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "debt_type": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "initial_amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "interest_paid": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "interest_rate": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "is_active": {
+                      "type": "boolean"
+                    },
+                    "latest_balance": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "latest_balance_date": {
+                      "format": "date",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "notes": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "start_date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "total_paid": {
+                      "format": "double",
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Update a debt",
+        "tags": [
+          "debts"
+        ]
+      }
+    },
+    "/api/equity-grants": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "available_companies": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "equity_grants": {
+                      "items": {
+                        "properties": {
+                          "company": {
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "fx_rate": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "grant_date": {
+                            "format": "date",
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "integer"
+                          },
+                          "is_active": {
+                            "type": "boolean"
+                          },
+                          "liquidity_event_date": {
+                            "format": "date",
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "notes": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "owner": {
+                            "type": "string"
+                          },
+                          "paper_value_base": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "paper_value_base_pln": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "paper_value_currency": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "paper_value_high": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "paper_value_high_pln": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "paper_value_low": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "paper_value_low_pln": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "requires_liquidity_event": {
+                            "type": "boolean"
+                          },
+                          "strike_price": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "tax_treatment": {
+                            "type": "string"
+                          },
+                          "total_shares": {
+                            "type": "integer"
+                          },
+                          "type": {
+                            "type": "string"
+                          },
+                          "valuation_date": {
+                            "format": "date",
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "valuation_source": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "vest_cliff_months": {
+                            "type": "integer"
+                          },
+                          "vest_custom_schedule": {
+                            "items": {
+                              "properties": {
+                                "month": {
+                                  "type": "integer"
+                                },
+                                "pct": {
+                                  "format": "double",
+                                  "type": "number"
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "vest_frequency": {
+                            "type": "string"
+                          },
+                          "vest_start_date": {
+                            "format": "date",
+                            "type": "string"
+                          },
+                          "vest_total_months": {
+                            "type": "integer"
+                          },
+                          "vested_shares_today": {
+                            "type": "integer"
+                          },
+                          "vesting_progress_pct": {
+                            "format": "double",
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "total_count": {
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List equity grants",
+        "tags": [
+          "equity-grants"
+        ]
+      },
+      "post": {
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "company": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "fx_rate": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "grant_date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "is_active": {
+                      "type": "boolean"
+                    },
+                    "liquidity_event_date": {
+                      "format": "date",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "notes": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "owner": {
+                      "type": "string"
+                    },
+                    "paper_value_base": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "paper_value_base_pln": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "paper_value_currency": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "paper_value_high": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "paper_value_high_pln": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "paper_value_low": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "paper_value_low_pln": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "requires_liquidity_event": {
+                      "type": "boolean"
+                    },
+                    "strike_price": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "tax_treatment": {
+                      "type": "string"
+                    },
+                    "total_shares": {
+                      "type": "integer"
+                    },
+                    "type": {
+                      "type": "string"
+                    },
+                    "valuation_date": {
+                      "format": "date",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "valuation_source": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "vest_cliff_months": {
+                      "type": "integer"
+                    },
+                    "vest_custom_schedule": {
+                      "items": {
+                        "properties": {
+                          "month": {
+                            "type": "integer"
+                          },
+                          "pct": {
+                            "format": "double",
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "vest_frequency": {
+                      "type": "string"
+                    },
+                    "vest_start_date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "vest_total_months": {
+                      "type": "integer"
+                    },
+                    "vested_shares_today": {
+                      "type": "integer"
+                    },
+                    "vesting_progress_pct": {
+                      "format": "double",
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "summary": "Create an equity grant",
+        "tags": [
+          "equity-grants"
+        ]
+      }
+    },
+    "/api/equity-grants/{id}": {
+      "delete": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "summary": "Delete an equity grant",
+        "tags": [
+          "equity-grants"
+        ]
+      },
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "company": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "fx_rate": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "grant_date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "is_active": {
+                      "type": "boolean"
+                    },
+                    "liquidity_event_date": {
+                      "format": "date",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "notes": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "owner": {
+                      "type": "string"
+                    },
+                    "paper_value_base": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "paper_value_base_pln": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "paper_value_currency": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "paper_value_high": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "paper_value_high_pln": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "paper_value_low": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "paper_value_low_pln": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "requires_liquidity_event": {
+                      "type": "boolean"
+                    },
+                    "strike_price": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "tax_treatment": {
+                      "type": "string"
+                    },
+                    "total_shares": {
+                      "type": "integer"
+                    },
+                    "type": {
+                      "type": "string"
+                    },
+                    "valuation_date": {
+                      "format": "date",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "valuation_source": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "vest_cliff_months": {
+                      "type": "integer"
+                    },
+                    "vest_custom_schedule": {
+                      "items": {
+                        "properties": {
+                          "month": {
+                            "type": "integer"
+                          },
+                          "pct": {
+                            "format": "double",
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "vest_frequency": {
+                      "type": "string"
+                    },
+                    "vest_start_date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "vest_total_months": {
+                      "type": "integer"
+                    },
+                    "vested_shares_today": {
+                      "type": "integer"
+                    },
+                    "vesting_progress_pct": {
+                      "format": "double",
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get an equity grant",
+        "tags": [
+          "equity-grants"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "company": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "fx_rate": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "grant_date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "is_active": {
+                      "type": "boolean"
+                    },
+                    "liquidity_event_date": {
+                      "format": "date",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "notes": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "owner": {
+                      "type": "string"
+                    },
+                    "paper_value_base": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "paper_value_base_pln": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "paper_value_currency": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "paper_value_high": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "paper_value_high_pln": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "paper_value_low": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "paper_value_low_pln": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "requires_liquidity_event": {
+                      "type": "boolean"
+                    },
+                    "strike_price": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "tax_treatment": {
+                      "type": "string"
+                    },
+                    "total_shares": {
+                      "type": "integer"
+                    },
+                    "type": {
+                      "type": "string"
+                    },
+                    "valuation_date": {
+                      "format": "date",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "valuation_source": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "vest_cliff_months": {
+                      "type": "integer"
+                    },
+                    "vest_custom_schedule": {
+                      "items": {
+                        "properties": {
+                          "month": {
+                            "type": "integer"
+                          },
+                          "pct": {
+                            "format": "double",
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "vest_frequency": {
+                      "type": "string"
+                    },
+                    "vest_start_date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "vest_total_months": {
+                      "type": "integer"
+                    },
+                    "vested_shares_today": {
+                      "type": "integer"
+                    },
+                    "vesting_progress_pct": {
+                      "format": "double",
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Update an equity grant",
+        "tags": [
+          "equity-grants"
+        ]
+      }
+    },
     "/api/goals": {
       "get": {
         "responses": {
@@ -1471,6 +3811,172 @@
         ]
       }
     },
+    "/api/investment/bond-stats": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "category": {
+                      "type": "string"
+                    },
+                    "returns": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "roi_percentage": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "total_contributed": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "total_value": {
+                      "format": "double",
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Bond ROI aggregates",
+        "tags": [
+          "investment"
+        ]
+      }
+    },
+    "/api/investment/stock-stats": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "category": {
+                      "type": "string"
+                    },
+                    "returns": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "roi_percentage": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "total_contributed": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "total_value": {
+                      "format": "double",
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Stock ROI aggregates",
+        "tags": [
+          "investment"
+        ]
+      }
+    },
+    "/api/payments": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "payment_count": {
+                      "type": "integer"
+                    },
+                    "payments": {
+                      "items": {
+                        "properties": {
+                          "account_id": {
+                            "type": "integer"
+                          },
+                          "account_name": {
+                            "type": "string"
+                          },
+                          "amount": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "created_at": {
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "date": {
+                            "format": "date",
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "integer"
+                          },
+                          "owner": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "total_paid": {
+                      "format": "double",
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List all debt payments",
+        "tags": [
+          "debt-payments"
+        ]
+      }
+    },
+    "/api/payments/counts": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Debt-payment counts per account",
+        "tags": [
+          "debt-payments"
+        ]
+      }
+    },
     "/api/personas": {
       "get": {
         "responses": {
@@ -1661,6 +4167,860 @@
         "summary": "Update a persona",
         "tags": [
           "personas"
+        ]
+      }
+    },
+    "/api/retirement/limits/{year}": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "year",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "properties": {
+                      "account_wrapper": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "integer"
+                      },
+                      "limit_amount": {
+                        "format": "double",
+                        "type": "number"
+                      },
+                      "notes": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "owner": {
+                        "type": "string"
+                      },
+                      "year": {
+                        "type": "integer"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Contribution limits for a year",
+        "tags": [
+          "retirement"
+        ]
+      }
+    },
+    "/api/retirement/limits/{year}/{wrapper}/{owner}": {
+      "put": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "year",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wrapper",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "owner",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "AccountWrapper": {
+                    "type": "string"
+                  },
+                  "LimitAmount": {
+                    "type": "string"
+                  },
+                  "Notes": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "Owner": {
+                    "type": "string"
+                  },
+                  "Year": {
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "account_wrapper": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "limit_amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "notes": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "owner": {
+                      "type": "string"
+                    },
+                    "year": {
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Upsert a contribution limit",
+        "tags": [
+          "retirement"
+        ]
+      }
+    },
+    "/api/retirement/ppk-contributions/generate": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "Month": {
+                    "type": "integer"
+                  },
+                  "Owner": {
+                    "type": "string"
+                  },
+                  "Year": {
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "employee_amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "employer_amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "gross_salary": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "month": {
+                      "type": "integer"
+                    },
+                    "owner": {
+                      "type": "string"
+                    },
+                    "total_amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "transactions_created": {
+                      "items": {
+                        "type": "integer"
+                      },
+                      "type": "array"
+                    },
+                    "year": {
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Generate monthly PPK contributions",
+        "tags": [
+          "retirement"
+        ]
+      }
+    },
+    "/api/retirement/ppk-stats": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "properties": {
+                      "employee_contributed": {
+                        "format": "double",
+                        "type": "number"
+                      },
+                      "employer_contributed": {
+                        "format": "double",
+                        "type": "number"
+                      },
+                      "government_contributed": {
+                        "format": "double",
+                        "type": "number"
+                      },
+                      "owner": {
+                        "type": "string"
+                      },
+                      "returns": {
+                        "format": "double",
+                        "type": "number"
+                      },
+                      "roi_percentage": {
+                        "format": "double",
+                        "type": "number"
+                      },
+                      "total_contributed": {
+                        "format": "double",
+                        "type": "number"
+                      },
+                      "total_value": {
+                        "format": "double",
+                        "type": "number"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "PPK stats per owner",
+        "tags": [
+          "retirement"
+        ]
+      }
+    },
+    "/api/retirement/stats": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "properties": {
+                      "account_wrapper": {
+                        "type": "string"
+                      },
+                      "employee_contributed": {
+                        "format": "double",
+                        "type": "number"
+                      },
+                      "employer_contributed": {
+                        "format": "double",
+                        "type": "number"
+                      },
+                      "is_warning": {
+                        "type": "boolean"
+                      },
+                      "limit_amount": {
+                        "format": "double",
+                        "nullable": true,
+                        "type": "number"
+                      },
+                      "owner": {
+                        "type": "string"
+                      },
+                      "percentage_used": {
+                        "format": "double",
+                        "nullable": true,
+                        "type": "number"
+                      },
+                      "remaining": {
+                        "format": "double",
+                        "nullable": true,
+                        "type": "number"
+                      },
+                      "total_contributed": {
+                        "format": "double",
+                        "type": "number"
+                      },
+                      "year": {
+                        "type": "integer"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "IKE/IKZE yearly stats",
+        "tags": [
+          "retirement"
+        ]
+      }
+    },
+    "/api/salaries": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "available_companies": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "current_salaries": {
+                      "additionalProperties": {
+                        "format": "double",
+                        "nullable": true,
+                        "type": "number"
+                      },
+                      "type": "object"
+                    },
+                    "inflation_context": {
+                      "additionalProperties": {
+                        "properties": {
+                          "cpi_as_of_year": {
+                            "type": "integer"
+                          },
+                          "current_salary": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "last_change_date": {
+                            "format": "date",
+                            "type": "string"
+                          },
+                          "owner": {
+                            "type": "string"
+                          },
+                          "previous_change_date": {
+                            "format": "date",
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "previous_salary": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "previous_salary_in_today_pln": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "real_change_pct": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "real_change_pln": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "object"
+                    },
+                    "salary_records": {
+                      "items": {
+                        "properties": {
+                          "company": {
+                            "type": "string"
+                          },
+                          "contract_type": {
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "date": {
+                            "format": "date",
+                            "type": "string"
+                          },
+                          "gross_amount": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "id": {
+                            "type": "integer"
+                          },
+                          "is_active": {
+                            "type": "boolean"
+                          },
+                          "owner": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "total_count": {
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List salary records",
+        "tags": [
+          "salaries"
+        ]
+      },
+      "post": {
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "company": {
+                      "type": "string"
+                    },
+                    "contract_type": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "gross_amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "is_active": {
+                      "type": "boolean"
+                    },
+                    "owner": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "summary": "Create a salary record",
+        "tags": [
+          "salaries"
+        ]
+      }
+    },
+    "/api/salaries/{id}": {
+      "delete": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "summary": "Delete a salary record",
+        "tags": [
+          "salaries"
+        ]
+      },
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "company": {
+                      "type": "string"
+                    },
+                    "contract_type": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "gross_amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "is_active": {
+                      "type": "boolean"
+                    },
+                    "owner": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get a salary record",
+        "tags": [
+          "salaries"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "company": {
+                      "type": "string"
+                    },
+                    "contract_type": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "gross_amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "is_active": {
+                      "type": "boolean"
+                    },
+                    "owner": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Update a salary record",
+        "tags": [
+          "salaries"
+        ]
+      }
+    },
+    "/api/simulations/mortgage-vs-invest": {
+      "post": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "inputs": {
+                      "properties": {
+                        "annual_interest_rate": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "enable_variable_rate": {
+                          "type": "boolean"
+                        },
+                        "expected_annual_return": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "inflation_rate": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "remaining_months": {
+                          "type": "integer"
+                        },
+                        "remaining_principal": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "total_monthly_budget": {
+                          "format": "double",
+                          "type": "number"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "summary": {
+                      "properties": {
+                        "belka_tax_a": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "belka_tax_b": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "break_even_gross_return": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "final_investment_portfolio": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "final_portfolio_a_real": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "final_portfolio_b_real": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "interest_saved": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "months_saved": {
+                          "type": "integer"
+                        },
+                        "net_advantage": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "regular_monthly_payment": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "total_interest_a": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "total_interest_b": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "winning_strategy": {
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "yearly_projections": {
+                      "items": {
+                        "properties": {
+                          "annual_rate": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "net_advantage_invest": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "scenario_a_after_tax_portfolio": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "scenario_a_cumulative_interest": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "scenario_a_investment_balance": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "scenario_a_mortgage_balance": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "scenario_a_paid_off": {
+                            "type": "boolean"
+                          },
+                          "scenario_a_real_mortgage_balance": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "scenario_a_real_portfolio": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "scenario_b_after_tax_portfolio": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "scenario_b_cumulative_interest": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "scenario_b_investment_balance": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "scenario_b_mortgage_balance": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "scenario_b_real_mortgage_balance": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "scenario_b_real_portfolio": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "year": {
+                            "type": "integer"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Mortgage overpay vs invest comparison",
+        "tags": [
+          "simulations"
+        ]
+      }
+    },
+    "/api/simulations/prefill": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "summary": "Prefill simulation inputs",
+        "tags": [
+          "simulations"
+        ]
+      }
+    },
+    "/api/simulations/retirement": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "summary": "Retirement account projection",
+        "tags": [
+          "simulations"
         ]
       }
     },
@@ -1909,6 +5269,348 @@
         "summary": "Update a snapshot",
         "tags": [
           "snapshots"
+        ]
+      }
+    },
+    "/api/transactions": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "total_invested": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "transaction_count": {
+                      "type": "integer"
+                    },
+                    "transactions": {
+                      "items": {
+                        "properties": {
+                          "account_id": {
+                            "type": "integer"
+                          },
+                          "account_name": {
+                            "type": "string"
+                          },
+                          "amount": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "created_at": {
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "date": {
+                            "format": "date",
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "integer"
+                          },
+                          "owner": {
+                            "type": "string"
+                          },
+                          "transaction_type": {
+                            "nullable": true,
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List all transactions",
+        "tags": [
+          "transactions"
+        ]
+      }
+    },
+    "/api/transactions/counts": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Transaction counts per account",
+        "tags": [
+          "transactions"
+        ]
+      }
+    },
+    "/api/zus/calculate": {
+      "post": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "inputs": {
+                      "properties": {
+                        "birth_date": {
+                          "format": "date",
+                          "type": "string"
+                        },
+                        "current_gross_monthly_salary": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "gender": {
+                          "type": "string"
+                        },
+                        "has_ofe": {
+                          "type": "boolean"
+                        },
+                        "inflation_rate": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "kapital_poczatkowy": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "owner": {
+                          "type": "string"
+                        },
+                        "retirement_age": {
+                          "type": "integer"
+                        },
+                        "salary_growth_rate": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "salary_history": {
+                          "items": {
+                            "properties": {
+                              "annual_gross": {
+                                "format": "double",
+                                "type": "number"
+                              },
+                              "year": {
+                                "type": "integer"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "valorization_rate_konto": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "valorization_rate_subkonto": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "work_start_year": {
+                          "type": "integer"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "kapital_poczatkowy_valorized": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "konto_at_retirement": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "last_gross_salary": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "life_expectancy_months": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "monthly_pension_gross": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "monthly_pension_net": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "replacement_rate": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "sensitivity": {
+                      "items": {
+                        "properties": {
+                          "label": {
+                            "type": "string"
+                          },
+                          "monthly_pension_gross": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "monthly_pension_net": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "replacement_rate": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "valorization_konto": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "valorization_subkonto": {
+                            "format": "double",
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "subkonto_at_retirement": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "total_capital": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "yearly_projections": {
+                      "items": {
+                        "properties": {
+                          "age": {
+                            "type": "integer"
+                          },
+                          "annual_gross_salary": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "contribution_konto": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "contribution_subkonto": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "konto_balance": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "salary_capped": {
+                            "type": "boolean"
+                          },
+                          "subkonto_balance": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "total_balance": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "year": {
+                            "type": "integer"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Project a ZUS pension",
+        "tags": [
+          "zus"
+        ]
+      }
+    },
+    "/api/zus/prefill": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "birth_date": {
+                      "format": "date",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "current_gross_monthly_salary": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "gender": {
+                      "type": "string"
+                    },
+                    "owner": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "retirement_age": {
+                      "type": "integer"
+                    },
+                    "salary_history": {
+                      "items": {
+                        "properties": {
+                          "annual_gross": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "year": {
+                            "type": "integer"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "work_start_year": {
+                      "nullable": true,
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Prefill ZUS inputs from salary history",
+        "tags": [
+          "zus"
         ]
       }
     },
