@@ -93,6 +93,7 @@ func registerAPIRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
 	registerCPIAndPayrollRoutes(r, pool, logger)
 	registerPortfolioRoutes(r, pool, logger)
 	registerLedgerRoutes(r, pool, logger)
+	registerDashboardRoutes(r, pool, logger)
 }
 
 func registerLedgerRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
@@ -135,7 +136,9 @@ func registerLedgerRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger)
 	r.Post("/api/simulations/mortgage-vs-invest", simHandler.MortgageVsInvest)
 	r.Post("/api/simulations/retirement", simHandler.Retirement)
 	r.Get("/api/simulations/prefill", simHandler.Prefill)
+}
 
+func registerDashboardRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
 	dashHandler := dashboard.NewHandler(dashboard.NewStore(pool), logger)
 	r.Get("/api/dashboard", dashHandler.Get)
 }

@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"time"
 )
@@ -31,7 +32,15 @@ func computeFromAggregates(ctx context.Context, s *Store, aggRows []AggregateRow
 	}
 	points := make([]snapNWPoint, 0, len(snapNW))
 	for sid, nw := range snapNW {
-		points = append(points, snapNWPoint{id: sid, date: shared.snapshotDate[sid], nw: nw})
+		date, ok := shared.snapshotDate[sid]
+		if !ok {
+			// A snapshot_aggregates row references a snapshot that doesn't
+			// exist — partial restore / corruption. Fail fast, as Python's
+			// snap_date[sid] KeyError does, rather than skewing the history
+			// with a zero date.
+			return result{}, fmt.Errorf("aggregate references missing snapshot %d", sid)
+		}
+		points = append(points, snapNWPoint{id: sid, date: date, nw: nw})
 	}
 	sort.Slice(points, func(i, j int) bool { return points[i].date.Before(points[j].date) })
 
