@@ -22,13 +22,13 @@ export const load: PageLoad = async ({ fetch, url }) => {
 
 		// Build query params from URL
 		const accountId = url.searchParams.get('account_id');
-		const owner = url.searchParams.get('owner');
+		const ownerUserId = url.searchParams.get('owner_user_id');
 		const dateFrom = url.searchParams.get('date_from');
 		const dateTo = url.searchParams.get('date_to');
 
 		const params = new URLSearchParams();
 		if (accountId) params.set('account_id', accountId);
-		if (owner) params.set('owner', owner);
+		if (ownerUserId) params.set('owner_user_id', ownerUserId);
 		if (dateFrom) params.set('date_from', dateFrom);
 		if (dateTo) params.set('date_to', dateTo);
 
@@ -53,16 +53,16 @@ export const load: PageLoad = async ({ fetch, url }) => {
 				.map((acc: Account) => ({ id: acc.id, name: acc.name, category: acc.category }));
 		}
 
-		const personasResponse = await fetch(`${apiUrl}/api/personas`);
-		const personas = personasResponse.ok ? await personasResponse.json() : [];
+		const ownersResponse = await fetch(`${apiUrl}/api/users`);
+		const owners = ownersResponse.ok ? await ownersResponse.json() : [];
 
 		return {
 			transactions: transactionsData,
 			accounts: investmentAccounts,
-			personas,
+			owners,
 			filters: {
 				account_id: accountId,
-				owner,
+				owner_user_id: ownerUserId,
 				date_from: dateFrom,
 				date_to: dateTo
 			}

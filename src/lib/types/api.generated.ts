@@ -39,7 +39,7 @@ export interface paths {
                                 id?: number;
                                 is_active?: boolean;
                                 name?: string;
-                                owner?: string;
+                                owner_user_id?: number | null;
                                 purpose?: string;
                                 receives_contributions?: boolean;
                                 /** Format: double */
@@ -57,7 +57,7 @@ export interface paths {
                                 id?: number;
                                 is_active?: boolean;
                                 name?: string;
-                                owner?: string;
+                                owner_user_id?: number | null;
                                 purpose?: string;
                                 receives_contributions?: boolean;
                                 /** Format: double */
@@ -97,7 +97,7 @@ export interface paths {
                             id?: number;
                             is_active?: boolean;
                             name?: string;
-                            owner?: string;
+                            owner_user_id?: number | null;
                             purpose?: string;
                             receives_contributions?: boolean;
                             /** Format: double */
@@ -144,7 +144,7 @@ export interface paths {
                         "application/json": {
                             account_id?: number;
                             account_name?: string;
-                            account_owner?: string;
+                            account_owner_user_id?: number | null;
                             /** Format: date-time */
                             created_at?: string;
                             currency?: string;
@@ -215,7 +215,7 @@ export interface paths {
                                 /** Format: date */
                                 date?: string;
                                 id?: number;
-                                owner?: string;
+                                owner_user_id?: number | null;
                             }[];
                             /** Format: double */
                             total_paid?: number;
@@ -253,7 +253,7 @@ export interface paths {
                             /** Format: date */
                             date?: string;
                             id?: number;
-                            owner?: string;
+                            owner_user_id?: number | null;
                         };
                     };
                 };
@@ -341,7 +341,7 @@ export interface paths {
                                 /** Format: date */
                                 date?: string;
                                 id?: number;
-                                owner?: string;
+                                owner_user_id?: number | null;
                                 transaction_type?: string | null;
                             }[];
                         };
@@ -378,7 +378,7 @@ export interface paths {
                             /** Format: date */
                             date?: string;
                             id?: number;
-                            owner?: string;
+                            owner_user_id?: number | null;
                             transaction_type?: string | null;
                         };
                     };
@@ -465,7 +465,7 @@ export interface paths {
                             id?: number;
                             is_active?: boolean;
                             name?: string;
-                            owner?: string;
+                            owner_user_id?: number | null;
                             purpose?: string;
                             receives_contributions?: boolean;
                             /** Format: double */
@@ -1557,7 +1557,7 @@ export interface paths {
                             debts?: {
                                 account_id?: number;
                                 account_name?: string;
-                                account_owner?: string;
+                                account_owner_user_id?: number | null;
                                 /** Format: date-time */
                                 created_at?: string;
                                 currency?: string;
@@ -1625,7 +1625,7 @@ export interface paths {
                         "application/json": {
                             account_id?: number;
                             account_name?: string;
-                            account_owner?: string;
+                            account_owner_user_id?: number | null;
                             /** Format: date-time */
                             created_at?: string;
                             currency?: string;
@@ -1674,7 +1674,7 @@ export interface paths {
                         "application/json": {
                             account_id?: number;
                             account_name?: string;
-                            account_owner?: string;
+                            account_owner_user_id?: number | null;
                             /** Format: date-time */
                             created_at?: string;
                             currency?: string;
@@ -2445,7 +2445,7 @@ export interface paths {
                                 /** Format: date */
                                 date?: string;
                                 id?: number;
-                                owner?: string;
+                                owner_user_id?: number | null;
                             }[];
                             /** Format: double */
                             total_paid?: number;
@@ -3489,7 +3489,7 @@ export interface paths {
                                 /** Format: date */
                                 date?: string;
                                 id?: number;
-                                owner?: string;
+                                owner_user_id?: number | null;
                                 transaction_type?: string | null;
                             }[];
                         };

@@ -32,11 +32,11 @@ type Debt struct {
 
 // AccountInfo is the subset of Account columns we need.
 type AccountInfo struct {
-	ID       int
-	Name     string
-	Owner    string
-	Type     string
-	IsActive bool
+	ID          int
+	Name        string
+	OwnerUserID *int
+	Type        string
+	IsActive    bool
 }
 
 // LatestBalance is one row's most-recent snapshot value.
@@ -79,10 +79,10 @@ const debtColsQualified = `
 // alongside ErrAccountInactive.
 func (s *Store) LoadAccount(ctx context.Context, id int) (*AccountInfo, error) {
 	row := s.pool.QueryRow(ctx,
-		`SELECT id, name, owner, type, is_active FROM accounts WHERE id = $1`, id,
+		`SELECT id, name, owner_user_id, type, is_active FROM accounts WHERE id = $1`, id,
 	)
 	var a AccountInfo
-	if err := row.Scan(&a.ID, &a.Name, &a.Owner, &a.Type, &a.IsActive); err != nil {
+	if err := row.Scan(&a.ID, &a.Name, &a.OwnerUserID, &a.Type, &a.IsActive); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrAccountNotFound
 		}
@@ -121,7 +121,7 @@ func (s *Store) ListAll(ctx context.Context, f ListFilter) ([]DebtWithAccount, e
 		args = append(args, *f.DebtType)
 		conds = append(conds, fmt.Sprintf("d.debt_type = $%d", len(args)))
 	}
-	q := `SELECT ` + debtColsQualified + `, a.name, a.owner
+	q := `SELECT ` + debtColsQualified + `, a.name, a.owner_user_id
 	      FROM debts d
 	      JOIN accounts a ON a.id = d.account_id
 	      WHERE ` + strings.Join(conds, " AND ") + `
@@ -138,7 +138,7 @@ func (s *Store) ListAll(ctx context.Context, f ListFilter) ([]DebtWithAccount, e
 		if err := rows.Scan(
 			&d.ID, &d.AccountID, &d.Name, &d.DebtType, &d.StartDate,
 			&d.InitialAmount, &d.InterestRate, &d.Currency, &d.Notes,
-			&d.IsActive, &d.CreatedAt, &a.Name, &a.Owner,
+			&d.IsActive, &d.CreatedAt, &a.Name, &a.OwnerUserID,
 		); err != nil {
 			return nil, fmt.Errorf("scan debt: %w", err)
 		}
@@ -237,7 +237,7 @@ func (s *Store) TotalPaidByAccount(ctx context.Context, ids []int) (map[int]deci
 // Get returns one active debt + its account info.
 func (s *Store) Get(ctx context.Context, debtID int) (*DebtWithAccount, error) {
 	row := s.pool.QueryRow(ctx, `
-		SELECT `+debtColsQualified+`, a.name, a.owner
+		SELECT `+debtColsQualified+`, a.name, a.owner_user_id
 		FROM debts d
 		JOIN accounts a ON a.id = d.account_id
 		WHERE d.id = $1 AND d.is_active = true`,
@@ -248,7 +248,7 @@ func (s *Store) Get(ctx context.Context, debtID int) (*DebtWithAccount, error) {
 	if err := row.Scan(
 		&d.ID, &d.AccountID, &d.Name, &d.DebtType, &d.StartDate,
 		&d.InitialAmount, &d.InterestRate, &d.Currency, &d.Notes,
-		&d.IsActive, &d.CreatedAt, &a.Name, &a.Owner,
+		&d.IsActive, &d.CreatedAt, &a.Name, &a.OwnerUserID,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
@@ -327,11 +327,11 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*DebtWithAcc
 		return nil, fmt.Errorf("update debt: %w", err)
 	}
 	row = tx.QueryRow(ctx,
-		`SELECT name, owner FROM accounts WHERE id = $1`, current.AccountID,
+		`SELECT name, owner_user_id FROM accounts WHERE id = $1`, current.AccountID,
 	)
 	var a AccountInfo
 	a.ID = current.AccountID
-	if err := row.Scan(&a.Name, &a.Owner); err != nil {
+	if err := row.Scan(&a.Name, &a.OwnerUserID); err != nil {
 		return nil, fmt.Errorf("load account for debt: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {

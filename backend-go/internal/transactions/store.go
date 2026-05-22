@@ -21,7 +21,7 @@ type Transaction struct {
 	AccountID       int
 	Amount          decimal.Decimal
 	Date            time.Time
-	Owner           string
+	OwnerUserID     *int
 	TransactionType *string
 	IsActive        bool
 	CreatedAt       time.Time
@@ -66,7 +66,7 @@ func NewStore(pool *pgxpool.Pool) *Store {
 const accountCols = `id, name, type, category, account_wrapper, is_active`
 
 const txCols = `
-	id, account_id, amount, date, owner, transaction_type, is_active, created_at
+	id, account_id, amount, date, owner_user_id, transaction_type, is_active, created_at
 `
 
 // LoadAccount returns the parent-account info; on ErrAccountNotInvestment the
@@ -121,10 +121,10 @@ func (s *Store) ListForAccount(ctx context.Context, accountID int) ([]Transactio
 
 // ListFilter narrows the all-transactions view.
 type ListFilter struct {
-	AccountID *int
-	Owner     *string
-	DateFrom  *time.Time
-	DateTo    *time.Time
+	AccountID   *int
+	OwnerUserID *int
+	DateFrom    *time.Time
+	DateTo      *time.Time
 }
 
 // TxnWithAccount carries one transaction with its account name joined in.
@@ -141,9 +141,9 @@ func (s *Store) ListAll(ctx context.Context, f ListFilter) ([]TxnWithAccount, er
 		args = append(args, *f.AccountID)
 		conds = append(conds, fmt.Sprintf("t.account_id = $%d", len(args)))
 	}
-	if f.Owner != nil {
-		args = append(args, *f.Owner)
-		conds = append(conds, fmt.Sprintf("t.owner = $%d", len(args)))
+	if f.OwnerUserID != nil {
+		args = append(args, *f.OwnerUserID)
+		conds = append(conds, fmt.Sprintf("t.owner_user_id = $%d", len(args)))
 	}
 	if f.DateFrom != nil {
 		args = append(args, *f.DateFrom)
@@ -153,7 +153,7 @@ func (s *Store) ListAll(ctx context.Context, f ListFilter) ([]TxnWithAccount, er
 		args = append(args, *f.DateTo)
 		conds = append(conds, fmt.Sprintf("t.date <= $%d", len(args)))
 	}
-	q := `SELECT t.id, t.account_id, t.amount, t.date, t.owner, t.transaction_type,
+	q := `SELECT t.id, t.account_id, t.amount, t.date, t.owner_user_id, t.transaction_type,
 	             t.is_active, t.created_at, a.name
 	      FROM transactions t
 	      JOIN accounts a ON a.id = t.account_id
@@ -169,7 +169,7 @@ func (s *Store) ListAll(ctx context.Context, f ListFilter) ([]TxnWithAccount, er
 		var t Transaction
 		var name string
 		if err := rows.Scan(
-			&t.ID, &t.AccountID, &t.Amount, &t.Date, &t.Owner,
+			&t.ID, &t.AccountID, &t.Amount, &t.Date, &t.OwnerUserID,
 			&t.TransactionType, &t.IsActive, &t.CreatedAt, &name,
 		); err != nil {
 			return nil, fmt.Errorf("scan transaction join: %w", err)
@@ -199,10 +199,10 @@ func (s *Store) Create(ctx context.Context, t *Transaction) (*Transaction, error
 		return nil, fmt.Errorf("check duplicate transaction: %w", err)
 	}
 	row := s.pool.QueryRow(ctx, `
-		INSERT INTO transactions (account_id, amount, date, owner, transaction_type, is_active, created_at)
-		VALUES ($1, $2, $3, $4, $5, true, $6)
+		INSERT INTO transactions (account_id, amount, date, owner, owner_user_id, transaction_type, is_active, created_at)
+		VALUES ($1, $2, $3, COALESCE((SELECT name FROM users WHERE id = $4), 'Shared'), $4, $5, true, $6)
 		RETURNING `+txCols,
-		t.AccountID, t.Amount, t.Date, t.Owner, t.TransactionType, time.Now().UTC(),
+		t.AccountID, t.Amount, t.Date, t.OwnerUserID, t.TransactionType, time.Now().UTC(),
 	)
 	return scanTransaction(row)
 }
@@ -261,7 +261,7 @@ func (s *Store) CountsByAccount(ctx context.Context) (map[int]int, error) {
 func scanTransaction(row pgx.Row) (*Transaction, error) {
 	var t Transaction
 	if err := row.Scan(
-		&t.ID, &t.AccountID, &t.Amount, &t.Date, &t.Owner,
+		&t.ID, &t.AccountID, &t.Amount, &t.Date, &t.OwnerUserID,
 		&t.TransactionType, &t.IsActive, &t.CreatedAt,
 	); err != nil {
 		return nil, err

@@ -13,7 +13,7 @@ type createRequest struct {
 	Name                  string
 	Type                  string
 	Category              string
-	Owner                 string
+	OwnerUserID           *int
 	Currency              string
 	AccountWrapper        *string
 	Purpose               string
@@ -42,11 +42,11 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *validat
 	}
 	r.Category = cat
 
-	owner, vErr := requireString(raw, "owner", "Owner cannot be empty")
+	ownerID, vErr := requireIntOrNull(raw, "owner_user_id")
 	if vErr != nil {
 		return r, vErr
 	}
-	r.Owner = owner
+	r.OwnerUserID = ownerID
 
 	cur, vErr := optionalString(raw, "currency", "PLN")
 	if vErr != nil {
@@ -103,16 +103,17 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *validationE
 	if vErr := patchEnumString(raw, "category", validCategories, &p.Category); vErr != nil {
 		return p, vErr
 	}
-	if v, ok := raw["owner"]; ok && !isNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return p, &validationError{Field: "owner", Msg: "must be a string"}
+	if v, ok := raw["owner_user_id"]; ok {
+		p.OwnerUserIDSet = true
+		if isNull(v) {
+			p.OwnerUserID = nil
+		} else {
+			var n int
+			if err := json.Unmarshal(v, &n); err != nil {
+				return p, &validationError{Field: "owner_user_id", Msg: "must be an integer"}
+			}
+			p.OwnerUserID = &n
 		}
-		s = strings.TrimSpace(s)
-		if s == "" {
-			return p, &validationError{Field: "owner", Msg: "Owner cannot be empty"}
-		}
-		p.Owner = &s
 	}
 	if vErr := patchPlainString(raw, "currency", &p.Currency); vErr != nil {
 		return p, vErr
@@ -173,6 +174,23 @@ func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string
 		return "", &validationError{Field: key, Msg: emptyMsg}
 	}
 	return s, nil
+}
+
+// requireIntOrNull reads an integer key that must be present; an explicit
+// null is allowed and yields nil (the "Shared" owner).
+func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *validationError) {
+	v, ok := raw[key]
+	if !ok {
+		return nil, &validationError{Field: key, Msg: "Field required"}
+	}
+	if isNull(v) {
+		return nil, nil
+	}
+	var n int
+	if err := json.Unmarshal(v, &n); err != nil {
+		return nil, &validationError{Field: key, Msg: "must be an integer"}
+	}
+	return &n, nil
 }
 
 func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *validationError) {

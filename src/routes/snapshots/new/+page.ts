@@ -9,11 +9,11 @@ export async function load({ fetch }) {
 			throw error(500, 'API base URL is not configured');
 		}
 
-		// Fetch accounts, assets, and personas in parallel
-		const [accountsResponse, assetsResponse, personasResponse] = await Promise.all([
+		// Fetch accounts, assets, and owners in parallel
+		const [accountsResponse, assetsResponse, ownersResponse] = await Promise.all([
 			fetch(`${apiUrl}/api/accounts`),
 			fetch(`${apiUrl}/api/assets`),
-			fetch(`${apiUrl}/api/personas`)
+			fetch(`${apiUrl}/api/users`)
 		]);
 
 		if (!accountsResponse.ok) {
@@ -22,18 +22,18 @@ export async function load({ fetch }) {
 		if (!assetsResponse.ok) {
 			throw error(assetsResponse.status, 'Failed to load assets');
 		}
-		if (!personasResponse.ok) {
-			throw error(personasResponse.status, 'Failed to load personas');
+		if (!ownersResponse.ok) {
+			throw error(ownersResponse.status, 'Failed to load owners');
 		}
 
 		const accountsData = await accountsResponse.json();
 		const assetsData = await assetsResponse.json();
-		const personas = await personasResponse.json();
+		const owners = await ownersResponse.json();
 
 		return {
 			...accountsData,
 			physicalAssets: assetsData.assets,
-			personas
+			owners
 		};
 	} catch (err) {
 		if (err instanceof Error && 'status' in err) {

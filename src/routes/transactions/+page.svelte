@@ -5,7 +5,7 @@
 	import { env } from '$env/dynamic/public';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { toast } from '$lib/stores/toast.svelte';
-	import type { Persona } from '$lib/types/personas';
+	import { ownerName, type OwnerOption } from '$lib/types/owners';
 	import { untrack } from 'svelte';
 	import type { PageData } from './$types';
 
@@ -16,11 +16,12 @@
 	let { data }: Props = $props();
 
 	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
-	const personas = $derived(data.personas as Persona[]);
-	const defaultOwner = $derived(personas.length > 0 ? personas[0].name : '');
+	const owners = $derived(data.owners as OwnerOption[]);
+	const defaultOwnerUserId = $derived(owners.length > 0 ? owners[0].id : null);
+	const defaultOwnerName = $derived(owners.length > 0 ? owners[0].name : '');
 
 	let filterAccountId = $state(untrack(() => data.filters.account_id || ''));
-	let filterOwner = $state(untrack(() => data.filters.owner || ''));
+	let filterOwnerUserId = $state(untrack(() => data.filters.owner_user_id || ''));
 	let filterDateFrom = $state(untrack(() => data.filters.date_from || ''));
 	let filterDateTo = $state(untrack(() => data.filters.date_to || ''));
 
@@ -29,14 +30,14 @@
 		account_id: '',
 		amount: 0,
 		date: new Date().toISOString().split('T')[0],
-		owner: untrack(() => defaultOwner)
+		owner_user_id: untrack(() => defaultOwnerUserId)
 	});
 	let transactionError = $state('');
 	let savingTransaction = $state(false);
 
 	let showPPKGenerateModal = $state(false);
 	let ppkGenerateData = $state({
-		owner: untrack(() => defaultOwner),
+		owner: untrack(() => defaultOwnerName),
 		month: new Date().getMonth() + 1,
 		year: new Date().getFullYear()
 	});
@@ -46,7 +47,7 @@
 	function applyFilters() {
 		const params = new URLSearchParams();
 		if (filterAccountId) params.set('account_id', filterAccountId);
-		if (filterOwner) params.set('owner', filterOwner);
+		if (filterOwnerUserId) params.set('owner_user_id', filterOwnerUserId);
 		if (filterDateFrom) params.set('date_from', filterDateFrom);
 		if (filterDateTo) params.set('date_to', filterDateTo);
 
@@ -55,7 +56,7 @@
 
 	function clearFilters() {
 		filterAccountId = '';
-		filterOwner = '';
+		filterOwnerUserId = '';
 		filterDateFrom = '';
 		filterDateTo = '';
 		goto('/transactions');
@@ -86,7 +87,7 @@
 			account_id: '',
 			amount: 0,
 			date: new Date().toISOString().split('T')[0],
-			owner: defaultOwner
+			owner_user_id: defaultOwnerUserId
 		};
 		transactionError = '';
 		showNewTransactionModal = true;
@@ -99,7 +100,7 @@
 
 	function openPPKGenerateModal() {
 		ppkGenerateData = {
-			owner: defaultOwner,
+			owner: defaultOwnerName,
 			month: new Date().getMonth() + 1,
 			year: new Date().getFullYear()
 		};
@@ -150,11 +151,6 @@
 			return;
 		}
 
-		if (!newTransactionData.owner) {
-			transactionError = 'Wybierz właściciela';
-			return;
-		}
-
 		transactionError = '';
 		savingTransaction = true;
 
@@ -167,7 +163,7 @@
 					body: JSON.stringify({
 						amount: newTransactionData.amount,
 						date: newTransactionData.date,
-						owner: newTransactionData.owner
+						owner_user_id: newTransactionData.owner_user_id
 					})
 				}
 			);
@@ -239,10 +235,10 @@
 
 				<label class="label">
 					<span class="font-semibold text-sm">Właściciel</span>
-					<select class="select" bind:value={filterOwner}>
+					<select class="select" bind:value={filterOwnerUserId}>
 						<option value="">Wszystkie</option>
-						{#each personas as persona}
-							<option value={persona.name}>{persona.name}</option>
+						{#each owners as owner}
+							<option value={String(owner.id)}>{owner.name}</option>
 						{/each}
 					</select>
 				</label>
@@ -298,7 +294,7 @@
 							<tr>
 								<td>{new Date(transaction.date).toLocaleDateString('pl-PL')}</td>
 								<td class="font-medium">{transaction.account_name}</td>
-								<td>{transaction.owner}</td>
+								<td>{ownerName(owners, transaction.owner_user_id)}</td>
 								<td class="font-semibold text-primary-600-400">{formatPLN(transaction.amount)}</td>
 								<td class="text-right">
 									<button
@@ -374,9 +370,10 @@
 
 		<label class="label">
 			<span class="font-semibold text-sm">Właściciel *</span>
-			<select class="select" bind:value={newTransactionData.owner} required>
-				{#each personas as persona}
-					<option value={persona.name}>{persona.name}</option>
+			<select class="select" bind:value={newTransactionData.owner_user_id}>
+				<option value={null}>Wspólne</option>
+				{#each owners as owner}
+					<option value={owner.id}>{owner.name}</option>
 				{/each}
 			</select>
 		</label>
@@ -405,8 +402,8 @@
 		<label class="label">
 			<span class="font-semibold text-sm">Właściciel *</span>
 			<select class="select" bind:value={ppkGenerateData.owner} required>
-				{#each personas as persona}
-					<option value={persona.name}>{persona.name}</option>
+				{#each owners as owner}
+					<option value={owner.name}>{owner.name}</option>
 				{/each}
 			</select>
 		</label>

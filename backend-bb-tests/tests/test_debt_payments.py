@@ -54,12 +54,12 @@ def test_get_account_payments_invalid_account_type(client: httpx.Client) -> None
 
 
 @pytest.mark.mutates
-def test_create_payment_happy_path(client: httpx.Client) -> None:
+def test_create_payment_happy_path(client: httpx.Client, owner_ids: dict[str, int]) -> None:
     account_id = _account_id_by_name(client, ACCOUNT_MARCIN_MORTGAGE)
     payload = {
         "amount": 1800.0,
         "date": "2025-05-15",
-        "owner": PERSONA_MARCIN,
+        "owner_user_id": owner_ids[PERSONA_MARCIN],
     }
     created_id: int | None = None
     try:
@@ -70,7 +70,7 @@ def test_create_payment_happy_path(client: httpx.Client) -> None:
         assert body["account_id"] == account_id
         assert body["amount"] == pytest.approx(1800.0)
         assert body["date"] == "2025-05-15"
-        assert body["owner"] == PERSONA_MARCIN
+        assert body["owner_user_id"] == owner_ids[PERSONA_MARCIN]
     finally:
         if created_id is not None:
             client.delete(f"/api/accounts/{account_id}/payments/{created_id}")
@@ -81,7 +81,7 @@ def test_create_payment_validation_error(client: httpx.Client) -> None:
     payload = {
         "amount": -50.0,
         "date": "2025-05-20",
-        "owner": PERSONA_MARCIN,
+        "owner_user_id": None,
     }
     response = client.post(f"/api/accounts/{account_id}/payments", json=payload)
     assert response.status_code >= 400, response.text
@@ -89,14 +89,14 @@ def test_create_payment_validation_error(client: httpx.Client) -> None:
 
 
 @pytest.mark.mutates
-def test_delete_payment_happy_path(client: httpx.Client) -> None:
+def test_delete_payment_happy_path(client: httpx.Client, owner_ids: dict[str, int]) -> None:
     account_id = _account_id_by_name(client, ACCOUNT_MARCIN_MORTGAGE)
     create_resp = client.post(
         f"/api/accounts/{account_id}/payments",
         json={
             "amount": 999.99,
             "date": "2025-07-15",
-            "owner": PERSONA_MARCIN,
+            "owner_user_id": owner_ids[PERSONA_MARCIN],
         },
     )
     assert create_resp.status_code == 201, create_resp.text

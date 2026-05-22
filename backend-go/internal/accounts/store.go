@@ -16,13 +16,14 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/aggregates"
 )
 
-// Account mirrors backend/app/models/account.Account.
+// Account mirrors backend/app/models/account.Account. OwnerUserID is the
+// owning household member; nil means jointly owned ("Shared").
 type Account struct {
 	ID                    int
 	Name                  string
 	Type                  string
 	Category              string
-	Owner                 string
+	OwnerUserID           *int
 	Currency              string
 	AccountWrapper        *string
 	Purpose               string
@@ -50,7 +51,7 @@ func NewStore(pool *pgxpool.Pool, aggs *aggregates.Store) *Store {
 }
 
 const selectColumns = `
-	id, name, type, category, owner, currency, account_wrapper, purpose,
+	id, name, type, category, owner_user_id, currency, account_wrapper, purpose,
 	square_meters, is_active, receives_contributions, created_at
 `
 
@@ -153,13 +154,18 @@ func (s *Store) Create(ctx context.Context, a *Account) (*Account, error) {
 	if err := s.checkDuplicateName(ctx, a.Name, 0); err != nil {
 		return nil, err
 	}
+	// owner ($4-derived) is dual-written from owner_user_id until a later
+	// phase drops the legacy owner string column.
 	row := s.pool.QueryRow(ctx, `
 		INSERT INTO accounts (
-			name, type, category, owner, currency, account_wrapper, purpose,
-			square_meters, is_active, receives_contributions, created_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9, $10)
+			name, type, category, owner, owner_user_id, currency, account_wrapper,
+			purpose, square_meters, is_active, receives_contributions, created_at
+		) VALUES (
+			$1, $2, $3, COALESCE((SELECT name FROM users WHERE id = $4), 'Shared'),
+			$4, $5, $6, $7, $8, true, $9, $10
+		)
 		RETURNING `+selectColumns,
-		a.Name, a.Type, a.Category, a.Owner, a.Currency, a.AccountWrapper, a.Purpose,
+		a.Name, a.Type, a.Category, a.OwnerUserID, a.Currency, a.AccountWrapper, a.Purpose,
 		a.SquareMeters, a.ReceivesContributions, time.Now().UTC(),
 	)
 	return scanAccount(row)
@@ -170,7 +176,8 @@ func (s *Store) Create(ctx context.Context, a *Account) (*Account, error) {
 type UpdatePatch struct {
 	Name                  *string
 	Category              *string
-	Owner                 *string
+	OwnerUserIDSet        bool
+	OwnerUserID           *int
 	Currency              *string
 	AccountWrapperSet     bool
 	AccountWrapper        *string
@@ -205,10 +212,10 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*Account, er
 	}
 	// Capture pre-patch values to decide whether the request meaningfully
 	// changed owner or category — matches Python's old_owner/old_category.
-	oldOwner := current.Owner
+	oldOwnerUserID := current.OwnerUserID
 	oldCategory := current.Category
 	applyPatch(current, p)
-	needsRecompute := (p.Owner != nil && *p.Owner != oldOwner) ||
+	needsRecompute := (p.OwnerUserIDSet && !intPtrEqual(p.OwnerUserID, oldOwnerUserID)) ||
 		(p.Category != nil && *p.Category != oldCategory)
 	if err := s.updateRow(ctx, tx, id, current); err != nil {
 		return nil, err
@@ -314,13 +321,17 @@ func (s *Store) checkDuplicateNameTx(ctx context.Context, tx pgx.Tx, name string
 }
 
 func (s *Store) updateRow(ctx context.Context, tx pgx.Tx, id int, a *Account) error {
+	// owner is dual-written from owner_user_id ($4) until the legacy column
+	// is dropped.
 	_, err := tx.Exec(ctx, `
 		UPDATE accounts SET
-			name = $1, type = $2, category = $3, owner = $4, currency = $5,
+			name = $1, type = $2, category = $3,
+			owner = COALESCE((SELECT name FROM users WHERE id = $4), 'Shared'),
+			owner_user_id = $4, currency = $5,
 			account_wrapper = $6, purpose = $7, square_meters = $8,
 			receives_contributions = $9
 		WHERE id = $10`,
-		a.Name, a.Type, a.Category, a.Owner, a.Currency,
+		a.Name, a.Type, a.Category, a.OwnerUserID, a.Currency,
 		a.AccountWrapper, a.Purpose, a.SquareMeters,
 		a.ReceivesContributions, id,
 	)
@@ -365,8 +376,8 @@ func applyPatch(a *Account, p UpdatePatch) {
 	if p.Category != nil {
 		a.Category = *p.Category
 	}
-	if p.Owner != nil {
-		a.Owner = *p.Owner
+	if p.OwnerUserIDSet {
+		a.OwnerUserID = p.OwnerUserID
 	}
 	if p.Currency != nil {
 		a.Currency = *p.Currency
@@ -388,11 +399,19 @@ func applyPatch(a *Account, p UpdatePatch) {
 func scanAccount(row pgx.Row) (*Account, error) {
 	var a Account
 	if err := row.Scan(
-		&a.ID, &a.Name, &a.Type, &a.Category, &a.Owner, &a.Currency,
+		&a.ID, &a.Name, &a.Type, &a.Category, &a.OwnerUserID, &a.Currency,
 		&a.AccountWrapper, &a.Purpose, &a.SquareMeters,
 		&a.IsActive, &a.ReceivesContributions, &a.CreatedAt,
 	); err != nil {
 		return nil, err
 	}
 	return &a, nil
+}
+
+// intPtrEqual reports whether two optional ints are equal (both nil counts).
+func intPtrEqual(a, b *int) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
 }

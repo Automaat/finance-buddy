@@ -21,7 +21,7 @@ function makeAccount(overrides: Partial<Account>): Account {
 		name: 'Account',
 		type: 'asset',
 		category: 'bank',
-		owner: 'Marcin',
+		owner_user_id: null,
 		currency: 'PLN',
 		account_wrapper: null,
 		purpose: 'general',

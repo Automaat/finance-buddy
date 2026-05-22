@@ -22,23 +22,23 @@ var validDebtTypes = map[string]struct{}{
 }
 
 type response struct {
-	ID                int      `json:"id"`
-	AccountID         int      `json:"account_id"`
-	AccountName       string   `json:"account_name"`
-	AccountOwner      string   `json:"account_owner"`
-	Name              string   `json:"name"`
-	DebtType          string   `json:"debt_type"`
-	StartDate         isoDate  `json:"start_date"`
-	InitialAmount     pyFloat  `json:"initial_amount"`
-	InterestRate      pyFloat  `json:"interest_rate"`
-	Currency          string   `json:"currency"`
-	Notes             *string  `json:"notes"`
-	IsActive          bool     `json:"is_active"`
-	CreatedAt         isoNaive `json:"created_at"`
-	LatestBalance     *pyFloat `json:"latest_balance"`
-	LatestBalanceDate *isoDate `json:"latest_balance_date"`
-	TotalPaid         pyFloat  `json:"total_paid"`
-	InterestPaid      pyFloat  `json:"interest_paid"`
+	ID                 int      `json:"id"`
+	AccountID          int      `json:"account_id"`
+	AccountName        string   `json:"account_name"`
+	AccountOwnerUserID *int     `json:"account_owner_user_id"`
+	Name               string   `json:"name"`
+	DebtType           string   `json:"debt_type"`
+	StartDate          isoDate  `json:"start_date"`
+	InitialAmount      pyFloat  `json:"initial_amount"`
+	InterestRate       pyFloat  `json:"interest_rate"`
+	Currency           string   `json:"currency"`
+	Notes              *string  `json:"notes"`
+	IsActive           bool     `json:"is_active"`
+	CreatedAt          isoNaive `json:"created_at"`
+	LatestBalance      *pyFloat `json:"latest_balance"`
+	LatestBalanceDate  *isoDate `json:"latest_balance_date"`
+	TotalPaid          pyFloat  `json:"total_paid"`
+	InterestPaid       pyFloat  `json:"interest_paid"`
 }
 
 type listResponse struct {
@@ -83,7 +83,7 @@ func toResponse(d Debt, a AccountInfo, m debtMetrics) response {
 	_, interestPaid := computeMetrics(d.InitialAmount, m.latestBalance, m.totalPaid)
 	ip, _ := interestPaid.Float64()
 	out := response{
-		ID: d.ID, AccountID: d.AccountID, AccountName: a.Name, AccountOwner: a.Owner,
+		ID: d.ID, AccountID: d.AccountID, AccountName: a.Name, AccountOwnerUserID: a.OwnerUserID,
 		Name: d.Name, DebtType: d.DebtType, StartDate: isoDate(d.StartDate),
 		InitialAmount: pyFloat(initial), InterestRate: pyFloat(rate),
 		Currency: d.Currency, Notes: d.Notes, IsActive: d.IsActive,

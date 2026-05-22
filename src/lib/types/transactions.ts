@@ -4,7 +4,7 @@ export interface Transaction {
 	account_name: string;
 	amount: number;
 	date: string;
-	owner: string;
+	owner_user_id: number | null;
 	created_at: string;
 }
 
