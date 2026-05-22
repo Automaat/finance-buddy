@@ -359,6 +359,56 @@ docker-compose -f docker-compose.dev.yml down        # Stop
 
 ---
 
+## Deployment
+
+Production runs on a self-hosted NAS, managed by Ansible in a separate repo:
+`~/sideprojects/home-nas`.
+
+### Topology
+
+- Target: `pet-projects` LXC. Stack = Postgres 18 + `backend-go` + `frontend`
+  (+ a postgres-exporter for metrics).
+- Behind Traefik with TLS — app at `https://finance.mskalski.dev`.
+- DB volume: `/data/finance-buddy/postgres`. **Real financial data — back up
+  before any schema change** (the backend runs additive DDL on startup).
+- Stack file: `home-nas:ansible/docker-compose/finance-buddy-stack.yml`,
+  copied to `/opt/finance-buddy/docker-compose.yml` by the playbook.
+
+### Release → deploy flow
+
+1. Release: run the `release.yml` workflow (`gh workflow run release.yml`).
+   Empty input auto-bumps the minor version — it tags `vX.Y.Z`, cuts a GitHub
+   release, and pushes `:latest` + `:vX.Y.Z` images to ghcr.io.
+2. Bump both image tags in the home-nas stack file to the new `vX.Y.Z`.
+3. Deploy: run the home-nas `deploy-manual.yml` workflow (stack
+   `finance-buddy`), or `ansible-playbook playbooks/deploy-finance-buddy.yml`.
+   It writes `/opt/finance-buddy/.env` from sops and runs `docker compose up`
+   with `pull: always`.
+
+### Config & secrets
+
+- Images: `ghcr.io/automaat/finance-buddy-{backend-go,frontend}`, pinned to a
+  version tag in the stack file.
+- Backend connects with libpq `PG*` vars (not `DATABASE_URL`) — pgx's URL
+  parser is strict about percent-encoding the password.
+- Secrets: sops-encrypted `home-nas:ansible/secrets/secrets.yaml` (age keys),
+  edited with `sops`. The playbook's `extract_sops_secrets_required` maps
+  `{fact: sops_key}` into `.env`. finance keys: `finance_db_password`,
+  `finance_jwt_secret`, `finance_admin_user`, `finance_admin_password`.
+
+### Auth env (v0.30.0+)
+
+- Backend: `FB_JWT_SECRET`, `FB_ADMIN_USERNAME`, `FB_ADMIN_PASSWORD` (from
+  sops); `FB_COOKIE_SECURE=true` (served over HTTPS). Backend hard-fails at
+  startup if `FB_JWT_SECRET` or `FB_ADMIN_PASSWORD` is unset.
+- Frontend: `PUBLIC_API_URL_BROWSER` must be the app's **own** origin
+  (`https://finance.mskalski.dev`) so browser calls hit the SvelteKit `/api`
+  proxy; `API_PROXY_TARGET=http://finance-backend-go:8000`.
+- Admin is re-seeded from `FB_ADMIN_*` on every startup (can't be locked out);
+  changing `FB_JWT_SECRET` invalidates all sessions.
+
+---
+
 ## Project-Specific Context
 
 ### Domain Knowledge (Polish Personal Finance)
