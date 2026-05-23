@@ -27,6 +27,7 @@
 	import { resolveApiUrl } from '$lib/api';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { toast } from '$lib/stores/toast.svelte';
+	import { confirm } from '$lib/stores/confirm.svelte';
 	import type {
 		BonusEvent,
 		BonusType,
@@ -417,9 +418,13 @@
 	}
 
 	async function deleteBonus(id: number) {
-		if (!confirm('Czy na pewno chcesz usunąć ten bonus?')) {
-			return;
-		}
+		const ok = await confirm({
+			title: 'Usuń bonus',
+			message: 'Czy na pewno chcesz usunąć ten bonus?',
+			confirmText: 'Usuń',
+			danger: true
+		});
+		if (!ok) return;
 
 		try {
 			const response = await fetch(`${apiUrl}/api/bonuses/${id}`, { method: 'DELETE' });
@@ -759,7 +764,13 @@
 	}
 
 	async function deleteEquityGrant(id: number) {
-		if (!confirm('Czy na pewno chcesz usunąć ten grant?')) return;
+		const ok = await confirm({
+			title: 'Usuń grant',
+			message: 'Czy na pewno chcesz usunąć ten grant?',
+			confirmText: 'Usuń',
+			danger: true
+		});
+		if (!ok) return;
 		try {
 			const response = await fetch(`${apiUrl}/api/equity-grants/${id}`, { method: 'DELETE' });
 			if (!response.ok) throw new Error('Failed to delete grant');
@@ -925,7 +936,13 @@
 	}
 
 	async function deleteValuation(id: number) {
-		if (!confirm('Czy na pewno chcesz usunąć tę wycenę?')) return;
+		const ok = await confirm({
+			title: 'Usuń wycenę',
+			message: 'Czy na pewno chcesz usunąć tę wycenę?',
+			confirmText: 'Usuń',
+			danger: true
+		});
+		if (!ok) return;
 		try {
 			const response = await fetch(`${apiUrl}/api/company-valuations/${id}`, {
 				method: 'DELETE'
@@ -1066,9 +1083,13 @@
 	}
 
 	async function deleteSalary(id: number) {
-		if (!confirm('Czy na pewno chcesz usunąć ten rekord wynagrodzenia?')) {
-			return;
-		}
+		const ok = await confirm({
+			title: 'Usuń wynagrodzenie',
+			message: 'Czy na pewno chcesz usunąć ten rekord wynagrodzenia?',
+			confirmText: 'Usuń',
+			danger: true
+		});
+		if (!ok) return;
 
 		try {
 			const response = await fetch(`${apiUrl}/api/salaries/${id}`, {

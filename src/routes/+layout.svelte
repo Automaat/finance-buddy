@@ -2,6 +2,7 @@
 	import '../app.css';
 	import { page } from '$app/stores';
 	import Toast from '$lib/components/Toast.svelte';
+	import Confirm from '$lib/components/Confirm.svelte';
 	import {
 		LayoutDashboard,
 		TrendingUp,
@@ -55,6 +56,7 @@
 </script>
 
 <Toast />
+<Confirm />
 
 {#if isLoginPage}
 	{@render children?.()}
