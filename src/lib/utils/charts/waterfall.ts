@@ -1,4 +1,4 @@
-import type { BarSeriesOption, EChartsOption } from 'echarts';
+import type { BarSeriesOption, EChartsOption, LineSeriesOption } from 'echarts';
 import type { TopLevelFormatterParams } from 'echarts/types/dist/shared';
 
 export interface NetWorthPoint {
@@ -98,7 +98,7 @@ export function buildWaterfallOption(
 			itemStyle: { color: s.liabilityDelta <= 0 ? COLOR_LIAB_NEG : COLOR_LIAB_POS }
 		}))
 	};
-	const netWorthLine: BarSeriesOption = {
+	const netWorthLine: LineSeriesOption = {
 		name: 'Wartość netto',
 		type: 'line',
 		yAxisIndex: 1,
@@ -107,7 +107,7 @@ export function buildWaterfallOption(
 		data: sliced.map((s) => s.endingNetWorth),
 		lineStyle: { color: COLOR_LINE, width: 2 },
 		itemStyle: { color: COLOR_LINE }
-	} as unknown as BarSeriesOption;
+	};
 
 	return {
 		title: { text: 'Wartość netto — wkład miesięczny' },

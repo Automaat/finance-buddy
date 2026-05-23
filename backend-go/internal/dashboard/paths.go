@@ -48,7 +48,14 @@ func aggregatePointsBySnapshot(aggRows []AggregateRow, snapshotDate map[int]time
 			SnapshotID:  sid,
 		})
 	}
-	sort.Slice(points, func(i, j int) bool { return points[i].Date.Before(points[j].Date) })
+	// Date primary, SnapshotID tiebreaker — keeps order stable when two
+	// snapshots share a calendar day.
+	sort.Slice(points, func(i, j int) bool {
+		if !points[i].Date.Equal(points[j].Date) {
+			return points[i].Date.Before(points[j].Date)
+		}
+		return points[i].SnapshotID < points[j].SnapshotID
+	})
 	return points, nil
 }
 
