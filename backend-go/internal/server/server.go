@@ -164,6 +164,7 @@ func registerLedgerRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger)
 	r.Post("/api/simulations/mortgage-vs-invest", simHandler.MortgageVsInvest)
 	r.Post("/api/simulations/retirement", simHandler.Retirement)
 	r.Get("/api/simulations/prefill", simHandler.Prefill)
+	r.Post("/api/simulations/monte-carlo", simHandler.MonteCarlo)
 }
 
 func registerDashboardRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
