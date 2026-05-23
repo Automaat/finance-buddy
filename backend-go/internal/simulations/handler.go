@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"math"
+	"math/rand/v2"
 	"net/http"
 	"strconv"
 	"strings"
@@ -219,6 +220,64 @@ func (h *Handler) Retirement(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, h.buildSimulationResponse(in, sims))
+}
+
+// monteCarloInputsWire mirrors MonteCarloInputs over JSON.
+type monteCarloInputsWire struct {
+	CurrentPortfolio   pyFloat `json:"current_portfolio"`
+	AnnualContribution pyFloat `json:"annual_contribution"`
+	ExpectedReturn     pyFloat `json:"expected_return"`
+	Volatility         pyFloat `json:"volatility"`
+	CurrentAge         int     `json:"current_age"`
+	RetirementAge      int     `json:"retirement_age"`
+	LifeExpectancy     int     `json:"life_expectancy"`
+	AnnualWithdrawal   pyFloat `json:"annual_withdrawal"`
+	Paths              int     `json:"paths,omitempty"`
+}
+
+// MonteCarlo serves POST /api/simulations/monte-carlo. It runs `paths`
+// Monte Carlo trajectories using N(expected_return, volatility) annual
+// returns and reports the success rate plus 5/50/95 percentile bands.
+func (h *Handler) MonteCarlo(w http.ResponseWriter, r *http.Request) {
+	var in monteCarloInputsWire
+	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<18)).Decode(&in); err != nil {
+		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		return
+	}
+	if in.CurrentAge <= 0 || in.LifeExpectancy <= in.CurrentAge {
+		writeValidationError(w, "life_expectancy", "life_expectancy must exceed current_age", "")
+		return
+	}
+	if in.RetirementAge < in.CurrentAge || in.RetirementAge > in.LifeExpectancy {
+		writeValidationError(w, "retirement_age", "retirement_age must be between current_age and life_expectancy", "")
+		return
+	}
+	if in.Volatility < 0 {
+		writeValidationError(w, "volatility", "volatility must be non-negative", "")
+		return
+	}
+	if in.CurrentPortfolio < 0 || in.AnnualContribution < 0 || in.AnnualWithdrawal < 0 {
+		writeValidationError(w, "amount", "monetary inputs must be non-negative", "")
+		return
+	}
+	if in.Paths < 0 || in.Paths > 10000 {
+		writeValidationError(w, "paths", "paths must be in [0, 10000]", "")
+		return
+	}
+
+	rng := rand.New(rand.NewPCG(uint64(h.now().UnixNano()), 0xdeadbeef))
+	result := RunMonteCarlo(rng, MonteCarloInputs{
+		CurrentPortfolio:   float64(in.CurrentPortfolio),
+		AnnualContribution: float64(in.AnnualContribution),
+		ExpectedReturn:     float64(in.ExpectedReturn),
+		Volatility:         float64(in.Volatility),
+		CurrentAge:         in.CurrentAge,
+		RetirementAge:      in.RetirementAge,
+		LifeExpectancy:     in.LifeExpectancy,
+		AnnualWithdrawal:   float64(in.AnnualWithdrawal),
+		Paths:              in.Paths,
+	})
+	writeJSON(w, http.StatusOK, result)
 }
 
 func (h *Handler) runSimulation(ctx context.Context, in simulationInputs) ([]AccountSimulation, error) {

@@ -3009,6 +3009,55 @@ export interface paths {
         };
         trace?: never;
     };
+    "/api/simulations/monte-carlo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Monte Carlo retirement projection */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            bands?: {
+                                age?: number;
+                                /** Format: double */
+                                p5?: number;
+                                /** Format: double */
+                                p50?: number;
+                                /** Format: double */
+                                p95?: number;
+                            }[];
+                            paths?: number;
+                            /** Format: double */
+                            success_rate?: number;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/simulations/mortgage-vs-invest": {
         parameters: {
             query?: never;

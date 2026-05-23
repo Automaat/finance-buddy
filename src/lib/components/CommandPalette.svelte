@@ -13,6 +13,7 @@
 		{ label: 'Dashboard', hint: '/', run: () => goto('/') },
 		{ label: 'Metryki', hint: '/metryki', run: () => goto('/metryki') },
 		{ label: 'Symulacje', hint: '/simulations', run: () => goto('/simulations') },
+		{ label: 'Emerytura (Monte Carlo)', hint: '/retirement', run: () => goto('/retirement') },
 		{ label: 'Konta', hint: '/accounts', run: () => goto('/accounts') },
 		{ label: 'Transakcje', hint: '/transactions', run: () => goto('/transactions') },
 		{ label: 'Majątek', hint: '/assets', run: () => goto('/assets') },

@@ -91,6 +91,7 @@ linters:
         - G204 # subprocess args — validated at construction
         - G304 # file inclusion via variable — intentional in this app
         - G124 # session cookie Secure flag is runtime-configurable (FB_COOKIE_SECURE) for plain-HTTP LAN deploys
+        - G404 # math/rand/v2 is correct for Monte Carlo and other statistical sampling — crypto/rand is wrong here
 
     govet:
       enable-all: true

@@ -4536,6 +4536,58 @@
         ]
       }
     },
+    "/api/simulations/monte-carlo": {
+      "post": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "bands": {
+                      "items": {
+                        "properties": {
+                          "age": {
+                            "type": "integer"
+                          },
+                          "p5": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "p50": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "p95": {
+                            "format": "double",
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "paths": {
+                      "type": "integer"
+                    },
+                    "success_rate": {
+                      "format": "double",
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Monte Carlo retirement projection",
+        "tags": [
+          "simulations"
+        ]
+      }
+    },
     "/api/simulations/mortgage-vs-invest": {
       "post": {
         "responses": {

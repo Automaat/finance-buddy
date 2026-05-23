@@ -10,4 +10,5 @@ var APISpec = []apispec.Route{
 	{Method: "POST", Path: "/api/simulations/mortgage-vs-invest", Tag: "simulations", Summary: "Mortgage overpay vs invest comparison", Response: mortgageResponse{}},
 	{Method: "POST", Path: "/api/simulations/retirement", Tag: "simulations", Summary: "Retirement account projection"},
 	{Method: "GET", Path: "/api/simulations/prefill", Tag: "simulations", Summary: "Prefill simulation inputs"},
+	{Method: "POST", Path: "/api/simulations/monte-carlo", Tag: "simulations", Summary: "Monte Carlo retirement projection", Response: MonteCarloResult{}},
 }
