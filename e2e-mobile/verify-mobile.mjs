@@ -89,40 +89,43 @@ async function audit(page, url) {
 	}, MIN_TAP);
 }
 
+async function auditRoute(ctx, vpLabel, route) {
+	const page = await ctx.newPage();
+	page.on('console', (msg) => {
+		if (msg.type() === 'error') {
+			console.error(`[${vpLabel}] console error:`, msg.text().slice(0, 200));
+		}
+	});
+	const url = `${BASE_URL}${route.path}`;
+	try {
+		const audit_result = await audit(page, url);
+		const screenshot = join(OUT_DIR, `${vpLabel}-${route.name}.png`);
+		await page.screenshot({ path: screenshot, fullPage: true });
+		const status =
+			audit_result.overflowX === 0 && audit_result.tooSmall.length === 0 ? 'OK' : 'ISSUE';
+		console.log(
+			`  [${vpLabel}] ${route.path} ... ${status}  overflowX=${audit_result.overflowX}px  tapTooSmall=${audit_result.tooSmall.length}`
+		);
+		await page.close();
+		return { viewport: vpLabel, route: route.path, ...audit_result };
+	} catch (err) {
+		console.log(`  [${vpLabel}] ${route.path} ... ERROR: ${err.message.slice(0, 100)}`);
+		await page.close().catch(() => {});
+		return { viewport: vpLabel, route: route.path, error: err.message };
+	}
+}
+
+async function auditViewport(browser, vp) {
+	const ctx = await browser.newContext({ ...vp.device });
+	const results = await Promise.all(ROUTES.map((route) => auditRoute(ctx, vp.label, route)));
+	await ctx.close();
+	return results;
+}
+
 async function run() {
 	const browser = await chromium.launch();
-	const results = [];
-
-	for (const vp of VIEWPORTS) {
-		const ctx = await browser.newContext({ ...vp.device });
-		const page = await ctx.newPage();
-		page.on('console', (msg) => {
-			if (msg.type() === 'error') {
-				console.error(`[${vp.label}] console error:`, msg.text().slice(0, 200));
-			}
-		});
-
-		for (const route of ROUTES) {
-			const url = `${BASE_URL}${route.path}`;
-			process.stdout.write(`  [${vp.label}] ${route.path} ... `);
-			try {
-				const audit_result = await audit(page, url);
-				const screenshot = join(OUT_DIR, `${vp.label}-${route.name}.png`);
-				await page.screenshot({ path: screenshot, fullPage: true });
-
-				const status =
-					audit_result.overflowX === 0 && audit_result.tooSmall.length === 0 ? 'OK' : 'ISSUE';
-				console.log(
-					`${status}  overflowX=${audit_result.overflowX}px  tapTooSmall=${audit_result.tooSmall.length}`
-				);
-				results.push({ viewport: vp.label, route: route.path, ...audit_result });
-			} catch (err) {
-				console.log(`ERROR: ${err.message.slice(0, 100)}`);
-				results.push({ viewport: vp.label, route: route.path, error: err.message });
-			}
-		}
-		await ctx.close();
-	}
+	const perViewport = await Promise.all(VIEWPORTS.map((vp) => auditViewport(browser, vp)));
+	const results = perViewport.flat();
 
 	await browser.close();
 
