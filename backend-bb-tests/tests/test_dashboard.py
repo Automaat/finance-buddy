@@ -97,6 +97,53 @@ def _dashboard_totals(client: httpx.Client) -> tuple[float, float, float]:
     )
 
 
+def test_dashboard_date_range_filters_time_series(client: httpx.Client) -> None:
+    # Seed has snapshots at 2025-11-30, 2025-12-31, 2026-01-31. A range that
+    # only includes the middle snapshot should trim every time series to one
+    # point per series — but leave snapshot tiles untouched.
+    full = client.get("/api/dashboard")
+    assert full.status_code == 200, full.text
+    full_body = full.json()
+
+    response = client.get(
+        "/api/dashboard",
+        params={"date_from": "2025-12-01", "date_to": "2025-12-31"},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+
+    history_dates = [p["date"] for p in body["net_worth_history"]]
+    assert history_dates == ["2025-12-31"], history_dates
+
+    for key in ("investment_time_series",):
+        dates = [p["date"] for p in body[key]]
+        assert dates == ["2025-12-31"], f"{key} dates={dates}"
+
+    for wrapper in ("ike", "ikze", "ppk"):
+        dates = [p["date"] for p in body["wrapper_time_series"][wrapper]]
+        assert dates == ["2025-12-31"], f"wrapper {wrapper} dates={dates}"
+
+    for category in ("stock", "bond"):
+        dates = [p["date"] for p in body["category_time_series"][category]]
+        assert dates == ["2025-12-31"], f"category {category} dates={dates}"
+
+    # Tiles are unaffected.
+    assert body["current_net_worth"] == full_body["current_net_worth"]
+    assert body["total_assets"] == full_body["total_assets"]
+    assert body["total_liabilities"] == full_body["total_liabilities"]
+
+
+def test_dashboard_invalid_date_range_rejected(client: httpx.Client) -> None:
+    response = client.get("/api/dashboard", params={"date_from": "not-a-date"})
+    assert response.status_code == 400, response.text
+
+    response = client.get(
+        "/api/dashboard",
+        params={"date_from": "2026-01-01", "date_to": "2024-01-01"},
+    )
+    assert response.status_code == 400, response.text
+
+
 @pytest.mark.mutates
 def test_history_preserved_after_soft_delete_account(
     client: httpx.Client, database_url: str, owner_ids: dict[str, int]
