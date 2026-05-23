@@ -24,7 +24,7 @@
 	const defaultOwnerName = $derived(owners.length > 0 ? owners[0].name : '');
 
 	const transactionColumns = $derived<SortableColumn<Transaction>[]>([
-		{ key: 'date', label: 'Data zakupu', sortable: true, accessor: (t) => t.date },
+		{ key: 'date', label: 'Data zakupu', sortable: true, accessor: (t) => new Date(t.date) },
 		{ key: 'account', label: 'Konto', sortable: true, accessor: (t) => t.account_name },
 		{
 			key: 'owner',

@@ -58,7 +58,7 @@
 </script>
 
 <script lang="ts" generics="T">
-	import { goto } from '$app/navigation';
+	import { replaceState } from '$app/navigation';
 	import { page } from '$app/stores';
 	import type { Snippet } from 'svelte';
 
@@ -86,13 +86,11 @@
 	const sortedItems = $derived(sortRows(items, columns, sort));
 
 	function cycleSort(key: string): void {
-		const params = new URLSearchParams($page.url.searchParams);
+		const url = new URL($page.url);
 		const next = nextSortDirection(sort, key);
-		if (next) params.set(paramName, formatSortParam(next));
-		else params.delete(paramName);
-		const qs = params.toString();
-		const path = $page.url.pathname;
-		goto(qs ? `${path}?${qs}` : path, { keepFocus: true, replaceState: true, noScroll: true });
+		if (next) url.searchParams.set(paramName, formatSortParam(next));
+		else url.searchParams.delete(paramName);
+		replaceState(url, $page.state);
 	}
 
 	let sentinel: HTMLDivElement;
