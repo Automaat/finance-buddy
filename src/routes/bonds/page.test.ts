@@ -36,6 +36,7 @@ vi.mock('echarts', () => ({
 }));
 
 const emptyData = {
+	user: null,
 	bonds: [],
 	total_value: 0,
 	total_count: 0,
