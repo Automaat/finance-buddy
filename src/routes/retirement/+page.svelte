@@ -139,15 +139,15 @@
 			</label>
 			<label class="space-y-1">
 				<span class="text-xs font-semibold">Obecny wiek</span>
-				<input type="number" min="0" max="120" class="input w-full" bind:value={currentAge} />
+				<input type="number" min="18" max="120" class="input w-full" bind:value={currentAge} />
 			</label>
 			<label class="space-y-1">
 				<span class="text-xs font-semibold">Wiek emerytalny</span>
-				<input type="number" min="0" max="120" class="input w-full" bind:value={retirementAge} />
+				<input type="number" min="18" max="120" class="input w-full" bind:value={retirementAge} />
 			</label>
 			<label class="space-y-1">
 				<span class="text-xs font-semibold">Oczekiwana długość życia</span>
-				<input type="number" min="0" max="120" class="input w-full" bind:value={lifeExpectancy} />
+				<input type="number" min="18" max="120" class="input w-full" bind:value={lifeExpectancy} />
 			</label>
 			<label class="space-y-1">
 				<span class="text-xs font-semibold">Roczna wypłata na emeryturze (PLN)</span>

@@ -37,9 +37,10 @@ type MonteCarloResult struct {
 }
 
 // RunMonteCarlo simulates `params.Paths` retirement paths. Returns drawn
-// from N(ExpectedReturn, Volatility). During accumulation (age <
-// RetirementAge) contributions are added each year; during decumulation
-// withdrawals are subtracted (balance is clamped at 0).
+// from N(ExpectedReturn, Volatility). Each year-end: grow, then add an
+// AnnualContribution if year-end age <= RetirementAge (the retirement
+// year still contributes), otherwise subtract AnnualWithdrawal. Balance
+// is clamped at zero, so once a path busts it stays busted.
 func RunMonteCarlo(rng *rand.Rand, p MonteCarloInputs) MonteCarloResult {
 	paths := p.Paths
 	if paths <= 0 {
