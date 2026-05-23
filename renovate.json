@@ -26,15 +26,12 @@
       ]
     },
     {
-      "description": "Group the FastAPI / Pydantic / SQLAlchemy backend stack",
-      "groupName": "fastapi stack",
-      "matchPackageNames": [
-        "fastapi",
-        "starlette",
-        "uvicorn",
-        "alembic",
-        "/^pydantic/",
-        "/^sqlalchemy/"
+      "description": "Group black-box test Python dependencies",
+      "groupName": "backend-bb-tests python",
+      "matchManagers": ["pep621", "pip_requirements", "poetry"],
+      "matchFileNames": [
+        "backend-bb-tests/pyproject.toml",
+        "backend-bb-tests/uv.lock"
       ]
     }
   ]
