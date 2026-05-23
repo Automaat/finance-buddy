@@ -186,8 +186,8 @@ export function grossToNet(
 		case 'UoD':
 			return netUod(grossMonthly, year);
 		default: {
-			const _exhaustive: never = contractType;
-			throw new Error(`Unknown contract type: ${String(_exhaustive)}`);
+			const exhaustiveCheck: never = contractType;
+			throw new Error(`Unknown contract type: ${String(exhaustiveCheck)}`);
 		}
 	}
 }
