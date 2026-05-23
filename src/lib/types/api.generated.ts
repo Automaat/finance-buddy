@@ -2782,9 +2782,13 @@ export interface paths {
                             is_warning?: boolean;
                             /** Format: double */
                             limit_amount?: number | null;
+                            /** Format: double */
+                            marginal_tax_rate?: number | null;
                             owner_user_id?: number | null;
                             /** Format: double */
                             percentage_used?: number | null;
+                            /** Format: double */
+                            pit_savings?: number | null;
                             /** Format: double */
                             remaining?: number | null;
                             /** Format: double */

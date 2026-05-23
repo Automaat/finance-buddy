@@ -29,6 +29,11 @@ type yearlyStat struct {
 	Remaining           *pyFloat `json:"remaining"`
 	PercentageUsed      *pyFloat `json:"percentage_used"`
 	IsWarning           bool     `json:"is_warning"`
+	// IKZE-only: marginal PIT rate at the owner's annualized salary and
+	// the estimated PIT savings from this year's contributions. Nil when
+	// the wrapper is not IKZE or the owner has no salary record.
+	MarginalTaxRate *pyFloat `json:"marginal_tax_rate"`
+	PITSavings      *pyFloat `json:"pit_savings"`
 }
 
 type ppkStat struct {
@@ -156,7 +161,7 @@ func (h *Handler) buildYearlyStat(ctx context.Context, year int, wrapper string,
 	lAmt := pyFloat(limitF)
 	rem := pyFloat(remaining)
 	pct := pyFloat(math.Round(percentage*10) / 10)
-	return yearlyStat{
+	stat := yearlyStat{
 		Year: year, AccountWrapper: wrapper, OwnerUserID: ownerUserID,
 		LimitAmount:         &lAmt,
 		TotalContributed:    pyFloat(totalF),
@@ -168,7 +173,39 @@ func (h *Handler) buildYearlyStat(ctx context.Context, year int, wrapper string,
 		// the raw value, so 89.95% must NOT flip the flag even though it
 		// rounds to 90.0 in percentage_used.
 		IsWarning: percentage >= 90,
-	}, true, nil
+	}
+	if wrapper == "IKZE" && totalF > 0 {
+		if rate, savings, ok := h.estimateIKZEPITSavings(ctx, ownerUserID, year, totalF); ok {
+			r := pyFloat(rate)
+			s := pyFloat(savings)
+			stat.MarginalTaxRate = &r
+			stat.PITSavings = &s
+		}
+	}
+	return stat, true, nil
+}
+
+// estimateIKZEPITSavings derives the owner's marginal PIT rate from their
+// latest salary record on or before year-end, then approximates the tax
+// saved by deducting the year's IKZE contributions. Returns ok=false when
+// the owner has no salary on record.
+func (h *Handler) estimateIKZEPITSavings(ctx context.Context, ownerUserID *int, year int, contribution float64) (float64, float64, bool) {
+	asOf := time.Date(year, 12, 31, 0, 0, 0, 0, time.UTC)
+	monthlyGross, err := h.store.CurrentSalaryFor(ctx, ownerUserID, asOf)
+	if err != nil {
+		// Skip the PIT card for owners with no salary. Anything else is an
+		// infra error that shouldn't silently degrade the UI — log it.
+		if !errors.Is(err, ErrNoSalary) {
+			h.logger.Warn("ikze pit salary lookup", "owner", ownerUserID, "err", err)
+		}
+		return 0, 0, false
+	}
+	monthly, _ := monthlyGross.Float64()
+	if monthly <= 0 {
+		return 0, 0, false
+	}
+	annualGross := monthly * 12
+	return MarginalPITRate(annualGross), EstimatePITSavings(contribution, annualGross), true
 }
 
 // PPKStats serves GET /api/retirement/ppk-stats.
