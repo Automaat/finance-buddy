@@ -60,28 +60,32 @@ describe('confirm store', () => {
 
 	it('with onConfirm: flips pending, awaits, then resolves true', async () => {
 		let resolveHandler: () => void = () => {};
-		const handlerStarted = new Promise<void>((started) => {
-			const p = confirm({
-				title: 't',
-				message: 'm',
-				onConfirm: () =>
-					new Promise<void>((resolveOnConfirm) => {
-						resolveHandler = resolveOnConfirm;
-						started();
-					})
-			});
-			confirmDialog.confirm();
-			void p.then((ok) => {
-				expect(ok).toBe(true);
-				expect(confirmDialog.current).toBeNull();
-			});
+		let handlerStarted!: () => void;
+		const started = new Promise<void>((res) => {
+			handlerStarted = res;
 		});
-		await handlerStarted;
+		const p = confirm({
+			title: 't',
+			message: 'm',
+			onConfirm: () =>
+				new Promise<void>((resolveOnConfirm) => {
+					resolveHandler = resolveOnConfirm;
+					handlerStarted();
+				})
+		});
+		confirmDialog.confirm();
+		await started;
 		expect(confirmDialog.current?.pending).toBe(true);
 		// Cancel during pending is a no-op.
 		confirmDialog.cancel();
 		expect(confirmDialog.current).not.toBeNull();
+		// Opening a second confirm while one is pending must not clobber.
+		const ignored = confirm({ title: 'x', message: 'x' });
+		await expect(ignored).resolves.toBe(false);
+		expect(confirmDialog.current?.title).toBe('t');
 		resolveHandler();
+		await expect(p).resolves.toBe(true);
+		expect(confirmDialog.current).toBeNull();
 	});
 
 	it('with onConfirm that throws: resolves false and closes', async () => {

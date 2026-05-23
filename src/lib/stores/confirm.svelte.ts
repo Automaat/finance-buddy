@@ -30,7 +30,13 @@ export interface ConfirmRequest extends ConfirmOptions {
 let current = $state<ConfirmRequest | null>(null);
 
 function open(options: ConfirmOptions): Promise<boolean> {
-	if (current && !current.pending) {
+	if (current) {
+		if (current.pending) {
+			// The first request is mid-flight handler — clobbering it would
+			// orphan its Promise and race confirmAction()'s post-await null
+			// write. Reject the newcomer instead.
+			return Promise.resolve(false);
+		}
 		// A second confirm before the first resolved cancels the first.
 		current.resolve(false);
 		current = null;
