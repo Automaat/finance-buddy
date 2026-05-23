@@ -1,7 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { buildRetirementProjectionOption, type AccountSimulation } from './simulations';
+import {
+	aggregateByWrapperOverAges,
+	buildRetirementByWrapperOption,
+	buildRetirementProjectionOption,
+	getTotalBalanceAtAge,
+	wrapperFromAccountName,
+	type AccountSimulation
+} from './simulations';
 
-function makeSimulation(name: string, balances: number[]): AccountSimulation {
+function makeSimulation(name: string, balances: number[], startAge = 30): AccountSimulation {
 	return {
 		account_name: name,
 		starting_balance: balances[0] ?? 0,
@@ -11,7 +18,7 @@ function makeSimulation(name: string, balances: number[]): AccountSimulation {
 		final_balance: balances[balances.length - 1] ?? 0,
 		yearly_projections: balances.map((balance, idx) => ({
 			year: 2025 + idx,
-			age: 30 + idx,
+			age: startAge + idx,
 			annual_contribution: 0,
 			balance_end_of_year: balance,
 			cumulative_contributions: 0,
@@ -112,5 +119,160 @@ describe('buildRetirementProjectionOption', () => {
 		expect(series).toHaveLength(10);
 		// 7th item should wrap back to the first palette colour
 		expect(series[6].itemStyle.color).toBe(series[0].itemStyle.color);
+	});
+});
+
+describe('wrapperFromAccountName', () => {
+	it('maps IKE/IKZE/PPK prefixes correctly', () => {
+		expect(wrapperFromAccountName('IKE (Marcin)')).toBe('IKE');
+		expect(wrapperFromAccountName('IKZE (Marcin)')).toBe('IKZE');
+		expect(wrapperFromAccountName('PPK (Marcin)')).toBe('PPK');
+	});
+
+	it('returns null for non-retirement accounts', () => {
+		expect(wrapperFromAccountName('Rachunek maklerski (Marcin)')).toBeNull();
+		expect(wrapperFromAccountName('')).toBeNull();
+	});
+
+	it('disambiguates IKZE before IKE so the longer prefix wins', () => {
+		expect(wrapperFromAccountName('IKZE (Ewa)')).toBe('IKZE');
+	});
+});
+
+describe('aggregateByWrapperOverAges', () => {
+	it('sums balances per wrapper at each age across owners', () => {
+		const sims: AccountSimulation[] = [
+			makeSimulation('IKE (Marcin)', [100, 200, 300], 60),
+			makeSimulation('IKE (Ewa)', [50, 100, 150], 60),
+			makeSimulation('IKZE (Marcin)', [1000, 2000, 3000], 60),
+			makeSimulation('PPK (Marcin)', [10, 20, 30], 60)
+		];
+		const out = aggregateByWrapperOverAges(sims);
+		expect(out.ages).toEqual([60, 61, 62]);
+		expect(out.IKE).toEqual([150, 300, 450]);
+		expect(out.IKZE).toEqual([1000, 2000, 3000]);
+		expect(out.PPK).toEqual([10, 20, 30]);
+	});
+
+	it('ignores non-retirement accounts', () => {
+		const sims: AccountSimulation[] = [
+			makeSimulation('Rachunek maklerski (Marcin)', [9999], 60),
+			makeSimulation('IKE (Marcin)', [100], 60)
+		];
+		const out = aggregateByWrapperOverAges(sims);
+		expect(out.IKE).toEqual([100]);
+		expect(out.IKZE).toEqual([0]);
+		expect(out.PPK).toEqual([0]);
+	});
+
+	it('returns empty arrays for an empty input', () => {
+		const out = aggregateByWrapperOverAges([]);
+		expect(out.ages).toEqual([]);
+		expect(out.IKE).toEqual([]);
+		expect(out.IKZE).toEqual([]);
+		expect(out.PPK).toEqual([]);
+	});
+
+	it('uses zero when a wrapper has no entry at an age', () => {
+		// IKE present at 60, PPK only at 61 — both ages should show.
+		const sims: AccountSimulation[] = [
+			{
+				account_name: 'IKE (Marcin)',
+				starting_balance: 0,
+				total_contributions: 0,
+				total_returns: 0,
+				total_tax_savings: 0,
+				final_balance: 0,
+				yearly_projections: [
+					{
+						year: 2025,
+						age: 60,
+						annual_contribution: 0,
+						balance_end_of_year: 100,
+						cumulative_contributions: 0,
+						cumulative_returns: 0,
+						annual_limit: 0,
+						limit_utilized_pct: 0,
+						tax_savings: 0
+					}
+				]
+			},
+			{
+				account_name: 'PPK (Marcin)',
+				starting_balance: 0,
+				total_contributions: 0,
+				total_returns: 0,
+				total_tax_savings: 0,
+				final_balance: 0,
+				yearly_projections: [
+					{
+						year: 2026,
+						age: 61,
+						annual_contribution: 0,
+						balance_end_of_year: 50,
+						cumulative_contributions: 0,
+						cumulative_returns: 0,
+						annual_limit: 0,
+						limit_utilized_pct: 0,
+						tax_savings: 0
+					}
+				]
+			}
+		];
+		const out = aggregateByWrapperOverAges(sims);
+		expect(out.ages).toEqual([60, 61]);
+		expect(out.IKE).toEqual([100, 0]);
+		expect(out.PPK).toEqual([0, 50]);
+	});
+});
+
+describe('getTotalBalanceAtAge', () => {
+	it('returns the sum of retirement balances at a given age', () => {
+		const sims: AccountSimulation[] = [
+			makeSimulation('IKE (Marcin)', [100, 200], 60),
+			makeSimulation('IKZE (Marcin)', [500, 700], 60),
+			makeSimulation('PPK (Marcin)', [50, 80], 60),
+			makeSimulation('Rachunek maklerski (Marcin)', [9999, 9999], 60)
+		];
+		expect(getTotalBalanceAtAge(sims, 60)).toBe(650);
+		expect(getTotalBalanceAtAge(sims, 61)).toBe(980);
+	});
+
+	it('returns null when no projection covers the age', () => {
+		const sims = [makeSimulation('IKE (Marcin)', [100, 200], 60)];
+		expect(getTotalBalanceAtAge(sims, 70)).toBeNull();
+	});
+});
+
+describe('buildRetirementByWrapperOption', () => {
+	it('emits three stacked series for IKE/IKZE/PPK', () => {
+		const sims = [
+			makeSimulation('IKE (Marcin)', [100, 200], 60),
+			makeSimulation('IKZE (Marcin)', [50, 75], 60),
+			makeSimulation('PPK (Marcin)', [10, 20], 60)
+		];
+		const option = buildRetirementByWrapperOption(sims, []);
+		const series = option.series as Array<{ name: string; stack: string; data: number[] }>;
+		expect(series).toHaveLength(3);
+		expect(series.map((s) => s.name)).toEqual(['IKE', 'IKZE', 'PPK']);
+		expect(series.every((s) => s.stack === 'total')).toBe(true);
+		expect(series[0].data).toEqual([100, 200]);
+	});
+
+	it('adds markLines only for milestone ages within the projection range', () => {
+		const sims = [makeSimulation('IKE (Marcin)', [100, 200, 300], 60)];
+		const option = buildRetirementByWrapperOption(sims, [60, 65, 70]);
+		const series = option.series as Array<{ markLine?: { data: Array<{ xAxis: string }> } }>;
+		const lines = series[0].markLine?.data ?? [];
+		// Only age 60 falls inside [60, 62]; 65 and 70 must be dropped.
+		expect(lines.map((l) => l.xAxis)).toEqual(['60']);
+	});
+
+	it('uses age as x-axis category', () => {
+		const sims = [makeSimulation('IKE (Marcin)', [100, 200], 60)];
+		const option = buildRetirementByWrapperOption(sims, []);
+		const xAxis = option.xAxis as { data: string[]; name: string };
+		expect(xAxis.data).toEqual(['60', '61']);
+		expect(xAxis.name).toBe('Wiek');
 	});
 });
