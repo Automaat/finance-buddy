@@ -206,18 +206,24 @@ func TestBuildUpdatePatchTargetDateValid(t *testing.T) {
 	}
 }
 
-func TestPatchPositiveAmount(t *testing.T) {
-	var dest *decimal.Decimal
-	if err := patchPositiveAmount(rawJSON(t, map[string]any{}), "x", &dest, "msg"); err != nil || dest != nil {
-		t.Fatalf("missing key should be no-op")
+func TestBuildUpdatePatchSetsTargetAmount(t *testing.T) {
+	raw := rawJSON(t, map[string]any{"target_amount": 1234.5})
+	p, vErr := buildUpdatePatch(raw)
+	if vErr != nil {
+		t.Fatalf("unexpected: %+v", vErr)
 	}
-	if err := patchPositiveAmount(rawJSON(t, map[string]any{"x": nil}), "x", &dest, "msg"); err != nil || dest != nil {
-		t.Fatalf("null should be no-op")
+	if p.TargetAmount == nil || !p.TargetAmount.Equal(decimal.NewFromFloat(1234.5)) {
+		t.Fatalf("expected 1234.5, got %+v", p.TargetAmount)
 	}
-	if err := patchPositiveAmount(rawJSON(t, map[string]any{"x": 10}), "x", &dest, "msg"); err != nil || dest == nil {
-		t.Fatalf("positive should set dest")
+}
+
+func TestBuildUpdatePatchSetsMonthlyContribution(t *testing.T) {
+	raw := rawJSON(t, map[string]any{"monthly_contribution": 500})
+	p, vErr := buildUpdatePatch(raw)
+	if vErr != nil {
+		t.Fatalf("unexpected: %+v", vErr)
 	}
-	if !dest.Equal(decimal.NewFromInt(10)) {
-		t.Fatalf("dest mismatch: %s", dest)
+	if p.MonthlyContribution == nil || !p.MonthlyContribution.Equal(decimal.NewFromInt(500)) {
+		t.Fatalf("expected 500, got %+v", p.MonthlyContribution)
 	}
 }
