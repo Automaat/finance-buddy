@@ -117,9 +117,11 @@ async function auditRoute(ctx, vpLabel, route) {
 
 async function auditViewport(browser, vp) {
 	const ctx = await browser.newContext({ ...vp.device });
-	const results = await Promise.all(ROUTES.map((route) => auditRoute(ctx, vp.label, route)));
-	await ctx.close();
-	return results;
+	try {
+		return await Promise.all(ROUTES.map((route) => auditRoute(ctx, vp.label, route)));
+	} finally {
+		await ctx.close();
+	}
 }
 
 async function run() {
