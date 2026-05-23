@@ -166,7 +166,7 @@ type YTMPoint struct {
 // the /bonds page chart.
 func YieldToMaturity(b *TreasuryBond, yoyByYear map[int]decimal.Decimal) []YTMPoint {
 	if b.Type.MaturityMonths() <= 0 {
-		return nil
+		return []YTMPoint{}
 	}
 	years := bondTenorYears(b.Type)
 	out := make([]YTMPoint, 0, years+1)
