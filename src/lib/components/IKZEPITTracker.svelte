@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { resolveApiUrl } from '$lib/api';
+	import { formatPLN, formatPercent } from '$lib/utils/format';
 	import { ownerName, type OwnerOption } from '$lib/types/owners';
 	import { ShieldCheck, Receipt } from 'lucide-svelte';
 
@@ -42,23 +43,17 @@
 		}
 	});
 
-	function fmtPLN(value: number | null | undefined): string {
-		if (value === null || value === undefined) return '—';
-		return value.toLocaleString('pl-PL', { maximumFractionDigits: 0 }) + ' PLN';
-	}
-
-	function fmtPct(value: number | null | undefined): string {
-		if (value === null || value === undefined) return '—';
-		return `${value.toFixed(1)}%`;
-	}
-
+	// marginal_tax_rate ships as a decimal (0.32), but formatPercent expects
+	// percent units — scale up first.
 	function fmtRate(value: number | null | undefined): string {
-		if (value === null || value === undefined) return '—';
-		return `${(value * 100).toFixed(0)}%`;
+		if (value == null) return '—';
+		return formatPercent(value * 100);
 	}
 
 	function progressClass(pct: number | null | undefined): string {
-		if (!pct) return 'bg-surface-300-700';
+		// `== null` matches both null and undefined but not 0 — important so
+		// "no data" (no aggregate at all) stays distinct from "0% used".
+		if (pct == null) return 'bg-surface-300-700';
 		// Order matters: ≥100 must check first or the ≥90 branch shadows it.
 		if (pct >= 100) return 'bg-success-500';
 		if (pct >= 90) return 'bg-warning-500';
@@ -88,8 +83,8 @@
 	{:else}
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 			{#each ikzeRows as row (row.owner_user_id ?? 'shared')}
-				{@const label = row.owner_user_id ? ownerName(owners, row.owner_user_id) : 'Wspólne'}
-				{@const pct = row.percentage_used ?? 0}
+				{@const label = ownerName(owners, row.owner_user_id)}
+				{@const pct = row.percentage_used}
 				<article class="card preset-tonal-surface p-4 space-y-3">
 					<div class="flex items-center justify-between gap-2">
 						<div class="font-semibold flex items-center gap-2">
@@ -105,15 +100,18 @@
 						<div class="flex justify-between text-sm">
 							<span class="text-surface-700-300">Wpłacono</span>
 							<span class="font-semibold">
-								{fmtPLN(row.total_contributed)} / {fmtPLN(row.limit_amount)}
+								{formatPLN(row.total_contributed)} / {formatPLN(row.limit_amount)}
 							</span>
 						</div>
 						<div class="h-2 w-full bg-surface-300-700 rounded-full overflow-hidden">
-							<div class="h-full {progressClass(pct)}" style="width: {Math.min(pct, 100)}%"></div>
+							<div
+								class="h-full {progressClass(pct)}"
+								style="width: {Math.min(pct ?? 0, 100)}%"
+							></div>
 						</div>
 						<div class="flex justify-between text-xs text-surface-600-400">
-							<span>{fmtPct(row.percentage_used)} limitu</span>
-							<span>Pozostało {fmtPLN(row.remaining)}</span>
+							<span>{formatPercent(row.percentage_used)} limitu</span>
+							<span>Pozostało {formatPLN(row.remaining)}</span>
 						</div>
 					</div>
 
@@ -124,7 +122,7 @@
 						</div>
 						<div>
 							<div class="text-xs text-surface-600-400">Szac. oszczędność PIT</div>
-							<div class="font-bold text-success-600-400">{fmtPLN(row.pit_savings)}</div>
+							<div class="font-bold text-success-600-400">{formatPLN(row.pit_savings)}</div>
 						</div>
 					</div>
 				</article>
