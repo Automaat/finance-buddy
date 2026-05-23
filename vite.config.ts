@@ -16,10 +16,10 @@ export default defineConfig({
 			reporter: ['text', 'json', 'html', 'lcov'],
 			exclude: ['node_modules/**', '.svelte-kit/**', 'build/**', '**/*.config.*', '**/.*rc.*'],
 			thresholds: {
-				statements: 56,
-				branches: 39,
-				functions: 56,
-				lines: 59
+				statements: 62,
+				branches: 43,
+				functions: 60,
+				lines: 64
 			}
 		}
 	}

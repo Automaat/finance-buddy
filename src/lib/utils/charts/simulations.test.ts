@@ -68,4 +68,49 @@ describe('buildRetirementProjectionOption', () => {
 		expect(series).toEqual([]);
 		expect(xAxis.data).toEqual([]);
 	});
+
+	it('formats y-axis labels as thousands', () => {
+		const option = buildRetirementProjectionOption([makeSimulation('X', [1000])]);
+		const yAxis = option.yAxis as { axisLabel: { formatter: (n: number) => string } };
+		expect(yAxis.axisLabel.formatter(15000)).toBe('15k');
+		expect(yAxis.axisLabel.formatter(1000)).toBe('1k');
+		expect(yAxis.axisLabel.formatter(0)).toBe('0k');
+	});
+
+	it('tooltip formatter renders rows per series', () => {
+		const option = buildRetirementProjectionOption([makeSimulation('IKE', [1000])]);
+		const tooltip = option.tooltip as unknown as {
+			formatter: (params: Array<{ name: number; seriesName: string; value: number }>) => string;
+		};
+		const html = tooltip.formatter([
+			{ name: 2025, seriesName: 'IKE', value: 12000 },
+			{ name: 2025, seriesName: 'IKZE', value: 7500 }
+		]);
+		expect(html).toContain('Rok 2025');
+		expect(html).toContain('IKE');
+		expect(html).toContain('IKZE');
+		// Polish locale's thousand separator is environment-dependent; assert
+		// the rendered numbers via toLocaleString to stay portable.
+		expect(html).toContain(`${(12000).toLocaleString('pl-PL')} PLN`);
+		expect(html).toContain(`${(7500).toLocaleString('pl-PL')} PLN`);
+	});
+
+	it('tooltip formatter accepts a single (non-array) param', () => {
+		const option = buildRetirementProjectionOption([makeSimulation('IKE', [1000])]);
+		const tooltip = option.tooltip as unknown as {
+			formatter: (param: { name: number; seriesName: string; value: number }) => string;
+		};
+		const html = tooltip.formatter({ name: 2030, seriesName: 'IKE', value: 50000 });
+		expect(html).toContain('Rok 2030');
+		expect(html).toContain('IKE');
+	});
+
+	it('reuses the palette when there are more series than colors', () => {
+		const sims = Array.from({ length: 10 }, (_, i) => makeSimulation(`acc${i}`, [i * 100]));
+		const option = buildRetirementProjectionOption(sims);
+		const series = option.series as Array<{ itemStyle: { color: string } }>;
+		expect(series).toHaveLength(10);
+		// 7th item should wrap back to the first palette colour
+		expect(series[6].itemStyle.color).toBe(series[0].itemStyle.color);
+	});
 });
