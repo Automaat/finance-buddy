@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import Toast from '$lib/components/Toast.svelte';
 	import Confirm from '$lib/components/Confirm.svelte';
+	import KeyboardShortcuts from '$lib/components/KeyboardShortcuts.svelte';
 	import {
 		LayoutDashboard,
 		TrendingUp,
@@ -48,6 +49,10 @@
 
 <Toast />
 <Confirm />
+
+{#if !isLoginPage}
+	<KeyboardShortcuts />
+{/if}
 
 {#if isLoginPage}
 	{@render children?.()}
