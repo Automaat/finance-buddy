@@ -181,12 +181,6 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		TransactionType: req.TransactionType,
 	})
 	if err != nil {
-		if errors.Is(err, ErrDuplicate) {
-			writeDetailError(w, http.StatusConflict,
-				fmt.Sprintf("Transaction for account %d on %s already exists",
-					accountID, req.Date.Format("2006-01-02")))
-			return
-		}
 		h.logger.Error("create transaction", "err", err)
 		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
