@@ -105,30 +105,38 @@ func emptyResult() result {
 }
 
 // sharedInputs bundles the tables both paths need.
+//
+// accounts/assetIDs intentionally include soft-deleted rows so historical
+// snapshot values keep their metadata after delete (issue #394). accountList
+// is the active-only slice for "current state" reads (real-estate property
+// counts, hasInvestment, allocation totals).
 type sharedInputs struct {
-	accounts       map[int]Account
-	accountList    []Account
-	activeAssetIDs map[int]struct{}
-	snapshots      []SnapshotMeta
-	snapshotDate   map[int]time.Time
-	config         AppConfig
-	hasConfig      bool
-	txns           []txnWithAccount
-	salaries       []float64
+	accounts     map[int]Account
+	accountList  []Account
+	assetIDs     map[int]struct{}
+	snapshots    []SnapshotMeta
+	snapshotDate map[int]time.Time
+	config       AppConfig
+	hasConfig    bool
+	txns         []txnWithAccount
+	salaries     []float64
 }
 
 func loadShared(ctx context.Context, s *Store) (sharedInputs, error) {
 	var in sharedInputs
-	accList, err := s.ActiveAccounts(ctx)
+	allAccs, err := s.AllAccounts(ctx)
 	if err != nil {
 		return in, err
 	}
-	in.accountList = accList
 	in.accounts = map[int]Account{}
-	for _, a := range accList {
+	in.accountList = make([]Account, 0, len(allAccs))
+	for _, a := range allAccs {
 		in.accounts[a.ID] = a
+		if a.IsActive {
+			in.accountList = append(in.accountList, a)
+		}
 	}
-	in.activeAssetIDs, err = s.ActiveAssetIDs(ctx)
+	in.assetIDs, err = s.AllAssetIDs(ctx)
 	if err != nil {
 		return in, err
 	}

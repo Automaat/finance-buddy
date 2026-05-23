@@ -73,12 +73,14 @@ func (k ownerKey) ownerUserID() *int {
 }
 
 // ComputeAggregates is the pure-math port of aggregate_spec.compute_aggregates.
-// Caller must filter accounts/assets to is_active=true rows before calling.
+// Pass accounts and asset ids including soft-deleted rows — aggregates are
+// the historical reporting view (issue #394) and need their original
+// type/category metadata to survive a soft delete.
 func ComputeAggregates(
 	snap SnapshotInput,
 	values []SnapshotValueInput,
 	accounts []AccountInput,
-	activeAssetIDs map[int]struct{},
+	knownAssetIDs map[int]struct{},
 ) []AggregateRow {
 	accountMap := map[int]AccountInput{}
 	for _, a := range accounts {
@@ -104,7 +106,7 @@ func ComputeAggregates(
 		v := sv.Value
 		switch {
 		case sv.AssetID != nil:
-			if _, active := activeAssetIDs[*sv.AssetID]; active {
+			if _, known := knownAssetIDs[*sv.AssetID]; known {
 				b := getBucket(ownerKey{shared: true})
 				b.assets = b.assets.Add(v)
 			}

@@ -47,14 +47,15 @@ func (r mergedRow) signedValue() float64 {
 }
 
 // buildMergedRows joins snapshot_values to assets + accounts + snapshots,
-// mirroring _build_merged_df / the raw-path merge. Accounts are the active
-// set; an account_id pointing at an inactive account leaves the account
-// columns nil (LEFT JOIN miss).
+// mirroring _build_merged_df / the raw-path merge. Accounts/assets include
+// soft-deleted rows so historical snapshots keep their metadata after a
+// delete (issue #394); current-state checks filter on Account.IsActive at
+// the call site instead.
 func buildMergedRows(
 	values []SnapshotValue,
 	snapshotDate map[int]time.Time,
 	accounts map[int]Account,
-	activeAssetIDs map[int]struct{},
+	assetIDs map[int]struct{},
 ) []mergedRow {
 	out := make([]mergedRow, 0, len(values))
 	for _, v := range values {
@@ -71,7 +72,7 @@ func buildMergedRows(
 			Value:      val,
 		}
 		if v.AssetID != nil {
-			if _, active := activeAssetIDs[*v.AssetID]; active {
+			if _, known := assetIDs[*v.AssetID]; known {
 				name := "asset" // any non-nil name marks "asset join hit"
 				row.AssetName = &name
 			}
