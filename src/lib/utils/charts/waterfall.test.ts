@@ -105,4 +105,50 @@ describe('buildWaterfallOption', () => {
 		expect(html).toContain('Δ Zobowiązania');
 		expect(html).toContain('Saldo końcowe');
 	});
+
+	it('tooltip returns empty string when dataIndex is out of range', () => {
+		const opt = buildWaterfallOption(steps);
+		const tooltip = opt.tooltip as unknown as {
+			formatter: (params: Array<{ dataIndex: number }>) => string;
+		};
+		expect(tooltip.formatter([{ dataIndex: 999 }])).toBe('');
+	});
+
+	it('tooltip accepts a single (non-array) param', () => {
+		const opt = buildWaterfallOption(steps);
+		const tooltip = opt.tooltip as unknown as {
+			formatter: (params: { dataIndex: number }) => string;
+		};
+		expect(tooltip.formatter({ dataIndex: 0 })).toContain('Saldo początkowe');
+	});
+
+	it('xAxis falls back to the raw date when it is not parsable', () => {
+		const opt = buildWaterfallOption([
+			{
+				date: 'not-a-date',
+				snapshotId: 1,
+				startingNetWorth: 0,
+				endingNetWorth: 100,
+				assetDelta: 100,
+				liabilityDelta: 0
+			},
+			{
+				date: 'still-not-a-date',
+				snapshotId: 2,
+				startingNetWorth: 100,
+				endingNetWorth: 200,
+				assetDelta: 100,
+				liabilityDelta: 0
+			}
+		]);
+		const xAxis = opt.xAxis as { data: string[] };
+		expect(xAxis.data).toEqual(['not-a-date', 'still-not-a-date']);
+	});
+
+	it('both yAxis formatters render k-shorthand', () => {
+		const opt = buildWaterfallOption(steps);
+		const yAxes = opt.yAxis as Array<{ axisLabel: { formatter: (v: number) => string } }>;
+		expect(yAxes[0].axisLabel.formatter(12000)).toBe('12k');
+		expect(yAxes[1].axisLabel.formatter(45000)).toBe('45k');
+	});
 });

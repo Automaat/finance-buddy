@@ -42,6 +42,14 @@ describe('computePresetBounds', () => {
 	it('returns now-5y for "5y"', () => {
 		expect(computePresetBounds('5y', NOW)).toEqual({ from: '2021-05-23', to: '2026-05-23' });
 	});
+
+	it('returns now-6m for "6m"', () => {
+		expect(computePresetBounds('6m', NOW)).toEqual({ from: '2025-11-23', to: '2026-05-23' });
+	});
+
+	it('returns now-3y for "3y"', () => {
+		expect(computePresetBounds('3y', NOW)).toEqual({ from: '2023-05-23', to: '2026-05-23' });
+	});
 });
 
 describe('resolveRangeParams', () => {

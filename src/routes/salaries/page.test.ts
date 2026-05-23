@@ -286,3 +286,242 @@ describe('Salaries page — saveSalary validation & error display', () => {
 		await waitFor(() => expect(invalidateAll).toHaveBeenCalled());
 	});
 });
+
+describe('Salaries page — equity grant flows', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date('2026-05-20T12:00:00Z'));
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+		vi.unstubAllGlobals();
+	});
+
+	it('blocks save when company is empty', async () => {
+		const fetchMock = vi.fn();
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(Page, { props: { data: baseData } });
+		await fireEvent.click(screen.getByRole('button', { name: /Nowy grant/i }));
+		// Modal renders with defaults (RSU, 1000 shares etc.), but company is empty.
+		const sharesInput = screen.getByLabelText(/Liczba akcji/) as HTMLInputElement;
+		await fireEvent.input(sharesInput, { target: { value: '1000' } });
+		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+
+		await waitFor(() => expect(screen.getByText('Firma nie może być pusta')).toBeTruthy());
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it('blocks save when total_shares is zero', async () => {
+		const fetchMock = vi.fn();
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(Page, { props: { data: baseData } });
+		await fireEvent.click(screen.getByRole('button', { name: /Nowy grant/i }));
+		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
+		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
+		const sharesInput = screen.getByLabelText(/Liczba akcji/) as HTMLInputElement;
+		await fireEvent.input(sharesInput, { target: { value: '0' } });
+		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+
+		await waitFor(() => expect(screen.getByText('Liczba akcji musi być większa niż 0')).toBeTruthy());
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it('blocks save when option type missing strike price', async () => {
+		const fetchMock = vi.fn();
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(Page, { props: { data: baseData } });
+		await fireEvent.click(screen.getByRole('button', { name: /Nowy grant/i }));
+		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
+		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
+		const sharesInput = screen.getByLabelText(/Liczba akcji/) as HTMLInputElement;
+		await fireEvent.input(sharesInput, { target: { value: '1000' } });
+		const typeSelect = screen.getByLabelText(/Typ\*/) as HTMLSelectElement;
+		await fireEvent.change(typeSelect, { target: { value: 'option' } });
+		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+
+		await waitFor(() =>
+			expect(screen.getByText('Opcje wymagają ceny wykonania (strike price)')).toBeTruthy()
+		);
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it('POSTs a grant and closes the modal on success', async () => {
+		const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(Page, { props: { data: baseData } });
+		await fireEvent.click(screen.getByRole('button', { name: /Nowy grant/i }));
+		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
+		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
+		const sharesInput = screen.getByLabelText(/Liczba akcji/) as HTMLInputElement;
+		await fireEvent.input(sharesInput, { target: { value: '1000' } });
+		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+
+		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+		const [url, init] = fetchMock.mock.calls[0];
+		expect(url).toBe('http://localhost:8000/api/equity-grants');
+		expect((init as RequestInit).method).toBe('POST');
+		const body = JSON.parse((init as RequestInit).body as string);
+		expect(body).toMatchObject({
+			type: 'rsu',
+			company: 'Acme',
+			owner_user_id: 1,
+			total_shares: 1000
+		});
+		await waitFor(() => expect(invalidateAll).toHaveBeenCalled());
+	});
+
+	it('renders 422-detail array errors joined with semicolons', async () => {
+		const fetchMock = vi.fn().mockResolvedValue({
+			ok: false,
+			json: async () => ({
+				detail: [{ msg: 'shares too low' }, { msg: 'bad date' }]
+			})
+		});
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(Page, { props: { data: baseData } });
+		await fireEvent.click(screen.getByRole('button', { name: /Nowy grant/i }));
+		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
+		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
+		const sharesInput = screen.getByLabelText(/Liczba akcji/) as HTMLInputElement;
+		await fireEvent.input(sharesInput, { target: { value: '1000' } });
+		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+
+		await waitFor(() => expect(screen.getByText('shares too low; bad date')).toBeTruthy());
+	});
+
+	it('renders string detail unchanged on 409 conflict', async () => {
+		const fetchMock = vi.fn().mockResolvedValue({
+			ok: false,
+			json: async () => ({ detail: 'Grant already exists' })
+		});
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(Page, { props: { data: baseData } });
+		await fireEvent.click(screen.getByRole('button', { name: /Nowy grant/i }));
+		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
+		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
+		const sharesInput = screen.getByLabelText(/Liczba akcji/) as HTMLInputElement;
+		await fireEvent.input(sharesInput, { target: { value: '1000' } });
+		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+
+		await waitFor(() => expect(screen.getByText('Grant already exists')).toBeTruthy());
+	});
+});
+
+describe('Salaries page — valuation flows', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date('2026-05-20T12:00:00Z'));
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+		vi.unstubAllGlobals();
+	});
+
+	it('blocks save when company is empty', async () => {
+		const fetchMock = vi.fn();
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(Page, { props: { data: baseData } });
+		await fireEvent.click(screen.getByRole('button', { name: /Nowa wycena/i }));
+		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+
+		await waitFor(() => expect(screen.getByText('Firma nie może być pusta')).toBeTruthy());
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it('blocks save when fmv_low > fmv_per_share', async () => {
+		const fetchMock = vi.fn();
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(Page, { props: { data: baseData } });
+		await fireEvent.click(screen.getByRole('button', { name: /Nowa wycena/i }));
+		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
+		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
+		const fmv = screen.getByLabelText(/FMV per share/) as HTMLInputElement;
+		await fireEvent.input(fmv, { target: { value: '5' } });
+		const low = screen.getByLabelText(/FMV low/) as HTMLInputElement;
+		await fireEvent.input(low, { target: { value: '10' } });
+		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+
+		await waitFor(() =>
+			expect(screen.getByText('fmv_low nie może być większe niż fmv_per_share')).toBeTruthy()
+		);
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it('blocks save when fmv_high < fmv_per_share', async () => {
+		const fetchMock = vi.fn();
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(Page, { props: { data: baseData } });
+		await fireEvent.click(screen.getByRole('button', { name: /Nowa wycena/i }));
+		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
+		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
+		const fmv = screen.getByLabelText(/FMV per share/) as HTMLInputElement;
+		await fireEvent.input(fmv, { target: { value: '10' } });
+		const high = screen.getByLabelText(/FMV high/) as HTMLInputElement;
+		await fireEvent.input(high, { target: { value: '5' } });
+		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+
+		await waitFor(() =>
+			expect(screen.getByText('fmv_high nie może być mniejsze niż fmv_per_share')).toBeTruthy()
+		);
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it('POSTs a valuation and closes the modal on success', async () => {
+		const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(Page, { props: { data: baseData } });
+		await fireEvent.click(screen.getByRole('button', { name: /Nowa wycena/i }));
+		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
+		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
+		const fmv = screen.getByLabelText(/FMV per share/) as HTMLInputElement;
+		await fireEvent.input(fmv, { target: { value: '12.5' } });
+		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+
+		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+		const [url, init] = fetchMock.mock.calls[0];
+		expect(url).toBe('http://localhost:8000/api/company-valuations');
+		expect((init as RequestInit).method).toBe('POST');
+		const body = JSON.parse((init as RequestInit).body as string);
+		expect(body).toMatchObject({
+			company: 'Acme',
+			currency: 'USD',
+			fmv_per_share: 12.5,
+			source: '409a'
+		});
+		await waitFor(() => expect(invalidateAll).toHaveBeenCalled());
+	});
+
+	it('renders 422-detail array errors joined with semicolons', async () => {
+		const fetchMock = vi.fn().mockResolvedValue({
+			ok: false,
+			json: async () => ({
+				detail: [{ msg: 'fmv missing' }, { msg: 'bad source' }]
+			})
+		});
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(Page, { props: { data: baseData } });
+		await fireEvent.click(screen.getByRole('button', { name: /Nowa wycena/i }));
+		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
+		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
+		const fmv = screen.getByLabelText(/FMV per share/) as HTMLInputElement;
+		await fireEvent.input(fmv, { target: { value: '12.5' } });
+		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+
+		await waitFor(() => expect(screen.getByText('fmv missing; bad source')).toBeTruthy());
+	});
+});

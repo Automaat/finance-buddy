@@ -155,4 +155,107 @@ describe('Simulations Page — run simulation', () => {
 		await waitFor(() => expect(screen.getByText(/Simulation failed/)).toBeTruthy());
 		expect(screen.queryByRole('heading', { name: 'Wyniki symulacji' })).toBeNull();
 	});
+
+	it('renders PPK and brokerage controls per owner', () => {
+		render(Page, { props: { data: mockData } });
+		expect(screen.getByText('PPK (Marcin)')).toBeTruthy();
+		expect(screen.getByText('PPK (Ewa)')).toBeTruthy();
+		expect(screen.getByText('Rachunek maklerski (Marcin)')).toBeTruthy();
+		expect(screen.getByText('Rachunek maklerski (Ewa)')).toBeTruthy();
+	});
+
+	it('renders the Założenia parameters block', () => {
+		render(Page, { props: { data: mockData } });
+		expect(screen.getByText(/Roczna stopa zwrotu/)).toBeTruthy();
+		expect(screen.getByText(/Wzrost limitów wpłat/)).toBeTruthy();
+		expect(screen.getByText(/Przewidywany wzrost wynagrodzeń/)).toBeTruthy();
+	});
+
+	it('blocks simulation when PPK employee rate is out of range', async () => {
+		const fetchMock = vi.fn();
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(Page, { props: { data: mockData } });
+		// Enable PPK for Marcin via its checkbox.
+		const ppkLabel = screen.getByText('PPK (Marcin)');
+		const ppkCheckbox = ppkLabel.parentElement!.querySelector(
+			'input[type="checkbox"]'
+		) as HTMLInputElement;
+		await fireEvent.click(ppkCheckbox);
+
+		// Find employee-rate input within the same PPK card.
+		const card = ppkLabel.closest('.card') as HTMLElement;
+		const employeeInput = Array.from(card.querySelectorAll('input[type="number"]')).find(
+			(el) => (el as HTMLInputElement).min === '0.5'
+		) as HTMLInputElement;
+		await fireEvent.input(employeeInput, { target: { value: '10' } });
+
+		await fireEvent.click(screen.getByRole('button', { name: 'Uruchom symulację' }));
+
+		await waitFor(() =>
+			expect(
+				screen.getByText(/PPK Marcin: Składka pracownika musi być w zakresie 0\.5-4%/)
+			).toBeTruthy()
+		);
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it('blocks simulation when PPK employer rate is out of range', async () => {
+		const fetchMock = vi.fn();
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(Page, { props: { data: mockData } });
+		const ppkLabel = screen.getByText('PPK (Marcin)');
+		const ppkCheckbox = ppkLabel.parentElement!.querySelector(
+			'input[type="checkbox"]'
+		) as HTMLInputElement;
+		await fireEvent.click(ppkCheckbox);
+
+		const card = ppkLabel.closest('.card') as HTMLElement;
+		const employerInput = Array.from(card.querySelectorAll('input[type="number"]')).find(
+			(el) => (el as HTMLInputElement).min === '1.5'
+		) as HTMLInputElement;
+		await fireEvent.input(employerInput, { target: { value: '10' } });
+
+		await fireEvent.click(screen.getByRole('button', { name: 'Uruchom symulację' }));
+
+		await waitFor(() =>
+			expect(
+				screen.getByText(/PPK Marcin: Składka pracodawcy musi być w zakresie 1\.5-4%/)
+			).toBeTruthy()
+		);
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it('blocks simulation when salary above threshold but belowThreshold checked', async () => {
+		const fetchMock = vi.fn();
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(Page, { props: { data: mockData } });
+		const ppkLabel = screen.getByText('PPK (Marcin)');
+		const ppkCheckbox = ppkLabel.parentElement!.querySelector(
+			'input[type="checkbox"]'
+		) as HTMLInputElement;
+		await fireEvent.click(ppkCheckbox);
+
+		const card = ppkLabel.closest('.card') as HTMLElement;
+		// Salary input has step="500".
+		const salaryInput = Array.from(card.querySelectorAll('input[type="number"]')).find(
+			(el) => (el as HTMLInputElement).step === '500'
+		) as HTMLInputElement;
+		await fireEvent.input(salaryInput, { target: { value: '999999' } });
+		// Check the "below threshold" box — contradicts the very large salary.
+		const belowThresholdLabel = card.querySelector('label.flex.items-start') as HTMLElement;
+		const belowThresholdCheckbox = belowThresholdLabel.querySelector(
+			'input[type="checkbox"]'
+		) as HTMLInputElement;
+		await fireEvent.click(belowThresholdCheckbox);
+
+		await fireEvent.click(screen.getByRole('button', { name: 'Uruchom symulację' }));
+
+		await waitFor(() =>
+			expect(screen.getByText(/PPK Marcin: Wynagrodzenie przekracza próg/)).toBeTruthy()
+		);
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
 });
