@@ -130,6 +130,7 @@ func registerLedgerRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger)
 	r.Delete("/api/accounts/{account_id}/transactions/{transaction_id}", txHandler.Delete)
 	r.Get("/api/transactions", txHandler.ListAll)
 	r.Get("/api/transactions/counts", txHandler.Counts)
+	r.Get("/api/transactions/types", txHandler.Types)
 
 	dpStore := debtpayments.NewStore(pool)
 	dpHandler := debtpayments.NewHandler(dpStore, logger)

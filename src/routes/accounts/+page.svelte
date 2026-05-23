@@ -46,10 +46,43 @@
 		amount: 0,
 		date: new Date().toISOString().split('T')[0],
 		owner_user_id: untrack(() => defaultOwnerUserId),
-		transaction_type: null as string | null
+		transaction_type: 'employee' as string
 	});
 	let transactionError = $state('');
 	let savingTransaction = $state(false);
+
+	interface TransactionTypeOption {
+		value: string;
+		label: string;
+	}
+	// Fallback list keeps the dropdown usable if /api/transactions/types
+	// fails (network blip, backend down). Matches the canonical Go enum so
+	// validation accepts every value the UI offers.
+	const FALLBACK_TRANSACTION_TYPES: TransactionTypeOption[] = [
+		{ value: 'employee', label: 'Wpłata pracownika' },
+		{ value: 'employer', label: 'Wpłata pracodawcy' },
+		{ value: 'government', label: 'Dopłata państwa' },
+		{ value: 'withdrawal', label: 'Wypłata' }
+	];
+	let transactionTypes: TransactionTypeOption[] = $state(FALLBACK_TRANSACTION_TYPES);
+
+	// Only PPK accounts accept employer + government contributions; for
+	// non-PPK wrappers (IKE, IKZE, stocks…) hide those rows.
+	const visibleTransactionTypes = $derived(
+		transactionTypes.filter(
+			(t) =>
+				selectedAccountWrapper === 'PPK' || (t.value !== 'employer' && t.value !== 'government')
+		)
+	);
+
+	onMount(async () => {
+		try {
+			const res = await fetch(`${apiUrl}/api/transactions/types`);
+			if (res.ok) transactionTypes = (await res.json()) as TransactionTypeOption[];
+		} catch (err) {
+			console.error('Failed to load transaction types:', err);
+		}
+	});
 
 	const categoryLabels: Record<string, string> = {
 		bank: 'Konto bankowe',
@@ -250,7 +283,7 @@
 			amount: 0,
 			date: new Date().toISOString().split('T')[0],
 			owner_user_id: defaultOwnerUserId,
-			transaction_type: null
+			transaction_type: 'employee'
 		};
 		transactionError = '';
 	}
@@ -277,7 +310,7 @@
 				amount: 0,
 				date: new Date().toISOString().split('T')[0],
 				owner_user_id: defaultOwnerUserId,
-				transaction_type: null
+				transaction_type: 'employee'
 			};
 
 			await loadTransactions();
@@ -747,11 +780,9 @@
 							<label class="label">
 								<span class="font-semibold text-sm">Typ wpłaty</span>
 								<select class="select" bind:value={transactionFormData.transaction_type}>
-									<option value="">Wpłata pracownika</option>
-									{#if selectedAccountWrapper === 'PPK'}
-										<option value="employer">Wpłata pracodawcy</option>
-									{/if}
-									<option value="withdrawal">Wypłata</option>
+									{#each visibleTransactionTypes as t}
+										<option value={t.value}>{t.label}</option>
+									{/each}
 								</select>
 							</label>
 						{/if}

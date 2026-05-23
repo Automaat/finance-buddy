@@ -8,6 +8,38 @@ import pytest
 from fixtures.seed import ACCOUNT_MARCIN_BANK, ACCOUNT_MARCIN_IKE, PERSONA_MARCIN
 
 
+def test_get_transaction_types_lists_canonical_enum(client: httpx.Client) -> None:
+    response = client.get("/api/transactions/types")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert isinstance(body, list)
+    values = [item["value"] for item in body]
+    # Must include the four canonical types in the documented order so the
+    # frontend dropdown stays deterministic.
+    assert values == ["employee", "employer", "government", "withdrawal"]
+    for item in body:
+        assert isinstance(item["label"], str)
+        assert item["label"], "label must be non-empty"
+
+
+def test_create_transaction_rejects_empty_transaction_type(
+    client: httpx.Client, owner_ids: dict[str, int]
+) -> None:
+    # Empty string isn't in ValidTypes — locks the contract so a UI bug
+    # mapping "employee" back to "" gets caught.
+    account_id = _account_id_by_name(client, ACCOUNT_MARCIN_IKE)
+    response = client.post(
+        f"/api/accounts/{account_id}/transactions",
+        json={
+            "amount": 100.0,
+            "date": "2025-10-15",
+            "owner_user_id": owner_ids[PERSONA_MARCIN],
+            "transaction_type": "",
+        },
+    )
+    assert response.status_code == 422, response.text
+
+
 def _account_id_by_name(client: httpx.Client, name: str) -> int:
     response = client.get("/api/accounts")
     assert response.status_code == 200, response.text
