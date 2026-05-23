@@ -9,7 +9,6 @@ const SIDEBAR_LINKS: { label: string; path: string }[] = [
 	{ label: 'Cele', path: '/goals' },
 	{ label: 'Snapshoty', path: '/snapshots' },
 	{ label: 'Wynagrodzenia', path: '/salaries' },
-	{ label: 'Konfiguracja', path: '/config' },
 	{ label: 'Ustawienia', path: '/settings' }
 ];
 

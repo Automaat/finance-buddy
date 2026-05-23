@@ -16,7 +16,6 @@
 		Settings,
 		Target,
 		User,
-		Users,
 		ShieldCheck,
 		LogOut
 	} from 'lucide-svelte';
@@ -24,7 +23,7 @@
 
 	let { children, data }: { children: import('svelte').Snippet; data: LayoutData } = $props();
 
-	const baseNav = [
+	const navItems = [
 		{ href: '/', label: 'Dashboard', icon: LayoutDashboard },
 		{ href: '/metryki', label: 'Metryki', icon: TrendingUp },
 		{ href: '/simulations', label: 'Symulacje', icon: Sparkles },
@@ -35,23 +34,15 @@
 		{ href: '/goals', label: 'Cele', icon: Target },
 		{ href: '/snapshots', label: 'Snapshoty', icon: Camera },
 		{ href: '/salaries', label: 'Wynagrodzenia', icon: Banknote },
-		{ href: '/config', label: 'Konfiguracja', icon: Settings },
-		{ href: '/settings', label: 'Ustawienia', icon: User }
+		{ href: '/settings', label: 'Ustawienia', icon: Settings }
 	];
-
-	// The user-management screen is admin-only.
-	const navItems = $derived(
-		data.user?.isAdmin
-			? [...baseNav, { href: '/users', label: 'Użytkownicy', icon: Users }]
-			: baseNav
-	);
 
 	const isLoginPage = $derived($page.url.pathname === '/login');
 
 	function isActive(href: string): boolean {
-		return href === '/simulations'
-			? $page.url.pathname.startsWith('/simulations')
-			: $page.url.pathname === href;
+		if (href === '/simulations') return $page.url.pathname.startsWith('/simulations');
+		if (href === '/settings') return $page.url.pathname.startsWith('/settings');
+		return $page.url.pathname === href;
 	}
 </script>
 
