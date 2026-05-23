@@ -7,9 +7,8 @@ export interface ChartHandle {
 }
 
 // createChart wires echarts.init + a ResizeObserver on the container and
-// returns a single dispose() that tears down both. Use inside onMount and
-// return chart.dispose from the cleanup callback so navigation away can't
-// leak canvases or observers.
+// returns a ChartHandle. Use inside onMount and call handle.dispose() from
+// the cleanup callback so navigation away can't leak canvases or observers.
 //
 // ResizeObserver is preferred over a global window resize listener: it
 // fires only when the container actually changes size (e.g. layout shifts,

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
+	import type { EChartsOption } from 'echarts';
 	import MetricCard from '$lib/components/MetricCard.svelte';
 	import { TrendingUp, CheckCircle2, Lightbulb } from 'lucide-svelte';
 	import {
@@ -41,10 +42,7 @@
 	onMount(() => {
 		const handles: ChartHandle[] = [];
 
-		const mount = (
-			el: HTMLDivElement,
-			option: Parameters<ChartHandle['chart']['setOption']>[0]
-		) => {
+		const mount = (el: HTMLDivElement, option: EChartsOption) => {
 			const handle = createChart(el);
 			handle.chart.setOption(option);
 			handles.push(handle);
