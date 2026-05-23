@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/Automaat/finance-buddy/backend-go/internal/allocation"
 	"github.com/Automaat/finance-buddy/backend-go/internal/auth"
 	"github.com/Automaat/finance-buddy/backend-go/internal/bonds"
 	"github.com/Automaat/finance-buddy/backend-go/internal/cpi"
@@ -188,6 +189,11 @@ func initDB(ctx context.Context, dsn string, logger *slog.Logger, adminUsername,
 	}
 	if err := bonds.NewStore(pool).EnsureSchema(ctx); err != nil {
 		logger.Error("ensure treasury_bonds schema", "err", err)
+		pool.Close()
+		return nil, 2
+	}
+	if err := allocation.NewStore(pool).EnsureSchema(ctx); err != nil {
+		logger.Error("ensure allocation_targets schema", "err", err)
 		pool.Close()
 		return nil, 2
 	}

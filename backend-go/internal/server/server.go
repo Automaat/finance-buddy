@@ -18,6 +18,7 @@ import (
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/accounts"
 	"github.com/Automaat/finance-buddy/backend-go/internal/aggregates"
+	"github.com/Automaat/finance-buddy/backend-go/internal/allocation"
 	"github.com/Automaat/finance-buddy/backend-go/internal/assets"
 	"github.com/Automaat/finance-buddy/backend-go/internal/auth"
 	"github.com/Automaat/finance-buddy/backend-go/internal/bonds"
@@ -282,6 +283,18 @@ func registerPortfolioRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logg
 		r.Get("/{id}/ytm", bondsHandler.YTM)
 		r.Put("/{id}", bondsHandler.Update)
 		r.Delete("/{id}", bondsHandler.Delete)
+	})
+
+	allocStore := allocation.NewStore(pool)
+	allocHoldings := allocation.NewHoldingsFromSnapshots(pool)
+	allocHandler := allocation.NewHandler(allocStore, allocHoldings, logger)
+	r.Route("/api/allocation", func(r chi.Router) {
+		r.Get("/targets", allocHandler.List)
+		r.Post("/targets", allocHandler.Create)
+		r.Put("/targets/replace", allocHandler.Replace)
+		r.Put("/targets/{id}", allocHandler.Update)
+		r.Delete("/targets/{id}", allocHandler.Delete)
+		r.Get("/drift", allocHandler.Drift)
 	})
 }
 

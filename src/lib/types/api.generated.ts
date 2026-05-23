@@ -503,6 +503,279 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/allocation/drift": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Actual vs target allocation drift */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            scopes?: {
+                                has_complete_target?: boolean;
+                                items?: {
+                                    category?: string;
+                                    /** Format: double */
+                                    current_percentage?: number;
+                                    /** Format: double */
+                                    current_value?: number;
+                                    /** Format: double */
+                                    drift_pp?: number;
+                                    owner_user_id?: number | null;
+                                    /** Format: double */
+                                    rebalance_amount?: number;
+                                    severity?: string;
+                                    /** Format: double */
+                                    target_percentage?: number;
+                                }[];
+                                owner_user_id?: number | null;
+                                /** Format: double */
+                                target_sum_pct?: number;
+                                /** Format: double */
+                                total_value?: number;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/allocation/targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List allocation targets */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            targets?: {
+                                category?: string;
+                                /** Format: date-time */
+                                created_at?: string;
+                                id?: number;
+                                owner_user_id?: number | null;
+                                /** Format: double */
+                                target_pct?: number;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create allocation target */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        category?: string;
+                        owner_user_id?: number | null;
+                        /** Format: double */
+                        target_pct?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            category?: string;
+                            /** Format: date-time */
+                            created_at?: string;
+                            id?: number;
+                            owner_user_id?: number | null;
+                            /** Format: double */
+                            target_pct?: number;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/allocation/targets/replace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace all targets for one owner scope */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        owner_user_id?: number | null;
+                        targets?: {
+                            category?: string;
+                            /** Format: double */
+                            target_pct?: number;
+                        }[];
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            targets?: {
+                                category?: string;
+                                /** Format: date-time */
+                                created_at?: string;
+                                id?: number;
+                                owner_user_id?: number | null;
+                                /** Format: double */
+                                target_pct?: number;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/allocation/targets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update allocation target */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: double */
+                        target_pct?: number | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            category?: string;
+                            /** Format: date-time */
+                            created_at?: string;
+                            id?: number;
+                            owner_user_id?: number | null;
+                            /** Format: double */
+                            target_pct?: number;
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete allocation target */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/assets": {
         parameters: {
             query?: never;

@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/accounts"
+	"github.com/Automaat/finance-buddy/backend-go/internal/allocation"
 	"github.com/Automaat/finance-buddy/backend-go/internal/apispec"
 	"github.com/Automaat/finance-buddy/backend-go/internal/assets"
 	"github.com/Automaat/finance-buddy/backend-go/internal/bonds"
@@ -59,6 +60,7 @@ func allRoutes() []apispec.Route {
 		transactions.APISpec,
 		debtpayments.APISpec,
 		debts.APISpec,
+		allocation.APISpec,
 	}
 	for _, s := range specs {
 		routes = append(routes, s...)

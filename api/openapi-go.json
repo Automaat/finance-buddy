@@ -716,6 +716,365 @@
         ]
       }
     },
+    "/api/allocation/drift": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "scopes": {
+                      "items": {
+                        "properties": {
+                          "has_complete_target": {
+                            "type": "boolean"
+                          },
+                          "items": {
+                            "items": {
+                              "properties": {
+                                "category": {
+                                  "type": "string"
+                                },
+                                "current_percentage": {
+                                  "format": "double",
+                                  "type": "number"
+                                },
+                                "current_value": {
+                                  "format": "double",
+                                  "type": "number"
+                                },
+                                "drift_pp": {
+                                  "format": "double",
+                                  "type": "number"
+                                },
+                                "owner_user_id": {
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "rebalance_amount": {
+                                  "format": "double",
+                                  "type": "number"
+                                },
+                                "severity": {
+                                  "type": "string"
+                                },
+                                "target_percentage": {
+                                  "format": "double",
+                                  "type": "number"
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "owner_user_id": {
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "target_sum_pct": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "total_value": {
+                            "format": "double",
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Actual vs target allocation drift",
+        "tags": [
+          "allocation"
+        ]
+      }
+    },
+    "/api/allocation/targets": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "targets": {
+                      "items": {
+                        "properties": {
+                          "category": {
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "integer"
+                          },
+                          "owner_user_id": {
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "target_pct": {
+                            "format": "double",
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List allocation targets",
+        "tags": [
+          "allocation"
+        ]
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "category": {
+                    "type": "string"
+                  },
+                  "owner_user_id": {
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "target_pct": {
+                    "format": "double",
+                    "type": "number"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "category": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "target_pct": {
+                      "format": "double",
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "summary": "Create allocation target",
+        "tags": [
+          "allocation"
+        ]
+      }
+    },
+    "/api/allocation/targets/replace": {
+      "put": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "owner_user_id": {
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "targets": {
+                    "items": {
+                      "properties": {
+                        "category": {
+                          "type": "string"
+                        },
+                        "target_pct": {
+                          "format": "double",
+                          "type": "number"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "targets": {
+                      "items": {
+                        "properties": {
+                          "category": {
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "integer"
+                          },
+                          "owner_user_id": {
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "target_pct": {
+                            "format": "double",
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Replace all targets for one owner scope",
+        "tags": [
+          "allocation"
+        ]
+      }
+    },
+    "/api/allocation/targets/{id}": {
+      "delete": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "summary": "Delete allocation target",
+        "tags": [
+          "allocation"
+        ]
+      },
+      "put": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "target_pct": {
+                    "format": "double",
+                    "nullable": true,
+                    "type": "number"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "category": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "target_pct": {
+                      "format": "double",
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Update allocation target",
+        "tags": [
+          "allocation"
+        ]
+      }
+    },
     "/api/assets": {
       "get": {
         "responses": {
