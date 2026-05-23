@@ -23,6 +23,7 @@ vi.mock('$lib/stores/toast.svelte', () => ({
 function pageData(targets: unknown[] = [], owners: unknown[] = []) {
 	return {
 		data: {
+			user: null,
 			targets: { targets },
 			owners
 		}
