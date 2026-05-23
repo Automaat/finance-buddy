@@ -6,6 +6,7 @@
 	import { isMobile, isTablet } from '$lib/utils/viewport';
 	import { chartPalette, chartAccent, chartAccentGradient } from '$lib/utils/theme';
 	import { ownerName, type OwnerOption } from '$lib/types/owners';
+	import { createChart } from '$lib/utils/charts/lifecycle';
 
 	interface Props {
 		netWorthHistory: { date: string; value: number }[];
@@ -33,7 +34,8 @@
 	onMount(() => {
 		if (!chartContainer || !pieChartContainer) return;
 
-		lineChart = echarts.init(chartContainer);
+		const lineHandle = createChart(chartContainer);
+		lineChart = lineHandle.chart;
 
 		const lineOption: EChartsOption = {
 			title: {
@@ -73,7 +75,8 @@
 
 		lineChart.setOption(lineOption);
 
-		pieChart = echarts.init(pieChartContainer);
+		const pieHandle = createChart(pieChartContainer);
+		pieChart = pieHandle.chart;
 
 		const pieOption: EChartsOption = {
 			title: {
@@ -104,17 +107,9 @@
 
 		pieChart.setOption(pieOption);
 
-		const handleResize = () => {
-			lineChart?.resize();
-			pieChart?.resize();
-		};
-
-		window.addEventListener('resize', handleResize);
-
 		return () => {
-			window.removeEventListener('resize', handleResize);
-			lineChart?.dispose();
-			pieChart?.dispose();
+			lineHandle.dispose();
+			pieHandle.dispose();
 		};
 	});
 

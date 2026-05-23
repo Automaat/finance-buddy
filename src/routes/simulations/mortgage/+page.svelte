@@ -4,6 +4,7 @@
 	import { env } from '$env/dynamic/public';
 	import * as echarts from 'echarts';
 	import type { EChartsOption } from 'echarts';
+	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
 
 	interface MortgageVsInvestYearlyRow {
 		year: number;
@@ -62,13 +63,15 @@
 	// Chart
 	let chartContainer: HTMLDivElement | undefined = $state();
 	let chart: echarts.ECharts | null = null;
+	let chartHandle: ChartHandle | null = null;
 
 	async function runSimulation() {
 		loading = true;
 		error = '';
 
-		if (chart) {
-			chart.dispose();
+		if (chartHandle) {
+			chartHandle.dispose();
+			chartHandle = null;
 			chart = null;
 		}
 		results = null;
@@ -112,8 +115,9 @@
 	function renderChart() {
 		if (!results || !chartContainer) return;
 
-		if (!chart) {
-			chart = echarts.init(chartContainer);
+		if (!chartHandle) {
+			chartHandle = createChart(chartContainer);
+			chart = chartHandle.chart;
 		}
 
 		const years = results.yearly_projections.map((r) => `Rok ${r.year}`);
@@ -184,15 +188,14 @@
 			]
 		};
 
-		chart.setOption(option);
+		chart?.setOption(option);
 	}
 
 	onMount(() => {
-		const handleResize = () => chart?.resize();
-		if (browser) window.addEventListener('resize', handleResize);
 		return () => {
-			if (browser) window.removeEventListener('resize', handleResize);
-			chart?.dispose();
+			chartHandle?.dispose();
+			chartHandle = null;
+			chart = null;
 		};
 	});
 
