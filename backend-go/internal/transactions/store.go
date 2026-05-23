@@ -1,6 +1,8 @@
 // Package transactions implements transaction endpoints for investment +
-// retirement accounts. Soft-delete is the only delete; create enforces
-// one-per-day per account.
+// retirement accounts. Soft-delete is the only delete; multiple active
+// transactions per (account, date) are allowed (fees, dividends, splits,
+// employer/employee PPK rows). PPK generation has its own idempotency
+// guard in internal/retirement.
 package transactions
 
 import (
@@ -49,7 +51,6 @@ var (
 	ErrAccountNotFound      = errors.New("account not found")
 	ErrAccountNotInvestment = errors.New("account is not investment/retirement")
 	ErrNotFound             = errors.New("transaction not found")
-	ErrDuplicate            = errors.New("transaction for date already exists")
 	ErrCrossAccount         = errors.New("transaction does not belong to account")
 )
 
@@ -182,22 +183,10 @@ func (s *Store) ListAll(ctx context.Context, f ListFilter) ([]TxnWithAccount, er
 	return out, nil
 }
 
-// Create inserts a transaction. ErrDuplicate on same (account_id, date) for
-// an active row.
+// Create inserts a transaction. Multiple active transactions may share
+// (account_id, date) — real workflows include same-day fees, dividends,
+// PPK employer/employee rows, and split imports.
 func (s *Store) Create(ctx context.Context, t *Transaction) (*Transaction, error) {
-	var existing int
-	err := s.pool.QueryRow(ctx, `
-		SELECT id FROM transactions
-		WHERE account_id = $1 AND date = $2 AND is_active = true
-		LIMIT 1`,
-		t.AccountID, t.Date,
-	).Scan(&existing)
-	if err == nil {
-		return nil, ErrDuplicate
-	}
-	if !errors.Is(err, pgx.ErrNoRows) {
-		return nil, fmt.Errorf("check duplicate transaction: %w", err)
-	}
 	row := s.pool.QueryRow(ctx, `
 		INSERT INTO transactions (account_id, amount, date, owner_user_id, transaction_type, is_active, created_at)
 		VALUES ($1, $2, $3, $4, $5, true, $6)

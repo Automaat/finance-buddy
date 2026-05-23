@@ -94,6 +94,76 @@ def test_create_transaction_validation_error(client: httpx.Client) -> None:
     assert "detail" in response.json()
 
 
+def _post_and_track(
+    client: httpx.Client, account_id: int, payload: dict, created_ids: list[int]
+) -> httpx.Response:
+    resp = client.post(f"/api/accounts/{account_id}/transactions", json=payload)
+    if resp.status_code == 201:
+        created_ids.append(resp.json()["id"])
+    return resp
+
+
+@pytest.mark.mutates
+def test_create_two_same_day_transactions_persist(
+    client: httpx.Client, owner_ids: dict[str, int]
+) -> None:
+    # Regression for #396: multiple active transactions may share
+    # (account_id, date) — e.g. same-day fees, dividends, split imports.
+    account_id = _account_id_by_name(client, ACCOUNT_MARCIN_IKE)
+    base = {
+        "date": "2025-09-12",
+        "owner_user_id": owner_ids[PERSONA_MARCIN],
+    }
+    created_ids: list[int] = []
+    try:
+        first = _post_and_track(
+            client,
+            account_id,
+            {**base, "amount": 100.0, "transaction_type": "employee"},
+            created_ids,
+        )
+        assert first.status_code == 201, first.text
+        second = _post_and_track(
+            client,
+            account_id,
+            {**base, "amount": 250.0, "transaction_type": "employer"},
+            created_ids,
+        )
+        assert second.status_code == 201, second.text
+        listing = client.get(f"/api/accounts/{account_id}/transactions")
+        assert listing.status_code == 200, listing.text
+        same_day = [t for t in listing.json()["transactions"] if t["date"] == "2025-09-12"]
+        amounts = sorted(t["amount"] for t in same_day)
+        assert amounts == [pytest.approx(100.0), pytest.approx(250.0)]
+    finally:
+        for tid in created_ids:
+            client.delete(f"/api/accounts/{account_id}/transactions/{tid}")
+
+
+@pytest.mark.mutates
+def test_create_two_same_day_same_type_transactions_persist(
+    client: httpx.Client, owner_ids: dict[str, int]
+) -> None:
+    # Same (account_id, date) and same transaction_type — e.g. two same-day
+    # fees or two employee contributions split across imports.
+    account_id = _account_id_by_name(client, ACCOUNT_MARCIN_IKE)
+    base = {
+        "date": "2025-09-19",
+        "owner_user_id": owner_ids[PERSONA_MARCIN],
+        "transaction_type": "employee",
+    }
+    created_ids: list[int] = []
+    try:
+        first = _post_and_track(client, account_id, {**base, "amount": 50.0}, created_ids)
+        assert first.status_code == 201, first.text
+        second = _post_and_track(client, account_id, {**base, "amount": 75.0}, created_ids)
+        assert second.status_code == 201, second.text
+        assert first.json()["id"] != second.json()["id"]
+    finally:
+        for tid in created_ids:
+            client.delete(f"/api/accounts/{account_id}/transactions/{tid}")
+
+
 @pytest.mark.mutates
 def test_delete_transaction_happy_path(client: httpx.Client, owner_ids: dict[str, int]) -> None:
     account_id = _account_id_by_name(client, ACCOUNT_MARCIN_IKE)
