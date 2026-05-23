@@ -6,6 +6,7 @@
 
 	const tabs = $derived([
 		{ href: '/settings/config', label: 'Konfiguracja' },
+		{ href: '/settings/allocation', label: 'Cele alokacji' },
 		{ href: '/settings', label: 'Ustawienia' },
 		...(data.user?.isAdmin ? [{ href: '/settings/users', label: 'Użytkownicy' }] : [])
 	]);

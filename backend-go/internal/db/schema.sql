@@ -1123,6 +1123,29 @@ ALTER TABLE ONLY public.treasury_bonds
 
 
 --
+-- Name: allocation_targets; Type: TABLE; Schema: public; Owner: -
+--
+-- Kept in sync with allocation.Store.EnsureSchema, which runs the same CREATE
+-- TABLE IF NOT EXISTS against pre-existing databases. Per-owner target asset
+-- allocations; owner_user_id NULL = household-level target.
+
+CREATE TABLE public.allocation_targets (
+    id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    category character varying(50) NOT NULL,
+    owner_user_id integer,
+    target_pct numeric(5,2) NOT NULL,
+    created_at timestamp without time zone NOT NULL DEFAULT (now() AT TIME ZONE 'utc'),
+    CONSTRAINT allocation_targets_pct_range CHECK (target_pct >= 0 AND target_pct <= 100)
+);
+
+CREATE UNIQUE INDEX allocation_targets_scope_category_uniq
+    ON public.allocation_targets (COALESCE(owner_user_id, -1), category);
+
+ALTER TABLE ONLY public.allocation_targets
+    ADD CONSTRAINT allocation_targets_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
 -- PostgreSQL database dump complete
 --
 
