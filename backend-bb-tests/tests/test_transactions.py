@@ -94,6 +94,15 @@ def test_create_transaction_validation_error(client: httpx.Client) -> None:
     assert "detail" in response.json()
 
 
+def _post_and_track(
+    client: httpx.Client, account_id: int, payload: dict, created_ids: list[int]
+) -> httpx.Response:
+    resp = client.post(f"/api/accounts/{account_id}/transactions", json=payload)
+    if resp.status_code == 201:
+        created_ids.append(resp.json()["id"])
+    return resp
+
+
 @pytest.mark.mutates
 def test_create_two_same_day_transactions_persist(
     client: httpx.Client, owner_ids: dict[str, int]
@@ -105,27 +114,30 @@ def test_create_two_same_day_transactions_persist(
         "date": "2025-09-12",
         "owner_user_id": owner_ids[PERSONA_MARCIN],
     }
-    first = client.post(
-        f"/api/accounts/{account_id}/transactions",
-        json={**base, "amount": 100.0, "transaction_type": "employee"},
-    )
-    assert first.status_code == 201, first.text
-    second = client.post(
-        f"/api/accounts/{account_id}/transactions",
-        json={**base, "amount": 250.0, "transaction_type": "employer"},
-    )
-    assert second.status_code == 201, second.text
+    created_ids: list[int] = []
     try:
+        first = _post_and_track(
+            client,
+            account_id,
+            {**base, "amount": 100.0, "transaction_type": "employee"},
+            created_ids,
+        )
+        assert first.status_code == 201, first.text
+        second = _post_and_track(
+            client,
+            account_id,
+            {**base, "amount": 250.0, "transaction_type": "employer"},
+            created_ids,
+        )
+        assert second.status_code == 201, second.text
         listing = client.get(f"/api/accounts/{account_id}/transactions")
         assert listing.status_code == 200, listing.text
         same_day = [t for t in listing.json()["transactions"] if t["date"] == "2025-09-12"]
         amounts = sorted(t["amount"] for t in same_day)
         assert amounts == [pytest.approx(100.0), pytest.approx(250.0)]
     finally:
-        for resp in (first, second):
-            tid = resp.json().get("id")
-            if tid is not None:
-                client.delete(f"/api/accounts/{account_id}/transactions/{tid}")
+        for tid in created_ids:
+            client.delete(f"/api/accounts/{account_id}/transactions/{tid}")
 
 
 @pytest.mark.mutates
@@ -140,23 +152,16 @@ def test_create_two_same_day_same_type_transactions_persist(
         "owner_user_id": owner_ids[PERSONA_MARCIN],
         "transaction_type": "employee",
     }
-    first = client.post(
-        f"/api/accounts/{account_id}/transactions",
-        json={**base, "amount": 50.0},
-    )
-    assert first.status_code == 201, first.text
-    second = client.post(
-        f"/api/accounts/{account_id}/transactions",
-        json={**base, "amount": 75.0},
-    )
-    assert second.status_code == 201, second.text
+    created_ids: list[int] = []
     try:
+        first = _post_and_track(client, account_id, {**base, "amount": 50.0}, created_ids)
+        assert first.status_code == 201, first.text
+        second = _post_and_track(client, account_id, {**base, "amount": 75.0}, created_ids)
+        assert second.status_code == 201, second.text
         assert first.json()["id"] != second.json()["id"]
     finally:
-        for resp in (first, second):
-            tid = resp.json().get("id")
-            if tid is not None:
-                client.delete(f"/api/accounts/{account_id}/transactions/{tid}")
+        for tid in created_ids:
+            client.delete(f"/api/accounts/{account_id}/transactions/{tid}")
 
 
 @pytest.mark.mutates
