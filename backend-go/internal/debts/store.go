@@ -321,11 +321,16 @@ func (s *Store) CreateWithAccount(ctx context.Context, acc AccountSpec, d *Debt)
 	}
 	now := time.Now().UTC()
 	var accountID int
+	// receives_contributions defaults to true to match /api/accounts (where
+	// the field defaults to true when omitted via optionalBoolDefaultTrue).
+	// The Python two-step flow this endpoint replaces relied on the same
+	// default — keep semantics identical so downstream consumers (PPK
+	// contribution logic, dashboards) see the same account shape.
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO accounts (
 			name, type, category, owner_user_id, currency, account_wrapper,
 			purpose, square_meters, is_active, receives_contributions, created_at
-		) VALUES ($1, 'liability', $2, $3, $4, NULL, 'general', NULL, true, false, $5)
+		) VALUES ($1, 'liability', $2, $3, $4, NULL, 'general', NULL, true, true, $5)
 		RETURNING id`,
 		acc.Name, acc.Category, acc.OwnerUserID, acc.Currency, now,
 	).Scan(&accountID); err != nil {

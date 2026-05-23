@@ -1590,7 +1590,53 @@ export interface paths {
             };
         };
         put?: never;
-        post?: never;
+        /** Create a debt and its liability account atomically */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            account_id?: number;
+                            account_name?: string;
+                            account_owner_user_id?: number | null;
+                            /** Format: date-time */
+                            created_at?: string;
+                            currency?: string;
+                            debt_type?: string;
+                            id?: number;
+                            /** Format: double */
+                            initial_amount?: number;
+                            /** Format: double */
+                            interest_paid?: number;
+                            /** Format: double */
+                            interest_rate?: number;
+                            is_active?: boolean;
+                            /** Format: double */
+                            latest_balance?: number | null;
+                            /** Format: date */
+                            latest_balance_date?: string | null;
+                            name?: string;
+                            notes?: string | null;
+                            /** Format: date */
+                            start_date?: string;
+                            /** Format: double */
+                            total_paid?: number;
+                        };
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
