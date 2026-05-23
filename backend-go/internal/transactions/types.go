@@ -17,27 +17,43 @@ const (
 	TransactionTypeWithdrawal TransactionType = "withdrawal"
 )
 
-// ValidTypes is the authoritative list of accepted transaction_type values.
-// Order is stable so the frontend dropdown renders deterministically.
-var ValidTypes = []TransactionType{
+// validTypes is the authoritative ordered list of accepted transaction_type
+// values. Kept unexported + only reached through ValidTypes() to prevent
+// other packages from reordering or appending at runtime.
+var validTypes = []TransactionType{
 	TransactionTypeEmployee,
 	TransactionTypeEmployer,
 	TransactionTypeGovernment,
 	TransactionTypeWithdrawal,
 }
 
-// LabelsPL maps each type to its Polish display label — used by /api/transactions/types
-// so the frontend dropdown doesn't have to hardcode translations.
-var LabelsPL = map[TransactionType]string{
+// labelsPL maps each type to its Polish display label. Same encapsulation
+// reason as validTypes — read via LabelPL().
+var labelsPL = map[TransactionType]string{
 	TransactionTypeEmployee:   "Wpłata pracownika",
 	TransactionTypeEmployer:   "Wpłata pracodawcy",
 	TransactionTypeGovernment: "Dopłata państwa",
 	TransactionTypeWithdrawal: "Wypłata",
 }
 
+// ValidTypes returns a fresh copy of the canonical, ordered enum slice.
+// Callers can mutate the returned slice without affecting the package's
+// source of truth.
+func ValidTypes() []TransactionType {
+	out := make([]TransactionType, len(validTypes))
+	copy(out, validTypes)
+	return out
+}
+
+// LabelPL returns the Polish display label for t, or an empty string if
+// t is not a recognized value.
+func LabelPL(t TransactionType) string {
+	return labelsPL[t]
+}
+
 // IsValid reports whether s is one of the recognized values.
 func IsValid(s string) bool {
-	for _, t := range ValidTypes {
+	for _, t := range validTypes {
 		if string(t) == s {
 			return true
 		}

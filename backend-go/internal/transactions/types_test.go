@@ -20,12 +20,29 @@ func TestIsValid(t *testing.T) {
 }
 
 func TestValidTypesAndLabelsCoverEachOther(t *testing.T) {
-	if len(ValidTypes) != len(LabelsPL) {
-		t.Fatalf("ValidTypes (%d) and LabelsPL (%d) lengths diverged", len(ValidTypes), len(LabelsPL))
-	}
-	for _, tt := range ValidTypes {
-		if _, ok := LabelsPL[tt]; !ok {
-			t.Errorf("LabelsPL missing entry for %q", tt)
+	types := ValidTypes()
+	for _, tt := range types {
+		if label := LabelPL(tt); label == "" {
+			t.Errorf("LabelPL missing entry for %q", tt)
 		}
+	}
+	// Reverse: every labelsPL entry must be in validTypes too.
+	seen := make(map[TransactionType]struct{}, len(types))
+	for _, tt := range types {
+		seen[tt] = struct{}{}
+	}
+	for tt := range labelsPL {
+		if _, ok := seen[tt]; !ok {
+			t.Errorf("labelsPL has %q but ValidTypes() doesn't", tt)
+		}
+	}
+}
+
+func TestValidTypesReturnsCopy(t *testing.T) {
+	a := ValidTypes()
+	a[0] = "tampered"
+	b := ValidTypes()
+	if b[0] == "tampered" {
+		t.Fatal("ValidTypes() returned a shared slice; mutation leaked")
 	}
 }

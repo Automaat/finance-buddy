@@ -216,12 +216,13 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 // Types serves GET /api/transactions/types — the canonical enum the
-// frontend dropdown should render. Ordered the same way as ValidTypes so
-// the UI is deterministic.
+// frontend dropdown should render. Ordered the same way as ValidTypes()
+// so the UI is deterministic.
 func (h *Handler) Types(w http.ResponseWriter, _ *http.Request) {
-	out := make([]typesItem, 0, len(ValidTypes))
-	for _, t := range ValidTypes {
-		out = append(out, typesItem{Value: string(t), Label: LabelsPL[t]})
+	types := ValidTypes()
+	out := make([]typesItem, 0, len(types))
+	for _, t := range types {
+		out = append(out, typesItem{Value: string(t), Label: LabelPL(t)})
 	}
 	writeJSON(w, http.StatusOK, out)
 }
