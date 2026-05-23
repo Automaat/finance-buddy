@@ -52,4 +52,31 @@ describe('Modal', () => {
 		await fireEvent.click(screen.getByText('Zapisz'));
 		expect(onConfirm).toHaveBeenCalledOnce();
 	});
+
+	it('confirms on Enter when focus is in dialog body', async () => {
+		const onConfirm = vi.fn();
+		render(Modal, { props: { open: true, title: 'Tytuł', onConfirm } });
+		await fireEvent.keyDown(window, { key: 'Enter' });
+		expect(onConfirm).toHaveBeenCalledOnce();
+	});
+
+	it('does not confirm on Enter inside a textarea', async () => {
+		const onConfirm = vi.fn();
+		render(Modal, { props: { open: true, title: 'Tytuł', onConfirm } });
+		const ta = document.createElement('textarea');
+		document.body.appendChild(ta);
+		ta.focus();
+		await fireEvent.keyDown(ta, { key: 'Enter' });
+		expect(onConfirm).not.toHaveBeenCalled();
+		document.body.removeChild(ta);
+	});
+
+	it('does not confirm on Enter when confirmDisabled', async () => {
+		const onConfirm = vi.fn();
+		render(Modal, {
+			props: { open: true, title: 'Tytuł', confirmDisabled: true, onConfirm }
+		});
+		await fireEvent.keyDown(window, { key: 'Enter' });
+		expect(onConfirm).not.toHaveBeenCalled();
+	});
 });

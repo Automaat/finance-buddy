@@ -30,7 +30,29 @@
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
-		if (event.key === 'Escape') onCancel?.();
+		if (!open) return;
+		if (event.key === 'Escape') {
+			onCancel?.();
+			return;
+		}
+		if (event.key === 'Enter' && !confirmDisabled) {
+			// Only confirm when Enter wouldn't lose the user input that's
+			// in focus: text inputs / selects are safe (single-line submit),
+			// textareas insert newlines, buttons handle their own activation,
+			// content-editable could have any meaning so we skip it.
+			const t = event.target as HTMLElement | null;
+			if (!t) {
+				onConfirm?.();
+				return;
+			}
+			const tag = t.tagName;
+			const editable = t.isContentEditable;
+			if (tag === 'TEXTAREA' || tag === 'BUTTON' || editable) return;
+			if (tag === 'INPUT' || tag === 'SELECT') {
+				event.preventDefault();
+			}
+			onConfirm?.();
+		}
 	}
 
 	const confirmClass = $derived(

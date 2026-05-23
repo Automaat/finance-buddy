@@ -5,6 +5,7 @@
 	import { resolveApiUrl } from '$lib/api';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { toast } from '$lib/stores/toast.svelte';
+	import { confirm } from '$lib/stores/confirm.svelte';
 	import { ownerName, type OwnerOption } from '$lib/types/owners';
 	import { untrack } from 'svelte';
 	import type { PageData } from './$types';
@@ -63,7 +64,13 @@
 	}
 
 	async function deleteTransaction(accountId: number, transactionId: number) {
-		if (!confirm('Czy na pewno chcesz usunąć tę transakcję?')) return;
+		const ok = await confirm({
+			title: 'Usuń transakcję',
+			message: 'Czy na pewno chcesz usunąć tę transakcję?',
+			confirmText: 'Usuń',
+			danger: true
+		});
+		if (!ok) return;
 
 		try {
 			const response = await fetch(
