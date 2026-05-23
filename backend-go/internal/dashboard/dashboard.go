@@ -6,10 +6,16 @@ import (
 	"time"
 )
 
-// netWorthPoint mirrors NetWorthPoint.
+// netWorthPoint mirrors NetWorthPoint. Assets and Liabilities are emitted
+// so the frontend can build a waterfall of month-over-month contributions
+// (asset-side delta vs liability-side delta). SnapshotID enables click
+// drill-down to the snapshot detail page.
 type netWorthPoint struct {
-	Date  time.Time
-	Value float64
+	Date        time.Time
+	Value       float64
+	Assets      float64
+	Liabilities float64
+	SnapshotID  int
 }
 
 // allocationItem mirrors AllocationItem.
