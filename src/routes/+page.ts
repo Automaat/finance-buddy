@@ -22,9 +22,10 @@ export async function load({ fetch, url }) {
 
 	const dashboardData = (async () => {
 		try {
-			const [dashboardRes, retirementRes] = await Promise.all([
+			const [dashboardRes, retirementRes, bondsRes] = await Promise.all([
 				fetch(dashboardURL),
-				fetch(`${apiUrl}/api/retirement/stats?year=${currentYear}`)
+				fetch(`${apiUrl}/api/retirement/stats?year=${currentYear}`),
+				fetch(`${apiUrl}/api/bonds`)
 			]);
 
 			if (!dashboardRes.ok) {
@@ -33,10 +34,13 @@ export async function load({ fetch, url }) {
 
 			const dashboard = await dashboardRes.json();
 			const retirementStats = retirementRes.ok ? await retirementRes.json() : [];
+			const bondsBody = bondsRes.ok ? await bondsRes.json() : { total_value: 0, total_count: 0 };
 
 			return {
 				...dashboard,
-				retirementStats
+				retirementStats,
+				treasuryBondsValue: bondsBody.total_value ?? 0,
+				treasuryBondsCount: bondsBody.total_count ?? 0
 			};
 		} catch (err) {
 			if (isHttpError(err)) {

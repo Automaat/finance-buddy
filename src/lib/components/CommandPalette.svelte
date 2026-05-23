@@ -17,6 +17,7 @@
 		{ label: 'Konta', hint: '/accounts', run: () => goto('/accounts') },
 		{ label: 'Transakcje', hint: '/transactions', run: () => goto('/transactions') },
 		{ label: 'Majątek', hint: '/assets', run: () => goto('/assets') },
+		{ label: 'Obligacje skarbowe', hint: '/bonds', run: () => goto('/bonds') },
 		{ label: 'Zobowiązania', hint: '/debts', run: () => goto('/debts') },
 		{ label: 'Cele', hint: '/goals', run: () => goto('/goals') },
 		{ label: 'Snapshoty', hint: '/snapshots', run: () => goto('/snapshots') },
