@@ -19,19 +19,16 @@ func aggregatePointsBySnapshot(aggRows []AggregateRow, snapshotDate map[int]time
 	type snapAgg struct {
 		nw, assets, liabs float64
 	}
-	bySnap := map[int]*snapAgg{}
+	bySnap := map[int]snapAgg{}
 	for _, r := range aggRows {
 		nw, _ := r.NetWorth.Float64()
 		ta, _ := r.TotalAssets.Float64()
 		tl, _ := r.TotalLiabilities.Float64()
-		agg, ok := bySnap[r.SnapshotID]
-		if !ok {
-			agg = &snapAgg{}
-			bySnap[r.SnapshotID] = agg
-		}
+		agg := bySnap[r.SnapshotID]
 		agg.nw += nw
 		agg.assets += ta
 		agg.liabs += tl
+		bySnap[r.SnapshotID] = agg
 	}
 	points := make([]netWorthPoint, 0, len(bySnap))
 	for sid, agg := range bySnap {
@@ -155,13 +152,11 @@ func computeRaw(ctx context.Context, s *Store) (result, error) {
 		nw, assets, liabs float64
 		snapshotID        int
 	}
-	byDate := map[time.Time]*byDateAgg{}
+	// Value-typed map so nilaway can verify every read is non-nil — the
+	// aggregate is updated by reassignment after each row.
+	byDate := map[time.Time]byDateAgg{}
 	for _, r := range rows {
-		agg, ok := byDate[r.Date]
-		if !ok {
-			agg = &byDateAgg{}
-			byDate[r.Date] = agg
-		}
+		agg := byDate[r.Date]
 		if r.AccountID != nil && r.AccType != nil {
 			if *r.AccType == "asset" {
 				agg.assets += r.Value
@@ -178,6 +173,7 @@ func computeRaw(ctx context.Context, s *Store) (result, error) {
 		if agg.snapshotID == 0 || r.SnapshotID < agg.snapshotID {
 			agg.snapshotID = r.SnapshotID
 		}
+		byDate[r.Date] = agg
 	}
 	dates := make([]time.Time, 0, len(byDate))
 	for d := range byDate {
