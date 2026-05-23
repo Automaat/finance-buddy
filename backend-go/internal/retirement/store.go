@@ -327,23 +327,46 @@ func (s *Store) ActivePPKAccountForOwner(ctx context.Context, ownerUserID *int) 
 	return id, nil
 }
 
-// PPKContribution is the writeback shape — two transactions per call.
+// PPKContribution is the writeback shape — two transactions per call,
+// plus optional one-time welcome and yearly annual government subsidies
+// when the caller requests them. WelcomeAmt/AnnualAmt are zero when the
+// caller didn't opt in; the store skips inserting a row when the amount
+// is zero or a matching subsidy already exists for the eligibility
+// window (welcome: per account, ever; annual: per (account, year)).
 type PPKContribution struct {
 	AccountID   int
 	EmployeeAmt decimal.Decimal
 	EmployerAmt decimal.Decimal
+	WelcomeAmt  decimal.Decimal
+	AnnualAmt   decimal.Decimal
 	Date        time.Time
 	OwnerUserID *int
 }
 
+// PPKContributionResult names the inserted transaction IDs so the handler
+// can echo which subsidies were actually written (vs. skipped due to
+// idempotency).
+type PPKContributionResult struct {
+	EmployeeID  int
+	EmployerID  int
+	WelcomeID   *int
+	AnnualID    *int
+	WelcomeSkip bool
+	AnnualSkip  bool
+}
+
 // InsertPPKContributions writes the employee + employer transactions
-// atomically. ErrContributionsExist when a row already exists for the
-// (account_id, date, employee|employer) tuple — guarded both by a
-// pre-check and by a UniqueViolation catch.
-func (s *Store) InsertPPKContributions(ctx context.Context, c PPKContribution) ([]int, error) {
+// atomically, plus any opted-in government subsidies. ErrContributionsExist
+// when a (account_id, date, employee|employer) row already exists — guarded
+// both by a pre-check and by a UniqueViolation catch. Welcome / annual
+// subsidies are independently idempotent: an existing welcome (any prior
+// government txn) skips the new one; an existing annual government txn in
+// the same year skips that one too.
+func (s *Store) InsertPPKContributions(ctx context.Context, c PPKContribution) (PPKContributionResult, error) {
+	var res PPKContributionResult
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("begin ppk tx: %w", err)
+		return res, fmt.Errorf("begin ppk tx: %w", err)
 	}
 	committed := false
 	defer func() {
@@ -361,7 +384,7 @@ func (s *Store) InsertPPKContributions(ctx context.Context, c PPKContribution) (
 	if _, err := tx.Exec(ctx,
 		`SELECT pg_advisory_xact_lock($1)`, lockKey,
 	); err != nil {
-		return nil, fmt.Errorf("ppk advisory lock: %w", err)
+		return res, fmt.Errorf("ppk advisory lock: %w", err)
 	}
 	var existing int
 	err = tx.QueryRow(ctx, `
@@ -372,40 +395,137 @@ func (s *Store) InsertPPKContributions(ctx context.Context, c PPKContribution) (
 		c.AccountID, c.Date,
 	).Scan(&existing)
 	if err != nil {
-		return nil, fmt.Errorf("count ppk existing: %w", err)
+		return res, fmt.Errorf("count ppk existing: %w", err)
 	}
 	if existing > 0 {
-		return nil, ErrContributionsExist
+		return res, ErrContributionsExist
 	}
 	now := time.Now().UTC()
-	var empID, emprID int
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO transactions (account_id, amount, date, owner_user_id, transaction_type, is_active, created_at)
 		VALUES ($1, $2, $3, $4, 'employee', true, $5)
 		RETURNING id`,
 		c.AccountID, c.EmployeeAmt, c.Date, c.OwnerUserID, now,
-	).Scan(&empID); err != nil {
+	).Scan(&res.EmployeeID); err != nil {
 		if isUniqueViolation(err) {
-			return nil, ErrContributionsExist
+			return res, ErrContributionsExist
 		}
-		return nil, fmt.Errorf("insert employee txn: %w", err)
+		return res, fmt.Errorf("insert employee txn: %w", err)
 	}
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO transactions (account_id, amount, date, owner_user_id, transaction_type, is_active, created_at)
 		VALUES ($1, $2, $3, $4, 'employer', true, $5)
 		RETURNING id`,
 		c.AccountID, c.EmployerAmt, c.Date, c.OwnerUserID, now,
-	).Scan(&emprID); err != nil {
+	).Scan(&res.EmployerID); err != nil {
 		if isUniqueViolation(err) {
-			return nil, ErrContributionsExist
+			return res, ErrContributionsExist
 		}
-		return nil, fmt.Errorf("insert employer txn: %w", err)
+		return res, fmt.Errorf("insert employer txn: %w", err)
+	}
+	if c.WelcomeAmt.IsPositive() {
+		welcomeID, skipped, err := maybeInsertSubsidy(ctx, tx, subsidyInsert{
+			accountID: c.AccountID, ownerUserID: c.OwnerUserID,
+			amount: c.WelcomeAmt, date: c.Date, now: now,
+			scope: welcomeScope{amount: c.WelcomeAmt},
+		})
+		if err != nil {
+			return res, err
+		}
+		res.WelcomeSkip = skipped
+		if !skipped {
+			res.WelcomeID = &welcomeID
+		}
+	}
+	if c.AnnualAmt.IsPositive() {
+		annualID, skipped, err := maybeInsertSubsidy(ctx, tx, subsidyInsert{
+			accountID: c.AccountID, ownerUserID: c.OwnerUserID,
+			amount: c.AnnualAmt, date: c.Date, now: now,
+			scope: annualScope{amount: c.AnnualAmt, year: c.Date.Year()},
+		})
+		if err != nil {
+			return res, err
+		}
+		res.AnnualSkip = skipped
+		if !skipped {
+			res.AnnualID = &annualID
+		}
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("commit ppk tx: %w", err)
+		return res, fmt.Errorf("commit ppk tx: %w", err)
 	}
 	committed = true
-	return []int{empID, emprID}, nil
+	return res, nil
+}
+
+// welcomeScope / annualScope name the eligibility windows. Both filter by
+// `amount` because welcome (250 PLN) and annual (240 PLN) are written with
+// the same `transaction_type='government'` — without distinguishing on
+// amount, a welcome inserted earlier in the same transaction would mask
+// the annual check (and vice-versa).
+type welcomeScope struct{ amount decimal.Decimal }
+
+type annualScope struct {
+	amount decimal.Decimal
+	year   int
+}
+
+type subsidyInsert struct {
+	accountID   int
+	ownerUserID *int
+	amount      decimal.Decimal
+	date, now   time.Time
+	scope       any
+}
+
+func maybeInsertSubsidy(ctx context.Context, tx pgx.Tx, s subsidyInsert) (int, bool, error) {
+	exists, err := subsidyExists(ctx, tx, s.accountID, s.scope)
+	if err != nil {
+		return 0, false, err
+	}
+	if exists {
+		return 0, true, nil
+	}
+	var id int
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO transactions (account_id, amount, date, owner_user_id, transaction_type, is_active, created_at)
+		VALUES ($1, $2, $3, $4, 'government', true, $5)
+		RETURNING id`,
+		s.accountID, s.amount, s.date, s.ownerUserID, s.now,
+	).Scan(&id); err != nil {
+		return 0, false, fmt.Errorf("insert government subsidy: %w", err)
+	}
+	return id, false, nil
+}
+
+func subsidyExists(ctx context.Context, tx pgx.Tx, accountID int, scope any) (bool, error) {
+	switch s := scope.(type) {
+	case welcomeScope:
+		var n int
+		if err := tx.QueryRow(ctx, `
+			SELECT COUNT(*) FROM transactions
+			WHERE account_id = $1 AND transaction_type = 'government'
+			  AND is_active = true AND amount = $2`,
+			accountID, s.amount,
+		).Scan(&n); err != nil {
+			return false, fmt.Errorf("count welcome subsidy: %w", err)
+		}
+		return n > 0, nil
+	case annualScope:
+		var n int
+		if err := tx.QueryRow(ctx, `
+			SELECT COUNT(*) FROM transactions
+			WHERE account_id = $1 AND transaction_type = 'government'
+			  AND is_active = true AND amount = $2
+			  AND EXTRACT(YEAR FROM date) = $3`,
+			accountID, s.amount, s.year,
+		).Scan(&n); err != nil {
+			return false, fmt.Errorf("count annual subsidy: %w", err)
+		}
+		return n > 0, nil
+	default:
+		return false, fmt.Errorf("unknown subsidy scope: %T", scope)
+	}
 }
 
 func isUniqueViolation(err error) bool {
