@@ -47,7 +47,14 @@ func healthcheck() int {
 	}
 	url := "http://" + net.JoinHostPort(host, port) + "/health"
 	client := &http.Client{Timeout: 3 * time.Second}
-	resp, err := client.Get(url)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "healthcheck:", err)
+		return 1
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "healthcheck:", err)
 		return 1
@@ -179,7 +186,7 @@ func envOr(key, fallback string) string {
 
 // envOrPresent returns the env value if the key is set (even if empty),
 // else fallback. Use for values where an explicit empty string is a
-// legitimate signal — e.g. CORS_ORIGINS="" matching Python's behaviour
+// legitimate signal — e.g. CORS_ORIGINS="" matching Python's behavior
 // of trusting whatever Settings parsed from the environment.
 func envOrPresent(key, fallback string) string {
 	if v, ok := os.LookupEnv(key); ok {

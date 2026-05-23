@@ -18,11 +18,9 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/cpi"
 )
 
-var (
-	validContractTypes = map[string]struct{}{
-		"UOP": {}, "UZ": {}, "UoD": {}, "B2B": {},
-	}
-)
+var validContractTypes = map[string]struct{}{
+	"UOP": {}, "UZ": {}, "UoD": {}, "B2B": {},
+}
 
 // response mirrors backend/app/schemas/salary_records.SalaryRecordResponse.
 // OwnerUserID is the owning household member; nil means jointly owned.
@@ -51,7 +49,7 @@ type inflationContext struct {
 }
 
 // listResponse keys current_salaries and inflation_context by owner_user_id
-// (JSON serialises the integer keys as strings).
+// (JSON serializes the integer keys as strings).
 type listResponse struct {
 	SalaryRecords      []response               `json:"salary_records"`
 	TotalCount         int                      `json:"total_count"`

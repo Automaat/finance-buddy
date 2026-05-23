@@ -43,7 +43,7 @@ func validateCreate(req *createRequest) *validationError {
 }
 
 // buildUpdatePatch reads a raw JSON object and decides, per field, whether
-// it was omitted, explicitly null, or set to a value. This is the Go analogue
+// it was omitted, explicitly null, or set to a value. This is the Go analog
 // of Pydantic's model_fields_set used in update_goal.
 func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *validationError) {
 	var p UpdatePatch

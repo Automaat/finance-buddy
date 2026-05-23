@@ -24,6 +24,7 @@ linters:
     - nilerr
     - nilnesserr
     - nilnil
+    - noctx
     - nonamedreturns
     - reassign
     - recvcheck
@@ -39,6 +40,7 @@ linters:
     - gocritic
     - goprintffuncname
     - gosec
+    - misspell
     - modernize
     - nolintlint
     - nosprintfhostport
@@ -47,11 +49,14 @@ linters:
     - testableexamples
     - thelper
     - unconvert
+    - unparam
     - usestdlibvars
     - usetesting
+    - whitespace
 
     # dependency hygiene
     - depguard
+    - gomodguard_v2
 
   settings:
     depguard:
@@ -158,6 +163,27 @@ linters:
     sloglint:
       no-mixed-args: true
 
+    misspell:
+      locale: US
+
+    gomodguard_v2:
+      blocked:
+        - module: github.com/pkg/errors
+          recommendations:
+            - errors
+          reason: stdlib errors covers wrapping since Go 1.13
+        - module: golang.org/x/exp/maps
+          recommendations:
+            - maps
+        - module: golang.org/x/exp/slices
+          recommendations:
+            - slices
+        - module: io/ioutil
+          recommendations:
+            - io
+            - os
+          reason: deprecated since Go 1.16
+
   exclusions:
     warn-unused: true
     presets:
@@ -174,5 +200,12 @@ linters:
 
 formatters:
   enable:
-    - gofmt
-    - goimports
+    - gci
+    - gofumpt
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/Automaat/finance-buddy/backend-go)
+      custom-order: true

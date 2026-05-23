@@ -13,7 +13,11 @@ func TestHealthEndpoint(t *testing.T) {
 	srv := httptest.NewServer(New(Config{CORSOrigins: "*"}, slog.New(slog.DiscardHandler), Deps{}))
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/health")
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL+"/health", http.NoBody)
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("get /health: %v", err)
 	}

@@ -72,7 +72,7 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *validat
 	}
 	r.SquareMeters = sq
 
-	recv, vErr := optionalBool(raw, "receives_contributions", true)
+	recv, vErr := optionalBoolDefaultTrue(raw, "receives_contributions")
 	if vErr != nil {
 		return r, vErr
 	}
@@ -250,10 +250,10 @@ func optionalDecimal(raw map[string]json.RawMessage, key string) (*decimal.Decim
 	return &d, nil
 }
 
-func optionalBool(raw map[string]json.RawMessage, key string, fallback bool) (bool, *validationError) {
+func optionalBoolDefaultTrue(raw map[string]json.RawMessage, key string) (bool, *validationError) {
 	v, ok := raw[key]
 	if !ok {
-		return fallback, nil
+		return true, nil
 	}
 	if isNull(v) {
 		return false, &validationError{Field: key, Msg: "must be a boolean"}
