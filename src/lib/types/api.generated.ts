@@ -2666,10 +2666,13 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            annual_applied?: boolean;
                             /** Format: double */
                             employee_amount?: number;
                             /** Format: double */
                             employer_amount?: number;
+                            /** Format: double */
+                            government_amount?: number;
                             /** Format: double */
                             gross_salary?: number;
                             month?: number;
@@ -2677,6 +2680,7 @@ export interface paths {
                             /** Format: double */
                             total_amount?: number;
                             transactions_created?: number[];
+                            welcome_applied?: boolean;
                             year?: number;
                         };
                     };

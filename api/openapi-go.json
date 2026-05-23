@@ -4049,11 +4049,18 @@
               "application/json": {
                 "schema": {
                   "properties": {
+                    "annual_applied": {
+                      "type": "boolean"
+                    },
                     "employee_amount": {
                       "format": "double",
                       "type": "number"
                     },
                     "employer_amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "government_amount": {
                       "format": "double",
                       "type": "number"
                     },
@@ -4077,6 +4084,9 @@
                         "type": "integer"
                       },
                       "type": "array"
+                    },
+                    "welcome_applied": {
+                      "type": "boolean"
                     },
                     "year": {
                       "type": "integer"

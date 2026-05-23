@@ -58,6 +58,9 @@ type ppkGenerateResponse struct {
 	GrossSalary         pyFloat `json:"gross_salary"`
 	EmployeeAmount      pyFloat `json:"employee_amount"`
 	EmployerAmount      pyFloat `json:"employer_amount"`
+	GovernmentAmount    pyFloat `json:"government_amount"`
+	WelcomeApplied      bool    `json:"welcome_applied"`
+	AnnualApplied       bool    `json:"annual_applied"`
 	TotalAmount         pyFloat `json:"total_amount"`
 	TransactionsCreated []int   `json:"transactions_created"`
 }
@@ -357,10 +360,18 @@ func (h *Handler) GeneratePPKContributions(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	lastDay := time.Date(req.Year, time.Month(req.Month)+1, 0, 0, 0, 0, 0, time.UTC)
-	ids, err := h.store.InsertPPKContributions(r.Context(), PPKContribution{
+	subsidy := SubsidyFor(req.Year)
+	contrib := PPKContribution{
 		AccountID: accountID, EmployeeAmt: employeeAmt, EmployerAmt: employerAmt,
 		Date: lastDay, OwnerUserID: req.OwnerUserID,
-	})
+	}
+	if req.IncludeWelcome {
+		contrib.WelcomeAmt = subsidy.WelcomeAmount
+	}
+	if req.IncludeAnnual {
+		contrib.AnnualAmt = subsidy.AnnualAmount
+	}
+	result, err := h.store.InsertPPKContributions(r.Context(), contrib)
 	if err != nil {
 		if errors.Is(err, ErrContributionsExist) {
 			writeDetailError(w, http.StatusConflict,
@@ -371,17 +382,49 @@ func (h *Handler) GeneratePPKContributions(w http.ResponseWriter, r *http.Reques
 		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
+	writeJSON(w, http.StatusOK, buildPPKGenerateResponse(req, gross, employeeAmt, employerAmt, subsidy, result))
+}
+
+func buildPPKGenerateResponse(
+	req generateRequest,
+	gross, employeeAmt, employerAmt decimal.Decimal,
+	subsidy SubsidyConfig,
+	result PPKContributionResult,
+) ppkGenerateResponse {
 	grossF, _ := gross.Float64()
 	empF, _ := employeeAmt.Float64()
 	emprF, _ := employerAmt.Float64()
-	writeJSON(w, http.StatusOK, ppkGenerateResponse{
-		OwnerUserID: req.OwnerUserID, Month: req.Month, Year: req.Year,
+	govF := 0.0
+	welcomeApplied := result.WelcomeID != nil
+	annualApplied := result.AnnualID != nil
+	if welcomeApplied {
+		w, _ := subsidy.WelcomeAmount.Float64()
+		govF += w
+	}
+	if annualApplied {
+		a, _ := subsidy.AnnualAmount.Float64()
+		govF += a
+	}
+	ids := []int{result.EmployeeID, result.EmployerID}
+	if result.WelcomeID != nil {
+		ids = append(ids, *result.WelcomeID)
+	}
+	if result.AnnualID != nil {
+		ids = append(ids, *result.AnnualID)
+	}
+	return ppkGenerateResponse{
+		OwnerUserID:         req.OwnerUserID,
+		Month:               req.Month,
+		Year:                req.Year,
 		GrossSalary:         pyFloat(grossF),
 		EmployeeAmount:      pyFloat(empF),
 		EmployerAmount:      pyFloat(emprF),
-		TotalAmount:         pyFloat(empF + emprF),
+		GovernmentAmount:    pyFloat(govF),
+		WelcomeApplied:      welcomeApplied,
+		AnnualApplied:       annualApplied,
+		TotalAmount:         pyFloat(empF + emprF + govF),
 		TransactionsCreated: ids,
-	})
+	}
 }
 
 // errBadOwnerParam marks a non-integer owner_user_id query value.
@@ -468,9 +511,11 @@ func buildLimitRequest(raw map[string]json.RawMessage, now func() time.Time) (li
 }
 
 type generateRequest struct {
-	OwnerUserID *int
-	Month       int
-	Year        int
+	OwnerUserID    *int
+	Month          int
+	Year           int
+	IncludeWelcome bool
+	IncludeAnnual  bool
 }
 
 func buildGenerateRequest(raw map[string]json.RawMessage, now func() time.Time) (generateRequest, *validationError) {
@@ -497,7 +542,33 @@ func buildGenerateRequest(raw map[string]json.RawMessage, now func() time.Time) 
 		return r, vErr
 	}
 	r.Year = year
+
+	welcome, vErr := optionalBool(raw, "include_welcome_subsidy")
+	if vErr != nil {
+		return r, vErr
+	}
+	r.IncludeWelcome = welcome
+	annual, vErr := optionalBool(raw, "include_annual_subsidy")
+	if vErr != nil {
+		return r, vErr
+	}
+	r.IncludeAnnual = annual
 	return r, nil
+}
+
+// optionalBool reads a boolean key. Missing/null returns false; a present
+// non-bool value (e.g. "true" sent as a string) is rejected so the client
+// gets a 422 instead of silently degrading to false.
+func optionalBool(raw map[string]json.RawMessage, key string) (bool, *validationError) {
+	v, ok := raw[key]
+	if !ok || isNull(v) {
+		return false, nil
+	}
+	var b bool
+	if err := json.Unmarshal(v, &b); err != nil {
+		return false, &validationError{Field: key, Msg: "must be a boolean"}
+	}
+	return b, nil
 }
 
 // --- helpers ---
