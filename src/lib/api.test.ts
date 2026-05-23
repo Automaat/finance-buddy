@@ -43,17 +43,31 @@ describe('resolveApiUrl', () => {
 		expect(resolveApiUrl()).toBe('http://localhost:5174');
 	});
 
-	it('throws when the server variable is missing', async () => {
+	it('throws a 500 when the server variable is missing', async () => {
 		browserState.value = false;
 		envState.PUBLIC_API_URL_BROWSER = 'http://localhost:5174';
 		const { resolveApiUrl } = await freshImport();
-		expect(() => resolveApiUrl()).toThrowError(/PUBLIC_API_URL/);
+		try {
+			resolveApiUrl();
+			expect.fail('expected throw');
+		} catch (e) {
+			const err = e as { status: number; body: { message: string } };
+			expect(err.status).toBe(500);
+			expect(err.body.message).toMatch(/PUBLIC_API_URL/);
+		}
 	});
 
-	it('throws when the browser variable is missing', async () => {
+	it('throws a 500 when the browser variable is missing', async () => {
 		browserState.value = true;
 		envState.PUBLIC_API_URL = 'http://backend-go:8000';
 		const { resolveApiUrl } = await freshImport();
-		expect(() => resolveApiUrl()).toThrowError(/PUBLIC_API_URL_BROWSER/);
+		try {
+			resolveApiUrl();
+			expect.fail('expected throw');
+		} catch (e) {
+			const err = e as { status: number; body: { message: string } };
+			expect(err.status).toBe(500);
+			expect(err.body.message).toMatch(/PUBLIC_API_URL_BROWSER/);
+		}
 	});
 });
