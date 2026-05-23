@@ -4,7 +4,9 @@
 	import * as echarts from 'echarts';
 	import type { PageData } from './$types';
 	import {
+		buildRetirementByWrapperOption,
 		buildRetirementProjectionOption,
+		getTotalBalanceAtAge,
 		type AccountSimulation
 	} from '$lib/utils/charts/simulations';
 	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
@@ -130,10 +132,23 @@
 	let loading = $state(false);
 	let error = $state('');
 
-	// Chart
+	// Charts
+	const MILESTONE_AGES = [60, 65, 70];
 	let chartContainer: HTMLDivElement | undefined = $state();
+	let wrapperChartContainer: HTMLDivElement | undefined = $state();
 	let chart: echarts.ECharts | null = null;
 	let chartHandle: ChartHandle | null = null;
+	let wrapperChart: echarts.ECharts | null = null;
+	let wrapperChartHandle: ChartHandle | null = null;
+
+	const milestoneBalances = $derived.by(() => {
+		const r = results;
+		if (!r) return [];
+		return MILESTONE_AGES.map((age) => ({
+			age,
+			balance: getTotalBalanceAtAge(r.simulations, age)
+		}));
+	});
 
 	async function runSimulation() {
 		loading = true;
@@ -240,11 +255,33 @@
 		chart?.setOption(buildRetirementProjectionOption(results.simulations));
 	}
 
+	// Render the wrapper-aggregate chart reactively: it only mounts after the
+	// milestone cards reveal, so we can't draw it synchronously when results
+	// arrive — wait for the container to bind.
+	$effect(() => {
+		if (!results || !wrapperChartContainer) return;
+
+		if (!wrapperChartHandle) {
+			wrapperChartHandle = createChart(wrapperChartContainer);
+			wrapperChart = wrapperChartHandle.chart;
+		}
+
+		if (results.simulations.length === 0) {
+			wrapperChart?.clear();
+			return;
+		}
+
+		wrapperChart?.setOption(buildRetirementByWrapperOption(results.simulations, MILESTONE_AGES));
+	});
+
 	onMount(() => {
 		return () => {
 			chartHandle?.dispose();
 			chartHandle = null;
 			chart = null;
+			wrapperChartHandle?.dispose();
+			wrapperChartHandle = null;
+			wrapperChart = null;
 		};
 	});
 
@@ -572,6 +609,25 @@
 				</div>
 
 				<div bind:this={chartContainer} class="w-full h-[280px] sm:h-[400px]"></div>
+
+				{#if milestoneBalances.some((m) => m.balance !== null)}
+					<h3 class="h4">Saldo IKE + IKZE + PPK w wieku emerytalnym</h3>
+					<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+						{#each milestoneBalances as milestone (milestone.age)}
+							<div class="card preset-tonal-surface p-4">
+								<div class="text-xs text-surface-600-400 mb-2">Wiek {milestone.age}</div>
+								<div class="text-xl font-bold">
+									{#if milestone.balance === null}
+										—
+									{:else}
+										{formatCurrency(milestone.balance)} PLN
+									{/if}
+								</div>
+							</div>
+						{/each}
+					</div>
+					<div bind:this={wrapperChartContainer} class="w-full h-[280px] sm:h-[400px]"></div>
+				{/if}
 
 				<h3 class="h4">Szczegóły projekcji</h3>
 				{#each results.simulations as simulation}
