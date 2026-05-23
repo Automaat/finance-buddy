@@ -29,6 +29,7 @@ type Config struct {
 	AllocationCommodities   int             `json:"allocation_commodities"`
 	MonthlyExpenses         decimal.Decimal `json:"monthly_expenses"`
 	MonthlyMortgagePayment  decimal.Decimal `json:"monthly_mortgage_payment"`
+	WithdrawalRate          decimal.Decimal `json:"withdrawal_rate"`
 }
 
 // ErrNotFound is returned when no row exists at id=1.
@@ -48,7 +49,7 @@ const selectColumns = `
 	id, birth_date, retirement_age, retirement_monthly_salary,
 	allocation_real_estate, allocation_stocks, allocation_bonds,
 	allocation_gold, allocation_commodities,
-	monthly_expenses, monthly_mortgage_payment
+	monthly_expenses, monthly_mortgage_payment, withdrawal_rate
 `
 
 // Get returns the singleton config or ErrNotFound.
@@ -75,8 +76,8 @@ func (s *Store) Upsert(ctx context.Context, in *Config) (*Config, error) {
 			id, birth_date, retirement_age, retirement_monthly_salary,
 			allocation_real_estate, allocation_stocks, allocation_bonds,
 			allocation_gold, allocation_commodities,
-			monthly_expenses, monthly_mortgage_payment
-		) VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			monthly_expenses, monthly_mortgage_payment, withdrawal_rate
+		) VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		ON CONFLICT (id) DO UPDATE SET
 			birth_date = EXCLUDED.birth_date,
 			retirement_age = EXCLUDED.retirement_age,
@@ -87,7 +88,8 @@ func (s *Store) Upsert(ctx context.Context, in *Config) (*Config, error) {
 			allocation_gold = EXCLUDED.allocation_gold,
 			allocation_commodities = EXCLUDED.allocation_commodities,
 			monthly_expenses = EXCLUDED.monthly_expenses,
-			monthly_mortgage_payment = EXCLUDED.monthly_mortgage_payment
+			monthly_mortgage_payment = EXCLUDED.monthly_mortgage_payment,
+			withdrawal_rate = EXCLUDED.withdrawal_rate
 		RETURNING `+selectColumns,
 		in.BirthDate,
 		in.RetirementAge,
@@ -99,6 +101,7 @@ func (s *Store) Upsert(ctx context.Context, in *Config) (*Config, error) {
 		in.AllocationCommodities,
 		in.MonthlyExpenses,
 		in.MonthlyMortgagePayment,
+		in.WithdrawalRate,
 	)
 	c, err := scanConfig(row)
 	if err != nil {
@@ -121,6 +124,7 @@ func scanConfig(row pgx.Row) (*Config, error) {
 		&c.AllocationCommodities,
 		&c.MonthlyExpenses,
 		&c.MonthlyMortgagePayment,
+		&c.WithdrawalRate,
 	)
 	if err != nil {
 		return nil, err

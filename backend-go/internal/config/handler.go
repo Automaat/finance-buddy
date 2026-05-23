@@ -28,21 +28,23 @@ type response struct {
 	AllocationCommodities   int       `json:"allocation_commodities"`
 	MonthlyExpenses         moneyJSON `json:"monthly_expenses"`
 	MonthlyMortgagePayment  moneyJSON `json:"monthly_mortgage_payment"`
+	WithdrawalRate          rateJSON  `json:"withdrawal_rate"`
 }
 
 // request is the PUT body. Date arrives as "YYYY-MM-DD" and money as either
 // a JSON number or string — pydantic on the Python side accepts both.
 type request struct {
-	BirthDate               isoDate         `json:"birth_date"`
-	RetirementAge           int             `json:"retirement_age"`
-	RetirementMonthlySalary decimal.Decimal `json:"retirement_monthly_salary"`
-	AllocationRealEstate    int             `json:"allocation_real_estate"`
-	AllocationStocks        int             `json:"allocation_stocks"`
-	AllocationBonds         int             `json:"allocation_bonds"`
-	AllocationGold          int             `json:"allocation_gold"`
-	AllocationCommodities   int             `json:"allocation_commodities"`
-	MonthlyExpenses         decimal.Decimal `json:"monthly_expenses"`
-	MonthlyMortgagePayment  decimal.Decimal `json:"monthly_mortgage_payment"`
+	BirthDate               isoDate          `json:"birth_date"`
+	RetirementAge           int              `json:"retirement_age"`
+	RetirementMonthlySalary decimal.Decimal  `json:"retirement_monthly_salary"`
+	AllocationRealEstate    int              `json:"allocation_real_estate"`
+	AllocationStocks        int              `json:"allocation_stocks"`
+	AllocationBonds         int              `json:"allocation_bonds"`
+	AllocationGold          int              `json:"allocation_gold"`
+	AllocationCommodities   int              `json:"allocation_commodities"`
+	MonthlyExpenses         decimal.Decimal  `json:"monthly_expenses"`
+	MonthlyMortgagePayment  decimal.Decimal  `json:"monthly_mortgage_payment"`
+	WithdrawalRate          *decimal.Decimal `json:"withdrawal_rate"`
 }
 
 func toResponse(c *Config) response {
@@ -58,6 +60,7 @@ func toResponse(c *Config) response {
 		AllocationCommodities:   c.AllocationCommodities,
 		MonthlyExpenses:         moneyJSON(c.MonthlyExpenses),
 		MonthlyMortgagePayment:  moneyJSON(c.MonthlyMortgagePayment),
+		WithdrawalRate:          rateJSON(c.WithdrawalRate),
 	}
 }
 
@@ -115,6 +118,10 @@ func (h *Handler) Put(w http.ResponseWriter, r *http.Request) {
 }
 
 func (r *request) toConfig() *Config {
+	rate := defaultWithdrawalRate
+	if r.WithdrawalRate != nil {
+		rate = *r.WithdrawalRate
+	}
 	return &Config{
 		BirthDate:               time.Time(r.BirthDate),
 		RetirementAge:           r.RetirementAge,
@@ -126,8 +133,13 @@ func (r *request) toConfig() *Config {
 		AllocationCommodities:   r.AllocationCommodities,
 		MonthlyExpenses:         r.MonthlyExpenses,
 		MonthlyMortgagePayment:  r.MonthlyMortgagePayment,
+		WithdrawalRate:          rate,
 	}
 }
+
+// defaultWithdrawalRate is the 4% Trinity-study safe-withdrawal default
+// — used when a PUT body omits withdrawal_rate (older clients).
+var defaultWithdrawalRate = decimal.NewFromFloat(0.04)
 
 // isoDate is a time.Time alias that JSON-marshals as "YYYY-MM-DD" and
 // unmarshals from the same. Matches Python's `date` field on the wire.
@@ -161,4 +173,13 @@ type moneyJSON decimal.Decimal
 func (m moneyJSON) MarshalJSON() ([]byte, error) {
 	d := decimal.Decimal(m)
 	return []byte(`"` + d.StringFixed(2) + `"`), nil
+}
+
+// rateJSON serializes withdrawal_rate as a 4-decimal JSON string — matches
+// the numeric(5,4) DB column (e.g. "0.0400" for the 4% default).
+type rateJSON decimal.Decimal
+
+func (r rateJSON) MarshalJSON() ([]byte, error) {
+	d := decimal.Decimal(r)
+	return []byte(`"` + d.StringFixed(4) + `"`), nil
 }

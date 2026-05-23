@@ -114,3 +114,33 @@ func TestValidateRetirementAgeBeforeCurrent(t *testing.T) {
 		t.Fatalf("expected retirement_age (vs current age) error, got %+v", err)
 	}
 }
+
+func TestValidateWithdrawalRateAllowed(t *testing.T) {
+	for _, v := range []float64{0.03, 0.035, 0.04} {
+		r := validRequest()
+		d := decimal.NewFromFloat(v)
+		r.WithdrawalRate = &d
+		if err := r.validate(); err != nil {
+			t.Fatalf("expected %v to validate, got %+v", v, err)
+		}
+	}
+}
+
+func TestValidateWithdrawalRateRejected(t *testing.T) {
+	for _, v := range []float64{0.02, 0.05, 0.045, 0} {
+		r := validRequest()
+		d := decimal.NewFromFloat(v)
+		r.WithdrawalRate = &d
+		if err := r.validate(); err == nil || err.Field != "withdrawal_rate" {
+			t.Fatalf("expected withdrawal_rate error for %v, got %+v", v, err)
+		}
+	}
+}
+
+func TestValidateWithdrawalRateNilOK(t *testing.T) {
+	r := validRequest()
+	r.WithdrawalRate = nil
+	if err := r.validate(); err != nil {
+		t.Fatalf("nil withdrawal_rate should pass (backward compat), got %+v", err)
+	}
+}

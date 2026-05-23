@@ -14,7 +14,8 @@
 		CheckCircle2,
 		AlertTriangle,
 		PiggyBank,
-		Coins
+		Coins,
+		Flame
 	} from 'lucide-svelte';
 	import { resolveApiUrl } from '$lib/api';
 	import { invalidateAll } from '$app/navigation';
@@ -207,6 +208,50 @@
 				</div>
 			</div>
 		</div>
+
+		{#if dashboard.metric_cards?.fire_number != null && dashboard.metric_cards?.runway_months != null}
+			{@const fire = dashboard.metric_cards}
+			{@const progress = fire.fi_progress ?? 0}
+			{@const annualExpensesPLN = formatPLN(fire.annual_expenses ?? 0)}
+			{@const firePLN = formatPLN(fire.fire_number ?? 0)}
+			{@const wrPct = ((fire.withdrawal_rate ?? 0.04) * 100).toFixed(1)}
+			{@const runwayLabel = (fire.runway_months ?? 0).toFixed(1)}
+			<div class="card preset-filled-surface-100-900 p-4 space-y-3">
+				<header class="flex items-start justify-between gap-2 flex-wrap">
+					<h3 class="h4 flex items-center gap-2"><Flame size={18} /> FIRE i runway</h3>
+					<span
+						class="text-xs text-surface-700-300"
+						title="annual_expenses = miesięczne wydatki × 12&#10;FIRE = annual_expenses ÷ withdrawal_rate (np. ÷ 0.04 = ×25)&#10;FI = wartość netto ÷ FIRE × 100%&#10;runway = aktywa płynne (bank + saving_account) ÷ miesięczne wydatki"
+					>
+						SWR {wrPct}% · ø {annualExpensesPLN}/rok
+					</span>
+				</header>
+				<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+					<div class="space-y-1">
+						<div class="text-xs text-surface-700-300">FI progress</div>
+						<div class="text-2xl font-bold">{progress.toFixed(1)}%</div>
+						<div class="h-2 rounded-full bg-surface-200-800 overflow-hidden">
+							<div
+								class="h-full transition-all {progress >= 100
+									? 'bg-success-500'
+									: progress >= 50
+										? 'bg-warning-500'
+										: 'bg-primary-500'}"
+								style="width: {Math.min(progress, 100)}%"
+							></div>
+						</div>
+						<div class="text-xs text-surface-700-300">cel: {firePLN}</div>
+					</div>
+					<div class="space-y-1">
+						<div class="text-xs text-surface-700-300">Runway</div>
+						<div class="text-2xl font-bold">{runwayLabel} mies.</div>
+						<div class="text-xs text-surface-700-300">
+							ile miesięcy wydatków pokrywają aktywa płynne
+						</div>
+					</div>
+				</div>
+			</div>
+		{/if}
 
 		{#if dashboard.treasuryBondsCount > 0}
 			<a

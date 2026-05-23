@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -77,5 +78,25 @@ func (r *request) validate() *validationError {
 			),
 		}
 	}
+	if r.WithdrawalRate != nil && !isAllowedWithdrawalRate(*r.WithdrawalRate) {
+		return &validationError{
+			"withdrawal_rate",
+			"Withdrawal rate must be 0.03, 0.035, or 0.04",
+		}
+	}
 	return nil
+}
+
+// allowedWithdrawalRates are the three FIRE-research-backed safe-withdrawal
+// rates exposed in /settings. Stored as 4-decimal numerics; comparison runs
+// against the canonical decimal form so JSON-number and JSON-string inputs
+// (0.04 vs "0.04") both parse to the same accepted value.
+var allowedWithdrawalRates = []decimal.Decimal{
+	decimal.NewFromFloat(0.03),
+	decimal.NewFromFloat(0.035),
+	decimal.NewFromFloat(0.04),
+}
+
+func isAllowedWithdrawalRate(v decimal.Decimal) bool {
+	return slices.ContainsFunc(allowedWithdrawalRates, v.Equal)
 }

@@ -95,6 +95,7 @@ CREATE TABLE public.app_config (
     allocation_commodities integer NOT NULL,
     monthly_expenses numeric(15,2) NOT NULL,
     monthly_mortgage_payment numeric(15,2) NOT NULL,
+    withdrawal_rate numeric(5,4) NOT NULL DEFAULT 0.04,
     CONSTRAINT single_row CHECK ((id = 1))
 );
 
