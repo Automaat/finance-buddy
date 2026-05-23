@@ -53,6 +53,7 @@ var (
 	ErrAccountNotLiability = errors.New("account is not a liability")
 	ErrNotFound            = errors.New("debt not found")
 	ErrDuplicateForAccount = errors.New("debt already exists for account")
+	ErrDuplicateName       = errors.New("account name already exists")
 )
 
 // Store is the persistence boundary.
@@ -279,6 +280,82 @@ func (s *Store) Create(ctx context.Context, d *Debt) (*Debt, error) {
 		return nil, fmt.Errorf("insert debt: %w", err)
 	}
 	return out, nil
+}
+
+// AccountSpec is the inline account payload used by CreateWithAccount.
+type AccountSpec struct {
+	Name        string
+	Category    string
+	OwnerUserID *int
+	Currency    string
+}
+
+// CreateWithAccount creates a liability account and a debt in one
+// transaction. The whole op rolls back if either insert fails — no orphan
+// liability account is left behind. Returns ErrDuplicateName if the
+// account name collides with an existing active account.
+func (s *Store) CreateWithAccount(ctx context.Context, acc AccountSpec, d *Debt) (*Debt, *AccountInfo, error) {
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return nil, nil, fmt.Errorf("begin create-with-account tx: %w", err)
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+	// Pre-check for an existing active account name. There's no DB unique
+	// index on accounts.name, so two concurrent calls could both pass —
+	// accepted because this app runs single-instance (see CLAUDE.md).
+	var existing int
+	err = tx.QueryRow(ctx,
+		`SELECT id FROM accounts WHERE name = $1 AND is_active = true LIMIT 1`,
+		acc.Name,
+	).Scan(&existing)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil, fmt.Errorf("check duplicate name: %w", err)
+	}
+	if err == nil {
+		return nil, nil, ErrDuplicateName
+	}
+	now := time.Now().UTC()
+	var accountID int
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO accounts (
+			name, type, category, owner_user_id, currency, account_wrapper,
+			purpose, square_meters, is_active, receives_contributions, created_at
+		) VALUES ($1, 'liability', $2, $3, $4, NULL, 'general', NULL, true, false, $5)
+		RETURNING id`,
+		acc.Name, acc.Category, acc.OwnerUserID, acc.Currency, now,
+	).Scan(&accountID); err != nil {
+		return nil, nil, fmt.Errorf("insert account: %w", err)
+	}
+	row := tx.QueryRow(ctx, `
+		INSERT INTO debts (
+			account_id, name, debt_type, start_date, initial_amount,
+			interest_rate, currency, notes, is_active, created_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9)
+		RETURNING `+debtCols,
+		accountID, d.Name, d.DebtType, d.StartDate, d.InitialAmount,
+		d.InterestRate, d.Currency, d.Notes, now,
+	)
+	out, err := scanDebt(row)
+	if err != nil {
+		if isUniqueViolation(err) {
+			return nil, nil, ErrDuplicateForAccount
+		}
+		return nil, nil, fmt.Errorf("insert debt: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, nil, fmt.Errorf("commit create-with-account tx: %w", err)
+	}
+	committed = true
+	info := &AccountInfo{
+		ID: accountID, Name: acc.Name, OwnerUserID: acc.OwnerUserID,
+		Type: "liability", IsActive: true,
+	}
+	return out, info, nil
 }
 
 // UpdatePatch is the sparse update set.

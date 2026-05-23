@@ -200,3 +200,110 @@ def test_seeded_mortgage_account_exists(client: httpx.Client) -> None:
     # Sanity check — the mortgage account underpins the seeded debt.
     account_id = _account_id_by_name(client, ACCOUNT_MARCIN_MORTGAGE)
     assert account_id > 0
+
+
+def _account_exists(dsn: str, name: str) -> bool:
+    with psycopg2.connect(dsn) as conn, conn.cursor() as cur:
+        cur.execute(
+            "SELECT 1 FROM accounts WHERE name = %s AND is_active = true", (name,)
+        )
+        return cur.fetchone() is not None
+
+
+@pytest.mark.mutates
+def test_create_debt_atomic_happy_path(
+    client: httpx.Client, database_url: str, owner_ids: dict[str, int]
+) -> None:
+    name = "BB Atomic Debt Account"
+    payload = {
+        "name": name,
+        "debt_type": "mortgage",
+        "start_date": "2024-04-01",
+        "initial_amount": 250000.0,
+        "interest_rate": 6.5,
+        "currency": "PLN",
+        "owner_user_id": owner_ids[PERSONA_MARCIN],
+    }
+    response = client.post("/api/debts", json=payload)
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["name"] == name
+    assert body["debt_type"] == "mortgage"
+    assert body["account_id"] > 0
+    assert body["account_owner_user_id"] == owner_ids[PERSONA_MARCIN]
+
+    try:
+        # Account should exist and be wired to the new debt.
+        listing = client.get(f"/api/debts?account_id={body['account_id']}")
+        assert listing.status_code == 200, listing.text
+        debts = listing.json()["debts"]
+        assert len(debts) == 1
+        assert debts[0]["id"] == body["id"]
+    finally:
+        _hard_delete_account_and_debt(database_url, body["account_id"])
+
+
+@pytest.mark.mutates
+def test_create_debt_atomic_rolls_back_on_validation_failure(
+    client: httpx.Client, database_url: str, owner_ids: dict[str, int]
+) -> None:
+    # Negative interest_rate is rejected by debt validation. The account
+    # insert must not be persisted — no orphan account should remain.
+    name = "BB Atomic Rollback Account"
+    payload = {
+        "name": name,
+        "debt_type": "mortgage",
+        "start_date": "2024-04-01",
+        "initial_amount": 100000.0,
+        "interest_rate": -1.0,
+        "currency": "PLN",
+        "owner_user_id": owner_ids[PERSONA_MARCIN],
+    }
+    response = client.post("/api/debts", json=payload)
+    assert response.status_code >= 400, response.text
+    assert not _account_exists(database_url, name)
+
+
+@pytest.mark.mutates
+def test_create_debt_atomic_rolls_back_on_bad_owner(
+    client: httpx.Client, database_url: str
+) -> None:
+    # owner_user_id 9_999_999 doesn't exist — the FK violation fires inside
+    # the atomic transaction, exercising the deferred rollback path.
+    name = "BB Atomic Bad Owner Account"
+    payload = {
+        "name": name,
+        "debt_type": "mortgage",
+        "start_date": "2024-04-01",
+        "initial_amount": 100000.0,
+        "interest_rate": 5.0,
+        "currency": "PLN",
+        "owner_user_id": 9_999_999,
+    }
+    response = client.post("/api/debts", json=payload)
+    assert response.status_code >= 400, response.text
+    assert not _account_exists(database_url, name)
+
+
+@pytest.mark.mutates
+def test_create_debt_atomic_duplicate_account_name(
+    client: httpx.Client, database_url: str, owner_ids: dict[str, int]
+) -> None:
+    name = "BB Atomic Duplicate Account"
+    payload = {
+        "name": name,
+        "debt_type": "installment_0percent",
+        "start_date": "2024-04-01",
+        "initial_amount": 1000.0,
+        "interest_rate": 0.0,
+        "currency": "PLN",
+        "owner_user_id": owner_ids[PERSONA_MARCIN],
+    }
+    first = client.post("/api/debts", json=payload)
+    assert first.status_code == 201, first.text
+    account_id = first.json()["account_id"]
+    try:
+        second = client.post("/api/debts", json=payload)
+        assert second.status_code == 409, second.text
+    finally:
+        _hard_delete_account_and_debt(database_url, account_id)

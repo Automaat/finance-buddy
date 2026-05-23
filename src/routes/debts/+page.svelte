@@ -103,42 +103,16 @@
 		saving = true;
 
 		try {
-			let endpoint: string;
-			let method: string;
-
-			if (editingDebt) {
-				endpoint = `${apiUrl}/api/debts/${editingDebt.id}`;
-				method = 'PUT';
-			} else {
-				const tempAccount = {
-					name: formData.name,
-					type: 'liability',
-					category: formData.debt_type === 'mortgage' ? 'mortgage' : 'installment',
-					owner_user_id: defaultOwnerUserId,
-					currency: formData.currency,
-					purpose: 'general'
-				};
-
-				const accountResponse = await fetch(`${apiUrl}/api/accounts`, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(tempAccount)
-				});
-
-				if (!accountResponse.ok) {
-					const errorData = await accountResponse.json();
-					throw new Error(errorData.detail || 'Failed to create account');
-				}
-
-				const accountData = await accountResponse.json();
-				endpoint = `${apiUrl}/api/accounts/${accountData.id}/debts`;
-				method = 'POST';
-			}
+			const endpoint = editingDebt
+				? `${apiUrl}/api/debts/${editingDebt.id}`
+				: `${apiUrl}/api/debts`;
+			const method = editingDebt ? 'PUT' : 'POST';
+			const body = editingDebt ? formData : { ...formData, owner_user_id: defaultOwnerUserId };
 
 			const response = await fetch(endpoint, {
 				method,
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(formData)
+				body: JSON.stringify(body)
 			});
 
 			if (!response.ok) {

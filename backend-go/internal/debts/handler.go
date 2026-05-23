@@ -21,6 +21,13 @@ var validDebtTypes = map[string]struct{}{
 	"mortgage": {}, "installment_0percent": {},
 }
 
+// debtTypeToCategory maps a debt_type to the liability account category
+// used when /api/debts creates the account in the same transaction.
+var debtTypeToCategory = map[string]string{
+	"mortgage":             "mortgage",
+	"installment_0percent": "installment",
+}
+
 type response struct {
 	ID                 int      `json:"id"`
 	AccountID          int      `json:"account_id"`
@@ -173,6 +180,55 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, toResponse(dwa.Debt, dwa.Account, m))
+}
+
+// CreateWithAccount serves POST /api/debts. Creates the liability account
+// and the debt in one DB transaction so a failed debt validation leaves no
+// orphan account behind. Account fields beyond name/owner/currency are
+// derived from debt_type (mortgage -> mortgage category, installment_0percent
+// -> installment category).
+func (h *Handler) CreateWithAccount(w http.ResponseWriter, r *http.Request) {
+	raw := map[string]json.RawMessage{}
+	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
+		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		return
+	}
+	req, vErr := buildCreateRequest(raw)
+	if vErr != nil {
+		writePydanticError(w, vErr)
+		return
+	}
+	ownerID, vErr := requireOwnerUserID(raw)
+	if vErr != nil {
+		writePydanticError(w, vErr)
+		return
+	}
+	acc := AccountSpec{
+		Name:        req.Name,
+		Category:    debtTypeToCategory[req.DebtType],
+		OwnerUserID: ownerID,
+		Currency:    req.Currency,
+	}
+	created, accInfo, err := h.store.CreateWithAccount(r.Context(), acc, &Debt{
+		Name: req.Name, DebtType: req.DebtType, StartDate: req.StartDate,
+		InitialAmount: req.InitialAmount, InterestRate: req.InterestRate,
+		Currency: req.Currency, Notes: req.Notes,
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrDuplicateName):
+			writeDetailError(w, http.StatusConflict,
+				fmt.Sprintf("Account with name '%s' already exists", req.Name))
+		case errors.Is(err, ErrDuplicateForAccount):
+			writeDetailError(w, http.StatusConflict,
+				fmt.Sprintf("Debt already exists for account '%s'", req.Name))
+		default:
+			h.logger.Error("create debt with account", "err", err)
+			writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		}
+		return
+	}
+	writeJSON(w, http.StatusCreated, toResponse(*created, *accInfo, debtMetrics{}))
 }
 
 // Create serves POST /api/accounts/{account_id}/debts.
@@ -472,6 +528,22 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *validationE
 		p.Notes = &s
 	}
 	return p, nil
+}
+
+func requireOwnerUserID(raw map[string]json.RawMessage) (*int, *validationError) {
+	const key = "owner_user_id"
+	v, ok := raw[key]
+	if !ok {
+		return nil, &validationError{Field: key, Msg: "Field required"}
+	}
+	if isNull(v) {
+		return nil, nil
+	}
+	var n int
+	if err := json.Unmarshal(v, &n); err != nil {
+		return nil, &validationError{Field: key, Msg: "must be an integer"}
+	}
+	return &n, nil
 }
 
 func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string, *validationError) {
