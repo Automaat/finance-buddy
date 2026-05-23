@@ -4,6 +4,7 @@
 	import { buildMonteCarloFanOption, type MonteCarloResult } from '$lib/utils/charts/montecarlo';
 	import { Info, Sparkles } from 'lucide-svelte';
 	import * as echarts from 'echarts';
+	import IKZEPITTracker from '$lib/components/IKZEPITTracker.svelte';
 
 	let currentPortfolio = $state(100000);
 	let annualContribution = $state(20000);
@@ -117,6 +118,8 @@
 			Tysiąc losowych ścieżek emerytalnych zamiast jednego deterministycznego planu.
 		</p>
 	</header>
+
+	<IKZEPITTracker />
 
 	<section class="card preset-filled-surface-100-900 p-5 space-y-4">
 		<h2 class="h4">Parametry</h2>

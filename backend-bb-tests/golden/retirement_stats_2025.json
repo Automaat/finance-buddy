@@ -5,8 +5,10 @@
     "employer_contributed": 0.0,
     "is_warning": false,
     "limit_amount": 23472.0,
+    "marginal_tax_rate": null,
     "owner_user_id": 2,
     "percentage_used": 6.4,
+    "pit_savings": null,
     "remaining": 21972.0,
     "total_contributed": 1500.0,
     "year": 2025

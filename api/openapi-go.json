@@ -4201,11 +4201,21 @@
                         "nullable": true,
                         "type": "number"
                       },
+                      "marginal_tax_rate": {
+                        "format": "double",
+                        "nullable": true,
+                        "type": "number"
+                      },
                       "owner_user_id": {
                         "nullable": true,
                         "type": "integer"
                       },
                       "percentage_used": {
+                        "format": "double",
+                        "nullable": true,
+                        "type": "number"
+                      },
+                      "pit_savings": {
                         "format": "double",
                         "nullable": true,
                         "type": "number"
