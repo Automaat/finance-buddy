@@ -232,6 +232,9 @@ describe('Salaries page — saveSalary validation & error display', () => {
 			company: 'Acme',
 			contract_type: 'UOP'
 		});
+
+		// Modal should have closed: the "Data wypłaty" input belongs to it.
+		await waitFor(() => expect(screen.queryByLabelText(/Data wypłaty/)).toBeNull());
 	});
 
 	it('blocks bonus save when amount is zero', async () => {
