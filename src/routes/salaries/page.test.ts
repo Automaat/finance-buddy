@@ -203,6 +203,58 @@ describe('Salaries page — saveSalary validation & error display', () => {
 		);
 	});
 
+	it('POSTs a bonus and closes the modal on success', async () => {
+		const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(Page, { props: { data: baseData } });
+		await fireEvent.click(screen.getByRole('button', { name: /Nowy bonus/i }));
+
+		const dateInput = screen.getByLabelText(/Data wypłaty/) as HTMLInputElement;
+		const amountInput = screen.getByLabelText(/Kwota/) as HTMLInputElement;
+		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
+		await fireEvent.input(dateInput, { target: { value: '2026-05-01' } });
+		await fireEvent.input(amountInput, { target: { value: '12000' } });
+		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
+
+		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+
+		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+		const [url, init] = fetchMock.mock.calls[0];
+		expect(url).toBe('http://localhost:8000/api/bonuses');
+		expect((init as RequestInit).method).toBe('POST');
+		const body = JSON.parse((init as RequestInit).body as string);
+		expect(body).toMatchObject({
+			date: '2026-05-01',
+			amount: 12000,
+			currency: 'PLN',
+			type: 'annual',
+			company: 'Acme',
+			contract_type: 'UOP'
+		});
+
+		// Modal should have closed: the "Data wypłaty" input belongs to it.
+		await waitFor(() => expect(screen.queryByLabelText(/Data wypłaty/)).toBeNull());
+	});
+
+	it('blocks bonus save when amount is zero', async () => {
+		const fetchMock = vi.fn();
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(Page, { props: { data: baseData } });
+		await fireEvent.click(screen.getByRole('button', { name: /Nowy bonus/i }));
+
+		const dateInput = screen.getByLabelText(/Data wypłaty/) as HTMLInputElement;
+		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
+		await fireEvent.input(dateInput, { target: { value: '2026-05-01' } });
+		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
+
+		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+
+		await waitFor(() => expect(screen.getByText('Kwota musi być większa niż 0')).toBeTruthy());
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
 	it('POSTs to /api/salaries and invalidates on success', async () => {
 		const fetchMock = vi.fn().mockResolvedValue({
 			ok: true,
