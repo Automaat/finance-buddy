@@ -31,6 +31,18 @@ vi.mock('echarts', () => ({
 	init: vi.fn(() => ({ setOption: vi.fn(), resize: vi.fn(), dispose: vi.fn() }))
 }));
 
+vi.mock('$app/navigation', () => ({
+	goto: vi.fn(),
+	invalidateAll: vi.fn()
+}));
+
+vi.mock('$app/stores', async () => {
+	const { readable } = await import('svelte/store');
+	return {
+		page: readable({ url: new URL('http://localhost/metryki') })
+	};
+});
+
 const metricCards = {
 	property_sqm: 0,
 	emergency_fund_months: 6,
@@ -62,7 +74,10 @@ const mockData = {
 	ppkStats: [],
 	stockStats: null,
 	bondStats: null,
-	owners: []
+	owners: [],
+	range: 'all' as const,
+	dateFrom: null,
+	dateTo: null
 };
 
 describe('Metryki Page', () => {
@@ -166,7 +181,10 @@ describe('Metryki Page with populated data', () => {
 			returns: 500,
 			roi_percentage: 5.26
 		},
-		owners: [{ id: 1, name: 'Marcin' }]
+		owners: [{ id: 1, name: 'Marcin' }],
+		range: 'all' as const,
+		dateFrom: null,
+		dateTo: null
 	};
 
 	it('renders the rebalancing suggestions when present', () => {

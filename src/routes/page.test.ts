@@ -53,8 +53,16 @@ vi.mock('echarts', () => ({
 }));
 
 vi.mock('$app/navigation', () => ({
-	invalidateAll: vi.fn()
+	invalidateAll: vi.fn(),
+	goto: vi.fn()
 }));
+
+vi.mock('$app/stores', async () => {
+	const { readable } = await import('svelte/store');
+	return {
+		page: readable({ url: new URL('http://localhost/') })
+	};
+});
 
 const baseTileDeltas = {
 	net_worth: {
@@ -107,7 +115,10 @@ function buildData(
 		user: null,
 		dashboardData,
 		owners: Promise.resolve(overrides.owners ?? []),
-		currentYear: overrides.currentYear ?? 2024
+		currentYear: overrides.currentYear ?? 2024,
+		range: 'all' as const,
+		dateFrom: null,
+		dateTo: null
 	};
 }
 

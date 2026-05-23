@@ -3,6 +3,7 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import Skeleton from '$lib/components/Skeleton.svelte';
 	import DashboardCharts from '$lib/components/DashboardCharts.svelte';
+	import DateRangePicker from '$lib/components/DateRangePicker.svelte';
 	import DeltaBadge from '$lib/components/DeltaBadge.svelte';
 	import { formatPLN } from '$lib/utils/format';
 	import {
@@ -112,6 +113,8 @@
 		<h1 class="h2">Dashboard</h1>
 		<p class="text-surface-700-300 text-sm">Twoja sytuacja finansowa w jednym miejscu</p>
 	</div>
+
+	<DateRangePicker />
 
 	{#await data.dashboardData}
 		<div role="status" aria-live="polite" aria-label="Ładowanie dashboardu" class="space-y-8">

@@ -1,11 +1,20 @@
 import { error } from '@sveltejs/kit';
 import { resolveApiUrl } from '$lib/api';
+import { resolveRangeParams } from '$lib/utils/dateRange';
 
-export async function load({ fetch }) {
+export async function load({ fetch, url }) {
 	try {
 		const apiUrl = resolveApiUrl();
 
-		const dashboardRes = await fetch(`${apiUrl}/api/dashboard`);
+		const { range, dateFrom, dateTo } = resolveRangeParams(url.searchParams);
+		const dashboardQS = new URLSearchParams();
+		if (dateFrom) dashboardQS.set('date_from', dateFrom);
+		if (dateTo) dashboardQS.set('date_to', dateTo);
+		const dashboardURL = dashboardQS.toString()
+			? `${apiUrl}/api/dashboard?${dashboardQS.toString()}`
+			: `${apiUrl}/api/dashboard`;
+
+		const dashboardRes = await fetch(dashboardURL);
 
 		if (!dashboardRes.ok) {
 			throw error(dashboardRes.status, 'Failed to load dashboard data');
@@ -47,7 +56,10 @@ export async function load({ fetch }) {
 			ppkStats,
 			stockStats,
 			bondStats,
-			owners
+			owners,
+			range,
+			dateFrom,
+			dateTo
 		};
 	} catch (err) {
 		if (err instanceof Error && 'status' in err) {

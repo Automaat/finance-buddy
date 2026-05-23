@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { onMount, untrack } from 'svelte';
 	import type { EChartsOption } from 'echarts';
 	import MetricCard from '$lib/components/MetricCard.svelte';
+	import DateRangePicker from '$lib/components/DateRangePicker.svelte';
 	import { TrendingUp, CheckCircle2, Lightbulb } from 'lucide-svelte';
 	import {
 		buildAllocationChartOption,
@@ -21,13 +21,11 @@
 
 	let { data }: Props = $props();
 
-	const {
-		metricCards,
-		allocationAnalysis,
-		investmentTimeSeries,
-		wrapperTimeSeries,
-		categoryTimeSeries
-	} = untrack(() => data);
+	const metricCards = $derived(data.metricCards);
+	const allocationAnalysis = $derived(data.allocationAnalysis);
+	const investmentTimeSeries = $derived(data.investmentTimeSeries);
+	const wrapperTimeSeries = $derived(data.wrapperTimeSeries);
+	const categoryTimeSeries = $derived(data.categoryTimeSeries);
 
 	let allocationChart: HTMLDivElement;
 	let wrapperChart: HTMLDivElement;
@@ -39,7 +37,9 @@
 	let bondChart: HTMLDivElement;
 	let yearlyRoiChart: HTMLDivElement;
 
-	onMount(() => {
+	$effect(() => {
+		// Re-mount every chart whenever the underlying series change (e.g.
+		// after the date-range picker triggers a load() refresh).
 		const handles: ChartHandle[] = [];
 
 		const mount = (el: HTMLDivElement, option: EChartsOption) => {
@@ -77,6 +77,8 @@
 
 <div class="space-y-6">
 	<h1 class="h1">Metryki</h1>
+
+	<DateRangePicker />
 
 	<h2 class="h2">Jak inwestować nowe pieniądze</h2>
 

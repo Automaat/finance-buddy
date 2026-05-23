@@ -1,10 +1,19 @@
 import { error, isHttpError } from '@sveltejs/kit';
 import { resolveApiUrl } from '$lib/api';
+import { resolveRangeParams } from '$lib/utils/dateRange';
 
-export async function load({ fetch }) {
+export async function load({ fetch, url }) {
 	const apiUrl = resolveApiUrl();
 
 	const currentYear = new Date().getFullYear();
+
+	const { range, dateFrom, dateTo } = resolveRangeParams(url.searchParams);
+	const dashboardQS = new URLSearchParams();
+	if (dateFrom) dashboardQS.set('date_from', dateFrom);
+	if (dateTo) dashboardQS.set('date_to', dateTo);
+	const dashboardURL = dashboardQS.toString()
+		? `${apiUrl}/api/dashboard?${dashboardQS.toString()}`
+		: `${apiUrl}/api/dashboard`;
 
 	const owners = (async () => {
 		const res = await fetch(`${apiUrl}/api/users`);
@@ -14,7 +23,7 @@ export async function load({ fetch }) {
 	const dashboardData = (async () => {
 		try {
 			const [dashboardRes, retirementRes] = await Promise.all([
-				fetch(`${apiUrl}/api/dashboard`),
+				fetch(dashboardURL),
 				fetch(`${apiUrl}/api/retirement/stats?year=${currentYear}`)
 			]);
 
@@ -40,6 +49,9 @@ export async function load({ fetch }) {
 	return {
 		dashboardData,
 		owners,
-		currentYear
+		currentYear,
+		range,
+		dateFrom,
+		dateTo
 	};
 }

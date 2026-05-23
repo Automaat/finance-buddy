@@ -2,8 +2,10 @@ package dashboard
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -25,6 +27,13 @@ func NewHandler(store *Store, logger *slog.Logger) *Handler {
 
 // Get serves GET /api/dashboard.
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+	rng, err := parseDateRange(r.URL.Query())
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"detail": err.Error()})
+		return
+	}
 	res, err := Compute(r.Context(), h.store)
 	if err != nil {
 		h.logger.Error("dashboard", "err", err)
@@ -33,11 +42,88 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]string{"detail": "Internal Server Error"})
 		return
 	}
+	applyDateRange(&res, rng)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(toWire(res)); err != nil {
 		h.logger.Error("encode dashboard", "err", err)
 	}
+}
+
+// dateRange is the inclusive [from, to] filter from the query string. A zero
+// time on either bound disables that side of the filter.
+type dateRange struct {
+	from time.Time
+	to   time.Time
+}
+
+func parseDateRange(q url.Values) (dateRange, error) {
+	var r dateRange
+	if s := strings.TrimSpace(q.Get("date_from")); s != "" {
+		t, err := time.Parse("2006-01-02", s)
+		if err != nil {
+			return r, errors.New("invalid date_from — expected yyyy-mm-dd")
+		}
+		r.from = t
+	}
+	if s := strings.TrimSpace(q.Get("date_to")); s != "" {
+		t, err := time.Parse("2006-01-02", s)
+		if err != nil {
+			return r, errors.New("invalid date_to — expected yyyy-mm-dd")
+		}
+		r.to = t
+	}
+	if !r.from.IsZero() && !r.to.IsZero() && r.to.Before(r.from) {
+		return r, errors.New("date_to must be on or after date_from")
+	}
+	return r, nil
+}
+
+func (r dateRange) includes(d time.Time) bool {
+	if !r.from.IsZero() && d.Before(r.from) {
+		return false
+	}
+	if !r.to.IsZero() && d.After(r.to) {
+		return false
+	}
+	return true
+}
+
+// applyDateRange filters the time-series fields in place. Snapshot tiles
+// (current net worth, totals, allocation, tile deltas) are not touched —
+// they always reflect the latest state.
+func applyDateRange(res *result, rng dateRange) {
+	if rng.from.IsZero() && rng.to.IsZero() {
+		return
+	}
+	res.NetWorthHistory = filterNetWorthHistory(res.NetWorthHistory, rng)
+	res.InvestmentTimeSeries = filterTimeSeries(res.InvestmentTimeSeries, rng)
+	for k, v := range res.WrapperTimeSeries {
+		res.WrapperTimeSeries[k] = filterTimeSeries(v, rng)
+	}
+	for k, v := range res.CategoryTimeSeries {
+		res.CategoryTimeSeries[k] = filterTimeSeries(v, rng)
+	}
+}
+
+func filterNetWorthHistory(pts []netWorthPoint, rng dateRange) []netWorthPoint {
+	out := make([]netWorthPoint, 0, len(pts))
+	for _, p := range pts {
+		if rng.includes(p.Date) {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+func filterTimeSeries(pts []timeSeriesPoint, rng dateRange) []timeSeriesPoint {
+	out := make([]timeSeriesPoint, 0, len(pts))
+	for _, p := range pts {
+		if rng.includes(p.Date) {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 // --- wire types ---

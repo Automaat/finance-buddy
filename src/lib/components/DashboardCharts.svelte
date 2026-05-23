@@ -18,8 +18,8 @@
 
 	let chartContainer: HTMLDivElement | undefined;
 	let pieChartContainer: HTMLDivElement | undefined;
-	let lineChart: echarts.ECharts | undefined;
-	let pieChart: echarts.ECharts | undefined;
+	let lineChart: echarts.ECharts | undefined = $state(undefined);
+	let pieChart: echarts.ECharts | undefined = $state(undefined);
 
 	const gridConfig = $derived(
 		$isMobile
@@ -31,81 +31,77 @@
 
 	const titleFontSize = $derived($isMobile ? 14 : 16);
 
-	onMount(() => {
-		if (!chartContainer || !pieChartContainer) return;
+	const lineOption = $derived<EChartsOption>({
+		title: {
+			text: 'Wartość Netto w Czasie',
+			left: 'center',
+			textStyle: { fontSize: titleFontSize }
+		},
+		tooltip: {
+			trigger: 'axis',
+			formatter: (params: any) => {
+				const date = new Date(params[0].value[0]).toLocaleDateString('pl-PL');
+				const value = formatPLN(params[0].value[1]);
+				return `${date}<br/>Wartość: ${value}`;
+			}
+		},
+		xAxis: { type: 'time' },
+		yAxis: {
+			type: 'value',
+			axisLabel: { formatter: (value: number) => formatPLN(value) }
+		},
+		series: [
+			{
+				data: netWorthHistory.map((h) => [h.date, h.value]),
+				type: 'line',
+				smooth: true,
+				areaStyle: {
+					color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+						{ offset: 0, color: chartAccentGradient[0] },
+						{ offset: 1, color: chartAccentGradient[1] }
+					])
+				},
+				lineStyle: { color: chartAccent, width: 2 }
+			}
+		],
+		grid: gridConfig
+	});
 
-		const lineHandle = createChart(chartContainer);
-		lineChart = lineHandle.chart;
-
-		const lineOption: EChartsOption = {
-			title: {
-				text: 'Wartość Netto w Czasie',
-				left: 'center',
-				textStyle: { fontSize: titleFontSize }
-			},
-			tooltip: {
-				trigger: 'axis',
-				formatter: (params: any) => {
-					const date = new Date(params[0].value[0]).toLocaleDateString('pl-PL');
-					const value = formatPLN(params[0].value[1]);
-					return `${date}<br/>Wartość: ${value}`;
-				}
-			},
-			xAxis: { type: 'time' },
-			yAxis: {
-				type: 'value',
-				axisLabel: { formatter: (value: number) => formatPLN(value) }
-			},
-			series: [
-				{
-					data: netWorthHistory.map((h) => [h.date, h.value]),
-					type: 'line',
-					smooth: true,
-					areaStyle: {
-						color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-							{ offset: 0, color: chartAccentGradient[0] },
-							{ offset: 1, color: chartAccentGradient[1] }
-						])
-					},
-					lineStyle: { color: chartAccent, width: 2 }
-				}
-			],
-			grid: gridConfig
-		};
-
-		lineChart.setOption(lineOption);
-
-		const pieHandle = createChart(pieChartContainer);
-		pieChart = pieHandle.chart;
-
-		const pieOption: EChartsOption = {
-			title: {
-				text: 'Alokacja Aktywów',
-				left: 'center',
-				textStyle: { fontSize: titleFontSize }
-			},
-			tooltip: { trigger: 'item', formatter: '{b}: {c} PLN ({d}%)' },
-			color: [...chartPalette],
-			series: [
-				{
-					type: 'pie',
-					radius: ['40%', '70%'],
-					data: allocation.map((a) => ({
-						name: `${a.category} (${ownerName(owners, a.owner_user_id)})`,
-						value: a.value
-					})),
-					emphasis: {
-						itemStyle: {
-							shadowBlur: 10,
-							shadowOffsetX: 0,
-							shadowColor: 'rgba(0, 0, 0, 0.5)'
-						}
+	const pieOption = $derived<EChartsOption>({
+		title: {
+			text: 'Alokacja Aktywów',
+			left: 'center',
+			textStyle: { fontSize: titleFontSize }
+		},
+		tooltip: { trigger: 'item', formatter: '{b}: {c} PLN ({d}%)' },
+		color: [...chartPalette],
+		series: [
+			{
+				type: 'pie',
+				radius: ['40%', '70%'],
+				data: allocation.map((a) => ({
+					name: `${a.category} (${ownerName(owners, a.owner_user_id)})`,
+					value: a.value
+				})),
+				emphasis: {
+					itemStyle: {
+						shadowBlur: 10,
+						shadowOffsetX: 0,
+						shadowColor: 'rgba(0, 0, 0, 0.5)'
 					}
 				}
-			]
-		};
+			}
+		]
+	});
 
-		pieChart.setOption(pieOption);
+	onMount(() => {
+		if (!chartContainer || !pieChartContainer) return;
+		const lineHandle = createChart(chartContainer);
+		const pieHandle = createChart(pieChartContainer);
+		// The $effect blocks below run after mount and will apply the initial
+		// options — no need to setOption here.
+		lineChart = lineHandle.chart;
+		pieChart = pieHandle.chart;
 
 		return () => {
 			lineHandle.dispose();
@@ -114,20 +110,11 @@
 	});
 
 	$effect(() => {
-		if (lineChart && gridConfig) {
-			lineChart.setOption({
-				grid: gridConfig,
-				title: { textStyle: { fontSize: titleFontSize } }
-			});
-		}
+		if (lineChart) lineChart.setOption(lineOption);
 	});
 
 	$effect(() => {
-		if (pieChart && titleFontSize) {
-			pieChart.setOption({
-				title: { textStyle: { fontSize: titleFontSize } }
-			});
-		}
+		if (pieChart) pieChart.setOption(pieOption);
 	});
 </script>
 
