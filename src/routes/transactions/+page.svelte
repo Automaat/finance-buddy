@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Modal from '$lib/components/Modal.svelte';
+	import SortableTable, { type SortableColumn } from '$lib/components/SortableTable.svelte';
 	import { formatPLN } from '$lib/utils/format';
 	import { Plus, Landmark, Search, BarChart3, Trash2 } from 'lucide-svelte';
 	import { resolveApiUrl } from '$lib/api';
@@ -8,6 +9,7 @@
 	import { confirm } from '$lib/stores/confirm.svelte';
 	import { ownerName, type OwnerOption } from '$lib/types/owners';
 	import { untrack } from 'svelte';
+	import type { Transaction } from '$lib/types/transactions';
 	import type { PageData } from './$types';
 
 	interface Props {
@@ -20,6 +22,19 @@
 	const owners = $derived(data.owners as OwnerOption[]);
 	const defaultOwnerUserId = $derived(owners.length > 0 ? owners[0].id : null);
 	const defaultOwnerName = $derived(owners.length > 0 ? owners[0].name : '');
+
+	const transactionColumns = $derived<SortableColumn<Transaction>[]>([
+		{ key: 'date', label: 'Data zakupu', sortable: true, accessor: (t) => t.date },
+		{ key: 'account', label: 'Konto', sortable: true, accessor: (t) => t.account_name },
+		{
+			key: 'owner',
+			label: 'Właściciel',
+			sortable: true,
+			accessor: (t) => ownerName(owners, t.owner_user_id)
+		},
+		{ key: 'amount', label: 'Kwota', sortable: true, accessor: (t) => t.amount },
+		{ key: 'actions', label: 'Akcje', align: 'right' }
+	]);
 
 	let filterAccountId = $state(untrack(() => data.filters.account_id || ''));
 	let filterOwnerUserId = $state(untrack(() => data.filters.owner_user_id || ''));
@@ -196,6 +211,25 @@
 	<title>Transakcje | Finansowa Forteca</title>
 </svelte:head>
 
+{#snippet transactionRow(transaction: Transaction)}
+	<tr>
+		<td>{new Date(transaction.date).toLocaleDateString('pl-PL')}</td>
+		<td class="font-medium">{transaction.account_name}</td>
+		<td>{ownerName(owners, transaction.owner_user_id)}</td>
+		<td class="font-semibold text-primary-600-400">{formatPLN(transaction.amount)}</td>
+		<td class="text-right">
+			<button
+				type="button"
+				class="btn-icon btn-icon-sm"
+				aria-label="Usuń"
+				onclick={() => deleteTransaction(transaction.account_id, transaction.id)}
+			>
+				<Trash2 size={16} />
+			</button>
+		</td>
+	</tr>
+{/snippet}
+
 <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
 	<div class="space-y-1">
 		<h1 class="h2">Wszystkie transakcje</h1>
@@ -285,39 +319,12 @@
 				<p>Brak transakcji</p>
 			</div>
 		{:else}
-			<div class="table-wrap">
-				<table class="table table-hover">
-					<thead>
-						<tr>
-							<th>Data zakupu</th>
-							<th>Konto</th>
-							<th>Właściciel</th>
-							<th>Kwota</th>
-							<th class="text-right">Akcje</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each data.transactions.transactions as transaction}
-							<tr>
-								<td>{new Date(transaction.date).toLocaleDateString('pl-PL')}</td>
-								<td class="font-medium">{transaction.account_name}</td>
-								<td>{ownerName(owners, transaction.owner_user_id)}</td>
-								<td class="font-semibold text-primary-600-400">{formatPLN(transaction.amount)}</td>
-								<td class="text-right">
-									<button
-										type="button"
-										class="btn-icon btn-icon-sm"
-										aria-label="Usuń"
-										onclick={() => deleteTransaction(transaction.account_id, transaction.id)}
-									>
-										<Trash2 size={16} />
-									</button>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
+			<SortableTable
+				columns={transactionColumns}
+				items={data.transactions.transactions}
+				row={transactionRow}
+				getKey={(t) => t.id}
+			/>
 		{/if}
 	</div>
 </div>
