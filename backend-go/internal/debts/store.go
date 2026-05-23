@@ -330,9 +330,9 @@ func (s *Store) CreateWithAccount(ctx context.Context, acc AccountSpec, d *Debt)
 		INSERT INTO accounts (
 			name, type, category, owner_user_id, currency, account_wrapper,
 			purpose, square_meters, is_active, receives_contributions, created_at
-		) VALUES ($1, 'liability', $2, $3, $4, NULL, 'general', NULL, true, true, $5)
+		) VALUES ($1, 'liability', $2, $3, $4, NULL, 'general', NULL, $5, $6, $7)
 		RETURNING id`,
-		acc.Name, acc.Category, acc.OwnerUserID, acc.Currency, now,
+		acc.Name, acc.Category, acc.OwnerUserID, acc.Currency, true, true, now,
 	).Scan(&accountID); err != nil {
 		return nil, nil, fmt.Errorf("insert account: %w", err)
 	}
