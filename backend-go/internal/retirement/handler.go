@@ -543,22 +543,32 @@ func buildGenerateRequest(raw map[string]json.RawMessage, now func() time.Time) 
 	}
 	r.Year = year
 
-	r.IncludeWelcome = optionalBool(raw, "include_welcome_subsidy")
-	r.IncludeAnnual = optionalBool(raw, "include_annual_subsidy")
+	welcome, vErr := optionalBool(raw, "include_welcome_subsidy")
+	if vErr != nil {
+		return r, vErr
+	}
+	r.IncludeWelcome = welcome
+	annual, vErr := optionalBool(raw, "include_annual_subsidy")
+	if vErr != nil {
+		return r, vErr
+	}
+	r.IncludeAnnual = annual
 	return r, nil
 }
 
-// optionalBool reads a boolean key; missing/null returns false.
-func optionalBool(raw map[string]json.RawMessage, key string) bool {
+// optionalBool reads a boolean key. Missing/null returns false; a present
+// non-bool value (e.g. "true" sent as a string) is rejected so the client
+// gets a 422 instead of silently degrading to false.
+func optionalBool(raw map[string]json.RawMessage, key string) (bool, *validationError) {
 	v, ok := raw[key]
 	if !ok || isNull(v) {
-		return false
+		return false, nil
 	}
 	var b bool
 	if err := json.Unmarshal(v, &b); err != nil {
-		return false
+		return false, &validationError{Field: key, Msg: "must be a boolean"}
 	}
-	return b
+	return b, nil
 }
 
 // --- helpers ---

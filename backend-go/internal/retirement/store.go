@@ -359,9 +359,10 @@ type PPKContributionResult struct {
 // atomically, plus any opted-in government subsidies. ErrContributionsExist
 // when a (account_id, date, employee|employer) row already exists — guarded
 // both by a pre-check and by a UniqueViolation catch. Welcome / annual
-// subsidies are independently idempotent: an existing welcome (any prior
-// government txn) skips the new one; an existing annual government txn in
-// the same year skips that one too.
+// subsidies are independently idempotent and keyed by amount (welcome and
+// annual share transaction_type='government'): a new welcome is skipped if
+// any prior welcome-amount government row exists on the account; a new
+// annual is skipped if a same-year, annual-amount government row exists.
 func (s *Store) InsertPPKContributions(ctx context.Context, c PPKContribution) (PPKContributionResult, error) {
 	var res PPKContributionResult
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})

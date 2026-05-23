@@ -136,34 +136,43 @@ def _ppk_account_id(client: httpx.Client) -> int:
 
 @contextmanager
 def _clean_ppk_account(dsn: str, account_id: int) -> Iterator[None]:
-    """Soft-delete the account's existing transactions for the test, then
-    restore them so the session-scoped seed is intact for downstream
-    golden tests. Newly-inserted rows during the test are hard-deleted on
-    exit."""
+    """Capture every existing transaction id on the account (active or not),
+    soft-deactivate the active ones so eligibility checks fire, then on exit
+    delete only the rows that didn't exist before and restore the originals'
+    is_active flags. Session-scoped seed survives intact."""
     with closing(psycopg2.connect(dsn)) as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id FROM transactions WHERE account_id = %s AND is_active = true",
+                "SELECT id, is_active FROM transactions WHERE account_id = %s",
                 (account_id,),
             )
-            existing_ids = [row[0] for row in cur.fetchall()]
+            preserved = {row[0]: row[1] for row in cur.fetchall()}
+            active_ids = [tid for tid, active in preserved.items() if active]
             cur.execute(
                 "UPDATE transactions SET is_active = false WHERE id = ANY(%s)",
-                (existing_ids,),
+                (active_ids,),
             )
         conn.commit()
         try:
             yield
         finally:
+            preserved_ids = list(preserved.keys())
             with conn.cursor() as cur:
-                cur.execute(
-                    "DELETE FROM transactions WHERE account_id = %s AND id <> ALL(%s)",
-                    (account_id, existing_ids),
-                )
-                cur.execute(
-                    "UPDATE transactions SET is_active = true WHERE id = ANY(%s)",
-                    (existing_ids,),
-                )
+                if preserved_ids:
+                    cur.execute(
+                        "DELETE FROM transactions WHERE account_id = %s AND id <> ALL(%s)",
+                        (account_id, preserved_ids),
+                    )
+                else:
+                    cur.execute(
+                        "DELETE FROM transactions WHERE account_id = %s",
+                        (account_id,),
+                    )
+                if active_ids:
+                    cur.execute(
+                        "UPDATE transactions SET is_active = true WHERE id = ANY(%s)",
+                        (active_ids,),
+                    )
             conn.commit()
 
 
