@@ -2,7 +2,10 @@
 	import { onMount, untrack } from 'svelte';
 	import * as echarts from 'echarts';
 	import type { EChartsOption } from 'echarts';
-	import Modal from '$lib/components/Modal.svelte';
+	import BonusFormModal from '$lib/components/salaries/BonusFormModal.svelte';
+	import EquityFormModal from '$lib/components/salaries/EquityFormModal.svelte';
+	import SalaryFormModal from '$lib/components/salaries/SalaryFormModal.svelte';
+	import ValuationFormModal from '$lib/components/salaries/ValuationFormModal.svelte';
 	import { formatPLN } from '$lib/utils/format';
 	import { buildCpiLookup, inflationAdjust, parseIsoDate } from '$lib/utils/inflation';
 	import { grossToNet, type PlContractType } from '$lib/utils/pl_tax';
@@ -1875,522 +1878,51 @@
 	</div>
 </div>
 
-<Modal
+<SalaryFormModal
 	open={showNewSalaryModal}
-	title={editingSalary ? 'Edytuj wynagrodzenie' : 'Nowe wynagrodzenie'}
-	onConfirm={saveSalary}
+	editing={editingSalary !== null}
+	data={salaryFormData}
+	error={salaryError}
+	saving={savingSalary}
+	{today}
+	{owners}
+	onSave={saveSalary}
 	onCancel={closeSalaryModal}
-	confirmText={savingSalary ? 'Zapisywanie...' : 'Zapisz'}
-	confirmDisabled={savingSalary}
->
-	<form
-		onsubmit={(event) => {
-			event.preventDefault();
-			saveSalary();
-		}}
-		class="space-y-4"
-	>
-		{#if salaryError}
-			<div class="card preset-filled-error-500 p-3 text-sm">{salaryError}</div>
-		{/if}
+/>
 
-		<label class="label">
-			<span class="font-semibold text-sm">Data zmiany*</span>
-			<input type="date" class="input" bind:value={salaryFormData.date} max={today} required />
-		</label>
-
-		<label class="label">
-			<span class="font-semibold text-sm">Pensja brutto (PLN)*</span>
-			<input
-				type="number"
-				class="input"
-				bind:value={salaryFormData.gross_amount}
-				min="0"
-				step="0.01"
-				required
-			/>
-		</label>
-
-		<label class="label">
-			<span class="font-semibold text-sm">Rodzaj umowy*</span>
-			<select class="select" bind:value={salaryFormData.contract_type} required>
-				<option value="UOP">UOP</option>
-				<option value="UZ">UZ</option>
-				<option value="UoD">UoD</option>
-				<option value="B2B">B2B</option>
-			</select>
-		</label>
-
-		<label class="label">
-			<span class="font-semibold text-sm">Firma*</span>
-			<input
-				type="text"
-				class="input"
-				bind:value={salaryFormData.company}
-				placeholder="Nazwa firmy"
-				required
-			/>
-		</label>
-
-		<label class="label">
-			<span class="font-semibold text-sm">Właściciel*</span>
-			<select class="select" bind:value={salaryFormData.owner_user_id} required>
-				{#each owners as owner (owner.id)}
-					<option value={owner.id}>{owner.name}</option>
-				{/each}
-			</select>
-		</label>
-	</form>
-</Modal>
-
-<Modal
+<BonusFormModal
 	open={showBonusModal}
-	title={editingBonus ? 'Edytuj bonus' : 'Nowy bonus'}
-	onConfirm={saveBonus}
+	editing={editingBonus !== null}
+	data={bonusFormData}
+	error={bonusError}
+	saving={savingBonus}
+	{today}
+	{owners}
+	onSave={saveBonus}
 	onCancel={closeBonusModal}
-	confirmText={savingBonus ? 'Zapisywanie...' : 'Zapisz'}
-	confirmDisabled={savingBonus}
->
-	<form
-		onsubmit={(event) => {
-			event.preventDefault();
-			saveBonus();
-		}}
-		class="space-y-4"
-	>
-		{#if bonusError}
-			<div class="card preset-filled-error-500 p-3 text-sm">{bonusError}</div>
-		{/if}
+/>
 
-		<label class="label">
-			<span class="font-semibold text-sm">Data wypłaty*</span>
-			<input type="date" class="input" bind:value={bonusFormData.date} max={today} required />
-		</label>
-
-		<div class="grid grid-cols-3 gap-2">
-			<label class="label col-span-2">
-				<span class="font-semibold text-sm">Kwota*</span>
-				<input
-					type="number"
-					class="input"
-					bind:value={bonusFormData.amount}
-					min="0"
-					step="0.01"
-					required
-				/>
-			</label>
-			<label class="label">
-				<span class="font-semibold text-sm">Waluta*</span>
-				<select class="select" bind:value={bonusFormData.currency} required>
-					<option value="PLN">PLN</option>
-					<option value="USD">USD</option>
-					<option value="EUR">EUR</option>
-					<option value="GBP">GBP</option>
-					<option value="CHF">CHF</option>
-				</select>
-			</label>
-		</div>
-
-		<label class="label">
-			<span class="font-semibold text-sm">Typ*</span>
-			<select class="select" bind:value={bonusFormData.type} required>
-				<option value="annual">Roczny</option>
-				<option value="signon">Powitalny</option>
-				<option value="spot">Uznaniowy</option>
-				<option value="retention">Retencyjny</option>
-			</select>
-		</label>
-
-		<label class="label">
-			<span class="font-semibold text-sm">Firma*</span>
-			<input
-				type="text"
-				class="input"
-				bind:value={bonusFormData.company}
-				placeholder="Nazwa firmy"
-				required
-			/>
-		</label>
-
-		<label class="label">
-			<span class="font-semibold text-sm">Właściciel*</span>
-			<select class="select" bind:value={bonusFormData.owner_user_id} required>
-				{#each owners as owner (owner.id)}
-					<option value={owner.id}>{owner.name}</option>
-				{/each}
-			</select>
-		</label>
-
-		<label class="label">
-			<span class="font-semibold text-sm">Rodzaj umowy*</span>
-			<select class="select" bind:value={bonusFormData.contract_type} required>
-				<option value="UOP">UOP</option>
-				<option value="UZ">UZ</option>
-				<option value="UoD">UoD</option>
-				<option value="B2B">B2B</option>
-			</select>
-		</label>
-
-		<label class="label">
-			<span class="font-semibold text-sm">Notatki</span>
-			<input
-				type="text"
-				class="input"
-				bind:value={bonusFormData.notes}
-				placeholder="np. Q4 performance bonus"
-			/>
-		</label>
-	</form>
-</Modal>
-
-<Modal
+<EquityFormModal
 	open={showEquityModal}
-	title={editingGrant ? 'Edytuj grant' : 'Nowy grant'}
-	onConfirm={saveEquityGrant}
+	editing={editingGrant !== null}
+	data={equityFormData}
+	error={equityError}
+	saving={savingEquity}
+	{today}
+	{owners}
+	{vestingPresets}
+	{taxTreatmentLabels}
+	onApplyPreset={(key) => applyPreset(key as VestingPresetKey)}
+	onSave={saveEquityGrant}
 	onCancel={closeEquityModal}
-	confirmText={savingEquity ? 'Zapisywanie...' : 'Zapisz'}
-	confirmDisabled={savingEquity}
->
-	<form
-		onsubmit={(event) => {
-			event.preventDefault();
-			saveEquityGrant();
-		}}
-		class="space-y-4"
-	>
-		{#if equityError}
-			<div class="card preset-filled-error-500 p-3 text-sm">{equityError}</div>
-		{/if}
+/>
 
-		<div class="grid grid-cols-2 gap-2">
-			<label class="label">
-				<span class="font-semibold text-sm">Typ*</span>
-				<select class="select" bind:value={equityFormData.type} required>
-					<option value="rsu">RSU</option>
-					<option value="option">Opcje</option>
-				</select>
-			</label>
-			<label class="label">
-				<span class="font-semibold text-sm">Data grantu*</span>
-				<input
-					type="date"
-					class="input"
-					bind:value={equityFormData.grant_date}
-					max={today}
-					required
-				/>
-			</label>
-		</div>
-
-		<label class="label">
-			<span class="font-semibold text-sm">Firma*</span>
-			<input
-				type="text"
-				class="input"
-				bind:value={equityFormData.company}
-				placeholder="Nazwa firmy"
-				required
-			/>
-		</label>
-
-		<label class="label">
-			<span class="font-semibold text-sm">Właściciel*</span>
-			<select class="select" bind:value={equityFormData.owner_user_id} required>
-				{#each owners as owner (owner.id)}
-					<option value={owner.id}>{owner.name}</option>
-				{/each}
-			</select>
-		</label>
-
-		<div class="grid grid-cols-2 gap-2">
-			<label class="label">
-				<span class="font-semibold text-sm">Liczba akcji*</span>
-				<input
-					type="number"
-					class="input"
-					bind:value={equityFormData.total_shares}
-					min="1"
-					step="1"
-					required
-				/>
-			</label>
-			<label class="label">
-				<span class="font-semibold text-sm">Waluta*</span>
-				<select class="select" bind:value={equityFormData.currency} required>
-					<option value="USD">USD</option>
-					<option value="EUR">EUR</option>
-					<option value="PLN">PLN</option>
-					<option value="GBP">GBP</option>
-					<option value="CHF">CHF</option>
-				</select>
-			</label>
-		</div>
-
-		{#if equityFormData.type === 'option'}
-			<label class="label">
-				<span class="font-semibold text-sm">Strike price (cena wykonania)*</span>
-				<input
-					type="number"
-					class="input"
-					bind:value={equityFormData.strike_price}
-					min="0"
-					step="0.0001"
-					required
-				/>
-			</label>
-		{/if}
-
-		<fieldset class="card preset-tonal-surface p-3 space-y-3">
-			<legend class="font-semibold text-sm px-1">Harmonogram vestingu</legend>
-
-			<label class="label">
-				<span class="font-semibold text-sm">Schemat</span>
-				<select
-					class="select"
-					bind:value={equityFormData.preset}
-					onchange={() => applyPreset(equityFormData.preset)}
-				>
-					{#each Object.entries(vestingPresets) as [key, preset]}
-						<option value={key}>{preset.label}</option>
-					{/each}
-				</select>
-			</label>
-
-			<label class="label">
-				<span class="font-semibold text-sm">Data startu vestingu*</span>
-				<input type="date" class="input" bind:value={equityFormData.vest_start_date} required />
-			</label>
-
-			<div class="grid grid-cols-3 gap-2">
-				<label class="label">
-					<span class="font-semibold text-sm">Cliff (msc)</span>
-					<input
-						type="number"
-						class="input"
-						bind:value={equityFormData.vest_cliff_months}
-						min="0"
-						step="1"
-					/>
-				</label>
-				<label class="label">
-					<span class="font-semibold text-sm">Całość (msc)*</span>
-					<input
-						type="number"
-						class="input"
-						bind:value={equityFormData.vest_total_months}
-						min="1"
-						step="1"
-						required
-					/>
-				</label>
-				<label class="label">
-					<span class="font-semibold text-sm">Częstotliwość</span>
-					<select class="select" bind:value={equityFormData.vest_frequency}>
-						<option value="monthly">Miesięczna</option>
-						<option value="quarterly">Kwartalna</option>
-						<option value="yearly">Roczna</option>
-					</select>
-				</label>
-			</div>
-
-			{#if equityFormData.preset === 'custom'}
-				<div class="text-xs text-surface-700-300">
-					Niestandardowy harmonogram: lista zdarzeń (miesiąc + % od całości).
-				</div>
-				{#each equityFormData.vest_custom_schedule ?? [] as event, idx (idx)}
-					<div class="grid grid-cols-[1fr,1fr,auto] gap-2 items-end">
-						<label class="label">
-							<span class="text-xs">Miesiąc</span>
-							<input type="number" class="input" bind:value={event.month} min="0" step="1" />
-						</label>
-						<label class="label">
-							<span class="text-xs">% od całości</span>
-							<input type="number" class="input" bind:value={event.pct} min="0" step="0.1" />
-						</label>
-						<button
-							type="button"
-							class="btn-icon btn-icon-sm"
-							aria-label="Usuń wiersz"
-							onclick={() => {
-								equityFormData.vest_custom_schedule =
-									equityFormData.vest_custom_schedule?.filter((_, i) => i !== idx) ?? null;
-							}}
-						>
-							<Trash2 size={14} />
-						</button>
-					</div>
-				{/each}
-				<button
-					type="button"
-					class="btn preset-tonal-surface btn-sm"
-					onclick={() => {
-						const next = [...(equityFormData.vest_custom_schedule ?? []), { month: 0, pct: 0 }];
-						equityFormData.vest_custom_schedule = next;
-					}}
-				>
-					<Plus size={14} /> Dodaj zdarzenie
-				</button>
-			{/if}
-		</fieldset>
-
-		<fieldset class="card preset-tonal-surface p-3 space-y-3">
-			<legend class="font-semibold text-sm px-1">Liquidity event (double-trigger)</legend>
-			<label class="flex items-center gap-2 cursor-pointer">
-				<input
-					type="checkbox"
-					class="checkbox"
-					bind:checked={equityFormData.requires_liquidity_event}
-				/>
-				<span class="text-sm">Wymaga liquidity event (IPO / akwizycja)</span>
-			</label>
-			{#if equityFormData.requires_liquidity_event}
-				<label class="label">
-					<span class="font-semibold text-sm">Data liquidity event</span>
-					<input type="date" class="input" bind:value={equityFormData.liquidity_event_date} />
-					<span class="text-xs text-surface-700-300"
-						>Puste = jeszcze nie wystąpiło. Vested = 0 dopóki nie wystąpi.</span
-					>
-				</label>
-			{/if}
-		</fieldset>
-
-		<label class="label">
-			<span class="font-semibold text-sm">Traktowanie podatkowe (PL)</span>
-			<select class="select" bind:value={equityFormData.tax_treatment}>
-				{#each Object.entries(taxTreatmentLabels) as [key, label]}
-					<option value={key}>{label}</option>
-				{/each}
-			</select>
-		</label>
-
-		<label class="label">
-			<span class="font-semibold text-sm">Notatki</span>
-			<input
-				type="text"
-				class="input"
-				bind:value={equityFormData.notes}
-				placeholder="np. ESOP 2024, double-trigger RSU"
-			/>
-		</label>
-	</form>
-</Modal>
-
-<Modal
+<ValuationFormModal
 	open={showValuationModal}
-	title={editingValuation ? 'Edytuj wycenę' : 'Nowa wycena'}
-	onConfirm={saveValuation}
+	editing={editingValuation !== null}
+	data={valuationFormData}
+	error={valuationError}
+	saving={savingValuation}
+	onSave={saveValuation}
 	onCancel={closeValuationModal}
-	confirmText={savingValuation ? 'Zapisywanie...' : 'Zapisz'}
-	confirmDisabled={savingValuation}
->
-	<form
-		onsubmit={(event) => {
-			event.preventDefault();
-			saveValuation();
-		}}
-		class="space-y-4"
-	>
-		{#if valuationError}
-			<div class="card preset-filled-error-500 p-3 text-sm">{valuationError}</div>
-		{/if}
-
-		<label class="label">
-			<span class="font-semibold text-sm">Firma*</span>
-			<input
-				type="text"
-				class="input"
-				bind:value={valuationFormData.company}
-				placeholder="Nazwa firmy"
-				required
-			/>
-		</label>
-
-		<div class="grid grid-cols-2 gap-2">
-			<label class="label">
-				<span class="font-semibold text-sm">Data wyceny*</span>
-				<input type="date" class="input" bind:value={valuationFormData.date} required />
-			</label>
-			<label class="label">
-				<span class="font-semibold text-sm">Waluta*</span>
-				<select class="select" bind:value={valuationFormData.currency} required>
-					<option value="USD">USD</option>
-					<option value="EUR">EUR</option>
-					<option value="PLN">PLN</option>
-					<option value="GBP">GBP</option>
-					<option value="CHF">CHF</option>
-				</select>
-			</label>
-		</div>
-
-		<label class="label">
-			<span class="font-semibold text-sm">FMV per share (bazowa)*</span>
-			<input
-				type="number"
-				class="input"
-				bind:value={valuationFormData.fmv_per_share}
-				min="0"
-				step="0.0001"
-				required
-			/>
-		</label>
-
-		<div class="grid grid-cols-2 gap-2">
-			<label class="label">
-				<span class="font-semibold text-sm">FMV low (opcjonalna)</span>
-				<input
-					type="number"
-					class="input"
-					bind:value={valuationFormData.fmv_low}
-					min="0"
-					step="0.0001"
-				/>
-			</label>
-			<label class="label">
-				<span class="font-semibold text-sm">FMV high (opcjonalna)</span>
-				<input
-					type="number"
-					class="input"
-					bind:value={valuationFormData.fmv_high}
-					min="0"
-					step="0.0001"
-				/>
-			</label>
-		</div>
-
-		<label class="label">
-			<span class="font-semibold text-sm">Źródło*</span>
-			<select class="select" bind:value={valuationFormData.source} required>
-				<option value="409a">409A</option>
-				<option value="preferred_round">Runda preferred</option>
-				<option value="tender">Tender / wykup</option>
-				<option value="estimate">Estymacja</option>
-			</select>
-		</label>
-
-		<label class="label">
-			<span class="font-semibold text-sm">Common stock discount (%) — opcjonalne</span>
-			<input
-				type="number"
-				class="input"
-				bind:value={valuationFormData.common_stock_discount_pct}
-				min="0"
-				max="100"
-				step="0.1"
-				placeholder="np. 30"
-			/>
-			<span class="text-xs text-surface-700-300"
-				>Stosowane przy wycenie preferred → common (zwykle 20–40%)</span
-			>
-		</label>
-
-		<label class="label">
-			<span class="font-semibold text-sm">Notatki</span>
-			<input
-				type="text"
-				class="input"
-				bind:value={valuationFormData.notes}
-				placeholder="np. Series C post-money"
-			/>
-		</label>
-	</form>
-</Modal>
+/>
