@@ -94,7 +94,7 @@ func TestToResponseSquareMetersForwarded(t *testing.T) {
 
 func TestParseIDParamValid(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/accounts/42", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/accounts/42", http.NoBody)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", "42")
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
@@ -107,7 +107,7 @@ func TestParseIDParamValid(t *testing.T) {
 
 func TestParseIDParamInvalidWrites422(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/accounts/abc", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/accounts/abc", http.NoBody)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", "abc")
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))

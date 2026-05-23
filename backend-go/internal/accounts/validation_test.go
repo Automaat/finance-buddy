@@ -264,13 +264,13 @@ func TestOptionalDecimalParsesAndFails(t *testing.T) {
 }
 
 func TestOptionalBoolFallbacks(t *testing.T) {
-	if b, vErr := optionalBool(map[string]json.RawMessage{}, "x", true); !b || vErr != nil {
+	if b, vErr := optionalBoolDefaultTrue(map[string]json.RawMessage{}, "x"); !b || vErr != nil {
 		t.Fatalf("missing should fall back to true")
 	}
-	if _, vErr := optionalBool(rawJSON(t, map[string]any{"x": nil}), "x", true); vErr == nil {
+	if _, vErr := optionalBoolDefaultTrue(rawJSON(t, map[string]any{"x": nil}), "x"); vErr == nil {
 		t.Fatalf("null should be a validation error")
 	}
-	b, vErr := optionalBool(rawJSON(t, map[string]any{"x": false}), "x", true)
+	b, vErr := optionalBoolDefaultTrue(rawJSON(t, map[string]any{"x": false}), "x")
 	if vErr != nil || b {
 		t.Fatalf("explicit false should pass through")
 	}

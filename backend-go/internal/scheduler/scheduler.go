@@ -54,7 +54,7 @@ func NewCPIScheduler(store *cpi.Store, fetcher *cpi.GUSFetcher, logger *slog.Log
 }
 
 // Run does the startup staleness check, then loops firing the monthly
-// refresh until ctx is cancelled. Intended to run in its own goroutine.
+// refresh until ctx is canceled. Intended to run in its own goroutine.
 func (s *CPIScheduler) Run(ctx context.Context) {
 	s.startupRefresh(ctx)
 	for {

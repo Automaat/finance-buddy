@@ -91,7 +91,7 @@ func computeFromAggregates(ctx context.Context, s *Store, aggRows []AggregateRow
 
 	if shared.hasConfig && len(latestRows) > 0 {
 		latestDate := shared.snapshotDate[latestSID]
-		nwForSavings := aggregateMonthlyNetWorths(aggRows, shared.snapshotDate)
+		nwForSavings := aggregateMonthlyNetWorths(aggRows)
 		res.MetricCards = buildMetricCards(latestRows, shared, res.RetirementAccountValue, latestDate, nwForSavings)
 		res.AllocationAnalysis = buildAllocationAnalysis(latestRows, shared.config)
 	}
@@ -246,7 +246,7 @@ func rawAllocation(latestRows []mergedRow) []allocationItem {
 
 // aggregateMonthlyNetWorths ports _compute_savings_rate_from_aggregates'
 // month-bucketing: latest snapshot per month, sorted chronologically.
-func aggregateMonthlyNetWorths(aggRows []AggregateRow, snapshotDate map[int]time.Time) []float64 {
+func aggregateMonthlyNetWorths(aggRows []AggregateRow) []float64 {
 	snapNW := map[int]float64{}
 	snapMonth := map[int]time.Time{}
 	for _, r := range aggRows {
