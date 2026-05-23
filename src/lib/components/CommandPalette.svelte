@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { shortcutsUI } from '$lib/stores/shortcuts.svelte';
 
@@ -39,7 +40,7 @@
 		if (shortcutsUI.paletteOpen) {
 			query = '';
 			activeIndex = 0;
-			queueMicrotask(() => inputEl?.focus());
+			tick().then(() => inputEl?.focus());
 		}
 	});
 

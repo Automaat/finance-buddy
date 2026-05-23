@@ -25,22 +25,30 @@
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
-		// Command palette: works even when typing — it's the universal escape
-		// hatch users expect from Cmd+K everywhere.
+		// Cmd+K toggles the palette and works even while typing — universal
+		// escape hatch users expect everywhere.
 		if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey) {
 			if (event.key === 'k' || event.key === 'K') {
 				event.preventDefault();
 				clearGotoPrefix();
-				shortcutsUI.openPalette();
+				if (shortcutsUI.paletteOpen) shortcutsUI.closePalette();
+				else shortcutsUI.openPalette();
 				return;
 			}
 		}
 
-		if (isTypingTarget(event.target)) return;
+		if (isTypingTarget(event.target)) {
+			clearGotoPrefix();
+			return;
+		}
 
-		// Don't intercept Tab / arrows / etc. that combine with modifiers
-		// (browser shortcuts) once we're past the Cmd+K case.
+		// Don't intercept browser shortcuts (Ctrl+Tab, Alt+Left, etc.) once
+		// we're past the Cmd+K case.
 		if (isModifierKeyPressed(event)) return;
+
+		// Palette traps its own input; if it's open without focus on the
+		// input the user pressed Tab away — still skip global shortcuts.
+		if (shortcutsUI.paletteOpen) return;
 
 		if (awaitingGoto) {
 			const match = GOTO_ROUTES.find((r) => r.key === event.key);
@@ -48,15 +56,20 @@
 			if (match) {
 				event.preventDefault();
 				goto(match.href);
+				return;
 			}
-			return;
+			// Unmatched g-prefix key falls through so `?` etc. still fire.
 		}
 
+		// `?` is a toggle — it must keep working while the help overlay is
+		// open so users can close it the same way they opened it.
 		if (event.key === '?') {
 			event.preventDefault();
 			shortcutsUI.toggleHelp();
 			return;
 		}
+
+		if (shortcutsUI.helpOpen) return;
 
 		if (event.key === 'n') {
 			event.preventDefault();
