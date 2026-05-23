@@ -61,8 +61,10 @@ func TestTruncateDayStripsTime(t *testing.T) {
 }
 
 func TestTruncateDayForcesUTC(t *testing.T) {
-	loc, _ := time.LoadLocation("Europe/Warsaw")
-	in := time.Date(2026, 5, 23, 23, 30, 0, 0, loc)
+	// Use a fixed zone so the test doesn't depend on the tzdata being
+	// installed on the runner.
+	warsaw := time.FixedZone("Europe/Warsaw", 2*60*60)
+	in := time.Date(2026, 5, 23, 23, 30, 0, 0, warsaw)
 	got := truncateDay(in)
 	if got.Location() != time.UTC {
 		t.Fatalf("expected UTC, got %s", got.Location())

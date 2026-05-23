@@ -253,7 +253,7 @@ func TestOptionalDecimalParsesAndFails(t *testing.T) {
 	if vErr != nil || d == nil || !d.Equal(decimal.RequireFromString("12.345")) {
 		t.Fatalf("good parse failed: %+v err=%+v", d, vErr)
 	}
-	bad := map[string]json.RawMessage{"x": json.RawMessage("not-a-number")}
+	bad := rawJSON(t, map[string]any{"x": "not-a-number"})
 	if _, vErr := optionalDecimal(bad, "x"); vErr == nil {
 		t.Fatalf("expected error on bad number")
 	}
