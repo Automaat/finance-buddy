@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Modal from '$lib/components/Modal.svelte';
 	import Skeleton from '$lib/components/Skeleton.svelte';
+	import SortableTable, { type SortableColumn } from '$lib/components/SortableTable.svelte';
 	import { formatPLN } from '$lib/utils/format';
 	import { Wallet, TrendingDown, Pencil, Trash2, Plus, BarChart3 } from 'lucide-svelte';
 	import { resolveApiUrl } from '$lib/api';
@@ -99,6 +100,24 @@
 		installment: 'Raty',
 		other: 'Inne'
 	};
+
+	const accountColumns = $derived<SortableColumn<Account>[]>([
+		{ key: 'name', label: 'Nazwa', sortable: true, accessor: (a) => a.name },
+		{
+			key: 'category',
+			label: 'Kategoria',
+			sortable: true,
+			accessor: (a) => categoryLabels[a.category] ?? a.category
+		},
+		{
+			key: 'owner',
+			label: 'Właściciel',
+			sortable: true,
+			accessor: (a) => ownerName(owners, a.owner_user_id)
+		},
+		{ key: 'value', label: 'Wartość', sortable: true, accessor: (a) => a.current_value },
+		{ key: 'actions', label: 'Akcje', align: 'right' }
+	]);
 
 	function startCreate() {
 		editingAccount = null;
@@ -351,6 +370,71 @@
 	<title>Konta | Finansowa Forteca</title>
 </svelte:head>
 
+{#snippet assetRow(account: Account)}
+	<tr>
+		<td class="font-medium">{account.name}</td>
+		<td>{categoryLabels[account.category] || account.category}</td>
+		<td>{ownerName(owners, account.owner_user_id)}</td>
+		<td class="font-semibold text-primary-600-400">{formatPLN(account.current_value)}</td>
+		<td class="text-right whitespace-nowrap">
+			<button
+				type="button"
+				class="btn-icon btn-icon-sm"
+				aria-label="Edytuj"
+				onclick={() => startEdit(account)}
+			>
+				<Pencil size={16} />
+			</button>
+			{#if INVESTMENT_CATEGORIES.has(account.category) || account.account_wrapper}
+				<button
+					type="button"
+					class="btn preset-tonal-surface btn-sm gap-1"
+					aria-label="Transakcje"
+					onclick={() => openTransactions(account.id, account.name, account.account_wrapper)}
+				>
+					<BarChart3 size={14} />
+					<span>{transactionCounts[account.id] || 0}</span>
+				</button>
+			{/if}
+			<button
+				type="button"
+				class="btn-icon btn-icon-sm"
+				aria-label="Usuń"
+				onclick={() => handleDelete(account.id)}
+			>
+				<Trash2 size={16} />
+			</button>
+		</td>
+	</tr>
+{/snippet}
+
+{#snippet liabilityRow(account: Account)}
+	<tr>
+		<td class="font-medium">{account.name}</td>
+		<td>{categoryLabels[account.category] || account.category}</td>
+		<td>{ownerName(owners, account.owner_user_id)}</td>
+		<td class="font-semibold text-error-600-400">{formatPLN(account.current_value)}</td>
+		<td class="text-right whitespace-nowrap">
+			<button
+				type="button"
+				class="btn-icon btn-icon-sm"
+				aria-label="Edytuj"
+				onclick={() => startEdit(account)}
+			>
+				<Pencil size={16} />
+			</button>
+			<button
+				type="button"
+				class="btn-icon btn-icon-sm"
+				aria-label="Usuń"
+				onclick={() => handleDelete(account.id)}
+			>
+				<Trash2 size={16} />
+			</button>
+		</td>
+	</tr>
+{/snippet}
+
 <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
 	<div class="space-y-1">
 		<h1 class="h2">Konta</h1>
@@ -417,61 +501,13 @@
 			{#if accounts.assets.length === 0}
 				<div class="text-center py-12 text-surface-700-300"><p>Brak aktywów</p></div>
 			{:else}
-				<div class="table-wrap">
-					<table class="table table-hover">
-						<thead>
-							<tr>
-								<th>Nazwa</th>
-								<th>Kategoria</th>
-								<th>Właściciel</th>
-								<th>Wartość</th>
-								<th class="text-right">Akcje</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each accounts.assets as account}
-								<tr>
-									<td class="font-medium">{account.name}</td>
-									<td>{categoryLabels[account.category] || account.category}</td>
-									<td>{ownerName(owners, account.owner_user_id)}</td>
-									<td class="font-semibold text-primary-600-400"
-										>{formatPLN(account.current_value)}</td
-									>
-									<td class="text-right whitespace-nowrap">
-										<button
-											type="button"
-											class="btn-icon btn-icon-sm"
-											aria-label="Edytuj"
-											onclick={() => startEdit(account)}
-										>
-											<Pencil size={16} />
-										</button>
-										{#if INVESTMENT_CATEGORIES.has(account.category) || account.account_wrapper}
-											<button
-												type="button"
-												class="btn preset-tonal-surface btn-sm gap-1"
-												aria-label="Transakcje"
-												onclick={() =>
-													openTransactions(account.id, account.name, account.account_wrapper)}
-											>
-												<BarChart3 size={14} />
-												<span>{transactionCounts[account.id] || 0}</span>
-											</button>
-										{/if}
-										<button
-											type="button"
-											class="btn-icon btn-icon-sm"
-											aria-label="Usuń"
-											onclick={() => handleDelete(account.id)}
-										>
-											<Trash2 size={16} />
-										</button>
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
+				<SortableTable
+					columns={accountColumns}
+					items={accounts.assets}
+					row={assetRow}
+					paramName="sortA"
+					getKey={(a) => a.id}
+				/>
 			{/if}
 		</div>
 
@@ -482,49 +518,13 @@
 			{#if accounts.liabilities.length === 0}
 				<div class="text-center py-12 text-surface-700-300"><p>Brak pasywów</p></div>
 			{:else}
-				<div class="table-wrap">
-					<table class="table table-hover">
-						<thead>
-							<tr>
-								<th>Nazwa</th>
-								<th>Kategoria</th>
-								<th>Właściciel</th>
-								<th>Wartość</th>
-								<th class="text-right">Akcje</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each accounts.liabilities as account}
-								<tr>
-									<td class="font-medium">{account.name}</td>
-									<td>{categoryLabels[account.category] || account.category}</td>
-									<td>{ownerName(owners, account.owner_user_id)}</td>
-									<td class="font-semibold text-error-600-400"
-										>{formatPLN(account.current_value)}</td
-									>
-									<td class="text-right whitespace-nowrap">
-										<button
-											type="button"
-											class="btn-icon btn-icon-sm"
-											aria-label="Edytuj"
-											onclick={() => startEdit(account)}
-										>
-											<Pencil size={16} />
-										</button>
-										<button
-											type="button"
-											class="btn-icon btn-icon-sm"
-											aria-label="Usuń"
-											onclick={() => handleDelete(account.id)}
-										>
-											<Trash2 size={16} />
-										</button>
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
+				<SortableTable
+					columns={accountColumns}
+					items={accounts.liabilities}
+					row={liabilityRow}
+					paramName="sortL"
+					getKey={(a) => a.id}
+				/>
 			{/if}
 		</div>
 	</div>
