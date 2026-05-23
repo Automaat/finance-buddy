@@ -1429,8 +1429,13 @@ export interface paths {
                                 savings_rate?: number | null;
                             };
                             net_worth_history?: {
+                                /** Format: double */
+                                assets?: number;
                                 /** Format: date */
                                 date?: string;
+                                /** Format: double */
+                                liabilities?: number;
+                                snapshot_id?: number;
                                 /** Format: double */
                                 value?: number;
                             }[];

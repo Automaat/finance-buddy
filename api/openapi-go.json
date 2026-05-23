@@ -2057,9 +2057,20 @@
                     "net_worth_history": {
                       "items": {
                         "properties": {
+                          "assets": {
+                            "format": "double",
+                            "type": "number"
+                          },
                           "date": {
                             "format": "date",
                             "type": "string"
+                          },
+                          "liabilities": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "snapshot_id": {
+                            "type": "integer"
                           },
                           "value": {
                             "format": "double",

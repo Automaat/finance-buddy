@@ -1,15 +1,25 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import * as echarts from 'echarts';
-	import type { EChartsOption } from 'echarts';
+	import type { ECElementEvent, EChartsOption } from 'echarts';
 	import { formatPLN } from '$lib/utils/format';
 	import { isMobile, isTablet } from '$lib/utils/viewport';
 	import { chartPalette, chartAccent, chartAccentGradient } from '$lib/utils/theme';
 	import { ownerName, type OwnerOption } from '$lib/types/owners';
 	import { createChart } from '$lib/utils/charts/lifecycle';
+	import { buildWaterfallOption, buildWaterfallSteps } from '$lib/utils/charts/waterfall';
+
+	interface NetWorthHistoryPoint {
+		date: string;
+		value: number;
+		assets?: number;
+		liabilities?: number;
+		snapshot_id?: number;
+	}
 
 	interface Props {
-		netWorthHistory: { date: string; value: number }[];
+		netWorthHistory: NetWorthHistoryPoint[];
 		allocation: { category: string; owner_user_id: number | null; value: number }[];
 		owners: OwnerOption[];
 	}
@@ -18,8 +28,29 @@
 
 	let chartContainer: HTMLDivElement | undefined;
 	let pieChartContainer: HTMLDivElement | undefined;
+	// Read inside an $effect, so must be $state.
+	let waterfallContainer: HTMLDivElement | undefined = $state();
 	let lineChart: echarts.ECharts | undefined = $state(undefined);
 	let pieChart: echarts.ECharts | undefined = $state(undefined);
+	let waterfallChart: echarts.ECharts | undefined = $state(undefined);
+
+	const waterfallSteps = $derived.by(() => {
+		const usable = netWorthHistory.filter(
+			(h) => typeof h.assets === 'number' && typeof h.liabilities === 'number'
+		);
+		return buildWaterfallSteps(
+			usable.map((h) => ({
+				date: h.date,
+				snapshotId: h.snapshot_id ?? 0,
+				value: h.value,
+				assets: h.assets!,
+				liabilities: h.liabilities!
+			}))
+		);
+	});
+
+	const waterfallMaxMonths = $derived($isMobile ? 6 : 12);
+	const waterfallSliced = $derived(waterfallSteps.slice(-waterfallMaxMonths));
 
 	const gridConfig = $derived(
 		$isMobile
@@ -116,6 +147,35 @@
 	$effect(() => {
 		if (pieChart) pieChart.setOption(pieOption);
 	});
+
+	// Waterfall chart lifecycle: the container only mounts when at least
+	// two snapshots exist (deltas need a previous baseline). Create the
+	// chart once via `handle` so the ResizeObserver from createChart() is
+	// disconnected on teardown — `chart.dispose()` alone would leak it.
+	$effect(() => {
+		if (!waterfallContainer) return;
+		const handle = createChart(waterfallContainer);
+		waterfallChart = handle.chart;
+		return () => {
+			handle.dispose();
+			waterfallChart = undefined;
+		};
+	});
+
+	$effect(() => {
+		if (!waterfallChart) return;
+		// Wipe any prior click handler — `setOption` is fine to call
+		// repeatedly, but click handlers stack across reactive runs.
+		waterfallChart.off('click');
+		waterfallChart.on('click', (event: ECElementEvent) => {
+			const idx = event.dataIndex as number;
+			const step = waterfallSliced[idx];
+			if (step && step.snapshotId) {
+				goto(`/snapshots/${step.snapshotId}/edit`);
+			}
+		});
+		waterfallChart.setOption(buildWaterfallOption(waterfallSliced));
+	});
 </script>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -127,3 +187,9 @@
 		<div bind:this={pieChartContainer} class="w-full h-[400px]"></div>
 	</div>
 </div>
+
+{#if waterfallSteps.length > 0}
+	<div class="card preset-filled-surface-100-900 p-4 mt-4">
+		<div bind:this={waterfallContainer} class="w-full h-[360px] cursor-pointer"></div>
+	</div>
+{/if}

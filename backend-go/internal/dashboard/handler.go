@@ -145,8 +145,11 @@ func (f pyFloat) MarshalJSON() ([]byte, error) {
 }
 
 type netWorthPointWire struct {
-	Date  isoDate `json:"date"`
-	Value pyFloat `json:"value"`
+	Date        isoDate `json:"date"`
+	Value       pyFloat `json:"value"`
+	Assets      pyFloat `json:"assets"`
+	Liabilities pyFloat `json:"liabilities"`
+	SnapshotID  int     `json:"snapshot_id"`
 }
 
 type allocationItemWire struct {
@@ -262,7 +265,11 @@ func toWire(res result) dashboardWire {
 	w.NetWorthHistory = make([]netWorthPointWire, 0, len(res.NetWorthHistory))
 	for _, p := range res.NetWorthHistory {
 		w.NetWorthHistory = append(w.NetWorthHistory, netWorthPointWire{
-			Date: isoDate(p.Date), Value: pyFloat(p.Value),
+			Date:        isoDate(p.Date),
+			Value:       pyFloat(p.Value),
+			Assets:      pyFloat(p.Assets),
+			Liabilities: pyFloat(p.Liabilities),
+			SnapshotID:  p.SnapshotID,
 		})
 	}
 	w.Allocation = make([]allocationItemWire, 0, len(res.Allocation))

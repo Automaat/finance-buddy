@@ -12,6 +12,53 @@ var allocationGroupMap = map[string]string{
 	"bond": "bonds", "gold": "gold",
 }
 
+// aggregatePointsBySnapshot collapses snapshot_aggregates rows (which are
+// per-(snapshot, owner)) into per-snapshot net-worth/assets/liabilities
+// points sorted by date. Missing snapshot dates cause a fail-fast error.
+func aggregatePointsBySnapshot(aggRows []AggregateRow, snapshotDate map[int]time.Time) ([]netWorthPoint, error) {
+	type snapAgg struct {
+		nw, assets, liabs float64
+	}
+	bySnap := map[int]snapAgg{}
+	for _, r := range aggRows {
+		nw, _ := r.NetWorth.Float64()
+		ta, _ := r.TotalAssets.Float64()
+		tl, _ := r.TotalLiabilities.Float64()
+		agg := bySnap[r.SnapshotID]
+		agg.nw += nw
+		agg.assets += ta
+		agg.liabs += tl
+		bySnap[r.SnapshotID] = agg
+	}
+	points := make([]netWorthPoint, 0, len(bySnap))
+	for sid, agg := range bySnap {
+		date, ok := snapshotDate[sid]
+		if !ok {
+			// A snapshot_aggregates row references a snapshot that doesn't
+			// exist — partial restore / corruption. Fail fast, as Python's
+			// snap_date[sid] KeyError does, rather than skewing the history
+			// with a zero date.
+			return nil, fmt.Errorf("aggregate references missing snapshot %d", sid)
+		}
+		points = append(points, netWorthPoint{
+			Date:        date,
+			Value:       agg.nw,
+			Assets:      agg.assets,
+			Liabilities: agg.liabs,
+			SnapshotID:  sid,
+		})
+	}
+	// Date primary, SnapshotID tiebreaker — keeps order stable when two
+	// snapshots share a calendar day.
+	sort.Slice(points, func(i, j int) bool {
+		if !points[i].Date.Equal(points[j].Date) {
+			return points[i].Date.Before(points[j].Date)
+		}
+		return points[i].SnapshotID < points[j].SnapshotID
+	})
+	return points, nil
+}
+
 // computeFromAggregates ports _get_dashboard_data_from_aggregates.
 func computeFromAggregates(ctx context.Context, s *Store, aggRows []AggregateRow) (result, error) {
 	shared, err := loadShared(ctx, s)
@@ -19,42 +66,19 @@ func computeFromAggregates(ctx context.Context, s *Store, aggRows []AggregateRow
 		return result{}, err
 	}
 
-	// net worth per snapshot, sorted by date.
-	snapNW := map[int]float64{}
-	for _, r := range aggRows {
-		nw, _ := r.NetWorth.Float64()
-		snapNW[r.SnapshotID] += nw
+	points, err := aggregatePointsBySnapshot(aggRows, shared.snapshotDate)
+	if err != nil {
+		return result{}, err
 	}
-	type snapNWPoint struct {
-		id   int
-		date time.Time
-		nw   float64
-	}
-	points := make([]snapNWPoint, 0, len(snapNW))
-	for sid, nw := range snapNW {
-		date, ok := shared.snapshotDate[sid]
-		if !ok {
-			// A snapshot_aggregates row references a snapshot that doesn't
-			// exist — partial restore / corruption. Fail fast, as Python's
-			// snap_date[sid] KeyError does, rather than skewing the history
-			// with a zero date.
-			return result{}, fmt.Errorf("aggregate references missing snapshot %d", sid)
-		}
-		points = append(points, snapNWPoint{id: sid, date: date, nw: nw})
-	}
-	sort.Slice(points, func(i, j int) bool { return points[i].date.Before(points[j].date) })
 
 	res := emptyResult()
-	res.NetWorthHistory = make([]netWorthPoint, 0, len(points))
-	for _, p := range points {
-		res.NetWorthHistory = append(res.NetWorthHistory, netWorthPoint{Date: p.date, Value: p.nw})
-	}
+	res.NetWorthHistory = points
 	if len(points) > 0 {
-		res.CurrentNetWorth = points[len(points)-1].nw
+		res.CurrentNetWorth = points[len(points)-1].Value
 	}
 	lastMonthNW := 0.0
 	if len(points) > 1 {
-		lastMonthNW = points[len(points)-2].nw
+		lastMonthNW = points[len(points)-2].Value
 	}
 	res.ChangeVsLastMonth = res.CurrentNetWorth - lastMonthNW
 
@@ -129,19 +153,55 @@ func computeRaw(ctx context.Context, s *Store) (result, error) {
 		return res, nil
 	}
 
-	// net worth grouped by date.
-	nwByDate := map[time.Time]float64{}
-	for _, r := range rows {
-		nwByDate[r.Date] += r.signedValue()
+	// net worth grouped by date — track assets/liabilities separately so
+	// the waterfall chart can show per-month contribution by side.
+	type byDateAgg struct {
+		nw, assets, liabs float64
+		snapshotID        int
 	}
-	dates := make([]time.Time, 0, len(nwByDate))
-	for d := range nwByDate {
+	// Value-typed map so nilaway can verify every read is non-nil — the
+	// aggregate is updated by reassignment after each row.
+	byDate := map[time.Time]byDateAgg{}
+	for _, r := range rows {
+		agg := byDate[r.Date]
+		if r.AccountID != nil && r.AccType != nil {
+			if *r.AccType == "asset" {
+				agg.assets += r.Value
+			} else {
+				agg.liabs += r.Value
+			}
+		} else if r.AssetID != nil && r.AssetName != nil {
+			agg.assets += r.Value
+		}
+		agg.nw += r.signedValue()
+		// Lowest snapshot_id for a given date wins — multiple snapshots on
+		// one date is unusual; the click-through points at the earliest-
+		// created of the duplicates.
+		if agg.snapshotID == 0 || r.SnapshotID < agg.snapshotID {
+			agg.snapshotID = r.SnapshotID
+		}
+		byDate[r.Date] = agg
+	}
+	dates := make([]time.Time, 0, len(byDate))
+	for d := range byDate {
 		dates = append(dates, d)
 	}
 	sort.Slice(dates, func(i, j int) bool { return dates[i].Before(dates[j]) })
 	res.NetWorthHistory = make([]netWorthPoint, 0, len(dates))
 	for _, d := range dates {
-		res.NetWorthHistory = append(res.NetWorthHistory, netWorthPoint{Date: d, Value: nwByDate[d]})
+		agg := byDate[d]
+		res.NetWorthHistory = append(res.NetWorthHistory, netWorthPoint{
+			Date:        d,
+			Value:       agg.nw,
+			Assets:      agg.assets,
+			Liabilities: agg.liabs,
+			SnapshotID:  agg.snapshotID,
+		})
+	}
+	// Convenience alias for the old single-value lookup below.
+	nwByDate := map[time.Time]float64{}
+	for d, agg := range byDate {
+		nwByDate[d] = agg.nw
 	}
 	if len(dates) > 0 {
 		res.CurrentNetWorth = nwByDate[dates[len(dates)-1]]
