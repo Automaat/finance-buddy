@@ -3,7 +3,7 @@
 	import Skeleton from '$lib/components/Skeleton.svelte';
 	import { formatPLN } from '$lib/utils/format';
 	import { Wallet, TrendingDown, Pencil, Trash2, Plus, BarChart3 } from 'lucide-svelte';
-	import { env } from '$env/dynamic/public';
+	import { resolveApiUrl } from '$lib/api';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount, untrack } from 'svelte';
 	import { INVESTMENT_CATEGORIES } from '$lib/constants';
@@ -17,7 +17,7 @@
 
 	let { data }: Props = $props();
 
-	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
+	const apiUrl = resolveApiUrl();
 	let owners: OwnerOption[] = $state([]);
 	const defaultOwnerUserId = $derived(owners.length > 0 ? owners[0].id : null);
 

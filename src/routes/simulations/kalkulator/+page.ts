@@ -1,13 +1,11 @@
-import { browser } from '$app/environment';
-import { env } from '$env/dynamic/public';
+import { resolveApiUrl } from '$lib/api';
 import type { PageLoad } from './$types';
 import type { SalaryRecord } from '$lib/types/salaries';
 import type { OwnerOption } from '$lib/types/owners';
 
 export const load: PageLoad = async ({ fetch }) => {
 	try {
-		const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
-		if (!apiUrl) return { latestSalaries: [], owners: [] };
+		const apiUrl = resolveApiUrl();
 
 		const [res, ownersRes] = await Promise.all([
 			fetch(`${apiUrl}/api/salaries`),

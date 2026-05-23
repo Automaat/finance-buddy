@@ -14,7 +14,7 @@
 		AlertTriangle,
 		PiggyBank
 	} from 'lucide-svelte';
-	import { env } from '$env/dynamic/public';
+	import { resolveApiUrl } from '$lib/api';
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { ownerName, type OwnerOption } from '$lib/types/owners';
@@ -68,7 +68,7 @@
 	}
 
 	async function saveLimits() {
-		const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
+		const apiUrl = resolveApiUrl();
 		try {
 			const requests = Object.entries(limits).map(([key, amount]) => {
 				const sep = key.indexOf('_');

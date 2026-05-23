@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
-	import { browser } from '$app/environment';
-	import { env } from '$env/dynamic/public';
+	import { resolveApiUrl } from '$lib/api';
 	import * as echarts from 'echarts';
 	import type { PageData } from './$types';
 	import {
@@ -163,8 +162,7 @@
 				}
 			}
 
-			const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
-			if (!apiUrl) throw new Error('API URL not configured');
+			const apiUrl = resolveApiUrl();
 
 			const requestBody = {
 				current_age: currentAge,

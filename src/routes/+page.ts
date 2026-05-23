@@ -1,12 +1,8 @@
 import { error, isHttpError } from '@sveltejs/kit';
-import { env } from '$env/dynamic/public';
-import { browser } from '$app/environment';
+import { resolveApiUrl } from '$lib/api';
 
 export async function load({ fetch }) {
-	const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
-	if (!apiUrl) {
-		throw error(500, 'API URL is not configured');
-	}
+	const apiUrl = resolveApiUrl();
 
 	const currentYear = new Date().getFullYear();
 

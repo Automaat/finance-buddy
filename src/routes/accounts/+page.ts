@@ -1,6 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { env } from '$env/dynamic/public';
-import { browser } from '$app/environment';
+import { resolveApiUrl } from '$lib/api';
 import type { PageLoad } from './$types';
 import type { Transaction, TransactionsData } from '$lib/types/transactions';
 import type { OwnerOption } from '$lib/types/owners';
@@ -29,10 +28,7 @@ export interface AccountsData {
 export type { Transaction, TransactionsData };
 
 export const load: PageLoad = async ({ fetch }) => {
-	const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
-	if (!apiUrl) {
-		throw error(500, 'API URL is not configured');
-	}
+	const apiUrl = resolveApiUrl();
 
 	const owners = (async (): Promise<OwnerOption[]> => {
 		const res = await fetch(`${apiUrl}/api/users`);

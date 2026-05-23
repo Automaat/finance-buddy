@@ -1,15 +1,15 @@
 import { error } from '@sveltejs/kit';
-import { env } from '$env/dynamic/public';
+import { resolveApiUrl } from '$lib/api';
 import type { SnapshotResponse } from '$lib/types';
 
 export async function load({ params, fetch }) {
-	const API_URL = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
+	const apiUrl = resolveApiUrl();
 
 	const [snapshotRes, accountsRes, assetsRes, ownersRes] = await Promise.all([
-		fetch(`${API_URL}/api/snapshots/${params.id}`),
-		fetch(`${API_URL}/api/accounts`),
-		fetch(`${API_URL}/api/assets`),
-		fetch(`${API_URL}/api/users`)
+		fetch(`${apiUrl}/api/snapshots/${params.id}`),
+		fetch(`${apiUrl}/api/accounts`),
+		fetch(`${apiUrl}/api/assets`),
+		fetch(`${apiUrl}/api/users`)
 	]);
 
 	if (!snapshotRes.ok) {

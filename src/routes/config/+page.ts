@@ -1,6 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { env } from '$env/dynamic/public';
-import { browser } from '$app/environment';
+import { resolveApiUrl } from '$lib/api';
 import type { PageLoad } from './$types';
 import type { paths } from '$lib/types/api.generated';
 
@@ -10,10 +9,7 @@ type AppConfig = paths['/api/config']['get']['responses'][200]['content']['appli
 
 export const load: PageLoad = async ({ fetch }) => {
 	try {
-		const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
-		if (!apiUrl) {
-			throw error(500, 'API URL is not configured');
-		}
+		const apiUrl = resolveApiUrl();
 
 		const response = await fetch(`${apiUrl}/api/config`);
 
