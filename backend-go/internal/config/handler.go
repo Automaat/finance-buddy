@@ -139,7 +139,9 @@ func (r *request) toConfig() *Config {
 
 // defaultWithdrawalRate is the 4% Trinity-study safe-withdrawal default
 // — used when a PUT body omits withdrawal_rate (older clients).
-var defaultWithdrawalRate = decimal.NewFromFloat(0.04)
+// RequireFromString keeps the constant exact at the numeric(5,4) precision
+// the DB column expects.
+var defaultWithdrawalRate = decimal.RequireFromString("0.04")
 
 // isoDate is a time.Time alias that JSON-marshals as "YYYY-MM-DD" and
 // unmarshals from the same. Matches Python's `date` field on the wire.

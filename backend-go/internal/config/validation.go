@@ -88,13 +88,14 @@ func (r *request) validate() *validationError {
 }
 
 // allowedWithdrawalRates are the three FIRE-research-backed safe-withdrawal
-// rates exposed in /settings. Stored as 4-decimal numerics; comparison runs
-// against the canonical decimal form so JSON-number and JSON-string inputs
-// (0.04 vs "0.04") both parse to the same accepted value.
+// rates exposed in /settings. RequireFromString — not NewFromFloat — so the
+// constants stay exact: NewFromFloat(0.035) round-trips through a binary
+// float and can lose precision, which would make Decimal.Equal miss a
+// JSON "0.035" parsed exactly via shopspring's string path.
 var allowedWithdrawalRates = []decimal.Decimal{
-	decimal.NewFromFloat(0.03),
-	decimal.NewFromFloat(0.035),
-	decimal.NewFromFloat(0.04),
+	decimal.RequireFromString("0.03"),
+	decimal.RequireFromString("0.035"),
+	decimal.RequireFromString("0.04"),
 }
 
 func isAllowedWithdrawalRate(v decimal.Decimal) bool {
