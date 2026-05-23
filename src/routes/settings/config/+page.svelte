@@ -54,6 +54,7 @@
 	);
 	let monthlyExpenses = $state(Number(config?.monthly_expenses ?? 0));
 	let monthlyMortgagePayment = $state(Number(config?.monthly_mortgage_payment ?? 0));
+	let withdrawalRate = $state(Number(config?.withdrawal_rate ?? 0.04));
 
 	let error = $state('');
 	let saving = $state(false);
@@ -117,7 +118,8 @@
 					allocation_gold: allocationGold,
 					allocation_commodities: allocationCommodities,
 					monthly_expenses: monthlyExpenses,
-					monthly_mortgage_payment: monthlyMortgagePayment
+					monthly_mortgage_payment: monthlyMortgagePayment,
+					withdrawal_rate: withdrawalRate
 				})
 			});
 
@@ -329,6 +331,18 @@
 			/>
 			<span class="text-xs italic text-surface-700-300"
 				>Używane do obliczenia czasu spłaty hipoteki</span
+			>
+		</label>
+
+		<label class="label">
+			<span class="font-semibold text-sm">Bezpieczna stopa wypłaty (FIRE)</span>
+			<select id="withdrawal-rate" class="select" bind:value={withdrawalRate}>
+				<option value={0.03}>3% — bardzo ostrożna (~33× wydatków)</option>
+				<option value={0.035}>3.5% — ostrożna (~28.6× wydatków)</option>
+				<option value={0.04}>4% — klasyczna reguła Trinity (×25)</option>
+			</select>
+			<span class="text-xs italic text-surface-700-300"
+				>Wyznacza cel FIRE = roczne wydatki ÷ stopa wypłaty.</span
 			>
 		</label>
 	</div>

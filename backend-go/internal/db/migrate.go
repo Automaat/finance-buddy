@@ -58,6 +58,22 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 	if _, err := pool.Exec(ctx, `DROP TABLE IF EXISTS personas`); err != nil {
 		return fmt.Errorf("drop personas table: %w", err)
 	}
+	if err := addAppConfigWithdrawalRate(ctx, pool); err != nil {
+		return err
+	}
+	return nil
+}
+
+// addAppConfigWithdrawalRate adds the withdrawal_rate column to app_config
+// for FIRE number computation (issue #376). 0.04 (4 percent) is the
+// Trinity-study default; the column is created with that default so any
+// existing app_config row is backfilled without a separate UPDATE.
+func addAppConfigWithdrawalRate(ctx context.Context, pool *pgxpool.Pool) error {
+	if _, err := pool.Exec(ctx, `
+		ALTER TABLE app_config
+		ADD COLUMN IF NOT EXISTS withdrawal_rate numeric(5,4) NOT NULL DEFAULT 0.04`); err != nil {
+		return fmt.Errorf("add withdrawal_rate to app_config: %w", err)
+	}
 	return nil
 }
 

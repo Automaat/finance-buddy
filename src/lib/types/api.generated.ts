@@ -1389,6 +1389,7 @@ export interface paths {
                             monthly_mortgage_payment?: string;
                             retirement_age?: number;
                             retirement_monthly_salary?: string;
+                            withdrawal_rate?: string;
                         };
                     };
                 };
@@ -1416,6 +1417,7 @@ export interface paths {
                         monthly_mortgage_payment?: string;
                         retirement_age?: number;
                         retirement_monthly_salary?: string;
+                        withdrawal_rate?: string | null;
                     };
                 };
             };
@@ -1439,6 +1441,7 @@ export interface paths {
                             monthly_mortgage_payment?: string;
                             retirement_age?: number;
                             retirement_monthly_salary?: string;
+                            withdrawal_rate?: string;
                         };
                     };
                 };
@@ -1681,9 +1684,15 @@ export interface paths {
                             }[];
                             metric_cards?: {
                                 /** Format: double */
+                                annual_expenses?: number | null;
+                                /** Format: double */
                                 debt_to_income_ratio?: number | null;
                                 /** Format: double */
                                 emergency_fund_months?: number;
+                                /** Format: double */
+                                fi_progress?: number | null;
+                                /** Format: double */
+                                fire_number?: number | null;
                                 /** Format: double */
                                 hour_of_life_cost?: number | null;
                                 /** Format: double */
@@ -1704,7 +1713,11 @@ export interface paths {
                                 /** Format: double */
                                 retirement_total?: number;
                                 /** Format: double */
+                                runway_months?: number | null;
+                                /** Format: double */
                                 savings_rate?: number | null;
+                                /** Format: double */
+                                withdrawal_rate?: number | null;
                             };
                             net_worth_history?: {
                                 /** Format: double */

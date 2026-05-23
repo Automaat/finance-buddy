@@ -114,3 +114,53 @@ func TestValidateRetirementAgeBeforeCurrent(t *testing.T) {
 		t.Fatalf("expected retirement_age (vs current age) error, got %+v", err)
 	}
 }
+
+func TestValidateWithdrawalRateAllowed(t *testing.T) {
+	// RequireFromString mirrors how shopspring's JSON decoder reads numeric
+	// literals — round-tripping through float64 would mask 0.035 precision
+	// loss and make the test pass for the wrong reason.
+	for _, s := range []string{"0.03", "0.035", "0.04"} {
+		r := validRequest()
+		d := decimal.RequireFromString(s)
+		r.WithdrawalRate = &d
+		if err := r.validate(); err != nil {
+			t.Fatalf("expected %s to validate, got %+v", s, err)
+		}
+	}
+}
+
+func TestValidateWithdrawalRateRejected(t *testing.T) {
+	for _, s := range []string{"0.02", "0.05", "0.045", "0"} {
+		r := validRequest()
+		d := decimal.RequireFromString(s)
+		r.WithdrawalRate = &d
+		if err := r.validate(); err == nil || err.Field != "withdrawal_rate" {
+			t.Fatalf("expected withdrawal_rate error for %s, got %+v", s, err)
+		}
+	}
+}
+
+// TestValidateWithdrawalRateFromJSON guards the actual wire path: a JSON
+// "0.035" must parse to a decimal that Equals the validation constant. If
+// either side ever switches back to NewFromFloat this regresses.
+func TestValidateWithdrawalRateFromJSON(t *testing.T) {
+	for _, raw := range []string{`0.035`, `"0.035"`, `0.04`, `"0.03"`} {
+		var d decimal.Decimal
+		if err := d.UnmarshalJSON([]byte(raw)); err != nil {
+			t.Fatalf("unmarshal %s: %v", raw, err)
+		}
+		r := validRequest()
+		r.WithdrawalRate = &d
+		if err := r.validate(); err != nil {
+			t.Fatalf("expected JSON %s to validate, got %+v", raw, err)
+		}
+	}
+}
+
+func TestValidateWithdrawalRateNilOK(t *testing.T) {
+	r := validRequest()
+	r.WithdrawalRate = nil
+	if err := r.validate(); err != nil {
+		t.Fatalf("nil withdrawal_rate should pass (backward compat), got %+v", err)
+	}
+}

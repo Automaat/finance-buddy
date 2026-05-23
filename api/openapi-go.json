@@ -1961,6 +1961,9 @@
                     },
                     "retirement_monthly_salary": {
                       "type": "string"
+                    },
+                    "withdrawal_rate": {
+                      "type": "string"
                     }
                   },
                   "type": "object"
@@ -2011,6 +2014,10 @@
                   },
                   "retirement_monthly_salary": {
                     "type": "string"
+                  },
+                  "withdrawal_rate": {
+                    "nullable": true,
+                    "type": "string"
                   }
                 },
                 "type": "object"
@@ -2057,6 +2064,9 @@
                       "type": "integer"
                     },
                     "retirement_monthly_salary": {
+                      "type": "string"
+                    },
+                    "withdrawal_rate": {
                       "type": "string"
                     }
                   },
@@ -2386,6 +2396,11 @@
                     },
                     "metric_cards": {
                       "properties": {
+                        "annual_expenses": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        },
                         "debt_to_income_ratio": {
                           "format": "double",
                           "nullable": true,
@@ -2393,6 +2408,16 @@
                         },
                         "emergency_fund_months": {
                           "format": "double",
+                          "type": "number"
+                        },
+                        "fi_progress": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "fire_number": {
+                          "format": "double",
+                          "nullable": true,
                           "type": "number"
                         },
                         "hour_of_life_cost": {
@@ -2436,7 +2461,17 @@
                           "format": "double",
                           "type": "number"
                         },
+                        "runway_months": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        },
                         "savings_rate": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "withdrawal_rate": {
                           "format": "double",
                           "nullable": true,
                           "type": "number"

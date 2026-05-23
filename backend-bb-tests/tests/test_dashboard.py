@@ -46,6 +46,11 @@ def test_dashboard_nested_keys_present(client: httpx.Client) -> None:
         "retirement_total",
         "investment_contributions",
         "investment_returns",
+        "fire_number",
+        "fi_progress",
+        "runway_months",
+        "annual_expenses",
+        "withdrawal_rate",
     }
     assert metric_card_keys.issubset(body["metric_cards"].keys())
 

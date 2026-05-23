@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -77,5 +78,26 @@ func (r *request) validate() *validationError {
 			),
 		}
 	}
+	if r.WithdrawalRate != nil && !isAllowedWithdrawalRate(*r.WithdrawalRate) {
+		return &validationError{
+			"withdrawal_rate",
+			"Withdrawal rate must be 0.03, 0.035, or 0.04",
+		}
+	}
 	return nil
+}
+
+// allowedWithdrawalRates are the three FIRE-research-backed safe-withdrawal
+// rates exposed in /settings. RequireFromString — not NewFromFloat — so the
+// constants stay exact: NewFromFloat(0.035) round-trips through a binary
+// float and can lose precision, which would make Decimal.Equal miss a
+// JSON "0.035" parsed exactly via shopspring's string path.
+var allowedWithdrawalRates = []decimal.Decimal{
+	decimal.RequireFromString("0.03"),
+	decimal.RequireFromString("0.035"),
+	decimal.RequireFromString("0.04"),
+}
+
+func isAllowedWithdrawalRate(v decimal.Decimal) bool {
+	return slices.ContainsFunc(allowedWithdrawalRates, v.Equal)
 }

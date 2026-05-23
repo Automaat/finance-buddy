@@ -40,6 +40,11 @@ type metricCards struct {
 	DebtToIncomeRatio       *float64
 	HourOfWorkCost          *float64
 	HourOfLifeCost          *float64
+	FIRENumber              *float64
+	FIProgress              *float64
+	RunwayMonths            *float64
+	AnnualExpenses          *float64
+	WithdrawalRate          *float64
 }
 
 type allocationBreakdown struct {

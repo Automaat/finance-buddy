@@ -116,7 +116,7 @@ func computeFromAggregates(ctx context.Context, s *Store, aggRows []AggregateRow
 	if shared.hasConfig && len(latestRows) > 0 {
 		latestDate := shared.snapshotDate[latestSID]
 		nwForSavings := aggregateMonthlyNetWorths(aggRows)
-		res.MetricCards = buildMetricCards(latestRows, shared, res.RetirementAccountValue, latestDate, nwForSavings)
+		res.MetricCards = buildMetricCards(latestRows, shared, res.RetirementAccountValue, latestDate, nwForSavings, res.CurrentNetWorth)
 		res.AllocationAnalysis = buildAllocationAnalysis(latestRows, shared.config)
 	}
 
@@ -225,7 +225,7 @@ func computeRaw(ctx context.Context, s *Store) (result, error) {
 		res.RetirementAccountValue = retirementValueOf(latestRows)
 		if shared.hasConfig {
 			nwForSavings := rawMonthlyNetWorths(rows, shared.snapshots)
-			res.MetricCards = buildMetricCards(latestRows, shared, res.RetirementAccountValue, latestDate, nwForSavings)
+			res.MetricCards = buildMetricCards(latestRows, shared, res.RetirementAccountValue, latestDate, nwForSavings, res.CurrentNetWorth)
 			res.AllocationAnalysis = buildAllocationAnalysis(latestRows, shared.config)
 		}
 	}
@@ -388,6 +388,7 @@ func buildMetricCards(
 	retirementValue float64,
 	latestDate time.Time,
 	netWorthsForSavings []float64,
+	currentNetWorth float64,
 ) metricCards {
 	cfg := shared.config
 
@@ -447,10 +448,14 @@ func buildMetricCards(
 		}
 	}
 
+	swr, _ := cfg.WithdrawalRate.Float64()
+	if swr <= 0 {
+		swr = 0.04
+	}
 	mc := metricCards{
 		PropertySQM:             propertySQM,
 		EmergencyFundMonths:     emergencyMonths,
-		RetirementIncomeMonthly: retirementValue * 0.04 / 12,
+		RetirementIncomeMonthly: retirementValue * swr / 12,
 		MortgageRemaining:       mortgageRemaining,
 		MortgageMonthsLeft:      mortgageMonthsLeft,
 		MortgageYearsLeft:       float64(mortgageMonthsLeft) / 12,
@@ -469,6 +474,13 @@ func buildMetricCards(
 		mc.HourOfWorkCost = &work
 		mc.HourOfLifeCost = &life
 	}
+
+	fire := computeFIRE(latestRows, cfg, currentNetWorth)
+	mc.AnnualExpenses = fire.AnnualExpenses
+	mc.FIRENumber = fire.FIRENumber
+	mc.FIProgress = fire.FIProgress
+	mc.RunwayMonths = fire.RunwayMonths
+	mc.WithdrawalRate = fire.WithdrawalRate
 	return mc
 }
 

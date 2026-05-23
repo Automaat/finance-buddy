@@ -188,6 +188,11 @@ type metricCardsWire struct {
 	DebtToIncomeRatio       *pyFloat `json:"debt_to_income_ratio"`
 	HourOfWorkCost          *pyFloat `json:"hour_of_work_cost"`
 	HourOfLifeCost          *pyFloat `json:"hour_of_life_cost"`
+	FIRENumber              *pyFloat `json:"fire_number"`
+	FIProgress              *pyFloat `json:"fi_progress"`
+	RunwayMonths            *pyFloat `json:"runway_months"`
+	AnnualExpenses          *pyFloat `json:"annual_expenses"`
+	WithdrawalRate          *pyFloat `json:"withdrawal_rate"`
 }
 
 type allocationBreakdownWire struct {
@@ -319,6 +324,11 @@ func metricCardsToWire(m metricCards) metricCardsWire {
 		DebtToIncomeRatio:       floatPtr(m.DebtToIncomeRatio),
 		HourOfWorkCost:          floatPtr(m.HourOfWorkCost),
 		HourOfLifeCost:          floatPtr(m.HourOfLifeCost),
+		FIRENumber:              floatPtr(m.FIRENumber),
+		FIProgress:              floatPtr(m.FIProgress),
+		RunwayMonths:            floatPtr(m.RunwayMonths),
+		AnnualExpenses:          floatPtr(m.AnnualExpenses),
+		WithdrawalRate:          floatPtr(m.WithdrawalRate),
 	}
 }
 
