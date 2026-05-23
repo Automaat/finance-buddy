@@ -870,6 +870,396 @@
         ]
       }
     },
+    "/api/bonds": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "bonds": {
+                      "items": {
+                        "properties": {
+                          "capitalize": {
+                            "type": "boolean"
+                          },
+                          "created_at": {
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "current_value": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "current_yield": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "face_value": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "first_year_rate": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "id": {
+                            "type": "integer"
+                          },
+                          "margin": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "maturity_date": {
+                            "format": "date",
+                            "type": "string"
+                          },
+                          "owner_user_id": {
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "purchase_date": {
+                            "format": "date",
+                            "type": "string"
+                          },
+                          "series": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "total_count": {
+                      "type": "integer"
+                    },
+                    "total_value": {
+                      "format": "double",
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List treasury bonds",
+        "tags": [
+          "bonds"
+        ]
+      },
+      "post": {
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "capitalize": {
+                      "type": "boolean"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "current_value": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "current_yield": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "face_value": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "first_year_rate": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "margin": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "maturity_date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "purchase_date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "series": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "summary": "Create a treasury bond",
+        "tags": [
+          "bonds"
+        ]
+      }
+    },
+    "/api/bonds/{id}": {
+      "delete": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "summary": "Delete a treasury bond",
+        "tags": [
+          "bonds"
+        ]
+      },
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "capitalize": {
+                      "type": "boolean"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "current_value": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "current_yield": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "face_value": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "first_year_rate": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "margin": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "maturity_date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "purchase_date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "series": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get a treasury bond",
+        "tags": [
+          "bonds"
+        ]
+      },
+      "put": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "capitalize": {
+                      "type": "boolean"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "current_value": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "current_yield": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "face_value": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "first_year_rate": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "margin": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "maturity_date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "purchase_date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "series": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Update a treasury bond",
+        "tags": [
+          "bonds"
+        ]
+      }
+    },
+    "/api/bonds/{id}/ytm": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "bond_id": {
+                      "type": "integer"
+                    },
+                    "points": {
+                      "items": {
+                        "properties": {
+                          "date": {
+                            "format": "date",
+                            "type": "string"
+                          },
+                          "value": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "year": {
+                            "type": "integer"
+                          },
+                          "year_rate": {
+                            "format": "double",
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Yield-to-maturity projection",
+        "tags": [
+          "bonds"
+        ]
+      }
+    },
     "/api/bonuses": {
       "get": {
         "responses": {

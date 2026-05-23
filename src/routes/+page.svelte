@@ -13,7 +13,8 @@
 		Settings,
 		CheckCircle2,
 		AlertTriangle,
-		PiggyBank
+		PiggyBank,
+		Coins
 	} from 'lucide-svelte';
 	import { resolveApiUrl } from '$lib/api';
 	import { invalidateAll } from '$app/navigation';
@@ -206,6 +207,24 @@
 				</div>
 			</div>
 		</div>
+
+		{#if dashboard.treasuryBondsCount > 0}
+			<a
+				href="/bonds"
+				class="card preset-filled-surface-100-900 p-4 space-y-2 block hover:preset-tonal-primary transition-colors"
+			>
+				<header>
+					<h3 class="h4 flex items-center gap-2"><Coins size={18} /> Obligacje skarbowe</h3>
+				</header>
+				<div class="text-3xl font-bold text-primary-600-400">
+					{formatPLN(dashboard.treasuryBondsValue)}
+				</div>
+				<p class="text-xs text-surface-700-300">
+					{dashboard.treasuryBondsCount}
+					{dashboard.treasuryBondsCount === 1 ? 'obligacja' : 'obligacji'} (auto-wycena wg CPI)
+				</p>
+			</a>
+		{/if}
 
 		{#if dashboard.retirementStats && dashboard.retirementStats.length > 0}
 			<div class="card preset-filled-surface-100-900 p-4 space-y-4">

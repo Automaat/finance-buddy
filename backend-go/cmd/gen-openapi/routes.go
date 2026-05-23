@@ -4,6 +4,7 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/accounts"
 	"github.com/Automaat/finance-buddy/backend-go/internal/apispec"
 	"github.com/Automaat/finance-buddy/backend-go/internal/assets"
+	"github.com/Automaat/finance-buddy/backend-go/internal/bonds"
 	bonusevents "github.com/Automaat/finance-buddy/backend-go/internal/bonus_events"
 	companyvaluations "github.com/Automaat/finance-buddy/backend-go/internal/company_valuations"
 	"github.com/Automaat/finance-buddy/backend-go/internal/config"
@@ -43,6 +44,7 @@ func allRoutes() []apispec.Route {
 		goals.APISpec,
 		accounts.APISpec,
 		assets.APISpec,
+		bonds.APISpec,
 		snapshots.APISpec,
 		dashboard.APISpec,
 		companyvaluations.APISpec,

@@ -643,6 +643,284 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/bonds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List treasury bonds */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            bonds?: {
+                                capitalize?: boolean;
+                                /** Format: date-time */
+                                created_at?: string;
+                                /** Format: double */
+                                current_value?: number;
+                                /** Format: double */
+                                current_yield?: number;
+                                /** Format: double */
+                                face_value?: number;
+                                /** Format: double */
+                                first_year_rate?: number;
+                                id?: number;
+                                /** Format: double */
+                                margin?: number;
+                                /** Format: date */
+                                maturity_date?: string;
+                                owner_user_id?: number | null;
+                                /** Format: date */
+                                purchase_date?: string;
+                                series?: string;
+                                type?: string;
+                            }[];
+                            total_count?: number;
+                            /** Format: double */
+                            total_value?: number;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create a treasury bond */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            capitalize?: boolean;
+                            /** Format: date-time */
+                            created_at?: string;
+                            /** Format: double */
+                            current_value?: number;
+                            /** Format: double */
+                            current_yield?: number;
+                            /** Format: double */
+                            face_value?: number;
+                            /** Format: double */
+                            first_year_rate?: number;
+                            id?: number;
+                            /** Format: double */
+                            margin?: number;
+                            /** Format: date */
+                            maturity_date?: string;
+                            owner_user_id?: number | null;
+                            /** Format: date */
+                            purchase_date?: string;
+                            series?: string;
+                            type?: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bonds/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a treasury bond */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            capitalize?: boolean;
+                            /** Format: date-time */
+                            created_at?: string;
+                            /** Format: double */
+                            current_value?: number;
+                            /** Format: double */
+                            current_yield?: number;
+                            /** Format: double */
+                            face_value?: number;
+                            /** Format: double */
+                            first_year_rate?: number;
+                            id?: number;
+                            /** Format: double */
+                            margin?: number;
+                            /** Format: date */
+                            maturity_date?: string;
+                            owner_user_id?: number | null;
+                            /** Format: date */
+                            purchase_date?: string;
+                            series?: string;
+                            type?: string;
+                        };
+                    };
+                };
+            };
+        };
+        /** Update a treasury bond */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            capitalize?: boolean;
+                            /** Format: date-time */
+                            created_at?: string;
+                            /** Format: double */
+                            current_value?: number;
+                            /** Format: double */
+                            current_yield?: number;
+                            /** Format: double */
+                            face_value?: number;
+                            /** Format: double */
+                            first_year_rate?: number;
+                            id?: number;
+                            /** Format: double */
+                            margin?: number;
+                            /** Format: date */
+                            maturity_date?: string;
+                            owner_user_id?: number | null;
+                            /** Format: date */
+                            purchase_date?: string;
+                            series?: string;
+                            type?: string;
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete a treasury bond */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bonds/{id}/ytm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Yield-to-maturity projection */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            bond_id?: number;
+                            points?: {
+                                /** Format: date */
+                                date?: string;
+                                /** Format: double */
+                                value?: number;
+                                year?: number;
+                                /** Format: double */
+                                year_rate?: number;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/bonuses": {
         parameters: {
             query?: never;

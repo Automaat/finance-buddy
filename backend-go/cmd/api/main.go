@@ -17,7 +17,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/Automaat/finance-buddy/backend-go/internal/auth"
+	"github.com/Automaat/finance-buddy/backend-go/internal/bonds"
 	"github.com/Automaat/finance-buddy/backend-go/internal/cpi"
 	"github.com/Automaat/finance-buddy/backend-go/internal/db"
 	"github.com/Automaat/finance-buddy/backend-go/internal/scheduler"
@@ -96,48 +99,12 @@ func run() int {
 	deps := server.Deps{}
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn != "" || os.Getenv("PGHOST") != "" {
-		// pgx's URL parser is strict — special chars in the password (@, :,
-		// /, ?, #) must be percent-encoded. If callers prefer to skip that
-		// hazard, they can leave DATABASE_URL empty and provide the libpq
-		// env vars (PGHOST/PGPORT/PGUSER/PGPASSWORD/PGDATABASE); pgx picks
-		// them up from an empty DSN.
-		pool, err := db.New(ctx, dsn)
-		if err != nil {
-			logger.Error("open db pool", "err", err)
-			return 2
+		pool, code := initDB(ctx, dsn, logger, adminUsername, adminPassword)
+		if code != 0 {
+			return code
 		}
 		defer pool.Close()
 		deps.Pool = pool
-		logger.Info("db pool ready")
-
-		if err := db.ApplySchema(ctx, pool); err != nil {
-			logger.Error("apply schema", "err", err)
-			return 2
-		}
-
-		// The users table is additive — schema.sql is only applied to empty
-		// databases, so it needs its own idempotent DDL plus admin seeding.
-		authStore := auth.NewStore(pool)
-		if err := authStore.EnsureSchema(ctx); err != nil {
-			logger.Error("ensure users schema", "err", err)
-			return 2
-		}
-		adminHash, err := auth.HashPassword(adminPassword)
-		if err != nil {
-			logger.Error("hash admin password", "err", err)
-			return 2
-		}
-		if err := authStore.UpsertAdmin(ctx, adminUsername, adminHash); err != nil {
-			logger.Error("seed admin user", "err", err)
-			return 2
-		}
-		logger.Info("admin user ready", "username", adminUsername)
-
-		// Final personas->users schema convergence (idempotent, runs every start).
-		if err := db.Migrate(ctx, pool); err != nil {
-			logger.Error("run migration", "err", err)
-			return 2
-		}
 
 		// CPI monthly-refresh scheduler — replaces the Python APScheduler job.
 		sched := scheduler.NewCPIScheduler(cpi.NewStore(pool), cpi.NewGUSFetcher(), logger)
@@ -173,6 +140,58 @@ func run() int {
 		}
 	}
 	return 0
+}
+
+// initDB opens the pool, applies the baseline schema, runs additive DDL
+// (users + treasury_bonds), seeds the admin user, and converges the
+// personas->users migration. Returns (pool, 0) on success, or (nil, exit code)
+// on failure so the caller can return without touching the pool.
+func initDB(ctx context.Context, dsn string, logger *slog.Logger, adminUsername, adminPassword string) (*pgxpool.Pool, int) {
+	// pgx's URL parser is strict — special chars in the password (@, :,
+	// /, ?, #) must be percent-encoded. If callers prefer to skip that
+	// hazard, they can leave DATABASE_URL empty and provide the libpq
+	// env vars (PGHOST/PGPORT/PGUSER/PGPASSWORD/PGDATABASE); pgx picks
+	// them up from an empty DSN.
+	pool, err := db.New(ctx, dsn)
+	if err != nil {
+		logger.Error("open db pool", "err", err)
+		return nil, 2
+	}
+	logger.Info("db pool ready")
+	if err := db.ApplySchema(ctx, pool); err != nil {
+		logger.Error("apply schema", "err", err)
+		pool.Close()
+		return nil, 2
+	}
+	authStore := auth.NewStore(pool)
+	if err := authStore.EnsureSchema(ctx); err != nil {
+		logger.Error("ensure users schema", "err", err)
+		pool.Close()
+		return nil, 2
+	}
+	adminHash, err := auth.HashPassword(adminPassword)
+	if err != nil {
+		logger.Error("hash admin password", "err", err)
+		pool.Close()
+		return nil, 2
+	}
+	if err := authStore.UpsertAdmin(ctx, adminUsername, adminHash); err != nil {
+		logger.Error("seed admin user", "err", err)
+		pool.Close()
+		return nil, 2
+	}
+	logger.Info("admin user ready", "username", adminUsername)
+	if err := db.Migrate(ctx, pool); err != nil {
+		logger.Error("run migration", "err", err)
+		pool.Close()
+		return nil, 2
+	}
+	if err := bonds.NewStore(pool).EnsureSchema(ctx); err != nil {
+		logger.Error("ensure treasury_bonds schema", "err", err)
+		pool.Close()
+		return nil, 2
+	}
+	return pool, 0
 }
 
 // envOr returns os.Getenv(key) if non-empty, else fallback. Use for values

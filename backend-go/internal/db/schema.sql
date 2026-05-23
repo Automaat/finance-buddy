@@ -1097,6 +1097,31 @@ ALTER TABLE ONLY public.snapshot_aggregates
 
 
 --
+-- Name: treasury_bonds; Type: TABLE; Schema: public; Owner: -
+--
+-- Kept in sync with bonds.Store.EnsureSchema, which runs the same CREATE
+-- TABLE IF NOT EXISTS against pre-existing databases.
+
+CREATE TABLE public.treasury_bonds (
+    id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    type character varying(8) NOT NULL,
+    series character varying(64) NOT NULL,
+    face_value numeric(15,2) NOT NULL,
+    purchase_date date NOT NULL,
+    owner_user_id integer,
+    first_year_rate numeric(8,4) NOT NULL,
+    margin numeric(8,4) NOT NULL DEFAULT 0,
+    capitalize boolean NOT NULL DEFAULT true,
+    is_active boolean NOT NULL DEFAULT true,
+    created_at timestamp without time zone NOT NULL DEFAULT (now() AT TIME ZONE 'utc')
+);
+
+
+ALTER TABLE ONLY public.treasury_bonds
+    ADD CONSTRAINT treasury_bonds_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.users(id) ON DELETE RESTRICT;
+
+
+--
 -- PostgreSQL database dump complete
 --
 
