@@ -257,9 +257,18 @@
 
 	// Render the wrapper-aggregate chart reactively: it only mounts after the
 	// milestone cards reveal, so we can't draw it synchronously when results
-	// arrive — wait for the container to bind.
+	// arrive — wait for the container to bind. When the {#if} unmounts the
+	// container (e.g. user re-runs with a sub-60 retirement age), dispose the
+	// handle so a later remount creates a fresh chart instead of writing to
+	// a detached canvas.
 	$effect(() => {
-		if (!results || !wrapperChartContainer) return;
+		if (!wrapperChartContainer) {
+			wrapperChartHandle?.dispose();
+			wrapperChartHandle = null;
+			wrapperChart = null;
+			return;
+		}
+		if (!results) return;
 
 		if (!wrapperChartHandle) {
 			wrapperChartHandle = createChart(wrapperChartContainer);
