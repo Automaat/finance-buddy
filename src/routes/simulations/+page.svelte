@@ -228,7 +228,6 @@
 
 			const responseData = await response.json();
 			results = responseData;
-			renderChart();
 		} catch (err) {
 			console.error('Simulation failed:', err);
 			if (err instanceof Error) {
@@ -239,8 +238,17 @@
 		}
 	}
 
-	function renderChart() {
-		if (!results || !chartContainer) return;
+	// Main per-account chart. Driven by $effect so it renders on the tick
+	// after `results = ...` flushes the DOM (the {#if results} container
+	// isn't bound until then).
+	$effect(() => {
+		if (!chartContainer) {
+			chartHandle?.dispose();
+			chartHandle = null;
+			chart = null;
+			return;
+		}
+		if (!results) return;
 
 		if (!chartHandle) {
 			chartHandle = createChart(chartContainer);
@@ -253,7 +261,7 @@
 		}
 
 		chart?.setOption(buildRetirementProjectionOption(results.simulations));
-	}
+	});
 
 	// Render the wrapper-aggregate chart reactively: it only mounts after the
 	// milestone cards reveal, so we can't draw it synchronously when results

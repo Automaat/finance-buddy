@@ -29,6 +29,18 @@ export interface AccountSimulation {
 
 const SERIES_COLORS = ['#5E81AC', '#81A1C1', '#88C0D0', '#8FBCBB', '#B48EAD', '#A3BE8C'];
 
+// Tooltip HTML escape: account names come from the database (user-set
+// owner labels can flow in) and Echarts' default tooltip renderer treats
+// the returned string as HTML.
+function escapeHtml(value: string): string {
+	return value
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;');
+}
+
 export function buildRetirementProjectionOption(simulations: AccountSimulation[]): EChartsOption {
 	const years = simulations.length > 0 ? simulations[0].yearly_projections.map((p) => p.year) : [];
 
@@ -46,10 +58,10 @@ export function buildRetirementProjectionOption(simulations: AccountSimulation[]
 			trigger: 'axis',
 			formatter: (params: TopLevelFormatterParams) => {
 				const items = Array.isArray(params) ? params : [params];
-				let result = `<strong>Rok ${items[0].name}</strong><br/>`;
+				let result = `<strong>Rok ${escapeHtml(String(items[0].name))}</strong><br/>`;
 				items.forEach((param) => {
 					const value = (param.value as number).toLocaleString('pl-PL');
-					result += `${param.seriesName}: ${value} PLN<br/>`;
+					result += `${escapeHtml(String(param.seriesName))}: ${value} PLN<br/>`;
 				});
 				return result;
 			}
@@ -185,11 +197,11 @@ export function buildRetirementByWrapperOption(
 			formatter: (params: TopLevelFormatterParams) => {
 				const items = Array.isArray(params) ? params : [params];
 				let total = 0;
-				let result = `<strong>Wiek ${items[0].name}</strong><br/>`;
+				let result = `<strong>Wiek ${escapeHtml(String(items[0].name))}</strong><br/>`;
 				items.forEach((p) => {
 					const value = (p.value as number) || 0;
 					total += value;
-					result += `${p.seriesName}: ${value.toLocaleString('pl-PL', { maximumFractionDigits: 0 })} PLN<br/>`;
+					result += `${escapeHtml(String(p.seriesName))}: ${value.toLocaleString('pl-PL', { maximumFractionDigits: 0 })} PLN<br/>`;
 				});
 				result += `<strong>Razem: ${total.toLocaleString('pl-PL', { maximumFractionDigits: 0 })} PLN</strong>`;
 				return result;
