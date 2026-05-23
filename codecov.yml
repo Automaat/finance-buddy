@@ -17,7 +17,7 @@ coverage:
 flags:
   frontend:
     paths:
-      - frontend/
+      - src/
 
 comment:
   layout: 'reach,diff,flags,tree,footer'
