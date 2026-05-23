@@ -28,7 +28,11 @@
     {
       "description": "Group black-box test Python dependencies",
       "groupName": "backend-bb-tests python",
-      "matchFileNames": ["backend-bb-tests/**"]
+      "matchManagers": ["pep621", "pip_requirements", "poetry"],
+      "matchFileNames": [
+        "backend-bb-tests/pyproject.toml",
+        "backend-bb-tests/uv.lock"
+      ]
     }
   ]
 }
