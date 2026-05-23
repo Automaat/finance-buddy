@@ -64,8 +64,8 @@
 			});
 
 			if (!response.ok) {
-				const data = await response.json();
-				throw new Error(data.detail || 'Failed to save asset');
+				const errorBody = await response.json();
+				throw new Error(errorBody.detail || 'Failed to save asset');
 			}
 
 			await invalidateAll();
