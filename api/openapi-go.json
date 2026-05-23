@@ -5077,6 +5077,37 @@
         ]
       }
     },
+    "/api/transactions/types": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "properties": {
+                      "label": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List valid transaction_type enum values",
+        "tags": [
+          "transactions"
+        ]
+      }
+    },
     "/api/zus/calculate": {
       "post": {
         "responses": {

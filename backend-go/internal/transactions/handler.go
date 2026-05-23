@@ -16,9 +16,8 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-var validTransactionTypes = map[string]struct{}{
-	"employee": {}, "employer": {}, "withdrawal": {}, "government": {},
-}
+// The canonical set of transaction_type values lives in types.go.
+// IsValid + ValidTypes are the only authority.
 
 type response struct {
 	ID              int      `json:"id"`
@@ -216,6 +215,18 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// Types serves GET /api/transactions/types — the canonical enum the
+// frontend dropdown should render. Ordered the same way as ValidTypes()
+// so the UI is deterministic.
+func (h *Handler) Types(w http.ResponseWriter, _ *http.Request) {
+	types := ValidTypes()
+	out := make([]typesItem, 0, len(types))
+	for _, t := range types {
+		out = append(out, typesItem{Value: string(t), Label: LabelPL(t)})
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
 // Counts serves GET /api/transactions/counts.
 func (h *Handler) Counts(w http.ResponseWriter, r *http.Request) {
 	counts, err := h.store.CountsByAccount(r.Context())
@@ -308,7 +319,7 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *validat
 		if err := json.Unmarshal(v, &s); err != nil {
 			return r, &validationError{Field: "transaction_type", Msg: "must be a string"}
 		}
-		if _, ok := validTransactionTypes[s]; !ok {
+		if !IsValid(s) {
 			return r, &validationError{Field: "transaction_type", Msg: fmt.Sprintf("invalid value %q", s)}
 		}
 		r.TransactionType = &s
