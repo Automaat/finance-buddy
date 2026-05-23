@@ -75,12 +75,12 @@ func TestComputeFIREZeroExpenses(t *testing.T) {
 		WithdrawalRate:  decimal.NewFromFloat(0.04),
 	}
 	got := computeFIRE(nil, cfg, 100_000)
+	// Zero monthly expenses → every FIRE-tile field is nil (the entire tile
+	// is hidden on the FE), including withdrawal_rate.
 	if got.AnnualExpenses != nil || got.FIRENumber != nil ||
-		got.FIProgress != nil || got.RunwayMonths != nil {
+		got.FIProgress != nil || got.RunwayMonths != nil ||
+		got.WithdrawalRate != nil {
 		t.Errorf("expected all-nil when monthly expenses == 0, got %+v", got)
-	}
-	if got.WithdrawalRate == nil {
-		t.Error("withdrawal_rate should still echo back when set")
 	}
 }
 

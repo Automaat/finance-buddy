@@ -448,10 +448,14 @@ func buildMetricCards(
 		}
 	}
 
+	swr, _ := cfg.WithdrawalRate.Float64()
+	if swr <= 0 {
+		swr = 0.04
+	}
 	mc := metricCards{
 		PropertySQM:             propertySQM,
 		EmergencyFundMonths:     emergencyMonths,
-		RetirementIncomeMonthly: retirementValue * 0.04 / 12,
+		RetirementIncomeMonthly: retirementValue * swr / 12,
 		MortgageRemaining:       mortgageRemaining,
 		MortgageMonthsLeft:      mortgageMonthsLeft,
 		MortgageYearsLeft:       float64(mortgageMonthsLeft) / 12,

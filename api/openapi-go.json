@@ -1962,7 +1962,9 @@
                     "retirement_monthly_salary": {
                       "type": "string"
                     },
-                    "withdrawal_rate": {}
+                    "withdrawal_rate": {
+                      "type": "string"
+                    }
                   },
                   "type": "object"
                 }
@@ -2064,7 +2066,9 @@
                     "retirement_monthly_salary": {
                       "type": "string"
                     },
-                    "withdrawal_rate": {}
+                    "withdrawal_rate": {
+                      "type": "string"
+                    }
                   },
                   "type": "object"
                 }

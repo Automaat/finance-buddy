@@ -1389,7 +1389,7 @@ export interface paths {
                             monthly_mortgage_payment?: string;
                             retirement_age?: number;
                             retirement_monthly_salary?: string;
-                            withdrawal_rate?: unknown;
+                            withdrawal_rate?: string;
                         };
                     };
                 };
@@ -1441,7 +1441,7 @@ export interface paths {
                             monthly_mortgage_payment?: string;
                             retirement_age?: number;
                             retirement_monthly_salary?: string;
-                            withdrawal_rate?: unknown;
+                            withdrawal_rate?: string;
                         };
                     };
                 };

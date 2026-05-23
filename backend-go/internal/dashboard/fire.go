@@ -36,10 +36,6 @@ func computeFIRE(latestRows []mergedRow, cfg AppConfig, netWorth float64) fireMe
 
 	monthlyExpenses, _ := cfg.MonthlyExpenses.Float64()
 	withdrawalRate, _ := cfg.WithdrawalRate.Float64()
-	if withdrawalRate > 0 {
-		wr := withdrawalRate
-		out.WithdrawalRate = &wr
-	}
 	if monthlyExpenses <= 0 {
 		return out
 	}
@@ -48,6 +44,8 @@ func computeFIRE(latestRows []mergedRow, cfg AppConfig, netWorth float64) fireMe
 	out.AnnualExpenses = &annual
 
 	if withdrawalRate > 0 {
+		wr := withdrawalRate
+		out.WithdrawalRate = &wr
 		fire := annual / withdrawalRate
 		out.FIRENumber = &fire
 		if fire > 0 && netWorth > 0 {

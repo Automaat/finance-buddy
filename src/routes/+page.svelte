@@ -211,7 +211,7 @@
 
 		{#if dashboard.metric_cards?.fire_number != null && dashboard.metric_cards?.runway_months != null}
 			{@const fire = dashboard.metric_cards}
-			{@const progress = fire.fi_progress ?? 0}
+			{@const progress = fire.fi_progress}
 			{@const annualExpensesPLN = formatPLN(fire.annual_expenses ?? 0)}
 			{@const firePLN = formatPLN(fire.fire_number ?? 0)}
 			{@const wrPct = ((fire.withdrawal_rate ?? 0.04) * 100).toFixed(1)}
@@ -229,15 +229,17 @@
 				<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 					<div class="space-y-1">
 						<div class="text-xs text-surface-700-300">FI progress</div>
-						<div class="text-2xl font-bold">{progress.toFixed(1)}%</div>
+						<div class="text-2xl font-bold">
+							{progress != null ? `${progress.toFixed(1)}%` : '—'}
+						</div>
 						<div class="h-2 rounded-full bg-surface-200-800 overflow-hidden">
 							<div
-								class="h-full transition-all {progress >= 100
+								class="h-full transition-all {(progress ?? 0) >= 100
 									? 'bg-success-500'
-									: progress >= 50
+									: (progress ?? 0) >= 50
 										? 'bg-warning-500'
 										: 'bg-primary-500'}"
-								style="width: {Math.min(progress, 100)}%"
+								style="width: {Math.min(progress ?? 0, 100)}%"
 							></div>
 						</div>
 						<div class="text-xs text-surface-700-300">cel: {firePLN}</div>
