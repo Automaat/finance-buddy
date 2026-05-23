@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
-	import * as echarts from 'echarts';
 	import MetricCard from '$lib/components/MetricCard.svelte';
 	import { TrendingUp, CheckCircle2, Lightbulb } from 'lucide-svelte';
 	import {
@@ -10,6 +9,7 @@
 		buildWrapperTrendChartOption,
 		buildYearlyRoiChartOption
 	} from '$lib/utils/charts/metryki';
+	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
 	import { ownerName, type OwnerOption } from '$lib/types/owners';
 
 	import type { PageData } from './$types';
@@ -39,45 +39,27 @@
 	let yearlyRoiChart: HTMLDivElement;
 
 	onMount(() => {
-		const allocationChartInstance = echarts.init(allocationChart);
-		allocationChartInstance.setOption(buildAllocationChartOption(allocationAnalysis.by_category));
+		const handles: ChartHandle[] = [];
 
-		const wrapperChartInstance = echarts.init(wrapperChart);
-		wrapperChartInstance.setOption(buildWrapperChartOption(allocationAnalysis.by_wrapper));
-
-		const investmentTrendChartInstance = echarts.init(investmentTrendChart);
-		investmentTrendChartInstance.setOption(buildInvestmentTrendChartOption(investmentTimeSeries));
-
-		const createWrapperChart = (
-			chartElement: HTMLDivElement,
-			title: string,
-			series: Parameters<typeof buildWrapperTrendChartOption>[1]
+		const mount = (
+			el: HTMLDivElement,
+			option: Parameters<ChartHandle['chart']['setOption']>[0]
 		) => {
-			const chartInstance = echarts.init(chartElement);
-			chartInstance.setOption(buildWrapperTrendChartOption(title, series));
-			return chartInstance;
+			const handle = createChart(el);
+			handle.chart.setOption(option);
+			handles.push(handle);
 		};
 
-		const ikeChartInstance = createWrapperChart(ikeChart, 'IKE w czasie', wrapperTimeSeries.ike);
-		const ikzeChartInstance = createWrapperChart(
-			ikzeChart,
-			'IKZE w czasie',
-			wrapperTimeSeries.ikze
-		);
-		const ppkChartInstance = createWrapperChart(ppkChart, 'PPK w czasie', wrapperTimeSeries.ppk);
-		const stockChartInstance = createWrapperChart(
-			stockChart,
-			'Akcje w czasie',
-			categoryTimeSeries.stock
-		);
-		const bondChartInstance = createWrapperChart(
-			bondChart,
-			'Obligacje w czasie',
-			categoryTimeSeries.bond
-		);
-
-		const yearlyRoiChartInstance = echarts.init(yearlyRoiChart);
-		yearlyRoiChartInstance.setOption(
+		mount(allocationChart, buildAllocationChartOption(allocationAnalysis.by_category));
+		mount(wrapperChart, buildWrapperChartOption(allocationAnalysis.by_wrapper));
+		mount(investmentTrendChart, buildInvestmentTrendChartOption(investmentTimeSeries));
+		mount(ikeChart, buildWrapperTrendChartOption('IKE w czasie', wrapperTimeSeries.ike));
+		mount(ikzeChart, buildWrapperTrendChartOption('IKZE w czasie', wrapperTimeSeries.ikze));
+		mount(ppkChart, buildWrapperTrendChartOption('PPK w czasie', wrapperTimeSeries.ppk));
+		mount(stockChart, buildWrapperTrendChartOption('Akcje w czasie', categoryTimeSeries.stock));
+		mount(bondChart, buildWrapperTrendChartOption('Obligacje w czasie', categoryTimeSeries.bond));
+		mount(
+			yearlyRoiChart,
 			buildYearlyRoiChartOption(
 				categoryTimeSeries.stock,
 				categoryTimeSeries.bond,
@@ -86,15 +68,7 @@
 		);
 
 		return () => {
-			allocationChartInstance.dispose();
-			wrapperChartInstance.dispose();
-			investmentTrendChartInstance.dispose();
-			ikeChartInstance.dispose();
-			ikzeChartInstance.dispose();
-			ppkChartInstance.dispose();
-			stockChartInstance.dispose();
-			bondChartInstance.dispose();
-			yearlyRoiChartInstance.dispose();
+			for (const handle of handles) handle.dispose();
 		};
 	});
 </script>

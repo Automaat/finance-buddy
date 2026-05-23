@@ -8,6 +8,7 @@
 		buildRetirementProjectionOption,
 		type AccountSimulation
 	} from '$lib/utils/charts/simulations';
+	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
 	import { ownerName, type OwnerOption } from '$lib/types/owners';
 
 	interface SimulationSummary {
@@ -133,6 +134,7 @@
 	// Chart
 	let chartContainer: HTMLDivElement | undefined = $state();
 	let chart: echarts.ECharts | null = null;
+	let chartHandle: ChartHandle | null = null;
 
 	async function runSimulation() {
 		loading = true;
@@ -227,30 +229,24 @@
 	function renderChart() {
 		if (!results || !chartContainer) return;
 
-		if (!chart) {
-			chart = echarts.init(chartContainer);
+		if (!chartHandle) {
+			chartHandle = createChart(chartContainer);
+			chart = chartHandle.chart;
 		}
 
 		if (results.simulations.length === 0) {
-			chart.clear();
+			chart?.clear();
 			return;
 		}
 
-		chart.setOption(buildRetirementProjectionOption(results.simulations));
+		chart?.setOption(buildRetirementProjectionOption(results.simulations));
 	}
 
 	onMount(() => {
-		const handleResize = () => chart?.resize();
-
-		if (browser) {
-			window.addEventListener('resize', handleResize);
-		}
-
 		return () => {
-			if (browser) {
-				window.removeEventListener('resize', handleResize);
-			}
-			chart?.dispose();
+			chartHandle?.dispose();
+			chartHandle = null;
+			chart = null;
 		};
 	});
 

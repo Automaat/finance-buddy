@@ -2,6 +2,7 @@
 	import { onMount, untrack } from 'svelte';
 	import * as echarts from 'echarts';
 	import type { EChartsOption } from 'echarts';
+	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
 	import BonusFormModal from '$lib/components/salaries/BonusFormModal.svelte';
 	import EquityFormModal from '$lib/components/salaries/EquityFormModal.svelte';
 	import SalaryFormModal from '$lib/components/salaries/SalaryFormModal.svelte';
@@ -92,6 +93,7 @@
 
 	let chartContainer: HTMLDivElement;
 	let chart: echarts.ECharts | undefined;
+	let chartHandle: ChartHandle | undefined;
 
 	let filterOwnerUserId = $state<number | null>(
 		untrack(() => (data.filters.owner_user_id ? Number(data.filters.owner_user_id) : null))
@@ -1223,12 +1225,16 @@
 		void [data.salaries.salary_records, cpiSeries, showNominal, showReal, showInflationTracked];
 
 		if (!chartContainer) return;
-		if (!chart) chart = echarts.init(chartContainer);
+		if (!chartHandle) {
+			chartHandle = createChart(chartContainer);
+			chart = chartHandle.chart;
+		}
 		applyChart();
 	});
 
 	onMount(() => () => {
-		chart?.dispose();
+		chartHandle?.dispose();
+		chartHandle = undefined;
 		chart = undefined;
 	});
 </script>
