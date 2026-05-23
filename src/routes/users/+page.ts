@@ -1,6 +1,5 @@
 import { error, redirect } from '@sveltejs/kit';
-import { env } from '$env/dynamic/public';
-import { browser } from '$app/environment';
+import { resolveApiUrl } from '$lib/api';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ fetch, parent }) => {
@@ -9,10 +8,7 @@ export const load: PageLoad = async ({ fetch, parent }) => {
 		redirect(303, '/');
 	}
 
-	const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
-	if (!apiUrl) {
-		throw error(500, 'API URL is not configured');
-	}
+	const apiUrl = resolveApiUrl();
 
 	const response = await fetch(`${apiUrl}/api/auth/users`);
 	if (!response.ok) {

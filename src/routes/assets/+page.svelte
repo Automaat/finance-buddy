@@ -2,7 +2,7 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import { formatPLN } from '$lib/utils/format';
 	import { Home, Pencil, Plus, Trash2 } from 'lucide-svelte';
-	import { env } from '$env/dynamic/public';
+	import { resolveApiUrl } from '$lib/api';
 	import { invalidateAll } from '$app/navigation';
 	import type { Asset } from './+page';
 	import type { PageData } from './$types';
@@ -13,7 +13,7 @@
 
 	let { data }: Props = $props();
 
-	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
+	const apiUrl = resolveApiUrl();
 
 	let showForm = $state(false);
 	let editingAsset: Asset | null = $state(null);

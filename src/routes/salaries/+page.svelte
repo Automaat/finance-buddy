@@ -24,7 +24,7 @@
 		Building2,
 		Wallet
 	} from 'lucide-svelte';
-	import { env } from '$env/dynamic/public';
+	import { resolveApiUrl } from '$lib/api';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { toast } from '$lib/stores/toast.svelte';
 	import type {
@@ -49,7 +49,7 @@
 
 	let { data }: Props = $props();
 
-	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
+	const apiUrl = resolveApiUrl();
 	const owners = $derived(data.owners as OwnerOption[]);
 	const defaultOwnerId = $derived<number | null>(owners.length > 0 ? owners[0].id : null);
 	const cpiSeries = $derived(data.cpiSeries as CpiSeries);

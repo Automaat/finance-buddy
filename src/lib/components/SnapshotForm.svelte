@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { env } from '$env/dynamic/public';
+	import { resolveApiUrl } from '$lib/api';
 	import { Wallet, Umbrella, TrendingUp, Home, CreditCard } from 'lucide-svelte';
 	import type { Account, Asset, SnapshotResponse } from '$lib/types';
 	import type { OwnerOption } from '$lib/types/owners';
@@ -173,7 +173,7 @@
 				newAccountSection === 'retirement' && newAccountWrapper ? newAccountWrapper : null;
 			const purpose = newAccountSection === 'retirement' ? 'retirement' : 'general';
 
-			const response = await fetch(`${env.PUBLIC_API_URL_BROWSER}/api/accounts`, {
+			const response = await fetch(`${resolveApiUrl()}/api/accounts`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
@@ -253,7 +253,7 @@
 		error = '';
 
 		try {
-			const response = await fetch(`${env.PUBLIC_API_URL_BROWSER}/api/assets`, {
+			const response = await fetch(`${resolveApiUrl()}/api/assets`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
@@ -359,8 +359,8 @@
 
 			const method = editingSnapshot ? 'PUT' : 'POST';
 			const url = editingSnapshot
-				? `${env.PUBLIC_API_URL_BROWSER}/api/snapshots/${editingSnapshot.id}`
-				: `${env.PUBLIC_API_URL_BROWSER}/api/snapshots`;
+				? `${resolveApiUrl()}/api/snapshots/${editingSnapshot.id}`
+				: `${resolveApiUrl()}/api/snapshots`;
 
 			const response = await fetch(url, {
 				method,

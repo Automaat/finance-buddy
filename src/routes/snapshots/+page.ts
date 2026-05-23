@@ -1,6 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { env } from '$env/dynamic/public';
-import { browser } from '$app/environment';
+import { resolveApiUrl } from '$lib/api';
 import type { PageLoad } from './$types';
 
 export interface SnapshotListItem {
@@ -11,10 +10,7 @@ export interface SnapshotListItem {
 }
 
 export const load: PageLoad = async ({ fetch }) => {
-	const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
-	if (!apiUrl) {
-		throw error(500, 'API URL is not configured');
-	}
+	const apiUrl = resolveApiUrl();
 
 	const snapshots = (async () => {
 		const response = await fetch(`${apiUrl}/api/snapshots`);

@@ -1,6 +1,5 @@
-import { browser } from '$app/environment';
 import { error } from '@sveltejs/kit';
-import { env } from '$env/dynamic/public';
+import { resolveApiUrl } from '$lib/api';
 import type { PageLoad } from './$types';
 
 export interface Goal {
@@ -32,10 +31,7 @@ export interface AccountOption {
 }
 
 export const load: PageLoad = async ({ fetch }) => {
-	const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
-	if (!apiUrl) {
-		throw error(500, 'API URL is not configured');
-	}
+	const apiUrl = resolveApiUrl();
 	const [goalsResponse, accountsResponse] = await Promise.all([
 		fetch(`${apiUrl}/api/goals`),
 		fetch(`${apiUrl}/api/accounts`)

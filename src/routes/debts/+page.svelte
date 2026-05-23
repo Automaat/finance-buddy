@@ -2,7 +2,7 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import { formatPLN, formatDate } from '$lib/utils/format';
 	import { ClipboardList, Plus, Pencil, Trash2, Wallet, CircleDollarSign } from 'lucide-svelte';
-	import { env } from '$env/dynamic/public';
+	import { resolveApiUrl } from '$lib/api';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount, untrack } from 'svelte';
 	import type { Debt, DebtPayment } from './+page';
@@ -15,7 +15,7 @@
 
 	let { data }: Props = $props();
 
-	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
+	const apiUrl = resolveApiUrl();
 	const owners = $derived(data.owners as OwnerOption[]);
 	const defaultOwnerUserId = $derived(owners.length > 0 ? owners[0].id : null);
 

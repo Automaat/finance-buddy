@@ -1,13 +1,9 @@
 import { error } from '@sveltejs/kit';
-import { env } from '$env/dynamic/public';
-import { browser } from '$app/environment';
+import { resolveApiUrl } from '$lib/api';
 
 export async function load({ fetch }) {
 	try {
-		const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
-		if (!apiUrl) {
-			throw error(500, 'API base URL is not configured');
-		}
+		const apiUrl = resolveApiUrl();
 
 		// Fetch accounts, assets, and owners in parallel
 		const [accountsResponse, assetsResponse, ownersResponse] = await Promise.all([

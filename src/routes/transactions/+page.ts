@@ -1,6 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { env } from '$env/dynamic/public';
-import { browser } from '$app/environment';
+import { resolveApiUrl } from '$lib/api';
 import type { PageLoad } from './$types';
 import type { Transaction, TransactionsData } from '$lib/types/transactions';
 import { INVESTMENT_CATEGORIES } from '$lib/constants';
@@ -15,10 +14,7 @@ export interface Account {
 
 export const load: PageLoad = async ({ fetch, url }) => {
 	try {
-		const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
-		if (!apiUrl) {
-			throw error(500, 'API URL is not configured');
-		}
+		const apiUrl = resolveApiUrl();
 
 		// Build query params from URL
 		const accountId = url.searchParams.get('account_id');

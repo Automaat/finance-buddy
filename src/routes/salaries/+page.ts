@@ -1,6 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { env } from '$env/dynamic/public';
-import { browser } from '$app/environment';
+import { resolveApiUrl } from '$lib/api';
 import type { PageLoad } from './$types';
 import type {
 	BonusEventsData,
@@ -30,10 +29,7 @@ const EMPTY_VALUATIONS: CompanyValuationsData = {
 
 export const load: PageLoad = async ({ fetch, url }) => {
 	try {
-		const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
-		if (!apiUrl) {
-			throw error(500, 'API URL is not configured');
-		}
+		const apiUrl = resolveApiUrl();
 
 		const ownerUserId = url.searchParams.get('owner_user_id');
 		const dateFrom = url.searchParams.get('date_from');

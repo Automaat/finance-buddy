@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { env } from '$env/dynamic/public';
+	import { resolveApiUrl } from '$lib/api';
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from '$lib/stores/toast.svelte';
 	import Modal from '$lib/components/Modal.svelte';
@@ -18,7 +18,7 @@
 
 	let { data }: { data: PageData } = $props();
 	const users = $derived(data.users as AppUser[]);
-	const apiUrl = env.PUBLIC_API_URL_BROWSER ?? '';
+	const apiUrl = resolveApiUrl();
 
 	let username = $state('');
 	let password = $state('');

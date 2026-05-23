@@ -2,7 +2,7 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import { formatPLN, formatDate } from '$lib/utils/format';
 	import { Target, Plus, Pencil, Trash2, CheckCircle2, Calendar } from 'lucide-svelte';
-	import { env } from '$env/dynamic/public';
+	import { resolveApiUrl } from '$lib/api';
 	import { invalidateAll } from '$app/navigation';
 	import type { Goal, AccountOption } from './+page';
 	import type { PageData } from './$types';
@@ -13,7 +13,7 @@
 
 	let { data }: Props = $props();
 
-	const apiUrl = env.PUBLIC_API_URL_BROWSER || 'http://localhost:8000';
+	const apiUrl = resolveApiUrl();
 
 	const goals = $derived(data.goals as Goal[]);
 	const accounts = $derived(data.accounts as AccountOption[]);

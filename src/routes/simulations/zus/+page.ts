@@ -1,13 +1,11 @@
 import { error } from '@sveltejs/kit';
-import { browser } from '$app/environment';
-import { env } from '$env/dynamic/public';
+import { resolveApiUrl } from '$lib/api';
 import type { PageLoad } from './$types';
 import type { OwnerOption } from '$lib/types/owners';
 
 export const load: PageLoad = async ({ fetch }) => {
 	try {
-		const apiUrl = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
-		if (!apiUrl) throw error(500, 'API URL not configured');
+		const apiUrl = resolveApiUrl();
 
 		const [prefillRes, ownersRes] = await Promise.all([
 			fetch(`${apiUrl}/api/zus/prefill`),
