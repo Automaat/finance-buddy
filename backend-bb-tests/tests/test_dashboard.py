@@ -82,10 +82,14 @@ def _restore_account(dsn: str, account_id: int) -> None:
         cur.execute("UPDATE accounts SET is_active = true WHERE id = %s", (account_id,))
 
 
-def _dashboard_totals(client: httpx.Client) -> tuple[float, float, float]:
+def _dashboard_body(client: httpx.Client) -> dict:
     response = client.get("/api/dashboard")
     assert response.status_code == 200, response.text
-    body = response.json()
+    return response.json()
+
+
+def _dashboard_totals(client: httpx.Client) -> tuple[float, float, float]:
+    body = _dashboard_body(client)
     return (
         float(body["total_assets"]),
         float(body["total_liabilities"]),
@@ -102,17 +106,25 @@ def test_history_preserved_after_soft_delete_account(
     # every snapshot row it was already part of.
     _ = owner_ids[PERSONA_MARCIN]  # ensure seed is loaded
     account_id = _account_id_by_name(client, ACCOUNT_MARCIN_BANK)
-    before_assets, before_liab, before_nw = _dashboard_totals(client)
-    before_history = client.get("/api/dashboard").json()["net_worth_history"]
+    before = _dashboard_body(client)
+    before_assets = float(before["total_assets"])
+    before_liab = float(before["total_liabilities"])
+    before_nw = float(before["current_net_worth"])
+    before_history = before["net_worth_history"]
 
     response = client.delete(f"/api/accounts/{account_id}")
     assert response.status_code == 204, response.text
     try:
-        after_assets, after_liab, after_nw = _dashboard_totals(client)
-        after_history = client.get("/api/dashboard").json()["net_worth_history"]
+        after = _dashboard_body(client)
+        after_assets = float(after["total_assets"])
+        after_liab = float(after["total_liabilities"])
+        after_nw = float(after["current_net_worth"])
+        after_history = after["net_worth_history"]
 
         # /api/accounts hides the soft-deleted row.
-        listing = client.get("/api/accounts").json()
+        listing_resp = client.get("/api/accounts")
+        assert listing_resp.status_code == 200, listing_resp.text
+        listing = listing_resp.json()
         live_names = {a["name"] for a in (*listing["assets"], *listing["liabilities"])}
         assert ACCOUNT_MARCIN_BANK not in live_names
 
