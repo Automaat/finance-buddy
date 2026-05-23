@@ -2384,6 +2384,89 @@
         "tags": [
           "debts"
         ]
+      },
+      "post": {
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "account_id": {
+                      "type": "integer"
+                    },
+                    "account_name": {
+                      "type": "string"
+                    },
+                    "account_owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "debt_type": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "initial_amount": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "interest_paid": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "interest_rate": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "is_active": {
+                      "type": "boolean"
+                    },
+                    "latest_balance": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "latest_balance_date": {
+                      "format": "date",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "notes": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "start_date": {
+                      "format": "date",
+                      "type": "string"
+                    },
+                    "total_paid": {
+                      "format": "double",
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "summary": "Create a debt and its liability account atomically",
+        "tags": [
+          "debts"
+        ]
       }
     },
     "/api/debts/{id}": {

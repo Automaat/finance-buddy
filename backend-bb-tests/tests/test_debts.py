@@ -204,9 +204,7 @@ def test_seeded_mortgage_account_exists(client: httpx.Client) -> None:
 
 def _account_exists(dsn: str, name: str) -> bool:
     with psycopg2.connect(dsn) as conn, conn.cursor() as cur:
-        cur.execute(
-            "SELECT 1 FROM accounts WHERE name = %s AND is_active = true", (name,)
-        )
+        cur.execute("SELECT 1 FROM accounts WHERE name = %s AND is_active = true", (name,))
         return cur.fetchone() is not None
 
 
