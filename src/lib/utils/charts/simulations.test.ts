@@ -284,9 +284,7 @@ describe('buildRetirementByWrapperOption', () => {
 		];
 		const option = buildRetirementByWrapperOption(sims, []);
 		const tooltip = option.tooltip as unknown as {
-			formatter: (
-				p: Array<{ name: string; seriesName: string; value: number }>
-			) => string;
+			formatter: (p: Array<{ name: string; seriesName: string; value: number }>) => string;
 		};
 		const html = tooltip.formatter([
 			{ name: '60', seriesName: 'IKE', value: 100 },
@@ -315,9 +313,7 @@ describe('buildRetirementByWrapperOption', () => {
 		const sims = [makeSimulation('IKE (Marcin)', [0], 60)];
 		const option = buildRetirementByWrapperOption(sims, []);
 		const tooltip = option.tooltip as unknown as {
-			formatter: (
-				p: Array<{ name: string; seriesName: string; value: unknown }>
-			) => string;
+			formatter: (p: Array<{ name: string; seriesName: string; value: unknown }>) => string;
 		};
 		const html = tooltip.formatter([{ name: '60', seriesName: 'IKE', value: null }]);
 		expect(html).toContain('0 PLN');

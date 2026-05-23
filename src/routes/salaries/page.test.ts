@@ -326,7 +326,9 @@ describe('Salaries page — equity grant flows', () => {
 		await fireEvent.input(sharesInput, { target: { value: '0' } });
 		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
 
-		await waitFor(() => expect(screen.getByText('Liczba akcji musi być większa niż 0')).toBeTruthy());
+		await waitFor(() =>
+			expect(screen.getByText('Liczba akcji musi być większa niż 0')).toBeTruthy()
+		);
 		expect(fetchMock).not.toHaveBeenCalled();
 	});
 

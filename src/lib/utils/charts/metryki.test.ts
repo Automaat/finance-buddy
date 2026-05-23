@@ -242,9 +242,7 @@ describe('chart formatter callbacks', () => {
 	it('wrapper pie tooltip handles array params (axis trigger fallback)', () => {
 		const option = buildWrapperChartOption(wrappers);
 		const tooltip = option.tooltip as unknown as {
-			formatter: (
-				p: Array<{ name: string; value: number; percent?: number }>
-			) => string;
+			formatter: (p: Array<{ name: string; value: number; percent?: number }>) => string;
 		};
 		const html = tooltip.formatter([{ name: 'IKZE', value: 8000, percent: 40 }]);
 		expect(html).toContain('IKZE');
@@ -253,9 +251,7 @@ describe('chart formatter callbacks', () => {
 	it('investment trend tooltip computes returns and formats PLN', () => {
 		const option = buildInvestmentTrendChartOption(trendSeries);
 		const tooltip = option.tooltip as unknown as {
-			formatter: (
-				p: Array<{ axisValue: string; value: number; seriesName: string }>
-			) => string;
+			formatter: (p: Array<{ axisValue: string; value: number; seriesName: string }>) => string;
 		};
 		const html = tooltip.formatter([
 			{ axisValue: '2023-12-31', value: 2000, seriesName: 'Wpłaty' },
@@ -277,9 +273,7 @@ describe('chart formatter callbacks', () => {
 	it('wrapper trend tooltip and yAxis formatter cover the named-chart variant', () => {
 		const option = buildWrapperTrendChartOption('IKE w czasie', trendSeries);
 		const tooltip = option.tooltip as unknown as {
-			formatter: (
-				p: Array<{ axisValue: string; value: number; seriesName: string }>
-			) => string;
+			formatter: (p: Array<{ axisValue: string; value: number; seriesName: string }>) => string;
 		};
 		const html = tooltip.formatter([
 			{ axisValue: '2023-12-31', value: 2000, seriesName: 'Wpłaty' },

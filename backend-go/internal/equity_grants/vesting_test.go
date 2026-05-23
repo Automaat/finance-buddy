@@ -13,8 +13,6 @@ func date(s string) time.Time {
 	return t
 }
 
-func ptrTime(t time.Time) *time.Time { return &t }
-
 func TestMonthsBetween(t *testing.T) {
 	tests := []struct {
 		name       string
