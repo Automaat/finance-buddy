@@ -85,16 +85,18 @@ func NewStore(pool *pgxpool.Pool, aggs *aggregates.Store) *Store {
 	return &Store{pool: pool, aggregates: aggs}
 }
 
-// List returns all snapshots ordered by date desc, each with its total_net_worth
-// computed from active accounts + active assets only (inactive contribute 0).
+// List returns all snapshots ordered by date desc, each with its total_net_worth.
+// Soft-deleted accounts/assets still contribute to historical snapshots they
+// belong to — see issue #394. The active flag governs current-management
+// views, not historical totals.
 func (s *Store) List(ctx context.Context) ([]ListItem, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT s.id, s.date, s.notes,
 			COALESCE(SUM(
 				CASE
-					WHEN a.id IS NOT NULL AND a.is_active = true THEN sv.value
-					WHEN acc.id IS NOT NULL AND acc.is_active = true AND acc.type = 'asset' THEN sv.value
-					WHEN acc.id IS NOT NULL AND acc.is_active = true AND acc.type = 'liability' THEN -sv.value
+					WHEN a.id IS NOT NULL THEN sv.value
+					WHEN acc.id IS NOT NULL AND acc.type = 'asset' THEN sv.value
+					WHEN acc.id IS NOT NULL AND acc.type = 'liability' THEN -sv.value
 					ELSE 0
 				END
 			), 0) AS total_net_worth

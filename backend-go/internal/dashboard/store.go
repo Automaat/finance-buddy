@@ -39,7 +39,9 @@ type AllocationJSONItem struct {
 }
 
 // Account mirrors the columns the dashboard reads from accounts.
-// OwnerUserID is nil for jointly-owned accounts.
+// OwnerUserID is nil for jointly-owned accounts. IsActive lets the
+// dashboard preserve historical snapshot values from soft-deleted
+// accounts while keeping "current state" reads filtered.
 type Account struct {
 	ID             int
 	Name           string
@@ -49,6 +51,7 @@ type Account struct {
 	AccountWrapper *string
 	Purpose        string
 	SquareMeters   *decimal.Decimal
+	IsActive       bool
 }
 
 // SnapshotValue is one snapshot_values row.
@@ -162,14 +165,18 @@ func (s *Store) AllSnapshots(ctx context.Context) ([]SnapshotMeta, error) {
 	return out, nil
 }
 
-// ActiveAccounts returns every active account.
-func (s *Store) ActiveAccounts(ctx context.Context) ([]Account, error) {
+// AllAccounts returns every account (active + soft-deleted). Historical
+// snapshot values that reference a soft-deleted account need the original
+// type/category to keep their contribution to net worth correct; callers
+// that want only the active set filter on Account.IsActive.
+func (s *Store) AllAccounts(ctx context.Context) ([]Account, error) {
 	rows, err := s.pool.Query(ctx, `
-		SELECT id, name, type, category, owner_user_id, account_wrapper, purpose, square_meters
-		FROM accounts WHERE is_active = true`,
+		SELECT id, name, type, category, owner_user_id, account_wrapper,
+		       purpose, square_meters, is_active
+		FROM accounts`,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("active accounts: %w", err)
+		return nil, fmt.Errorf("all accounts: %w", err)
 	}
 	defer rows.Close()
 	out := []Account{}
@@ -177,7 +184,7 @@ func (s *Store) ActiveAccounts(ctx context.Context) ([]Account, error) {
 		var a Account
 		if err := rows.Scan(
 			&a.ID, &a.Name, &a.Type, &a.Category, &a.OwnerUserID,
-			&a.AccountWrapper, &a.Purpose, &a.SquareMeters,
+			&a.AccountWrapper, &a.Purpose, &a.SquareMeters, &a.IsActive,
 		); err != nil {
 			return nil, fmt.Errorf("scan account: %w", err)
 		}
@@ -189,11 +196,13 @@ func (s *Store) ActiveAccounts(ctx context.Context) ([]Account, error) {
 	return out, nil
 }
 
-// ActiveAssetIDs returns the set of active asset ids.
-func (s *Store) ActiveAssetIDs(ctx context.Context) (map[int]struct{}, error) {
-	rows, err := s.pool.Query(ctx, `SELECT id FROM assets WHERE is_active = true`)
+// AllAssetIDs returns the set of asset ids (active + soft-deleted), used
+// to mark historical snapshot rows that point at the assets table even
+// when the underlying asset is soft-deleted.
+func (s *Store) AllAssetIDs(ctx context.Context) (map[int]struct{}, error) {
+	rows, err := s.pool.Query(ctx, `SELECT id FROM assets`)
 	if err != nil {
-		return nil, fmt.Errorf("active assets: %w", err)
+		return nil, fmt.Errorf("all assets: %w", err)
 	}
 	defer rows.Close()
 	out := map[int]struct{}{}

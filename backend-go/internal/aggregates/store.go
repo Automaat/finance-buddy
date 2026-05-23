@@ -60,15 +60,15 @@ func (s *Store) RecomputeForSnapshot(ctx context.Context, tx pgx.Tx, snapshotID 
 			assetIDs = append(assetIDs, *v.AssetID)
 		}
 	}
-	accounts, err := loadActiveAccounts(ctx, tx, accountIDs)
+	accounts, err := loadAccountsByID(ctx, tx, accountIDs)
 	if err != nil {
 		return err
 	}
-	activeAssets, err := loadActiveAssetIDs(ctx, tx, assetIDs)
+	knownAssets, err := loadAssetIDs(ctx, tx, assetIDs)
 	if err != nil {
 		return err
 	}
-	rows := ComputeAggregates(snap, values, accounts, activeAssets)
+	rows := ComputeAggregates(snap, values, accounts, knownAssets)
 	now := time.Now().UTC()
 	for _, r := range rows {
 		alloc := make([]map[string]any, 0, len(r.Allocation))
@@ -197,17 +197,21 @@ func loadSnapshotValues(ctx context.Context, tx pgx.Tx, snapshotID int) ([]Snaps
 	return out, nil
 }
 
-func loadActiveAccounts(ctx context.Context, tx pgx.Tx, ids []int) ([]AccountInput, error) {
+// loadAccountsByID loads every account referenced by the snapshots being
+// recomputed, regardless of is_active. Aggregates are the historical
+// reporting view (issue #394): soft-deleting an account must not retroactively
+// drop its contribution from old snapshots.
+func loadAccountsByID(ctx context.Context, tx pgx.Tx, ids []int) ([]AccountInput, error) {
 	if len(ids) == 0 {
 		return []AccountInput{}, nil
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT id, owner_user_id, type, category
-		FROM accounts WHERE id = ANY($1) AND is_active = true`,
+		FROM accounts WHERE id = ANY($1)`,
 		ids,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("load active accounts: %w", err)
+		return nil, fmt.Errorf("load accounts for aggregates: %w", err)
 	}
 	defer rows.Close()
 	out := []AccountInput{}
@@ -224,16 +228,18 @@ func loadActiveAccounts(ctx context.Context, tx pgx.Tx, ids []int) ([]AccountInp
 	return out, nil
 }
 
-func loadActiveAssetIDs(ctx context.Context, tx pgx.Tx, ids []int) (map[int]struct{}, error) {
+// loadAssetIDs loads every asset id referenced by the snapshots being
+// recomputed, regardless of is_active. See loadAccountsByID for the why.
+func loadAssetIDs(ctx context.Context, tx pgx.Tx, ids []int) (map[int]struct{}, error) {
 	if len(ids) == 0 {
 		return map[int]struct{}{}, nil
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT id FROM assets WHERE id = ANY($1) AND is_active = true`,
+		SELECT id FROM assets WHERE id = ANY($1)`,
 		ids,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("load active assets: %w", err)
+		return nil, fmt.Errorf("load assets for aggregates: %w", err)
 	}
 	defer rows.Close()
 	out := map[int]struct{}{}

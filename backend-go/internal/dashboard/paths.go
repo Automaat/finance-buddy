@@ -86,7 +86,7 @@ func computeFromAggregates(ctx context.Context, s *Store, aggRows []AggregateRow
 	if err != nil {
 		return result{}, err
 	}
-	latestRows := buildMergedRows(latestValues, shared.snapshotDate, shared.accounts, shared.activeAssetIDs)
+	latestRows := buildMergedRows(latestValues, shared.snapshotDate, shared.accounts, shared.assetIDs)
 	res.RetirementAccountValue = retirementValueOf(latestRows)
 
 	if shared.hasConfig && len(latestRows) > 0 {
@@ -102,7 +102,7 @@ func computeFromAggregates(ctx context.Context, s *Store, aggRows []AggregateRow
 		if err != nil {
 			return result{}, err
 		}
-		allRows := buildMergedRows(allValues, shared.snapshotDate, shared.accounts, shared.activeAssetIDs)
+		allRows := buildMergedRows(allValues, shared.snapshotDate, shared.accounts, shared.assetIDs)
 		res.InvestmentTimeSeries = buildInvestmentTimeSeries(allRows, shared.snapshots, shared.txns)
 		res.WrapperTimeSeries = buildWrapperTimeSeries(allRows, shared.snapshots, shared.txns)
 		res.CategoryTimeSeries = buildCategoryTimeSeries(allRows, shared.snapshots, shared.txns)
@@ -123,7 +123,7 @@ func computeRaw(ctx context.Context, s *Store) (result, error) {
 	if err != nil {
 		return result{}, err
 	}
-	rows := buildMergedRows(allValues, shared.snapshotDate, shared.accounts, shared.activeAssetIDs)
+	rows := buildMergedRows(allValues, shared.snapshotDate, shared.accounts, shared.assetIDs)
 	res := emptyResult()
 	if len(rows) == 0 {
 		return res, nil
