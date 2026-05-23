@@ -2,15 +2,14 @@ import { chromium, devices } from '@playwright/test';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:5174';
 
-async function run() {
-	const browser = await chromium.launch();
-	const results = [];
+const VIEWPORTS = [
+	{ label: 'iphone', device: devices['iPhone 14 Pro'] },
+	{ label: 'ipad', device: devices['iPad Mini'] }
+];
 
-	for (const vp of [
-		{ label: 'iphone', device: devices['iPhone 14 Pro'] },
-		{ label: 'ipad', device: devices['iPad Mini'] }
-	]) {
-		const ctx = await browser.newContext({ ...vp.device });
+async function testViewport(browser, vp) {
+	const ctx = await browser.newContext({ ...vp.device });
+	try {
 		const page = await ctx.newPage();
 		const consoleErrors = [];
 		page.on('pageerror', (err) => consoleErrors.push(err.message));
@@ -35,31 +34,38 @@ async function run() {
 		const runButton = page.locator('button.primary-button');
 		const runButtonVisible = await runButton.isVisible();
 
-		console.log(`  form visible: ${formVisible}`);
-		console.log(`  run button visible: ${runButtonVisible}`);
+		console.log(`  [${vp.label}] form visible: ${formVisible}`);
+		console.log(`  [${vp.label}] run button visible: ${runButtonVisible}`);
 
-		if (runButtonVisible) {
-			console.log('  filling form fields...');
+		let result;
+
+		if (!runButtonVisible) {
+			result = {
+				viewport: vp.label,
+				success: false,
+				error: 'run button not visible — page did not render correctly'
+			};
+		} else {
+			console.log(`  [${vp.label}] filling form fields...`);
 			await page.locator('input[type="date"]').first().fill('1990-06-15');
 			const retirementAgeInput = page.locator('input[type="number"]').nth(0);
 			// Set a valid retirement age (first numeric input is retirement age in this form)
 			await retirementAgeInput.fill('65');
 			await page.waitForTimeout(200);
-			console.log('  clicking run button...');
+			console.log(`  [${vp.label}] clicking run button...`);
 			await runButton.click();
 
-			// Wait for results
 			try {
 				await page.waitForSelector('.summary-cards', { timeout: 15000 });
-				console.log('  results rendered: OK');
+				console.log(`  [${vp.label}] results rendered: OK`);
 
 				const summaryCards = await page.locator('.summary-card').count();
-				console.log(`  summary cards: ${summaryCards}`);
+				console.log(`  [${vp.label}] summary cards: ${summaryCards}`);
 
 				const chartHeight = await page
 					.locator('.chart-container')
 					.evaluate((el) => el.offsetHeight);
-				console.log(`  chart height: ${chartHeight}px`);
+				console.log(`  [${vp.label}] chart height: ${chartHeight}px`);
 
 				// Check if table still scrolls nicely on mobile
 				const tableWrapper = page.locator('.projection-table').first();
@@ -71,31 +77,36 @@ async function run() {
 						overflow: getComputedStyle(el).overflowX
 					}));
 					console.log(
-						`  projection table: scrollW=${tableScroll.scrollWidth} clientW=${tableScroll.clientWidth} overflow=${tableScroll.overflow}`
+						`  [${vp.label}] projection table: scrollW=${tableScroll.scrollWidth} clientW=${tableScroll.clientWidth} overflow=${tableScroll.overflow}`
 					);
 				}
 
-				// Verify no page-level horizontal overflow
 				const pageOverflow = await page.evaluate(
 					() => document.documentElement.scrollWidth - document.documentElement.clientWidth
 				);
-				console.log(`  page overflow x: ${pageOverflow}px`);
+				console.log(`  [${vp.label}] page overflow x: ${pageOverflow}px`);
 
-				results.push({ viewport: vp.label, success: true });
+				result = { viewport: vp.label, success: true };
 			} catch (err) {
-				console.log(`  ERROR waiting for results: ${err.message}`);
-				results.push({ viewport: vp.label, success: false, error: err.message });
+				console.log(`  [${vp.label}] ERROR waiting for results: ${err.message}`);
+				result = { viewport: vp.label, success: false, error: err.message };
 			}
 		}
 
 		if (consoleErrors.length > 0) {
-			console.log('  console/page errors:');
+			console.log(`  [${vp.label}] console/page errors:`);
 			for (const e of consoleErrors.slice(0, 3)) console.log(`    - ${e}`);
 		}
 
+		return result;
+	} finally {
 		await ctx.close();
 	}
+}
 
+async function run() {
+	const browser = await chromium.launch();
+	const results = await Promise.all(VIEWPORTS.map((vp) => testViewport(browser, vp)));
 	await browser.close();
 
 	const ok = results.every((r) => r.success);
