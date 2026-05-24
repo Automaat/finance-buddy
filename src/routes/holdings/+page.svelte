@@ -167,7 +167,7 @@
 	async function deleteSecurity(s: { id: number; symbol: string }) {
 		const ok = await confirm({
 			title: 'Usunąć papier wartościowy?',
-			message: `„${s.symbol}" zostanie trwale usunięty.`,
+			message: `„${s.symbol}” zostanie trwale usunięty.`,
 			danger: true,
 			confirmText: 'Usuń'
 		});

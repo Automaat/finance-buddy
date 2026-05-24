@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -289,7 +290,9 @@ func (s *Store) Holdings(ctx context.Context) ([]HoldingRow, error) {
 		run, runErr := ComputeRunning(lots)
 		if runErr != nil {
 			// Skip securities with corrupted lot histories rather than failing
-			// the whole endpoint.
+			// the whole endpoint. Log so the corruption is visible in ops.
+			slog.Default().Warn("holdings: skipping security with bad lot history",
+				"security_id", sec.ID, "symbol", sec.Symbol, "err", runErr)
 			continue
 		}
 		if run.Quantity.IsZero() && run.RealizedGain.IsZero() {

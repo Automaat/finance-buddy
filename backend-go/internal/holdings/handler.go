@@ -11,7 +11,23 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/shopspring/decimal"
+)
+
+// pgErrorCode returns the SQLSTATE for a Postgres-driven error, or "" when
+// the error didn't originate from pgx.
+func pgErrorCode(err error) string {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		return pgErr.Code
+	}
+	return ""
+}
+
+const (
+	pgUniqueViolation     = "23505"
+	pgForeignKeyViolation = "23503"
 )
 
 // Handler is the HTTP boundary for /api/holdings.
@@ -81,6 +97,10 @@ func (h *Handler) CreateSecurity(w http.ResponseWriter, r *http.Request) {
 	}
 	created, err := h.store.CreateSecurity(r.Context(), sec)
 	if err != nil {
+		if pgErrorCode(err) == pgUniqueViolation {
+			writeError(w, http.StatusConflict, "A security with the same symbol or ISIN already exists")
+			return
+		}
 		h.logger.Error("create security", "err", err)
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
@@ -99,8 +119,12 @@ func (h *Handler) DeleteSecurity(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "Security not found")
 			return
 		}
-		// Foreign-key violation from referencing lots.
-		writeError(w, http.StatusConflict, "Cannot delete security with lots; delete the lots first")
+		if pgErrorCode(err) == pgForeignKeyViolation {
+			writeError(w, http.StatusConflict, "Cannot delete security with lots; delete the lots first")
+			return
+		}
+		h.logger.Error("delete security", "err", err)
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -182,6 +206,10 @@ func (h *Handler) CreateLot(w http.ResponseWriter, r *http.Request) {
 	}
 	created, err := h.store.CreateLot(r.Context(), lot)
 	if err != nil {
+		if pgErrorCode(err) == pgForeignKeyViolation {
+			writeError(w, http.StatusNotFound, "Referenced account or security not found")
+			return
+		}
 		h.logger.Error("create lot", "err", err)
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
@@ -269,6 +297,10 @@ func (h *Handler) UpsertQuote(w http.ResponseWriter, r *http.Request) {
 	}
 	saved, err := h.store.UpsertQuote(r.Context(), q)
 	if err != nil {
+		if pgErrorCode(err) == pgForeignKeyViolation {
+			writeError(w, http.StatusNotFound, "Security not found")
+			return
+		}
 		h.logger.Error("upsert quote", "err", err)
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
 		return

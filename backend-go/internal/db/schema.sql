@@ -645,7 +645,7 @@ CREATE TABLE public.transactions (
 
 
 --
--- Name: recurring_transactions; Type: TABLE; Schema: public; Owner: -
+-- Name: securities; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.securities (

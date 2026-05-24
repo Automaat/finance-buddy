@@ -29,6 +29,15 @@ export interface AccountOption {
 	name: string;
 }
 
+interface AccountRow {
+	id: number;
+	name: string;
+	category: string;
+	is_active: boolean;
+}
+
+const INVESTMENT_CATEGORIES = new Set(['stock', 'bond', 'fund', 'etf']);
+
 export const load: PageLoad = async ({ fetch }) => {
 	const apiUrl = resolveApiUrl();
 	const [holdingsRes, securitiesRes, accountsRes] = await Promise.all([
@@ -41,10 +50,16 @@ export const load: PageLoad = async ({ fetch }) => {
 	if (!accountsRes.ok) throw error(accountsRes.status, 'Failed to load accounts');
 	const holdings = (await holdingsRes.json()) as { holdings: HoldingRow[] };
 	const securities = (await securitiesRes.json()) as { securities: SecurityRow[] };
-	const accountsData = (await accountsRes.json()) as { accounts: AccountOption[] };
+	const accountsPayload = (await accountsRes.json()) as {
+		assets: AccountRow[];
+		liabilities: AccountRow[];
+	};
+	const accounts = (accountsPayload.assets ?? [])
+		.filter((a) => a.is_active && INVESTMENT_CATEGORIES.has(a.category))
+		.map((a) => ({ id: a.id, name: a.name }));
 	return {
 		holdings: holdings.holdings,
 		securities: securities.securities,
-		accounts: accountsData.accounts.map((a) => ({ id: a.id, name: a.name }))
+		accounts
 	};
 };
