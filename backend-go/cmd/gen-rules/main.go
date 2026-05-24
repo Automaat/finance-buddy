@@ -49,7 +49,9 @@ func run() error {
 	// trailingComma: "none" in prettier config — emit fields joined by ",\n"
 	// with no trailing comma on the last entry of either object or outer map.
 	b.WriteString("export const PL_RULES = {\n")
-	for i, r := range rules.Polish2026 {
+	all := rules.All()
+	for i := range all {
+		r := &all[i]
 		fields := []string{
 			fmt.Sprintf("\t\tkey: %s", tsString(r.Key)),
 			fmt.Sprintf("\t\tname: %s", tsString(r.Name)),
@@ -62,19 +64,21 @@ func run() error {
 			fmt.Sprintf("\t\tlastCheckedDate: %s", tsString(r.LastCheckedDate.Format("2006-01-02"))),
 			fmt.Sprintf("\t\tdescription: %s", tsString(r.Description)),
 		}
-		b.WriteString(fmt.Sprintf("\t%s: {\n", r.Key))
+		fmt.Fprintf(&b, "\t%s: {\n", r.Key)
 		b.WriteString(strings.Join(fields, ",\n"))
 		b.WriteString("\n\t}")
-		if i < len(rules.Polish2026)-1 {
+		if i < len(all)-1 {
 			b.WriteString(",")
 		}
 		b.WriteString("\n")
 	}
 	b.WriteString("} as const satisfies Record<string, PLRule>;\n")
-	if err := os.WriteFile(out, []byte(b.String()), 0o644); err != nil {
+	// 0o600 satisfies gosec G306; the generated TS is a public source-tree
+	// artifact, but tighter perms keep the linter happy without harm.
+	if err := os.WriteFile(out, []byte(b.String()), 0o600); err != nil {
 		return fmt.Errorf("write %s: %w", out, err)
 	}
-	fmt.Println("wrote", out, "—", len(rules.Polish2026), "rules")
+	fmt.Println("wrote", out, "—", len(all), "rules")
 	return nil
 }
 
