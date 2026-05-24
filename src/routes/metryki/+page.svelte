@@ -12,6 +12,7 @@
 	} from '$lib/utils/charts/metryki';
 	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
 	import { ownerName, type OwnerOption } from '$lib/types/owners';
+	import ContributionAdjustedReturns from '$lib/components/ContributionAdjustedReturns.svelte';
 
 	import type { PageData } from './$types';
 
@@ -381,6 +382,13 @@
 			/>
 		</div>
 	{/if}
+
+	<h2 class="h2">Zwroty skorygowane o wpłaty</h2>
+	<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+		<ContributionAdjustedReturns scope={{ type: 'all' }} title="Gospodarstwo" />
+		<ContributionAdjustedReturns scope={{ type: 'category', value: 'stock' }} title="Akcje" />
+		<ContributionAdjustedReturns scope={{ type: 'category', value: 'bond' }} title="Obligacje" />
+	</div>
 
 	<h2 class="h2">Struktura portfela inwestycyjnego</h2>
 

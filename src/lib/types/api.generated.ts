@@ -2979,6 +2979,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/investment/returns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Contribution-adjusted (money-weighted) returns */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            as_of?: string;
+                            convergence_failed?: boolean;
+                            /** Format: double */
+                            current_value?: number;
+                            /** Format: double */
+                            deposits?: number;
+                            has_snapshot?: boolean;
+                            /** Format: double */
+                            money_weighted_pct?: number | null;
+                            /** Format: double */
+                            net_contributed?: number;
+                            period?: string;
+                            scope?: {
+                                account_id?: number | null;
+                                type?: string;
+                                value?: string;
+                            };
+                            /** Format: double */
+                            simple_roi_pct?: number;
+                            since?: string | null;
+                            /** Format: double */
+                            valuation_change?: number;
+                            /** Format: double */
+                            withdrawals?: number;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/investment/stock-stats": {
         parameters: {
             query?: never;
