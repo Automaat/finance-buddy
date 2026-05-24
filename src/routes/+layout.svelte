@@ -4,6 +4,7 @@
 	import Toast from '$lib/components/Toast.svelte';
 	import Confirm from '$lib/components/Confirm.svelte';
 	import KeyboardShortcuts from '$lib/components/KeyboardShortcuts.svelte';
+	import GlobalErrorCapture from '$lib/components/GlobalErrorCapture.svelte';
 	import BottomSheet from '$lib/components/BottomSheet.svelte';
 	import { navPrefs } from '$lib/stores/navPrefs.svelte';
 	import { NAV_ROUTES, type NavRoute } from '$lib/nav/routes';
@@ -45,6 +46,7 @@
 
 <Toast />
 <Confirm />
+<GlobalErrorCapture />
 
 {#if !isLoginPage}
 	<KeyboardShortcuts />
