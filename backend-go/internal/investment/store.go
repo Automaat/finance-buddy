@@ -51,8 +51,8 @@ type PeriodWindow struct {
 	AsOf  time.Time
 }
 
-// ScopedFlows pulls all active transactions in scope between `since` (open)
-// and `asOf` (inclusive). Returns chronologically sorted.
+// ScopedFlows pulls all active transactions in scope between `since` and
+// `asOf` (both inclusive). Returns chronologically sorted.
 func (s *Store) ScopedFlows(ctx context.Context, scope ScopeFilter, w PeriodWindow) ([]TransactionDated, error) {
 	args := []any{w.AsOf}
 	clauses := []string{"a.is_active = true", "t.is_active = true", "t.date <= $1"}

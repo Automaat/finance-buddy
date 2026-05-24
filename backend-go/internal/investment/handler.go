@@ -76,6 +76,10 @@ func (h *Handler) Returns(w http.ResponseWriter, r *http.Request) {
 	if period == "" {
 		period = "all"
 	}
+	if !validPeriod(period) {
+		writeDetailError(w, http.StatusBadRequest, "period must be one of 1m|3m|ytd|1y|all")
+		return
+	}
 	now := time.Now().UTC()
 	window := windowFor(period, now)
 
@@ -85,7 +89,14 @@ func (h *Handler) Returns(w http.ResponseWriter, r *http.Request) {
 		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	flows, err := h.store.ScopedFlows(r.Context(), scope, PeriodWindow{Since: window.Since, AsOf: now})
+	// Cash flows must align with the valuation date. When a snapshot exists,
+	// upper-bound the flow window at snapDate so transactions added after the
+	// snapshot don't pollute the return calculation.
+	flowEnd := now
+	if hasSnap {
+		flowEnd = snapDate
+	}
+	flows, err := h.store.ScopedFlows(r.Context(), scope, PeriodWindow{Since: window.Since, AsOf: flowEnd})
 	if err != nil {
 		h.logger.Error("returns: flows", "err", err)
 		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
@@ -93,7 +104,25 @@ func (h *Handler) Returns(w http.ResponseWriter, r *http.Request) {
 	}
 
 	deposits, withdrawals := 0.0, 0.0
-	xirrFlows := make([]CashFlow, 0, len(flows)+1)
+	xirrFlows := make([]CashFlow, 0, len(flows)+2)
+	// Windowed periods need an opening balance so XIRR reflects the return
+	// over the period rather than treating pre-window value as free money.
+	// Inject the snapshot-as-of-since as a positive cash flow at `since`.
+	var openingValue float64
+	if window.Since != nil {
+		openValDec, _, hasOpen, err := h.store.LatestValueInScope(r.Context(), scope, *window.Since)
+		if err != nil {
+			h.logger.Error("returns: opening snapshot", "err", err)
+			writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+		if hasOpen {
+			openingValue, _ = openValDec.Float64()
+			if openingValue > 0 {
+				xirrFlows = append(xirrFlows, CashFlow{Date: *window.Since, Amount: openingValue})
+			}
+		}
+	}
 	for _, f := range flows {
 		amt, _ := f.Amount.Float64()
 		if amt >= 0 {
@@ -105,25 +134,31 @@ func (h *Handler) Returns(w http.ResponseWriter, r *http.Request) {
 	}
 	netContrib := deposits - withdrawals
 	currentValue, _ := value.Float64()
-	valuationChange := currentValue - netContrib
+	// Valuation change is the difference between current value and what was
+	// put in over the window — current value minus (opening + net flows).
+	valuationChange := currentValue - openingValue - netContrib
 
+	asOf := now
+	if hasSnap {
+		asOf = snapDate
+	}
 	resp := returnsResponse{
 		Scope:           scopeWire,
 		Period:          period,
-		AsOf:            now.Format("2006-01-02"),
+		AsOf:            asOf.Format("2006-01-02"),
 		Deposits:        pyFloat(deposits),
 		Withdrawals:     pyFloat(withdrawals),
 		NetContributed:  pyFloat(netContrib),
 		CurrentValue:    pyFloat(currentValue),
 		ValuationChange: pyFloat(valuationChange),
-		SimpleROIPct:    pyFloat(math.Round(SimpleROI(netContrib, currentValue)*10000) / 100),
+		SimpleROIPct:    pyFloat(math.Round(SimpleROI(openingValue+netContrib, currentValue)*10000) / 100),
 		HasSnapshot:     hasSnap,
 	}
 	if window.Since != nil {
 		s := window.Since.Format("2006-01-02")
 		resp.Since = &s
 	}
-	if hasSnap && currentValue > 0 {
+	if hasSnap {
 		// Closing terminal flow = liquidate at current value at the snapshot date.
 		xirrFlows = append(xirrFlows, CashFlow{Date: snapDate, Amount: -currentValue})
 		mwr, xerr := XIRR(xirrFlows)
@@ -135,6 +170,14 @@ func (h *Handler) Returns(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeJSON(w, http.StatusOK, resp)
+}
+
+func validPeriod(p string) bool {
+	switch p {
+	case "1m", "3m", "ytd", "1y", "all":
+		return true
+	}
+	return false
 }
 
 func parseScope(r *http.Request) (ScopeFilter, scopeWire, string) {

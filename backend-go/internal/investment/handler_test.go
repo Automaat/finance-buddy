@@ -1,13 +1,15 @@
 package investment
 
 import (
+	"context"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 )
 
 func TestParseScope_DefaultIsAll(t *testing.T) {
-	r := httptest.NewRequest("GET", "/api/investment/returns", nil)
+	r := httptest.NewRequestWithContext(context.Background(), "GET", "/api/investment/returns", http.NoBody)
 	scope, wire, err := parseScope(r)
 	if err != "" {
 		t.Fatalf("unexpected error: %s", err)
@@ -21,7 +23,7 @@ func TestParseScope_DefaultIsAll(t *testing.T) {
 }
 
 func TestParseScope_Account(t *testing.T) {
-	r := httptest.NewRequest("GET", "/api/investment/returns?scope=account&id=42", nil)
+	r := httptest.NewRequestWithContext(context.Background(), "GET", "/api/investment/returns?scope=account&id=42", http.NoBody)
 	scope, wire, err := parseScope(r)
 	if err != "" {
 		t.Fatalf("unexpected error: %s", err)
@@ -42,7 +44,7 @@ func TestParseScope_AccountRejectsBadID(t *testing.T) {
 		"/api/investment/returns?scope=account&id=-3",
 	}
 	for _, url := range cases {
-		r := httptest.NewRequest("GET", url, nil)
+		r := httptest.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
 		_, _, err := parseScope(r)
 		if err == "" {
 			t.Errorf("expected error for %s", url)
@@ -51,7 +53,7 @@ func TestParseScope_AccountRejectsBadID(t *testing.T) {
 }
 
 func TestParseScope_CategoryRequiresValue(t *testing.T) {
-	r := httptest.NewRequest("GET", "/api/investment/returns?scope=category", nil)
+	r := httptest.NewRequestWithContext(context.Background(), "GET", "/api/investment/returns?scope=category", http.NoBody)
 	_, _, err := parseScope(r)
 	if err == "" {
 		t.Errorf("expected error when scope=category and value missing")
@@ -59,7 +61,7 @@ func TestParseScope_CategoryRequiresValue(t *testing.T) {
 }
 
 func TestParseScope_WrapperRequiresValue(t *testing.T) {
-	r := httptest.NewRequest("GET", "/api/investment/returns?scope=wrapper", nil)
+	r := httptest.NewRequestWithContext(context.Background(), "GET", "/api/investment/returns?scope=wrapper", http.NoBody)
 	_, _, err := parseScope(r)
 	if err == "" {
 		t.Errorf("expected error when scope=wrapper and value missing")
@@ -67,7 +69,7 @@ func TestParseScope_WrapperRequiresValue(t *testing.T) {
 }
 
 func TestParseScope_CategoryHappyPath(t *testing.T) {
-	r := httptest.NewRequest("GET", "/api/investment/returns?scope=category&value=stock", nil)
+	r := httptest.NewRequestWithContext(context.Background(), "GET", "/api/investment/returns?scope=category&value=stock", http.NoBody)
 	scope, wire, err := parseScope(r)
 	if err != "" {
 		t.Fatalf("unexpected error: %s", err)
@@ -81,7 +83,7 @@ func TestParseScope_CategoryHappyPath(t *testing.T) {
 }
 
 func TestParseScope_Unknown(t *testing.T) {
-	r := httptest.NewRequest("GET", "/api/investment/returns?scope=bogus", nil)
+	r := httptest.NewRequestWithContext(context.Background(), "GET", "/api/investment/returns?scope=bogus", http.NoBody)
 	_, _, err := parseScope(r)
 	if err == "" {
 		t.Errorf("expected error for unknown scope")
