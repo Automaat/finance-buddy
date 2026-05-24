@@ -78,6 +78,9 @@ type AppConfig struct {
 	AllocationBonds        int
 	AllocationGold         int
 	WithdrawalRate         decimal.Decimal
+	BirthDate              time.Time
+	CoastFIRETargetAge     *int
+	ExpectedReturnRate     decimal.Decimal
 }
 
 // SnapshotMeta is id+date.
@@ -292,14 +295,16 @@ func (s *Store) LoadAppConfig(ctx context.Context) (AppConfig, bool, error) {
 	row := s.pool.QueryRow(ctx, `
 		SELECT monthly_expenses, monthly_mortgage_payment,
 		       allocation_stocks, allocation_bonds, allocation_gold,
-		       withdrawal_rate
+		       withdrawal_rate, birth_date,
+		       coast_fire_target_age, expected_return_rate
 		FROM app_config WHERE id = 1`,
 	)
 	var c AppConfig
 	if err := row.Scan(
 		&c.MonthlyExpenses, &c.MonthlyMortgagePayment,
 		&c.AllocationStocks, &c.AllocationBonds, &c.AllocationGold,
-		&c.WithdrawalRate,
+		&c.WithdrawalRate, &c.BirthDate,
+		&c.CoastFIRETargetAge, &c.ExpectedReturnRate,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return AppConfig{}, false, nil

@@ -61,11 +61,33 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 	if err := addAppConfigWithdrawalRate(ctx, pool); err != nil {
 		return err
 	}
+	if err := addAppConfigCoastFIRE(ctx, pool); err != nil {
+		return err
+	}
 	if err := createRecurringTransactionsTable(ctx, pool); err != nil {
 		return err
 	}
 	if err := createHoldingsTables(ctx, pool); err != nil {
 		return err
+	}
+	return nil
+}
+
+// addAppConfigCoastFIRE adds the Coast FIRE inputs to app_config (issue #548):
+// `coast_fire_target_age` (optional — Coast FIRE tile hides when nil) and
+// `expected_return_rate` (defaults to 0.07, a conservative real-return
+// assumption matching the retirement-savings projection on the settings page).
+func addAppConfigCoastFIRE(ctx context.Context, pool *pgxpool.Pool) error {
+	stmts := []string{
+		`ALTER TABLE app_config
+		ADD COLUMN IF NOT EXISTS coast_fire_target_age integer`,
+		`ALTER TABLE app_config
+		ADD COLUMN IF NOT EXISTS expected_return_rate numeric(5,4) NOT NULL DEFAULT 0.07`,
+	}
+	for _, stmt := range stmts {
+		if _, err := pool.Exec(ctx, stmt); err != nil {
+			return fmt.Errorf("add coast fire columns to app_config: %w", err)
+		}
 	}
 	return nil
 }

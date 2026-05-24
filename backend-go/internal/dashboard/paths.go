@@ -475,13 +475,23 @@ func buildMetricCards(
 		mc.HourOfLifeCost = &life
 	}
 
-	fire := computeFIRE(latestRows, cfg, currentNetWorth)
+	assignFIREMetrics(&mc, computeFIRE(latestRows, cfg, currentNetWorth))
+	return mc
+}
+
+// assignFIREMetrics copies the FIRE/Coast-FIRE bundle into the metric-card
+// struct. Pulled out of buildMetricCards to keep that function under the
+// funlen threshold without obscuring the wiring.
+func assignFIREMetrics(mc *metricCards, fire fireMetrics) {
 	mc.AnnualExpenses = fire.AnnualExpenses
 	mc.FIRENumber = fire.FIRENumber
 	mc.FIProgress = fire.FIProgress
 	mc.RunwayMonths = fire.RunwayMonths
 	mc.WithdrawalRate = fire.WithdrawalRate
-	return mc
+	mc.CoastFIRENumber = fire.CoastFIRENumber
+	mc.CoastFIREGap = fire.CoastFIREGap
+	mc.CoastFIRETargetAge = fire.CoastFIRETargetAge
+	mc.ExpectedReturnRate = fire.ExpectedReturnRate
 }
 
 // buildAllocationAnalysis is the shared allocation-analysis computation.

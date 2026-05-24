@@ -164,3 +164,54 @@ func TestValidateWithdrawalRateNilOK(t *testing.T) {
 		t.Fatalf("nil withdrawal_rate should pass (backward compat), got %+v", err)
 	}
 }
+
+func TestValidateCoastFIRETargetAgeOutOfRange(t *testing.T) {
+	r := validRequest()
+	bad := 10
+	r.CoastFIRETargetAge = &bad
+	if err := r.validate(); err == nil || err.Field != "coast_fire_target_age" {
+		t.Fatalf("expected coast_fire_target_age error, got %+v", err)
+	}
+}
+
+func TestValidateCoastFIRETargetAgeBeforeCurrent(t *testing.T) {
+	r := validRequest()
+	now := time.Now().UTC()
+	r.BirthDate = isoDate(now.AddDate(-50, 0, 0))
+	r.RetirementAge = 65
+	bad := 30
+	r.CoastFIRETargetAge = &bad
+	if err := r.validate(); err == nil || err.Field != "coast_fire_target_age" {
+		t.Fatalf("expected coast_fire_target_age vs current age error, got %+v", err)
+	}
+}
+
+func TestValidateCoastFIRETargetAgeNilOK(t *testing.T) {
+	r := validRequest()
+	r.CoastFIRETargetAge = nil
+	if err := r.validate(); err != nil {
+		t.Fatalf("nil coast_fire_target_age should pass, got %+v", err)
+	}
+}
+
+func TestValidateExpectedReturnRateOutOfRange(t *testing.T) {
+	for _, s := range []string{"0", "0.005", "0.25", "1.0"} {
+		r := validRequest()
+		d := decimal.RequireFromString(s)
+		r.ExpectedReturnRate = &d
+		if err := r.validate(); err == nil || err.Field != "expected_return_rate" {
+			t.Fatalf("expected expected_return_rate error for %s, got %+v", s, err)
+		}
+	}
+}
+
+func TestValidateExpectedReturnRateAllowed(t *testing.T) {
+	for _, s := range []string{"0.01", "0.05", "0.07", "0.10", "0.20"} {
+		r := validRequest()
+		d := decimal.RequireFromString(s)
+		r.ExpectedReturnRate = &d
+		if err := r.validate(); err != nil {
+			t.Fatalf("expected %s to validate, got %+v", s, err)
+		}
+	}
+}

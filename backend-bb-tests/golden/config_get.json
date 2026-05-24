@@ -5,6 +5,8 @@
   "allocation_real_estate": 40,
   "allocation_stocks": 30,
   "birth_date": "1990-06-15",
+  "coast_fire_target_age": null,
+  "expected_return_rate": "0.0700",
   "id": 1,
   "monthly_expenses": "5000.00",
   "monthly_mortgage_payment": "2000.00",
