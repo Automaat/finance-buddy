@@ -2334,6 +2334,10 @@
                     "monthly_mortgage_payment": {
                       "type": "string"
                     },
+                    "monthly_savings": {
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "retirement_age": {
                       "type": "integer"
                     },
@@ -2407,6 +2411,10 @@
                   "monthly_mortgage_payment": {
                     "type": "string"
                   },
+                  "monthly_savings": {
+                    "nullable": true,
+                    "type": "string"
+                  },
                   "retirement_age": {
                     "type": "integer"
                   },
@@ -2475,6 +2483,10 @@
                       "type": "string"
                     },
                     "monthly_mortgage_payment": {
+                      "type": "string"
+                    },
+                    "monthly_savings": {
+                      "nullable": true,
                       "type": "string"
                     },
                     "retirement_age": {
@@ -2905,6 +2917,15 @@
                           "nullable": true,
                           "type": "number"
                         },
+                        "fi_projected_date": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "fi_years_remaining": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        },
                         "fire_number": {
                           "format": "double",
                           "nullable": true,
@@ -2934,6 +2955,11 @@
                           "type": "number"
                         },
                         "lean_fire_number": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "monthly_savings": {
                           "format": "double",
                           "nullable": true,
                           "type": "number"

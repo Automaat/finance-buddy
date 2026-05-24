@@ -1665,6 +1665,7 @@ export interface paths {
                             lean_monthly_expenses?: string | null;
                             monthly_expenses?: string;
                             monthly_mortgage_payment?: string;
+                            monthly_savings?: string | null;
                             retirement_age?: number;
                             retirement_monthly_salary?: string;
                             withdrawal_rate?: string;
@@ -1698,6 +1699,7 @@ export interface paths {
                         lean_monthly_expenses?: string | null;
                         monthly_expenses?: string;
                         monthly_mortgage_payment?: string;
+                        monthly_savings?: string | null;
                         retirement_age?: number;
                         retirement_monthly_salary?: string;
                         withdrawal_rate?: string | null;
@@ -1727,6 +1729,7 @@ export interface paths {
                             lean_monthly_expenses?: string | null;
                             monthly_expenses?: string;
                             monthly_mortgage_payment?: string;
+                            monthly_savings?: string | null;
                             retirement_age?: number;
                             retirement_monthly_salary?: string;
                             withdrawal_rate?: string;
@@ -2007,6 +2010,9 @@ export interface paths {
                                 fat_fire_number?: number | null;
                                 /** Format: double */
                                 fi_progress?: number | null;
+                                fi_projected_date?: string | null;
+                                /** Format: double */
+                                fi_years_remaining?: number | null;
                                 /** Format: double */
                                 fire_number?: number | null;
                                 /** Format: double */
@@ -2021,6 +2027,8 @@ export interface paths {
                                 lean_fi_progress?: number | null;
                                 /** Format: double */
                                 lean_fire_number?: number | null;
+                                /** Format: double */
+                                monthly_savings?: number | null;
                                 mortgage_months_left?: number;
                                 /** Format: double */
                                 mortgage_remaining?: number;

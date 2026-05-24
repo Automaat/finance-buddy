@@ -84,6 +84,7 @@ type AppConfig struct {
 	BaristaMonthlyIncome   *decimal.Decimal
 	LeanMonthlyExpenses    *decimal.Decimal
 	FatMonthlyExpenses     *decimal.Decimal
+	MonthlySavings         *decimal.Decimal
 }
 
 // SnapshotMeta is id+date.
@@ -301,7 +302,8 @@ func (s *Store) LoadAppConfig(ctx context.Context) (AppConfig, bool, error) {
 		       withdrawal_rate, birth_date,
 		       coast_fire_target_age, expected_return_rate,
 		       barista_monthly_income,
-		       lean_monthly_expenses, fat_monthly_expenses
+		       lean_monthly_expenses, fat_monthly_expenses,
+		       monthly_savings
 		FROM app_config WHERE id = 1`,
 	)
 	var c AppConfig
@@ -312,6 +314,7 @@ func (s *Store) LoadAppConfig(ctx context.Context) (AppConfig, bool, error) {
 		&c.CoastFIRETargetAge, &c.ExpectedReturnRate,
 		&c.BaristaMonthlyIncome,
 		&c.LeanMonthlyExpenses, &c.FatMonthlyExpenses,
+		&c.MonthlySavings,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return AppConfig{}, false, nil

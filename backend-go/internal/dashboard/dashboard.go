@@ -62,6 +62,9 @@ type metricCards struct {
 	LeanFIProgress          *float64
 	FatFIRENumber           *float64
 	FatFIProgress           *float64
+	MonthlySavings          *float64
+	FIYearsRemaining        *float64
+	FIProjectedDate         *string
 }
 
 type allocationBreakdown struct {

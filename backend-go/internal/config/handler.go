@@ -34,6 +34,7 @@ type response struct {
 	BaristaMonthlyIncome    *moneyJSON `json:"barista_monthly_income"`
 	LeanMonthlyExpenses     *moneyJSON `json:"lean_monthly_expenses"`
 	FatMonthlyExpenses      *moneyJSON `json:"fat_monthly_expenses"`
+	MonthlySavings          *moneyJSON `json:"monthly_savings"`
 }
 
 // request is the PUT body. Date arrives as "YYYY-MM-DD" and money as either
@@ -55,6 +56,7 @@ type request struct {
 	BaristaMonthlyIncome    *decimal.Decimal `json:"barista_monthly_income"`
 	LeanMonthlyExpenses     *decimal.Decimal `json:"lean_monthly_expenses"`
 	FatMonthlyExpenses      *decimal.Decimal `json:"fat_monthly_expenses"`
+	MonthlySavings          *decimal.Decimal `json:"monthly_savings"`
 }
 
 func toResponse(c *Config) response {
@@ -76,6 +78,7 @@ func toResponse(c *Config) response {
 		BaristaMonthlyIncome:    moneyPtr(c.BaristaMonthlyIncome),
 		LeanMonthlyExpenses:     moneyPtr(c.LeanMonthlyExpenses),
 		FatMonthlyExpenses:      moneyPtr(c.FatMonthlyExpenses),
+		MonthlySavings:          moneyPtr(c.MonthlySavings),
 	}
 }
 
@@ -168,6 +171,7 @@ func (r *request) toConfig() *Config {
 		BaristaMonthlyIncome:    r.BaristaMonthlyIncome,
 		LeanMonthlyExpenses:     r.LeanMonthlyExpenses,
 		FatMonthlyExpenses:      r.FatMonthlyExpenses,
+		MonthlySavings:          r.MonthlySavings,
 	}
 }
 

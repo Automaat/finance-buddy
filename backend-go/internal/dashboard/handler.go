@@ -210,6 +210,9 @@ type metricCardsWire struct {
 	LeanFIProgress          *pyFloat `json:"lean_fi_progress"`
 	FatFIRENumber           *pyFloat `json:"fat_fire_number"`
 	FatFIProgress           *pyFloat `json:"fat_fi_progress"`
+	MonthlySavings          *pyFloat `json:"monthly_savings"`
+	FIYearsRemaining        *pyFloat `json:"fi_years_remaining"`
+	FIProjectedDate         *string  `json:"fi_projected_date"`
 }
 
 type allocationBreakdownWire struct {
@@ -363,6 +366,9 @@ func metricCardsToWire(m metricCards) metricCardsWire {
 		LeanFIProgress:          floatPtr(m.LeanFIProgress),
 		FatFIRENumber:           floatPtr(m.FatFIRENumber),
 		FatFIProgress:           floatPtr(m.FatFIProgress),
+		MonthlySavings:          floatPtr(m.MonthlySavings),
+		FIYearsRemaining:        floatPtr(m.FIYearsRemaining),
+		FIProjectedDate:         m.FIProjectedDate,
 	}
 }
 
