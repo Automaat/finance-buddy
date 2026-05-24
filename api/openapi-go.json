@@ -6319,6 +6319,68 @@
         ]
       }
     },
+    "/api/rules": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "rules": {
+                      "items": {
+                        "properties": {
+                          "category": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "effective_date": {
+                            "format": "date",
+                            "type": "string"
+                          },
+                          "key": {
+                            "type": "string"
+                          },
+                          "last_checked_date": {
+                            "format": "date",
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "source_url": {
+                            "type": "string"
+                          },
+                          "unit": {
+                            "type": "string"
+                          },
+                          "value": {
+                            "type": "string"
+                          },
+                          "year": {
+                            "type": "integer"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List Polish financial constants with source metadata",
+        "tags": [
+          "rules"
+        ]
+      }
+    },
     "/api/salaries": {
       "get": {
         "responses": {

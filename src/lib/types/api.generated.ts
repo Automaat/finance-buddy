@@ -4207,6 +4207,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Polish financial constants with source metadata */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            rules?: {
+                                category?: string;
+                                description?: string;
+                                /** Format: date */
+                                effective_date?: string;
+                                key?: string;
+                                /** Format: date */
+                                last_checked_date?: string;
+                                name?: string;
+                                source_url?: string;
+                                unit?: string;
+                                value?: string;
+                                year?: number;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/salaries": {
         parameters: {
             query?: never;
