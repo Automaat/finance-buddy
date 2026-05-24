@@ -21,14 +21,7 @@ describe('navPrefs', () => {
 	});
 
 	it('truncates to MAX_PINNED', () => {
-		navPrefs.set([
-			'/',
-			'/accounts',
-			'/snapshots',
-			'/goals',
-			'/transactions',
-			'/assets'
-		]);
+		navPrefs.set(['/', '/accounts', '/snapshots', '/goals', '/transactions', '/assets']);
 		expect(navPrefs.pinned.length).toBe(MAX_PINNED);
 	});
 
