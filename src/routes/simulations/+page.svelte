@@ -458,7 +458,14 @@
 	<h1 class="h1">Symulacje Emerytalne</h1>
 
 	<div class="card preset-filled-surface-100-900 p-4 space-y-3">
-		<h2 class="h3">Zapisane scenariusze</h2>
+		<div class="flex items-center justify-between flex-wrap gap-2">
+			<h2 class="h3">Zapisane scenariusze</h2>
+			{#if scenarios.length >= 2}
+				<a href="/simulations/compare" class="btn btn-sm preset-tonal-primary">
+					Porównaj scenariusze →
+				</a>
+			{/if}
+		</div>
 		<div class="flex flex-wrap items-end gap-2">
 			<label class="label flex-1 min-w-[200px]">
 				<span class="text-sm font-semibold">Nazwa</span>
