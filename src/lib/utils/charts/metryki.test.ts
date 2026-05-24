@@ -183,4 +183,107 @@ describe('buildYearlyRoiChartOption', () => {
 		expect(xAxis.data).toEqual([]);
 		expect(series[0].data).toEqual([]);
 	});
+
+	it('label position callback flips below the axis for negative ROI', () => {
+		const option = buildYearlyRoiChartOption([], [], []);
+		const series = option.series as Array<{
+			label: { position: (p: { value: unknown }) => string };
+		}>;
+		expect(series[0].label.position({ value: 5 })).toBe('top');
+		expect(series[0].label.position({ value: -3 })).toBe('bottom');
+		expect(series[0].label.position({ value: 0 })).toBe('top');
+	});
+
+	it('tooltip formatter shows ROI per series and "brak danych" for nulls', () => {
+		const option = buildYearlyRoiChartOption([], [], []);
+		const tooltip = option.tooltip as unknown as {
+			formatter: (p: Array<{ seriesName: string; value: number | null }>) => string;
+		};
+		const html = tooltip.formatter([
+			{ seriesName: 'Akcje', value: 12 },
+			{ seriesName: 'Obligacje', value: null },
+			{ seriesName: 'PPK', value: 4 }
+		]);
+		expect(html).toContain('Akcje: 12%');
+		expect(html).toContain('Obligacje: brak danych');
+		expect(html).toContain('PPK: 4%');
+	});
+});
+
+describe('chart formatter callbacks', () => {
+	it('allocation xAxis formatter title-cases the category name', () => {
+		const option = buildAllocationChartOption(allocationCategories);
+		const xAxis = option.xAxis as { axisLabel: { formatter: (v: string) => string } };
+		expect(xAxis.axisLabel.formatter('akcje')).toBe('Akcje');
+		expect(xAxis.axisLabel.formatter('')).toBe('');
+	});
+
+	it('wrapper pie tooltip formats a single param', () => {
+		const option = buildWrapperChartOption(wrappers);
+		const tooltip = option.tooltip as unknown as {
+			formatter: (p: { name: string; value: number; percent?: number }) => string;
+		};
+		const html = tooltip.formatter({ name: 'IKE', value: 12000, percent: 60 });
+		expect(html).toContain('IKE');
+		expect(html).toContain('12');
+		expect(html).toContain('60.0%');
+	});
+
+	it('wrapper pie label formatter renders name and percent', () => {
+		const option = buildWrapperChartOption(wrappers);
+		const series = option.series as Array<{
+			label: { formatter: (p: { name: string; percent?: number }) => string };
+		}>;
+		expect(series[0].label.formatter({ name: 'IKE', percent: 33.33 })).toContain('IKE');
+		expect(series[0].label.formatter({ name: 'IKE', percent: 33.33 })).toContain('33.3%');
+		expect(series[0].label.formatter({ name: 'IKE' })).toContain('0.0%');
+	});
+
+	it('wrapper pie tooltip handles array params (axis trigger fallback)', () => {
+		const option = buildWrapperChartOption(wrappers);
+		const tooltip = option.tooltip as unknown as {
+			formatter: (p: Array<{ name: string; value: number; percent?: number }>) => string;
+		};
+		const html = tooltip.formatter([{ name: 'IKZE', value: 8000, percent: 40 }]);
+		expect(html).toContain('IKZE');
+	});
+
+	it('investment trend tooltip computes returns and formats PLN', () => {
+		const option = buildInvestmentTrendChartOption(trendSeries);
+		const tooltip = option.tooltip as unknown as {
+			formatter: (p: Array<{ axisValue: string; value: number; seriesName: string }>) => string;
+		};
+		const html = tooltip.formatter([
+			{ axisValue: '2023-12-31', value: 2000, seriesName: 'Wpłaty' },
+			{ axisValue: '2023-12-31', value: 2200, seriesName: 'Wartość portfela' }
+		]);
+		expect(html).toContain('2023-12-31');
+		expect(html).toContain('Wartość portfela');
+		expect(html).toContain('Wpłaty');
+		expect(html).toContain('Zyski');
+	});
+
+	it('investment trend yAxis formatter renders k-shorthand', () => {
+		const option = buildInvestmentTrendChartOption(trendSeries);
+		const yAxis = option.yAxis as { axisLabel: { formatter: (v: number) => string } };
+		expect(yAxis.axisLabel.formatter(15000)).toBe('15k');
+		expect(yAxis.axisLabel.formatter(0)).toBe('0k');
+	});
+
+	it('wrapper trend tooltip and yAxis formatter cover the named-chart variant', () => {
+		const option = buildWrapperTrendChartOption('IKE w czasie', trendSeries);
+		const tooltip = option.tooltip as unknown as {
+			formatter: (p: Array<{ axisValue: string; value: number; seriesName: string }>) => string;
+		};
+		const html = tooltip.formatter([
+			{ axisValue: '2023-12-31', value: 2000, seriesName: 'Wpłaty' },
+			{ axisValue: '2023-12-31', value: 2200, seriesName: 'Wartość portfela' }
+		]);
+		expect(html).toContain('Wartość');
+		expect(html).toContain('Wpłaty');
+		expect(html).toContain('Zyski');
+
+		const yAxis = option.yAxis as { axisLabel: { formatter: (v: number) => string } };
+		expect(yAxis.axisLabel.formatter(2500)).toBe('3k');
+	});
 });

@@ -275,4 +275,55 @@ describe('buildRetirementByWrapperOption', () => {
 		expect(xAxis.data).toEqual(['60', '61']);
 		expect(xAxis.name).toBe('Wiek');
 	});
+
+	it('tooltip formatter sums series values and renders rows per wrapper', () => {
+		const sims = [
+			makeSimulation('IKE (Marcin)', [100, 200], 60),
+			makeSimulation('IKZE (Marcin)', [50, 75], 60),
+			makeSimulation('PPK (Marcin)', [10, 20], 60)
+		];
+		const option = buildRetirementByWrapperOption(sims, []);
+		const tooltip = option.tooltip as unknown as {
+			formatter: (p: Array<{ name: string; seriesName: string; value: number }>) => string;
+		};
+		const html = tooltip.formatter([
+			{ name: '60', seriesName: 'IKE', value: 100 },
+			{ name: '60', seriesName: 'IKZE', value: 50 },
+			{ name: '60', seriesName: 'PPK', value: 10 }
+		]);
+		expect(html).toContain('Wiek 60');
+		expect(html).toContain('IKE');
+		expect(html).toContain('IKZE');
+		expect(html).toContain('PPK');
+		expect(html).toContain('Razem');
+	});
+
+	it('tooltip formatter accepts a single non-array param', () => {
+		const sims = [makeSimulation('IKE (Marcin)', [100], 60)];
+		const option = buildRetirementByWrapperOption(sims, []);
+		const tooltip = option.tooltip as unknown as {
+			formatter: (p: { name: string; seriesName: string; value: number }) => string;
+		};
+		const html = tooltip.formatter({ name: '60', seriesName: 'IKE', value: 100 });
+		expect(html).toContain('Wiek 60');
+		expect(html).toContain('IKE');
+	});
+
+	it('tooltip formatter coerces null/undefined values to 0', () => {
+		const sims = [makeSimulation('IKE (Marcin)', [0], 60)];
+		const option = buildRetirementByWrapperOption(sims, []);
+		const tooltip = option.tooltip as unknown as {
+			formatter: (p: Array<{ name: string; seriesName: string; value: unknown }>) => string;
+		};
+		const html = tooltip.formatter([{ name: '60', seriesName: 'IKE', value: null }]);
+		expect(html).toContain('0 PLN');
+	});
+
+	it('yAxis formatter renders k-shorthand for retirement-by-wrapper chart', () => {
+		const sims = [makeSimulation('IKE (Marcin)', [100], 60)];
+		const option = buildRetirementByWrapperOption(sims, []);
+		const yAxis = option.yAxis as { axisLabel: { formatter: (v: number) => string } };
+		expect(yAxis.axisLabel.formatter(125000)).toBe('125k');
+		expect(yAxis.axisLabel.formatter(0)).toBe('0k');
+	});
 });

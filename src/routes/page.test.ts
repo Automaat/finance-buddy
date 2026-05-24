@@ -277,3 +277,81 @@ describe('Dashboard retirement limits save flow', () => {
 		errorSpy.mockRestore();
 	});
 });
+
+describe('Dashboard — FIRE / runway / bonds cards', () => {
+	it('renders FIRE+runway card when metric_cards has values', async () => {
+		render(Page, {
+			props: {
+				data: buildData({
+					dashboardData: {
+						net_worth_history: [{ date: '2024-01-01', value: 5000 }],
+						current_net_worth: 6000,
+						change_vs_last_month: 1000,
+						total_assets: 10000,
+						total_liabilities: 4000,
+						allocation: [],
+						retirementStats: [],
+						tile_deltas: baseTileDeltas,
+						metric_cards: {
+							fire_number: 1000000,
+							runway_months: 18.5,
+							fi_progress: 25,
+							annual_expenses: 40000,
+							withdrawal_rate: 0.04
+						}
+					}
+				})
+			}
+		});
+		await waitFor(() => expect(screen.getByText(/FIRE i runway/)).toBeTruthy());
+		expect(screen.getByText('FI progress')).toBeTruthy();
+		expect(screen.getByText('25.0%')).toBeTruthy();
+		expect(screen.getByText('18.5 mies.')).toBeTruthy();
+		expect(screen.getByText(/SWR 4\.0%/)).toBeTruthy();
+	});
+
+	it('renders the treasury bonds card when count > 0', async () => {
+		render(Page, {
+			props: {
+				data: buildData({
+					dashboardData: {
+						net_worth_history: [{ date: '2024-01-01', value: 5000 }],
+						current_net_worth: 6000,
+						change_vs_last_month: 1000,
+						total_assets: 10000,
+						total_liabilities: 4000,
+						allocation: [],
+						retirementStats: [],
+						tile_deltas: baseTileDeltas,
+						treasuryBondsCount: 3,
+						treasuryBondsValue: 30000
+					}
+				})
+			}
+		});
+		await waitFor(() => expect(screen.getByText('Obligacje skarbowe')).toBeTruthy());
+		expect(screen.getByText('3 obligacji (auto-wycena wg CPI)')).toBeTruthy();
+	});
+
+	it('singularises bonds count to "obligacja" when count is 1', async () => {
+		render(Page, {
+			props: {
+				data: buildData({
+					dashboardData: {
+						net_worth_history: [{ date: '2024-01-01', value: 5000 }],
+						current_net_worth: 6000,
+						change_vs_last_month: 1000,
+						total_assets: 10000,
+						total_liabilities: 4000,
+						allocation: [],
+						retirementStats: [],
+						tile_deltas: baseTileDeltas,
+						treasuryBondsCount: 1,
+						treasuryBondsValue: 10000
+					}
+				})
+			}
+		});
+		await waitFor(() => expect(screen.getByText('1 obligacja (auto-wycena wg CPI)')).toBeTruthy());
+	});
+});

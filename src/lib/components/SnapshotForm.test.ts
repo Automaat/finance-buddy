@@ -308,3 +308,222 @@ describe('SnapshotForm submit', () => {
 		);
 	});
 });
+
+describe('SnapshotForm — sections, hide/show, modals', () => {
+	const bankAccount = makeAccount({
+		id: 1,
+		name: 'Konto Główne',
+		category: 'bank',
+		current_value: 5000
+	});
+	const hiddenBank = makeAccount({
+		id: 2,
+		name: 'Konto Pomocnicze',
+		category: 'bank',
+		current_value: 0
+	});
+	const ikeAccount = makeAccount({
+		id: 3,
+		name: 'IKE Marcin',
+		category: 'stock',
+		account_wrapper: 'IKE',
+		current_value: 12000
+	});
+	const stockAccount = makeAccount({
+		id: 4,
+		name: 'Maklerski',
+		category: 'stock',
+		current_value: 8000
+	});
+	const apartment = makeAsset({ id: 5, name: 'Mieszkanie', current_value: 500000 });
+	const hiddenAsset = makeAsset({ id: 6, name: 'Działka', current_value: 0 });
+	const carAccount = makeAccount({
+		id: 7,
+		name: 'Auto',
+		category: 'vehicle',
+		current_value: 30000
+	});
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it('renders the Emerytura section when retirement accounts exist', () => {
+		render(SnapshotForm, {
+			props: { assets: [ikeAccount], liabilities: [], physicalAssets: [] }
+		});
+		expect(screen.getByRole('heading', { name: /Emerytura/ })).toBeTruthy();
+		expect(screen.getByText('IKE')).toBeTruthy();
+	});
+
+	it('renders Inwestycje and Majątek headers', () => {
+		render(SnapshotForm, {
+			props: {
+				assets: [bankAccount, stockAccount, carAccount],
+				liabilities: [],
+				physicalAssets: [apartment]
+			}
+		});
+		expect(screen.getByRole('heading', { name: /Inwestycje/ })).toBeTruthy();
+		expect(screen.getByRole('heading', { name: /Majątek/ })).toBeTruthy();
+		expect(screen.getByLabelText(/Auto/)).toBeTruthy();
+		expect(screen.getByLabelText(/Mieszkanie/)).toBeTruthy();
+	});
+
+	it('hidden accounts (current_value 0) appear under "Pokaż ukryte konta" and can be re-added', async () => {
+		render(SnapshotForm, {
+			props: { assets: [bankAccount, hiddenBank], liabilities: [], physicalAssets: [] }
+		});
+		// Hidden one isn't in the visible value list initially.
+		expect(screen.queryByLabelText(/Konto Pomocnicze/)).toBeNull();
+		await fireEvent.click(screen.getByRole('button', { name: /Konto Pomocnicze/ }));
+		expect(screen.getByLabelText(/Konto Pomocnicze/)).toBeTruthy();
+	});
+
+	it('hidden physical assets can be re-added from Majątek section', async () => {
+		render(SnapshotForm, {
+			props: { assets: [], liabilities: [], physicalAssets: [apartment, hiddenAsset] }
+		});
+		expect(screen.queryByLabelText(/Działka/)).toBeNull();
+		await fireEvent.click(screen.getByRole('button', { name: /Działka/ }));
+		expect(screen.getByLabelText(/Działka/)).toBeTruthy();
+	});
+
+	it('opens the new-account modal when the "+ Dodaj nowe konto" button under financial is clicked', async () => {
+		render(SnapshotForm, {
+			props: { assets: [bankAccount], liabilities: [], physicalAssets: [] }
+		});
+		const addBtns = screen.getAllByRole('button', { name: /Dodaj nowe konto/ });
+		await fireEvent.click(addBtns[0]);
+		// Modal asks for "Nazwa konta" — its label is sufficient evidence.
+		await waitFor(() => expect(screen.getByLabelText(/Nazwa konta/)).toBeTruthy());
+	});
+
+	it('blocks new-account create when name is empty', async () => {
+		const fetchMock = vi.fn();
+		vi.stubGlobal('fetch', fetchMock);
+		render(SnapshotForm, {
+			props: { assets: [bankAccount], liabilities: [], physicalAssets: [] }
+		});
+		const addBtns = screen.getAllByRole('button', { name: /Dodaj nowe konto/ });
+		await fireEvent.click(addBtns[0]);
+		// Click the modal's confirm button — name is empty.
+		const createBtn = screen.getByRole('button', { name: 'Utwórz konto' });
+		await fireEvent.click(createBtn);
+		await waitFor(() => expect(screen.getByText('Nazwa konta jest wymagana')).toBeTruthy());
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it('POSTs a new account when the form is submitted', async () => {
+		const fetchMock = vi.fn().mockResolvedValue({
+			ok: true,
+			json: async () => ({
+				id: 99,
+				name: 'New Bank',
+				type: 'asset',
+				category: 'bank',
+				owner_user_id: null,
+				currency: 'PLN',
+				account_wrapper: null,
+				purpose: 'general',
+				square_meters: null,
+				is_active: true,
+				receives_contributions: false,
+				created_at: '2026-05-20',
+				current_value: 0
+			})
+		});
+		vi.stubGlobal('fetch', fetchMock);
+		render(SnapshotForm, {
+			props: { assets: [bankAccount], liabilities: [], physicalAssets: [] }
+		});
+		const addBtns = screen.getAllByRole('button', { name: /Dodaj nowe konto/ });
+		await fireEvent.click(addBtns[0]);
+		const nameInput = screen.getByLabelText(/^Nazwa konta/) as HTMLInputElement;
+		await fireEvent.input(nameInput, { target: { value: 'New Bank' } });
+		const createBtn = screen.getByRole('button', { name: 'Utwórz konto' });
+		await fireEvent.click(createBtn);
+		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+		const [url, init] = fetchMock.mock.calls[0];
+		expect(url).toBe('http://localhost:8000/api/accounts');
+		expect((init as RequestInit).method).toBe('POST');
+		const body = JSON.parse((init as RequestInit).body as string);
+		expect(body).toMatchObject({
+			name: 'New Bank',
+			type: 'asset',
+			category: 'bank',
+			currency: 'PLN'
+		});
+	});
+
+	it('shows detail error when create-account API fails', async () => {
+		const fetchMock = vi.fn().mockResolvedValue({
+			ok: false,
+			json: async () => ({ detail: 'Already exists' })
+		});
+		vi.stubGlobal('fetch', fetchMock);
+		render(SnapshotForm, {
+			props: { assets: [bankAccount], liabilities: [], physicalAssets: [] }
+		});
+		const addBtns = screen.getAllByRole('button', { name: /Dodaj nowe konto/ });
+		await fireEvent.click(addBtns[0]);
+		const nameInput = screen.getByLabelText(/^Nazwa konta/) as HTMLInputElement;
+		await fireEvent.input(nameInput, { target: { value: 'Dup' } });
+		const createBtn = screen.getByRole('button', { name: 'Utwórz konto' });
+		await fireEvent.click(createBtn);
+		await waitFor(() => expect(screen.getByText('Already exists')).toBeTruthy());
+	});
+
+	it('opens the new-asset modal and POSTs a new asset on submit', async () => {
+		const fetchMock = vi.fn().mockResolvedValue({
+			ok: true,
+			json: async () => ({
+				id: 42,
+				name: 'Nowy Majątek',
+				is_active: true,
+				created_at: '2026-05-20',
+				current_value: 0
+			})
+		});
+		vi.stubGlobal('fetch', fetchMock);
+		render(SnapshotForm, {
+			props: { assets: [], liabilities: [], physicalAssets: [apartment] }
+		});
+		await fireEvent.click(screen.getByRole('button', { name: /Dodaj nowy majątek/ }));
+		const nameInput = screen.getByLabelText(/Nazwa/) as HTMLInputElement;
+		await fireEvent.input(nameInput, { target: { value: 'Nowy Majątek' } });
+		const createBtn = screen.getByRole('button', { name: 'Utwórz majątek' });
+		await fireEvent.click(createBtn);
+		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+		const [url, init] = fetchMock.mock.calls[0];
+		expect(url).toBe('http://localhost:8000/api/assets');
+		expect((init as RequestInit).method).toBe('POST');
+		const body = JSON.parse((init as RequestInit).body as string);
+		expect(body).toEqual({ name: 'Nowy Majątek' });
+	});
+
+	it('blocks new-asset create when name is empty', async () => {
+		const fetchMock = vi.fn();
+		vi.stubGlobal('fetch', fetchMock);
+		render(SnapshotForm, {
+			props: { assets: [], liabilities: [], physicalAssets: [apartment] }
+		});
+		await fireEvent.click(screen.getByRole('button', { name: /Dodaj nowy majątek/ }));
+		const createBtn = screen.getByRole('button', { name: 'Utwórz majątek' });
+		await fireEvent.click(createBtn);
+		await waitFor(() => expect(screen.getByText('Nazwa majątku jest wymagana')).toBeTruthy());
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it('Anuluj button navigates to "/"', async () => {
+		render(SnapshotForm, {
+			props: { assets: [], liabilities: [], physicalAssets: [] }
+		});
+		await fireEvent.click(screen.getByRole('button', { name: 'Anuluj' }));
+		expect(goto).toHaveBeenCalledWith('/');
+	});
+});
