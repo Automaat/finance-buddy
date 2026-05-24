@@ -11,7 +11,8 @@ import {
 	Coins,
 	Dices,
 	Settings,
-	Target
+	Target,
+	Repeat
 } from 'lucide-svelte';
 
 export const NAV_ROUTES = [
@@ -21,6 +22,7 @@ export const NAV_ROUTES = [
 	{ href: '/retirement', label: 'Emerytura', icon: Dices },
 	{ href: '/accounts', label: 'Konta', icon: Wallet },
 	{ href: '/transactions', label: 'Transakcje', icon: ArrowRightLeft },
+	{ href: '/recurring', label: 'Cykliczne', icon: Repeat },
 	{ href: '/assets', label: 'Majątek', icon: Home },
 	{ href: '/bonds', label: 'Obligacje', icon: Coins },
 	{ href: '/debts', label: 'Zobowiązania', icon: ClipboardList },

@@ -645,6 +645,47 @@ CREATE TABLE public.transactions (
 
 
 --
+-- Name: recurring_transactions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.recurring_transactions (
+    id integer NOT NULL,
+    account_id integer NOT NULL,
+    amount numeric(15,2) NOT NULL,
+    owner_user_id integer,
+    transaction_type character varying(20),
+    category character varying(50),
+    description character varying(200) NOT NULL DEFAULT '',
+    frequency character varying(16) NOT NULL,
+    day_of_month integer,
+    start_date date NOT NULL,
+    end_date date,
+    active boolean NOT NULL DEFAULT true,
+    skipped_dates date[] NOT NULL DEFAULT ARRAY[]::date[],
+    last_run_date date,
+    created_at timestamp without time zone NOT NULL DEFAULT (now() at time zone 'utc'),
+    updated_at timestamp without time zone NOT NULL DEFAULT (now() at time zone 'utc')
+);
+
+CREATE SEQUENCE public.recurring_transactions_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+ALTER SEQUENCE public.recurring_transactions_id_seq OWNED BY public.recurring_transactions.id;
+ALTER TABLE ONLY public.recurring_transactions ALTER COLUMN id SET DEFAULT nextval('public.recurring_transactions_id_seq'::regclass);
+ALTER TABLE ONLY public.recurring_transactions ADD CONSTRAINT recurring_transactions_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.recurring_transactions
+    ADD CONSTRAINT recurring_transactions_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.accounts(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.recurring_transactions
+    ADD CONSTRAINT recurring_transactions_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.users(id) ON DELETE RESTRICT;
+CREATE INDEX ix_recurring_transactions_active_account ON public.recurring_transactions USING btree (active, account_id);
+
+
+--
 -- Name: transactions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
