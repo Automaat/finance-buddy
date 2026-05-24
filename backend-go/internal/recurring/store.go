@@ -259,8 +259,9 @@ func (s *Store) MintOccurrence(ctx context.Context, r Recurring, date time.Time)
 }
 
 // errAlreadyMinted signals that a concurrent caller already minted this or a
-// later occurrence; mapped to nothing at the handler — Run Now silently
-// no-ops to keep the UI idempotent.
+// later occurrence. The HTTP layer turns it into a 200 OK with
+// {already_minted: true} so Run Now is idempotent for the client; the
+// scheduler swallows it silently.
 var errAlreadyMinted = errors.New("recurring: occurrence already minted")
 
 // IsAlreadyMinted reports whether err is the already-minted sentinel.

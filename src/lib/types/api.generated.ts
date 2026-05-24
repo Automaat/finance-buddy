@@ -3353,8 +3353,9 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            already_minted?: boolean;
                             date?: string;
-                            transaction_id?: number;
+                            transaction_id?: number | null;
                         };
                     };
                 };

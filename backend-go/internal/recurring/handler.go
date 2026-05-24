@@ -54,8 +54,9 @@ type listResponse struct {
 }
 
 type runNowResponse struct {
-	TransactionID int    `json:"transaction_id"`
+	TransactionID *int   `json:"transaction_id"`
 	Date          string `json:"date"`
+	AlreadyMinted bool   `json:"already_minted"`
 }
 
 func formatDate(t time.Time) string { return t.UTC().Format("2006-01-02") }
@@ -66,7 +67,10 @@ func formatDatePtr(t *time.Time) *string {
 	s := formatDate(*t)
 	return &s
 }
-func formatTimestamp(t time.Time) string { return t.UTC().Format("2006-01-02T15:04:05") }
+
+// formatTimestamp matches the isoNaive layout used across the rest of the Go
+// API (microsecond precision, naive UTC). Cf. internal/transactions/handler.go.
+func formatTimestamp(t time.Time) string { return t.UTC().Format("2006-01-02T15:04:05.999999") }
 
 func (h *Handler) toResponse(r Recurring) response {
 	skips := make([]string, 0, len(r.SkippedDates))
@@ -81,7 +85,7 @@ func (h *Handler) toResponse(r Recurring) response {
 	return response{
 		ID:              r.ID,
 		AccountID:       r.AccountID,
-		Amount:          r.Amount.String(),
+		Amount:          r.Amount.StringFixed(2),
 		OwnerUserID:     r.OwnerUserID,
 		TransactionType: r.TransactionType,
 		Category:        r.Category,
@@ -220,19 +224,20 @@ func (h *Handler) RunNow(w http.ResponseWriter, r *http.Request) {
 	}
 	today := h.now().UTC().Truncate(24 * time.Hour)
 	txID, err := h.store.MintOccurrence(r.Context(), row, today)
-	if err != nil {
-		if IsAlreadyMinted(err) {
-			writeError(w, http.StatusConflict, "Occurrence already minted for today")
-			return
-		}
+	if err != nil && !IsAlreadyMinted(err) {
 		h.logger.Error("run-now mint", "err", err)
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	writeJSON(w, http.StatusCreated, map[string]any{
-		"transaction_id": txID,
-		"date":           formatDate(today),
-	})
+	resp := runNowResponse{Date: formatDate(today), AlreadyMinted: IsAlreadyMinted(err)}
+	if !resp.AlreadyMinted {
+		resp.TransactionID = &txID
+	}
+	status := http.StatusCreated
+	if resp.AlreadyMinted {
+		status = http.StatusOK
+	}
+	writeJSON(w, status, resp)
 }
 
 // Skip serves POST /api/recurring/{id}/skip — adds the supplied date (or

@@ -5106,10 +5106,14 @@
               "application/json": {
                 "schema": {
                   "properties": {
+                    "already_minted": {
+                      "type": "boolean"
+                    },
                     "date": {
                       "type": "string"
                     },
                     "transaction_id": {
+                      "nullable": true,
                       "type": "integer"
                     }
                   },

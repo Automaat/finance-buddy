@@ -2,6 +2,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { resolveApiUrl } from '$lib/api';
 	import { toast } from '$lib/stores/toast.svelte';
+	import { confirm } from '$lib/stores/confirm.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import { Plus, Play, SkipForward, Trash2, Pencil } from 'lucide-svelte';
 	import type { PageData } from './$types';
@@ -42,6 +43,10 @@
 	}
 
 	function openCreate() {
+		if (data.accounts.length === 0) {
+			toast.error('Najpierw utwórz konto, do którego będą trafiać transakcje.');
+			return;
+		}
 		editingId = null;
 		form = emptyForm();
 		modalOpen = true;
@@ -105,9 +110,13 @@
 			const apiUrl = resolveApiUrl();
 			const res = await fetch(`${apiUrl}/api/recurring/${row.id}/run-now`, { method: 'POST' });
 			if (!res.ok) throw new Error('Nie udało się utworzyć transakcji');
-			toast.success(
-				`Utworzono transakcję na dziś dla "${row.description || 'recurring #' + row.id}"`
-			);
+			const payload = (await res.json().catch(() => null)) as { already_minted?: boolean } | null;
+			const label = row.description || `recurring #${row.id}`;
+			if (payload?.already_minted) {
+				toast.info(`„${label}" już utworzono dziś — pominięto.`);
+			} else {
+				toast.success(`Utworzono transakcję na dziś dla „${label}".`);
+			}
 			await invalidateAll();
 		} catch (err) {
 			if (err instanceof Error) toast.error(err.message);
@@ -142,7 +151,14 @@
 	}
 
 	async function remove(row: RecurringRow) {
-		if (!confirm(`Usunąć "${row.description || 'recurring #' + row.id}"?`)) return;
+		const label = row.description || `recurring #${row.id}`;
+		const ok = await confirm({
+			title: 'Usunąć transakcję cykliczną?',
+			message: `„${label}" zostanie trwale usunięta.`,
+			danger: true,
+			confirmText: 'Usuń'
+		});
+		if (!ok) return;
 		try {
 			const apiUrl = resolveApiUrl();
 			const res = await fetch(`${apiUrl}/api/recurring/${row.id}`, { method: 'DELETE' });
@@ -179,7 +195,7 @@
 
 	{#if data.recurring.length === 0}
 		<div class="card preset-tonal-surface p-6 text-center text-sm text-surface-700-300">
-			Brak transakcji cyklicznych. Kliknij „Dodaj" aby zacząć.
+			Brak transakcji cyklicznych. Kliknij „Dodaj” aby zacząć.
 		</div>
 	{:else}
 		<div class="table-wrap">
