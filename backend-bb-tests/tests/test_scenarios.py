@@ -66,8 +66,8 @@ def test_scenarios_validation_rejects_bad_inputs(client: httpx.Client) -> None:
     cases = [
         ({"name": "", "kind": "retirement", "inputs_json": {"a": 1}}, "name"),
         ({"name": "x", "kind": "bogus", "inputs_json": {"a": 1}}, "kind"),
-        ({"name": "x", "kind": "retirement", "inputs_json": []}, "inputs"),
-        ({"name": "x", "kind": "retirement", "inputs_json": None}, "inputs"),
+        ({"name": "x", "kind": "retirement", "inputs_json": []}, "inputs_json"),
+        ({"name": "x", "kind": "retirement", "inputs_json": None}, "inputs_json"),
     ]
     for body, want_field in cases:
         r = client.post("/api/scenarios", json=body)

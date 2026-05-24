@@ -50,7 +50,7 @@ func TestValidateCreateInputsMustBeObject(t *testing.T) {
 	cases := []string{`null`, `[]`, `42`, `"x"`, `true`}
 	for _, in := range cases {
 		err := validateCreate("Plan", "retirement", json.RawMessage(in))
-		if err == nil || err.Field != "inputs" {
+		if err == nil || err.Field != "inputs_json" {
 			t.Errorf("expected inputs error for %q, got %+v", in, err)
 		}
 	}
@@ -58,7 +58,7 @@ func TestValidateCreateInputsMustBeObject(t *testing.T) {
 
 func TestValidateCreateInputsMissing(t *testing.T) {
 	t.Parallel()
-	if err := validateCreate("Plan", "retirement", nil); err == nil || err.Field != "inputs" {
+	if err := validateCreate("Plan", "retirement", nil); err == nil || err.Field != "inputs_json" {
 		t.Fatalf("expected inputs error for nil payload, got %+v", err)
 	}
 }
@@ -68,7 +68,7 @@ func TestValidateCreateInputsTooLarge(t *testing.T) {
 	// Build a JSON object that exceeds maxInputsBytes.
 	pad := strings.Repeat("a", maxInputsBytes)
 	body := []byte(`{"x":"` + pad + `"}`)
-	if err := validateCreate("Plan", "retirement", body); err == nil || err.Field != "inputs" {
+	if err := validateCreate("Plan", "retirement", body); err == nil || err.Field != "inputs_json" {
 		t.Fatalf("expected inputs over-size error, got %+v", err)
 	}
 }
@@ -82,7 +82,7 @@ func TestValidateUpdateEmptyName(t *testing.T) {
 
 func TestValidateUpdateInputsMustBeObject(t *testing.T) {
 	t.Parallel()
-	if err := validateUpdate("Plan", json.RawMessage(`[]`)); err == nil || err.Field != "inputs" {
+	if err := validateUpdate("Plan", json.RawMessage(`[]`)); err == nil || err.Field != "inputs_json" {
 		t.Fatalf("expected inputs error, got %+v", err)
 	}
 }

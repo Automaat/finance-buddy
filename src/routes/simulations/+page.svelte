@@ -186,6 +186,7 @@
 	}
 
 	async function loadScenarios() {
+		scenarioError = '';
 		try {
 			const r = await fetch(`${resolveApiUrl()}/api/scenarios?kind=retirement`);
 			if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -195,6 +196,14 @@
 			console.error('Failed to load scenarios:', err);
 			scenarioError = err instanceof Error ? err.message : 'Nie udało się pobrać scenariuszy';
 		}
+	}
+
+	// Backend returns naive UTC strings ("2026-05-24T18:00:00"); new Date()
+	// would interpret those as local time and shift the displayed instant.
+	// Force a UTC parse so the formatted label matches the server clock.
+	function formatScenarioTimestamp(s: string): string {
+		const utc = s.endsWith('Z') ? s : s + 'Z';
+		return new Date(utc).toLocaleString('pl-PL');
 	}
 
 	async function saveCurrentScenario() {
@@ -476,7 +485,7 @@
 		{/if}
 		{#if scenarios.length === 0}
 			<p class="text-sm text-surface-700-300 italic">
-				Brak zapisanych scenariuszy. Skonfiguruj symulację powyżej i kliknij „Zapisz bieżący".
+				Brak zapisanych scenariuszy. Skonfiguruj symulację powyżej i kliknij „Zapisz bieżący”.
 			</p>
 		{:else}
 			<ul class="divide-y divide-surface-200-800">
@@ -484,7 +493,7 @@
 					<li class="py-2 flex flex-wrap items-center gap-2">
 						<span class="flex-1 min-w-[180px] text-sm font-semibold">{s.name}</span>
 						<span class="text-xs text-surface-700-300">
-							{new Date(s.updated_at).toLocaleString('pl-PL')}
+							{formatScenarioTimestamp(s.updated_at)}
 						</span>
 						<button
 							type="button"

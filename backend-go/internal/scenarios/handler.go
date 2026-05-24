@@ -157,11 +157,12 @@ func (h *Handler) Clone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req cloneRequest
-	if r.ContentLength > 0 {
-		if err := json.NewDecoder(io.LimitReader(r.Body, 4096)).Decode(&req); err != nil {
-			writeValidationError(w, "body", "Invalid JSON body", err.Error())
-			return
-		}
+	// Body is required by the OpenAPI spec (Request type is declared on the
+	// clone route). EOF / empty body is tolerated so clients can send {} or
+	// nothing at all — both mean "use the default suffixed name".
+	if err := json.NewDecoder(io.LimitReader(r.Body, 4096)).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
+		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		return
 	}
 	if vErr := validateCloneName(req.Name); vErr != nil {
 		writePydanticError(w, vErr)

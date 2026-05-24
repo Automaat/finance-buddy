@@ -37,19 +37,19 @@ func validateCreate(name, kind string, inputs json.RawMessage) *validationError 
 		return &validationError{"kind", "Kind must be one of: monte-carlo, mortgage-vs-invest, retirement, wibor"}
 	}
 	if len(inputs) == 0 || string(inputs) == "null" {
-		return &validationError{"inputs", "Inputs must be a JSON object"}
+		return &validationError{"inputs_json", "Inputs must be a JSON object"}
 	}
 	if len(inputs) > maxInputsBytes {
-		return &validationError{"inputs", "Inputs payload exceeds 64 KiB"}
+		return &validationError{"inputs_json", "Inputs payload exceeds 64 KiB"}
 	}
 	// Require an object — not a bare array/scalar — so the consumer can keep
 	// growing the shape without ambiguity at the top level.
 	var probe any
 	if err := json.Unmarshal(inputs, &probe); err != nil {
-		return &validationError{"inputs", "Inputs must be valid JSON"}
+		return &validationError{"inputs_json", "Inputs must be valid JSON"}
 	}
 	if _, ok := probe.(map[string]any); !ok {
-		return &validationError{"inputs", "Inputs must be a JSON object"}
+		return &validationError{"inputs_json", "Inputs must be a JSON object"}
 	}
 	return nil
 }
@@ -65,17 +65,17 @@ func validateUpdate(name string, inputs json.RawMessage) *validationError {
 		return &validationError{"name", "Name must be at most 200 characters"}
 	}
 	if len(inputs) == 0 || string(inputs) == "null" {
-		return &validationError{"inputs", "Inputs must be a JSON object"}
+		return &validationError{"inputs_json", "Inputs must be a JSON object"}
 	}
 	if len(inputs) > maxInputsBytes {
-		return &validationError{"inputs", "Inputs payload exceeds 64 KiB"}
+		return &validationError{"inputs_json", "Inputs payload exceeds 64 KiB"}
 	}
 	var probe any
 	if err := json.Unmarshal(inputs, &probe); err != nil {
-		return &validationError{"inputs", "Inputs must be valid JSON"}
+		return &validationError{"inputs_json", "Inputs must be valid JSON"}
 	}
 	if _, ok := probe.(map[string]any); !ok {
-		return &validationError{"inputs", "Inputs must be a JSON object"}
+		return &validationError{"inputs_json", "Inputs must be a JSON object"}
 	}
 	return nil
 }
