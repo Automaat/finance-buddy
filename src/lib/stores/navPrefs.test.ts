@@ -21,8 +21,30 @@ describe('navPrefs', () => {
 	});
 
 	it('truncates to MAX_PINNED', () => {
-		navPrefs.set(['/', '/a', '/b', '/c', '/d', '/e']);
+		navPrefs.set([
+			'/',
+			'/accounts',
+			'/snapshots',
+			'/goals',
+			'/transactions',
+			'/assets'
+		]);
 		expect(navPrefs.pinned.length).toBe(MAX_PINNED);
+	});
+
+	it('drops unknown hrefs', () => {
+		navPrefs.set(['/', '/nope', '/accounts', '/also-nope']);
+		expect(navPrefs.pinned).toEqual(['/', '/accounts']);
+	});
+
+	it('drops duplicates', () => {
+		navPrefs.set(['/', '/', '/accounts', '/accounts']);
+		expect(navPrefs.pinned).toEqual(['/', '/accounts']);
+	});
+
+	it('falls back to DEFAULT_PINNED when all entries are invalid', () => {
+		navPrefs.set(['/nope', '/also-nope']);
+		expect(navPrefs.pinned).toEqual([...DEFAULT_PINNED]);
 	});
 
 	it('reset() restores defaults', () => {

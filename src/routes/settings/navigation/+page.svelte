@@ -1,42 +1,8 @@
 <script lang="ts">
-	import {
-		LayoutDashboard,
-		TrendingUp,
-		Sparkles,
-		Wallet,
-		ArrowRightLeft,
-		Home,
-		ClipboardList,
-		Camera,
-		Banknote,
-		Coins,
-		Dices,
-		Settings,
-		Target,
-		Pin,
-		PinOff,
-		RotateCcw,
-		ChevronUp,
-		ChevronDown
-	} from 'lucide-svelte';
+	import { Pin, PinOff, RotateCcw, ChevronUp, ChevronDown } from 'lucide-svelte';
 	import { navPrefs, MAX_PINNED, DEFAULT_PINNED } from '$lib/stores/navPrefs.svelte';
+	import { NAV_ROUTES } from '$lib/nav/routes';
 	import { toast } from '$lib/stores/toast.svelte';
-
-	const ALL_ROUTES = [
-		{ href: '/', label: 'Dashboard', icon: LayoutDashboard },
-		{ href: '/metryki', label: 'Metryki', icon: TrendingUp },
-		{ href: '/simulations', label: 'Symulacje', icon: Sparkles },
-		{ href: '/retirement', label: 'Emerytura', icon: Dices },
-		{ href: '/accounts', label: 'Konta', icon: Wallet },
-		{ href: '/transactions', label: 'Transakcje', icon: ArrowRightLeft },
-		{ href: '/assets', label: 'Majątek', icon: Home },
-		{ href: '/bonds', label: 'Obligacje', icon: Coins },
-		{ href: '/debts', label: 'Zobowiązania', icon: ClipboardList },
-		{ href: '/goals', label: 'Cele', icon: Target },
-		{ href: '/snapshots', label: 'Snapshoty', icon: Camera },
-		{ href: '/salaries', label: 'Wynagrodzenia', icon: Banknote },
-		{ href: '/settings', label: 'Ustawienia', icon: Settings }
-	];
 
 	const pinned = $derived(navPrefs.pinned);
 
@@ -110,7 +76,7 @@
 		{:else}
 			<ol class="space-y-2">
 				{#each pinned as href, i (href)}
-					{@const item = ALL_ROUTES.find((r) => r.href === href)}
+					{@const item = NAV_ROUTES.find((r) => r.href === href)}
 					{#if item}
 						<li class="flex items-center gap-3 px-3 py-2 rounded-container bg-surface-50-950">
 							<item.icon size={18} class="text-primary-500" />
@@ -151,7 +117,7 @@
 	<section class="card preset-filled-surface-100-900 p-4 space-y-3">
 		<h3 class="h4 font-semibold">Dostępne</h3>
 		<ul class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-			{#each ALL_ROUTES.filter((r) => !isPinned(r.href)) as item (item.href)}
+			{#each NAV_ROUTES.filter((r) => !isPinned(r.href)) as item (item.href)}
 				<li>
 					<button
 						type="button"
