@@ -132,6 +132,153 @@
 	let loading = $state(false);
 	let error = $state('');
 
+	// --- Saved scenarios (issue #547) ---
+	interface RetirementScenarioInputs {
+		current_age: number;
+		retirement_age: number;
+		ike_ikze_accounts: IkeIkzeConfig[];
+		ppk_accounts: PpkConfig[];
+		brokerage_accounts: BrokerageConfig[];
+		annual_return_rate: number;
+		limit_growth_rate: number;
+		expected_salary_growth: number;
+		inflation_rate: number;
+	}
+
+	interface SavedScenario {
+		id: number;
+		name: string;
+		kind: string;
+		inputs_json: RetirementScenarioInputs;
+		created_at: string;
+		updated_at: string;
+	}
+
+	let scenarios: SavedScenario[] = $state([]);
+	let scenarioName = $state('');
+	let scenarioBusy = $state(false);
+	let scenarioError = $state('');
+
+	function snapshotInputs(): RetirementScenarioInputs {
+		return {
+			current_age: currentAge,
+			retirement_age: retirementAge,
+			ike_ikze_accounts: ikeIkzeAccounts.map((a) => ({ ...a })),
+			ppk_accounts: ppkAccounts.map((a) => ({ ...a })),
+			brokerage_accounts: brokerageAccounts.map((a) => ({ ...a })),
+			annual_return_rate: annualReturnRate,
+			limit_growth_rate: limitGrowthRate,
+			expected_salary_growth: expectedSalaryGrowth,
+			inflation_rate: inflationRate
+		};
+	}
+
+	function applyInputs(inputs: RetirementScenarioInputs) {
+		currentAge = inputs.current_age;
+		retirementAge = inputs.retirement_age;
+		ikeIkzeAccounts = (inputs.ike_ikze_accounts ?? []).map((a) => ({ ...a }));
+		ppkAccounts = (inputs.ppk_accounts ?? []).map((a) => ({ ...a }));
+		brokerageAccounts = (inputs.brokerage_accounts ?? []).map((a) => ({ ...a }));
+		annualReturnRate = inputs.annual_return_rate;
+		limitGrowthRate = inputs.limit_growth_rate;
+		expectedSalaryGrowth = inputs.expected_salary_growth;
+		inflationRate = inputs.inflation_rate;
+	}
+
+	async function loadScenarios() {
+		scenarioError = '';
+		try {
+			const r = await fetch(`${resolveApiUrl()}/api/scenarios?kind=retirement`);
+			if (!r.ok) throw new Error(`HTTP ${r.status}`);
+			const body = await r.json();
+			scenarios = (body.scenarios ?? []) as SavedScenario[];
+		} catch (err) {
+			console.error('Failed to load scenarios:', err);
+			scenarioError = err instanceof Error ? err.message : 'Nie udało się pobrać scenariuszy';
+		}
+	}
+
+	// Backend returns naive UTC strings ("2026-05-24T18:00:00"); new Date()
+	// would interpret those as local time and shift the displayed instant.
+	// Force a UTC parse so the formatted label matches the server clock.
+	function formatScenarioTimestamp(s: string): string {
+		const utc = s.endsWith('Z') ? s : s + 'Z';
+		return new Date(utc).toLocaleString('pl-PL');
+	}
+
+	async function saveCurrentScenario() {
+		const trimmed = scenarioName.trim();
+		if (!trimmed) {
+			scenarioError = 'Wprowadź nazwę scenariusza';
+			return;
+		}
+		scenarioBusy = true;
+		scenarioError = '';
+		try {
+			const r = await fetch(`${resolveApiUrl()}/api/scenarios`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					name: trimmed,
+					kind: 'retirement',
+					inputs_json: snapshotInputs()
+				})
+			});
+			if (!r.ok) {
+				const body = await r.json().catch(() => ({}));
+				throw new Error(body.detail?.[0]?.msg ?? `HTTP ${r.status}`);
+			}
+			scenarioName = '';
+			await loadScenarios();
+		} catch (err) {
+			scenarioError = err instanceof Error ? err.message : String(err);
+		} finally {
+			scenarioBusy = false;
+		}
+	}
+
+	async function cloneScenario(id: number) {
+		scenarioBusy = true;
+		scenarioError = '';
+		try {
+			const r = await fetch(`${resolveApiUrl()}/api/scenarios/${id}/clone`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({})
+			});
+			if (!r.ok) throw new Error(`HTTP ${r.status}`);
+			await loadScenarios();
+		} catch (err) {
+			scenarioError = err instanceof Error ? err.message : String(err);
+		} finally {
+			scenarioBusy = false;
+		}
+	}
+
+	function loadScenarioIntoForm(s: SavedScenario) {
+		applyInputs(s.inputs_json);
+		scenarioError = '';
+	}
+
+	async function deleteScenario(id: number) {
+		if (!confirm('Usunąć ten scenariusz?')) return;
+		scenarioBusy = true;
+		scenarioError = '';
+		try {
+			const r = await fetch(`${resolveApiUrl()}/api/scenarios/${id}`, { method: 'DELETE' });
+			if (!r.ok && r.status !== 204) throw new Error(`HTTP ${r.status}`);
+			await loadScenarios();
+		} catch (err) {
+			scenarioError = err instanceof Error ? err.message : String(err);
+		} finally {
+			scenarioBusy = false;
+		}
+	}
+
+	onMount(() => {
+		loadScenarios();
+	});
+
 	// Charts
 	const MILESTONE_AGES = [60, 65, 70];
 	let chartContainer: HTMLDivElement | undefined = $state();
@@ -309,6 +456,74 @@
 
 <div class="space-y-4">
 	<h1 class="h1">Symulacje Emerytalne</h1>
+
+	<div class="card preset-filled-surface-100-900 p-4 space-y-3">
+		<h2 class="h3">Zapisane scenariusze</h2>
+		<div class="flex flex-wrap items-end gap-2">
+			<label class="label flex-1 min-w-[200px]">
+				<span class="text-sm font-semibold">Nazwa</span>
+				<input
+					type="text"
+					maxlength="200"
+					placeholder="np. Plan A — 7% zwrotu"
+					bind:value={scenarioName}
+					disabled={scenarioBusy}
+					class="input"
+				/>
+			</label>
+			<button
+				type="button"
+				class="btn preset-filled-primary-500"
+				onclick={saveCurrentScenario}
+				disabled={scenarioBusy || scenarioName.trim() === ''}
+			>
+				Zapisz bieżący
+			</button>
+		</div>
+		{#if scenarioError}
+			<div class="text-sm text-error-600-400">{scenarioError}</div>
+		{/if}
+		{#if scenarios.length === 0}
+			<p class="text-sm text-surface-700-300 italic">
+				Brak zapisanych scenariuszy. Skonfiguruj symulację powyżej i kliknij „Zapisz bieżący”.
+			</p>
+		{:else}
+			<ul class="divide-y divide-surface-200-800">
+				{#each scenarios as s (s.id)}
+					<li class="py-2 flex flex-wrap items-center gap-2">
+						<span class="flex-1 min-w-[180px] text-sm font-semibold">{s.name}</span>
+						<span class="text-xs text-surface-700-300">
+							{formatScenarioTimestamp(s.updated_at)}
+						</span>
+						<button
+							type="button"
+							class="btn btn-sm preset-tonal-primary"
+							onclick={() => loadScenarioIntoForm(s)}
+							disabled={scenarioBusy}
+						>
+							Wczytaj
+						</button>
+						<button
+							type="button"
+							class="btn btn-sm preset-tonal-surface"
+							onclick={() => cloneScenario(s.id)}
+							disabled={scenarioBusy}
+						>
+							Duplikuj
+						</button>
+						<button
+							type="button"
+							class="btn btn-sm preset-tonal-error"
+							onclick={() => deleteScenario(s.id)}
+							disabled={scenarioBusy}
+						>
+							Usuń
+						</button>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</div>
 
 	<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
 		<div class="card preset-filled-surface-100-900 p-5 space-y-4">

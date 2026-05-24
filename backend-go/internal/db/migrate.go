@@ -73,6 +73,35 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 	if err := createHoldingsTables(ctx, pool); err != nil {
 		return err
 	}
+	if err := createSimulationScenariosTable(ctx, pool); err != nil {
+		return err
+	}
+	return nil
+}
+
+// createSimulationScenariosTable creates the simulation_scenarios table for
+// issue #547 on existing databases. New installs get it from schema.sql.
+// inputs_json is opaque to the backend — the simulations form serializes
+// its current state into it, so adding fields to the form doesn't require
+// a schema change.
+func createSimulationScenariosTable(ctx context.Context, pool *pgxpool.Pool) error {
+	stmts := []string{
+		`CREATE TABLE IF NOT EXISTS simulation_scenarios (
+			id serial PRIMARY KEY,
+			name varchar(200) NOT NULL,
+			kind varchar(40) NOT NULL,
+			inputs_json jsonb NOT NULL,
+			created_at timestamp without time zone NOT NULL DEFAULT (now() at time zone 'utc'),
+			updated_at timestamp without time zone NOT NULL DEFAULT (now() at time zone 'utc')
+		)`,
+		`CREATE INDEX IF NOT EXISTS ix_simulation_scenarios_kind_updated_at
+			ON simulation_scenarios (kind, updated_at DESC)`,
+	}
+	for _, stmt := range stmts {
+		if _, err := pool.Exec(ctx, stmt); err != nil {
+			return fmt.Errorf("create simulation_scenarios: %w", err)
+		}
+	}
 	return nil
 }
 

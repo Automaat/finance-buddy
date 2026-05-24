@@ -748,6 +748,24 @@ CREATE TABLE public.recurring_transactions (
 
 
 --
+-- Name: simulation_scenarios; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.simulation_scenarios (
+    id serial PRIMARY KEY,
+    name character varying(200) NOT NULL,
+    kind character varying(40) NOT NULL,
+    inputs_json jsonb NOT NULL,
+    created_at timestamp without time zone NOT NULL DEFAULT (now() at time zone 'utc'),
+    updated_at timestamp without time zone NOT NULL DEFAULT (now() at time zone 'utc')
+);
+
+
+CREATE INDEX ix_simulation_scenarios_kind_updated_at
+    ON public.simulation_scenarios (kind, updated_at DESC);
+
+
+--
 -- Name: recurring_transactions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
