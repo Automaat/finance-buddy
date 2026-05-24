@@ -9,7 +9,8 @@
 		Info,
 		CheckCircle2,
 		AlertTriangle,
-		Gauge
+		Gauge,
+		Flame
 	} from 'lucide-svelte';
 	import { resolveApiUrl } from '$lib/api';
 	import { invalidateAll } from '$app/navigation';
@@ -55,6 +56,10 @@
 	let monthlyExpenses = $state(Number(config?.monthly_expenses ?? 0));
 	let monthlyMortgagePayment = $state(Number(config?.monthly_mortgage_payment ?? 0));
 	let withdrawalRate = $state(Number(config?.withdrawal_rate ?? 0.04));
+	// Coast FIRE: target age is optional — empty input means "no Coast FIRE
+	// tile". The backend treats a null coast_fire_target_age the same way.
+	let coastFireTargetAge = $state<number | null>(config?.coast_fire_target_age ?? null);
+	let expectedReturnRate = $state(Number(config?.expected_return_rate ?? 0.07));
 
 	let error = $state('');
 	let saving = $state(false);
@@ -119,7 +124,9 @@
 					allocation_commodities: allocationCommodities,
 					monthly_expenses: monthlyExpenses,
 					monthly_mortgage_payment: monthlyMortgagePayment,
-					withdrawal_rate: withdrawalRate
+					withdrawal_rate: withdrawalRate,
+					coast_fire_target_age: coastFireTargetAge,
+					expected_return_rate: expectedReturnRate
 				})
 			});
 
@@ -344,6 +351,56 @@
 			<span class="text-xs italic text-surface-700-300"
 				>Wyznacza cel FIRE = roczne wydatki ÷ stopa wypłaty.</span
 			>
+		</label>
+	</div>
+
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header>
+			<h3 class="h3 flex items-center gap-2"><Flame size={20} /> Coast FIRE</h3>
+		</header>
+
+		<label class="label">
+			<span class="font-semibold text-sm">Docelowy wiek Coast FIRE</span>
+			<input
+				id="coast-fire-target-age"
+				type="number"
+				min="18"
+				max="100"
+				step="1"
+				placeholder="np. 65 (puste = wyłączone)"
+				value={coastFireTargetAge ?? ''}
+				oninput={(e) => {
+					const v = (e.target as HTMLInputElement).value;
+					// Backend stores target age as *int; force integer + drop NaN so
+					// the JSON encoder never sends a float that fails to decode.
+					if (v === '') {
+						coastFireTargetAge = null;
+						return;
+					}
+					const n = parseInt(v, 10);
+					coastFireTargetAge = Number.isNaN(n) ? null : n;
+				}}
+				class="input"
+			/>
+			<span class="text-xs italic text-surface-700-300">
+				Wiek, w którym chcesz osiągnąć FIRE bez dalszych wpłat. Puste = ukryj kartę Coast FIRE.
+			</span>
+		</label>
+
+		<label class="label">
+			<span class="font-semibold text-sm">Oczekiwana stopa zwrotu (rocznie)</span>
+			<input
+				id="expected-return-rate"
+				type="number"
+				min="0.01"
+				max="0.20"
+				step="0.005"
+				bind:value={expectedReturnRate}
+				class="input"
+			/>
+			<span class="text-xs italic text-surface-700-300">
+				Realna stopa zwrotu używana do dyskontowania celu FIRE do dziś (np. 0.07 = 7%).
+			</span>
 		</label>
 	</div>
 

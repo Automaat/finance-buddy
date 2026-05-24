@@ -29,6 +29,8 @@ type response struct {
 	MonthlyExpenses         moneyJSON `json:"monthly_expenses"`
 	MonthlyMortgagePayment  moneyJSON `json:"monthly_mortgage_payment"`
 	WithdrawalRate          rateJSON  `json:"withdrawal_rate"`
+	CoastFIRETargetAge      *int      `json:"coast_fire_target_age"`
+	ExpectedReturnRate      rateJSON  `json:"expected_return_rate"`
 }
 
 // request is the PUT body. Date arrives as "YYYY-MM-DD" and money as either
@@ -45,6 +47,8 @@ type request struct {
 	MonthlyExpenses         decimal.Decimal  `json:"monthly_expenses"`
 	MonthlyMortgagePayment  decimal.Decimal  `json:"monthly_mortgage_payment"`
 	WithdrawalRate          *decimal.Decimal `json:"withdrawal_rate"`
+	CoastFIRETargetAge      *int             `json:"coast_fire_target_age"`
+	ExpectedReturnRate      *decimal.Decimal `json:"expected_return_rate"`
 }
 
 func toResponse(c *Config) response {
@@ -61,6 +65,8 @@ func toResponse(c *Config) response {
 		MonthlyExpenses:         moneyJSON(c.MonthlyExpenses),
 		MonthlyMortgagePayment:  moneyJSON(c.MonthlyMortgagePayment),
 		WithdrawalRate:          rateJSON(c.WithdrawalRate),
+		CoastFIRETargetAge:      c.CoastFIRETargetAge,
+		ExpectedReturnRate:      rateJSON(c.ExpectedReturnRate),
 	}
 }
 
@@ -122,6 +128,10 @@ func (r *request) toConfig() *Config {
 	if r.WithdrawalRate != nil {
 		rate = *r.WithdrawalRate
 	}
+	expectedReturn := defaultExpectedReturnRate
+	if r.ExpectedReturnRate != nil {
+		expectedReturn = *r.ExpectedReturnRate
+	}
 	return &Config{
 		BirthDate:               time.Time(r.BirthDate),
 		RetirementAge:           r.RetirementAge,
@@ -134,6 +144,8 @@ func (r *request) toConfig() *Config {
 		MonthlyExpenses:         r.MonthlyExpenses,
 		MonthlyMortgagePayment:  r.MonthlyMortgagePayment,
 		WithdrawalRate:          rate,
+		CoastFIRETargetAge:      r.CoastFIRETargetAge,
+		ExpectedReturnRate:      expectedReturn,
 	}
 }
 
@@ -142,6 +154,11 @@ func (r *request) toConfig() *Config {
 // RequireFromString keeps the constant exact at the numeric(5,4) precision
 // the DB column expects.
 var defaultWithdrawalRate = decimal.RequireFromString("0.04")
+
+// defaultExpectedReturnRate is the 7% nominal real-return assumption used
+// elsewhere in the app (retirement projection on the settings page). Used
+// when a PUT body omits expected_return_rate.
+var defaultExpectedReturnRate = decimal.RequireFromString("0.07")
 
 // isoDate is a time.Time alias that JSON-marshals as "YYYY-MM-DD" and
 // unmarshals from the same. Matches Python's `date` field on the wire.

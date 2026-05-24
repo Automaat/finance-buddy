@@ -84,8 +84,45 @@ func (r *request) validate() *validationError {
 			"Withdrawal rate must be 0.03, 0.035, or 0.04",
 		}
 	}
+	if r.CoastFIRETargetAge != nil {
+		ta := *r.CoastFIRETargetAge
+		if ta < 18 || ta > 100 {
+			return &validationError{
+				"coast_fire_target_age",
+				"Coast FIRE target age must be between 18 and 100",
+			}
+		}
+		if ta <= age {
+			return &validationError{
+				"coast_fire_target_age",
+				fmt.Sprintf(
+					"Coast FIRE target age (%d) must be greater than current age (%d)",
+					ta, age,
+				),
+			}
+		}
+	}
+	if r.ExpectedReturnRate != nil {
+		if r.ExpectedReturnRate.LessThan(minExpectedReturnRate) ||
+			r.ExpectedReturnRate.GreaterThan(maxExpectedReturnRate) {
+			return &validationError{
+				"expected_return_rate",
+				"Expected return rate must be between 0.01 and 0.20",
+			}
+		}
+	}
 	return nil
 }
+
+// minExpectedReturnRate / maxExpectedReturnRate bracket the Coast FIRE
+// projection's expected_return_rate input: 1%–20% covers everything from
+// conservative bond-heavy portfolios to optimistic stock returns. Values
+// outside this band almost always point at a unit error (e.g. typing 7
+// instead of 0.07).
+var (
+	minExpectedReturnRate = decimal.RequireFromString("0.01")
+	maxExpectedReturnRate = decimal.RequireFromString("0.20")
+)
 
 // allowedWithdrawalRates are the three FIRE-research-backed safe-withdrawal
 // rates exposed in /settings. RequireFromString — not NewFromFloat — so the

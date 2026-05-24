@@ -2306,6 +2306,13 @@
                       "format": "date",
                       "type": "string"
                     },
+                    "coast_fire_target_age": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "expected_return_rate": {
+                      "type": "string"
+                    },
                     "id": {
                       "type": "integer"
                     },
@@ -2362,6 +2369,14 @@
                     "format": "date",
                     "type": "string"
                   },
+                  "coast_fire_target_age": {
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "expected_return_rate": {
+                    "nullable": true,
+                    "type": "string"
+                  },
                   "monthly_expenses": {
                     "type": "string"
                   },
@@ -2408,6 +2423,13 @@
                     },
                     "birth_date": {
                       "format": "date",
+                      "type": "string"
+                    },
+                    "coast_fire_target_age": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "expected_return_rate": {
                       "type": "string"
                     },
                     "id": {
@@ -2760,6 +2782,20 @@
                           "nullable": true,
                           "type": "number"
                         },
+                        "coast_fire_gap": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "coast_fire_number": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "coast_fire_target_age": {
+                          "nullable": true,
+                          "type": "integer"
+                        },
                         "debt_to_income_ratio": {
                           "format": "double",
                           "nullable": true,
@@ -2767,6 +2803,11 @@
                         },
                         "emergency_fund_months": {
                           "format": "double",
+                          "type": "number"
+                        },
+                        "expected_return_rate": {
+                          "format": "double",
+                          "nullable": true,
                           "type": "number"
                         },
                         "fi_progress": {

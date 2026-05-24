@@ -1657,6 +1657,8 @@ export interface paths {
                             allocation_stocks?: number;
                             /** Format: date */
                             birth_date?: string;
+                            coast_fire_target_age?: number | null;
+                            expected_return_rate?: string;
                             id?: number;
                             monthly_expenses?: string;
                             monthly_mortgage_payment?: string;
@@ -1686,6 +1688,8 @@ export interface paths {
                         allocation_stocks?: number;
                         /** Format: date */
                         birth_date?: string;
+                        coast_fire_target_age?: number | null;
+                        expected_return_rate?: string | null;
                         monthly_expenses?: string;
                         monthly_mortgage_payment?: string;
                         retirement_age?: number;
@@ -1709,6 +1713,8 @@ export interface paths {
                             allocation_stocks?: number;
                             /** Format: date */
                             birth_date?: string;
+                            coast_fire_target_age?: number | null;
+                            expected_return_rate?: string;
                             id?: number;
                             monthly_expenses?: string;
                             monthly_mortgage_payment?: string;
@@ -1959,9 +1965,16 @@ export interface paths {
                                 /** Format: double */
                                 annual_expenses?: number | null;
                                 /** Format: double */
+                                coast_fire_gap?: number | null;
+                                /** Format: double */
+                                coast_fire_number?: number | null;
+                                coast_fire_target_age?: number | null;
+                                /** Format: double */
                                 debt_to_income_ratio?: number | null;
                                 /** Format: double */
                                 emergency_fund_months?: number;
+                                /** Format: double */
+                                expected_return_rate?: number | null;
                                 /** Format: double */
                                 fi_progress?: number | null;
                                 /** Format: double */

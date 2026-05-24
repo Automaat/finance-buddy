@@ -1,7 +1,9 @@
 package dashboard
 
 import (
+	"math"
 	"testing"
+	"time"
 
 	"github.com/shopspring/decimal"
 )
@@ -136,4 +138,124 @@ func approxEqual(a, b, tol float64) bool {
 		d = -d
 	}
 	return d < tol
+}
+
+func TestAddCoastFIREHappyPath(t *testing.T) {
+	t.Parallel()
+	// Born 1990-01-01, "now" = 2025-01-01 → currentAge ≈ 35; target 65 → 30 years.
+	birth := time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC)
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	targetAge := 65
+	cfg := AppConfig{
+		BirthDate:          birth,
+		CoastFIRETargetAge: &targetAge,
+		ExpectedReturnRate: decimal.RequireFromString("0.07"),
+	}
+	fire := 1_500_000.0
+	out := fireMetrics{FIRENumber: &fire}
+
+	addCoastFIRE(&out, cfg, 500_000, now)
+
+	// coast = 1_500_000 / 1.07^30 ≈ 197_028
+	wantCoast := 1_500_000 / math.Pow(1.07, 30)
+	if out.CoastFIRENumber == nil || !approxEqual(*out.CoastFIRENumber, wantCoast, 1) {
+		t.Fatalf("coast_fire_number = %v, want ≈%v", out.CoastFIRENumber, wantCoast)
+	}
+	// gap = coast − net_worth ≈ 197_028 − 500_000 < 0 (surplus)
+	wantGap := wantCoast - 500_000
+	if out.CoastFIREGap == nil || !approxEqual(*out.CoastFIREGap, wantGap, 1) {
+		t.Fatalf("coast_fire_gap = %v, want ≈%v", out.CoastFIREGap, wantGap)
+	}
+	if out.CoastFIRETargetAge == nil || *out.CoastFIRETargetAge != 65 {
+		t.Errorf("coast_fire_target_age = %v, want 65", out.CoastFIRETargetAge)
+	}
+	if out.ExpectedReturnRate == nil || *out.ExpectedReturnRate != 0.07 {
+		t.Errorf("expected_return_rate = %v, want 0.07", out.ExpectedReturnRate)
+	}
+}
+
+func TestAddCoastFIREGapPositiveWhenNetWorthShort(t *testing.T) {
+	t.Parallel()
+	birth := time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC)
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	targetAge := 65
+	cfg := AppConfig{
+		BirthDate:          birth,
+		CoastFIRETargetAge: &targetAge,
+		ExpectedReturnRate: decimal.RequireFromString("0.07"),
+	}
+	fire := 1_500_000.0
+	out := fireMetrics{FIRENumber: &fire}
+
+	addCoastFIRE(&out, cfg, 50_000, now)
+	if out.CoastFIREGap == nil || *out.CoastFIREGap <= 0 {
+		t.Fatalf("expected positive gap, got %v", out.CoastFIREGap)
+	}
+}
+
+func TestAddCoastFIRENoTargetAgeStaysNil(t *testing.T) {
+	t.Parallel()
+	cfg := AppConfig{
+		BirthDate:          time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC),
+		ExpectedReturnRate: decimal.RequireFromString("0.07"),
+	}
+	fire := 1_500_000.0
+	out := fireMetrics{FIRENumber: &fire}
+	addCoastFIRE(&out, cfg, 500_000, time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC))
+	if out.CoastFIRENumber != nil || out.CoastFIREGap != nil {
+		t.Errorf("expected nil coast fields without target age, got %+v", out)
+	}
+}
+
+func TestAddCoastFIRETargetAgeAtOrBelowCurrentStaysNil(t *testing.T) {
+	t.Parallel()
+	// currentAge ≈ 35, target 30 → skip.
+	birth := time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC)
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	targetAge := 30
+	cfg := AppConfig{
+		BirthDate:          birth,
+		CoastFIRETargetAge: &targetAge,
+		ExpectedReturnRate: decimal.RequireFromString("0.07"),
+	}
+	fire := 1_500_000.0
+	out := fireMetrics{FIRENumber: &fire}
+	addCoastFIRE(&out, cfg, 500_000, now)
+	if out.CoastFIRENumber != nil {
+		t.Errorf("expected nil coast_fire_number when target ≤ current age, got %v", *out.CoastFIRENumber)
+	}
+}
+
+func TestAddCoastFIREZeroReturnRateStaysNil(t *testing.T) {
+	t.Parallel()
+	birth := time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC)
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	targetAge := 65
+	cfg := AppConfig{
+		BirthDate:          birth,
+		CoastFIRETargetAge: &targetAge,
+		ExpectedReturnRate: decimal.Zero,
+	}
+	fire := 1_500_000.0
+	out := fireMetrics{FIRENumber: &fire}
+	addCoastFIRE(&out, cfg, 500_000, now)
+	if out.CoastFIRENumber != nil {
+		t.Errorf("expected nil coast_fire_number when return rate is zero, got %v", *out.CoastFIRENumber)
+	}
+}
+
+func TestAddCoastFIRENoFIRENumberStaysNil(t *testing.T) {
+	t.Parallel()
+	birth := time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC)
+	targetAge := 65
+	cfg := AppConfig{
+		BirthDate:          birth,
+		CoastFIRETargetAge: &targetAge,
+		ExpectedReturnRate: decimal.RequireFromString("0.07"),
+	}
+	out := fireMetrics{}
+	addCoastFIRE(&out, cfg, 500_000, time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC))
+	if out.CoastFIRENumber != nil {
+		t.Errorf("expected nil coast_fire_number without FIRE number, got %v", *out.CoastFIRENumber)
+	}
 }

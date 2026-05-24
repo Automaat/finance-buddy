@@ -45,6 +45,10 @@ type metricCards struct {
 	RunwayMonths            *float64
 	AnnualExpenses          *float64
 	WithdrawalRate          *float64
+	CoastFIRENumber         *float64
+	CoastFIREGap            *float64
+	CoastFIRETargetAge      *int
+	ExpectedReturnRate      *float64
 }
 
 type allocationBreakdown struct {

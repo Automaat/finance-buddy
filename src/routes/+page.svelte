@@ -217,6 +217,10 @@
 			{@const firePLN = formatPLN(fire.fire_number ?? 0)}
 			{@const wrPct = ((fire.withdrawal_rate ?? 0.04) * 100).toFixed(1)}
 			{@const runwayLabel = (fire.runway_months ?? 0).toFixed(1)}
+			{@const coastNum = fire.coast_fire_number}
+			{@const coastGap = fire.coast_fire_gap}
+			{@const coastTargetAge = fire.coast_fire_target_age}
+			{@const coastReturnPct = ((fire.expected_return_rate ?? 0.07) * 100).toFixed(1)}
 			<div class="card preset-filled-surface-100-900 p-4 space-y-3">
 				<header class="flex items-start justify-between gap-2 flex-wrap">
 					<h3 class="h4 flex items-center gap-2"><Flame size={18} /> FIRE i runway</h3>
@@ -253,6 +257,36 @@
 						</div>
 					</div>
 				</div>
+				{#if coastNum != null && coastGap != null && coastTargetAge != null}
+					{@const surplus = coastGap <= 0}
+					<div class="pt-3 border-t border-surface-200-800 grid grid-cols-1 sm:grid-cols-2 gap-3">
+						<div class="space-y-1">
+							<div
+								class="text-xs text-surface-700-300"
+								title="coast_fire_number = FIRE ÷ (1 + expected_return)^(target_age − current_age) — kapitał potrzebny dziś, aby bez dalszych wpłat osiągnąć FIRE w docelowym wieku."
+							>
+								Coast FIRE (cel {coastTargetAge} r., {coastReturnPct}%/rok)
+							</div>
+							<div class="text-2xl font-bold">{formatPLN(coastNum)}</div>
+							<div class="text-xs text-surface-700-300">kapitał dziś, by przestać inwestować</div>
+						</div>
+						<div class="space-y-1">
+							<div class="text-xs text-surface-700-300">
+								{surplus ? 'Nadwyżka' : 'Brakuje'}
+							</div>
+							<div
+								class="text-2xl font-bold {surplus
+									? 'text-success-600-400'
+									: 'text-warning-600-400'}"
+							>
+								{formatPLN(Math.abs(coastGap))}
+							</div>
+							<div class="text-xs text-surface-700-300">
+								{surplus ? 'już osiągnięto Coast FIRE' : 'do osiągnięcia Coast FIRE'}
+							</div>
+						</div>
+					</div>
+				{/if}
 			</div>
 		{/if}
 

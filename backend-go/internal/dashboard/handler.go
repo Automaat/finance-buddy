@@ -193,6 +193,10 @@ type metricCardsWire struct {
 	RunwayMonths            *pyFloat `json:"runway_months"`
 	AnnualExpenses          *pyFloat `json:"annual_expenses"`
 	WithdrawalRate          *pyFloat `json:"withdrawal_rate"`
+	CoastFIRENumber         *pyFloat `json:"coast_fire_number"`
+	CoastFIREGap            *pyFloat `json:"coast_fire_gap"`
+	CoastFIRETargetAge      *int     `json:"coast_fire_target_age"`
+	ExpectedReturnRate      *pyFloat `json:"expected_return_rate"`
 }
 
 type allocationBreakdownWire struct {
@@ -329,6 +333,10 @@ func metricCardsToWire(m metricCards) metricCardsWire {
 		RunwayMonths:            floatPtr(m.RunwayMonths),
 		AnnualExpenses:          floatPtr(m.AnnualExpenses),
 		WithdrawalRate:          floatPtr(m.WithdrawalRate),
+		CoastFIRENumber:         floatPtr(m.CoastFIRENumber),
+		CoastFIREGap:            floatPtr(m.CoastFIREGap),
+		CoastFIRETargetAge:      m.CoastFIRETargetAge,
+		ExpectedReturnRate:      floatPtr(m.ExpectedReturnRate),
 	}
 }
 
