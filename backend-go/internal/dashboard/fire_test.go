@@ -169,8 +169,21 @@ func TestAddCoastFIREHappyPath(t *testing.T) {
 	if out.CoastFIRETargetAge == nil || *out.CoastFIRETargetAge != 65 {
 		t.Errorf("coast_fire_target_age = %v, want 65", out.CoastFIRETargetAge)
 	}
-	if out.ExpectedReturnRate == nil || *out.ExpectedReturnRate != 0.07 {
-		t.Errorf("expected_return_rate = %v, want 0.07", out.ExpectedReturnRate)
+}
+
+// TestComputeFIREExposesExpectedReturnRate guards the wire field that the
+// UI uses to label both Coast and Barista years-to-FI captions: the rate
+// must surface regardless of which feature consumed it.
+func TestComputeFIREExposesExpectedReturnRate(t *testing.T) {
+	t.Parallel()
+	cfg := AppConfig{
+		MonthlyExpenses:    decimal.NewFromInt(5000),
+		WithdrawalRate:     decimal.RequireFromString("0.04"),
+		ExpectedReturnRate: decimal.RequireFromString("0.06"),
+	}
+	got := computeFIRE(nil, cfg, 100_000)
+	if got.ExpectedReturnRate == nil || *got.ExpectedReturnRate != 0.06 {
+		t.Errorf("expected_return_rate = %v, want 0.06", got.ExpectedReturnRate)
 	}
 }
 

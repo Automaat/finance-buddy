@@ -83,6 +83,14 @@ func computeFIRE(latestRows []mergedRow, cfg AppConfig, netWorth float64) fireMe
 	runway := liquid / monthlyExpenses
 	out.RunwayMonths = &runway
 
+	// Surface the configured expected return rate once when it's positive, so
+	// the wire field is independent of whether Coast or Barista FIRE actually
+	// consumed it. The UI uses this rate to label both years-to-FI captions.
+	if er, _ := cfg.ExpectedReturnRate.Float64(); er > 0 {
+		rate := er
+		out.ExpectedReturnRate = &rate
+	}
+
 	now := time.Now().UTC()
 	addCoastFIRE(&out, cfg, netWorth, now)
 	addBaristaFIRE(&out, cfg, netWorth)
@@ -183,8 +191,6 @@ func addCoastFIRE(out *fireMetrics, cfg AppConfig, netWorth float64, now time.Ti
 	out.CoastFIREGap = &gap
 	ta := targetAge
 	out.CoastFIRETargetAge = &ta
-	er := expectedReturn
-	out.ExpectedReturnRate = &er
 }
 
 // yearsBetween returns whole years from birth to now using the same
