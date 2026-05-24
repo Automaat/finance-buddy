@@ -20,6 +20,7 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/recurring"
 	"github.com/Automaat/finance-buddy/backend-go/internal/retirement"
 	"github.com/Automaat/finance-buddy/backend-go/internal/salaries"
+	"github.com/Automaat/finance-buddy/backend-go/internal/scenarios"
 	"github.com/Automaat/finance-buddy/backend-go/internal/simulations"
 	"github.com/Automaat/finance-buddy/backend-go/internal/snapshots"
 	"github.com/Automaat/finance-buddy/backend-go/internal/transactions"
@@ -60,6 +61,7 @@ func allRoutes() []apispec.Route {
 		investment.APISpec,
 		holdings.APISpec,
 		simulations.APISpec,
+		scenarios.APISpec,
 		transactions.APISpec,
 		recurring.APISpec,
 		debtpayments.APISpec,

@@ -37,6 +37,7 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/recurring"
 	"github.com/Automaat/finance-buddy/backend-go/internal/retirement"
 	"github.com/Automaat/finance-buddy/backend-go/internal/salaries"
+	"github.com/Automaat/finance-buddy/backend-go/internal/scenarios"
 	"github.com/Automaat/finance-buddy/backend-go/internal/simulations"
 	"github.com/Automaat/finance-buddy/backend-go/internal/snapshots"
 	"github.com/Automaat/finance-buddy/backend-go/internal/transactions"
@@ -194,6 +195,14 @@ func registerLedgerRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger)
 	r.Post("/api/simulations/retirement", simHandler.Retirement)
 	r.Get("/api/simulations/prefill", simHandler.Prefill)
 	r.Post("/api/simulations/monte-carlo", simHandler.MonteCarlo)
+
+	scHandler := scenarios.NewHandler(scenarios.NewStore(pool), logger)
+	r.Get("/api/scenarios", scHandler.List)
+	r.Post("/api/scenarios", scHandler.Create)
+	r.Get("/api/scenarios/{id}", scHandler.Get)
+	r.Put("/api/scenarios/{id}", scHandler.Update)
+	r.Delete("/api/scenarios/{id}", scHandler.Delete)
+	r.Post("/api/scenarios/{id}/clone", scHandler.Clone)
 }
 
 func registerDashboardRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {

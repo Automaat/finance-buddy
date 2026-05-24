@@ -84,51 +84,72 @@ describe('Simulations Page — run simulation', () => {
 	});
 
 	it('POSTs request body and renders the results section on success', async () => {
-		const fetchMock = vi.fn().mockResolvedValue({
-			ok: true,
-			statusText: 'OK',
-			json: async () => ({
-				simulations: [
-					{
-						account_name: 'IKE Marcin',
-						starting_balance: 1000,
-						total_contributions: 5000,
-						total_returns: 700,
-						total_tax_savings: 0,
-						final_balance: 6700,
-						yearly_projections: [
-							{
-								year: 2026,
-								age: 35,
-								annual_contribution: 1000,
-								balance_end_of_year: 2000,
-								cumulative_contributions: 1000,
-								cumulative_returns: 0,
-								annual_limit: 5000,
-								limit_utilized_pct: 20,
-								tax_savings: 0
-							}
-						]
-					}
-				],
-				summary: {
-					total_final_balance: 6700,
+		const simulationsBody = {
+			simulations: [
+				{
+					account_name: 'IKE Marcin',
+					starting_balance: 1000,
 					total_contributions: 5000,
 					total_returns: 700,
 					total_tax_savings: 0,
-					estimated_monthly_income: 200,
-					estimated_monthly_income_today: 150,
-					years_until_retirement: 30
+					final_balance: 6700,
+					yearly_projections: [
+						{
+							year: 2026,
+							age: 35,
+							annual_contribution: 1000,
+							balance_end_of_year: 2000,
+							cumulative_contributions: 1000,
+							cumulative_returns: 0,
+							annual_limit: 5000,
+							limit_utilized_pct: 20,
+							tax_savings: 0
+						}
+					]
 				}
-			})
+			],
+			summary: {
+				total_final_balance: 6700,
+				total_contributions: 5000,
+				total_returns: 700,
+				total_tax_savings: 0,
+				estimated_monthly_income: 200,
+				estimated_monthly_income_today: 150,
+				years_until_retirement: 30
+			}
+		};
+		// Route by URL: onMount triggers GET /api/scenarios; the click triggers
+		// POST /api/simulations/retirement. The two share a fetch stub so each
+		// call is dispatched to its own response.
+		const fetchMock = vi.fn().mockImplementation((url: string) => {
+			if (url.includes('/api/scenarios')) {
+				return Promise.resolve({
+					ok: true,
+					statusText: 'OK',
+					json: async () => ({ scenarios: [] })
+				});
+			}
+			return Promise.resolve({
+				ok: true,
+				statusText: 'OK',
+				json: async () => simulationsBody
+			});
 		});
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: mockData } });
 		await fireEvent.click(screen.getByRole('button', { name: 'Uruchom symulację' }));
 
-		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-		const [url, init] = fetchMock.mock.calls[0];
+		await waitFor(() => {
+			const simCall = fetchMock.mock.calls.find(([u]) =>
+				String(u).includes('/api/simulations/retirement')
+			);
+			expect(simCall).toBeTruthy();
+		});
+		const simCall = fetchMock.mock.calls.find(([u]) =>
+			String(u).includes('/api/simulations/retirement')
+		)!;
+		const [url, init] = simCall;
 		expect(url).toBe('http://localhost:8000/api/simulations/retirement');
 		expect((init as RequestInit).method).toBe('POST');
 		const body = JSON.parse((init as RequestInit).body as string);
@@ -172,7 +193,11 @@ describe('Simulations Page — run simulation', () => {
 	});
 
 	it('blocks simulation when PPK employee rate is out of range', async () => {
-		const fetchMock = vi.fn();
+		const fetchMock = vi.fn().mockResolvedValue({
+			ok: true,
+			statusText: 'OK',
+			json: async () => ({ scenarios: [] })
+		});
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: mockData } });
@@ -197,11 +222,19 @@ describe('Simulations Page — run simulation', () => {
 				screen.getByText(/PPK Marcin: Składka pracownika musi być w zakresie 0\.5-4%/)
 			).toBeTruthy()
 		);
-		expect(fetchMock).not.toHaveBeenCalled();
+		// Local validation should keep the POST from going out.
+		const simCall = fetchMock.mock.calls.find(([u]) =>
+			String(u).includes('/api/simulations/retirement')
+		);
+		expect(simCall).toBeUndefined();
 	});
 
 	it('blocks simulation when PPK employer rate is out of range', async () => {
-		const fetchMock = vi.fn();
+		const fetchMock = vi.fn().mockResolvedValue({
+			ok: true,
+			statusText: 'OK',
+			json: async () => ({ scenarios: [] })
+		});
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: mockData } });
@@ -224,11 +257,19 @@ describe('Simulations Page — run simulation', () => {
 				screen.getByText(/PPK Marcin: Składka pracodawcy musi być w zakresie 1\.5-4%/)
 			).toBeTruthy()
 		);
-		expect(fetchMock).not.toHaveBeenCalled();
+		// Local validation should keep the POST from going out.
+		const simCall = fetchMock.mock.calls.find(([u]) =>
+			String(u).includes('/api/simulations/retirement')
+		);
+		expect(simCall).toBeUndefined();
 	});
 
 	it('blocks simulation when salary above threshold but belowThreshold checked', async () => {
-		const fetchMock = vi.fn();
+		const fetchMock = vi.fn().mockResolvedValue({
+			ok: true,
+			statusText: 'OK',
+			json: async () => ({ scenarios: [] })
+		});
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: mockData } });
@@ -256,6 +297,10 @@ describe('Simulations Page — run simulation', () => {
 		await waitFor(() =>
 			expect(screen.getByText(/PPK Marcin: Wynagrodzenie przekracza próg/)).toBeTruthy()
 		);
-		expect(fetchMock).not.toHaveBeenCalled();
+		// Local validation should keep the POST from going out.
+		const simCall = fetchMock.mock.calls.find(([u]) =>
+			String(u).includes('/api/simulations/retirement')
+		);
+		expect(simCall).toBeUndefined();
 	});
 });
