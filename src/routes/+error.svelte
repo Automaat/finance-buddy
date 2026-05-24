@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { invalidateAll } from '$app/navigation';
-	import { TriangleAlert, RefreshCw } from 'lucide-svelte';
+	import { dev } from '$app/environment';
+	import { toast } from '$lib/stores/toast.svelte';
+	import { TriangleAlert, RefreshCw, Bug } from 'lucide-svelte';
 
 	let retrying = $state(false);
 
@@ -13,6 +15,24 @@
 			retrying = false;
 		}
 	}
+
+	async function report() {
+		const payload = [
+			`status: ${$page.status}`,
+			`url: ${$page.url.toString()}`,
+			`message: ${$page.error?.message ?? '—'}`,
+			$page.error?.stack ? `stack:\n${$page.error.stack}` : ''
+		]
+			.filter(Boolean)
+			.join('\n');
+		try {
+			await navigator.clipboard.writeText(payload);
+			toast.success('Skopiowano szczegóły błędu do schowka.');
+		} catch {
+			toast.error('Nie udało się skopiować szczegółów — skopiuj ręcznie z konsoli.');
+			console.error('[error-report]\n' + payload);
+		}
+	}
 </script>
 
 <div class="error-boundary">
@@ -22,10 +42,20 @@
 		{$page.error?.message || 'Nie udało się załadować danych.'}
 	</p>
 	<p class="error-status">Kod błędu: {$page.status}</p>
+	{#if dev && $page.error?.stack}
+		<details class="error-stack">
+			<summary>Szczegóły dla deweloperów</summary>
+			<pre>{$page.error.stack}</pre>
+		</details>
+	{/if}
 	<div class="error-actions">
 		<button type="button" onclick={retry} disabled={retrying}>
 			<RefreshCw size={18} />
 			{retrying ? 'Ponawianie…' : 'Spróbuj ponownie'}
+		</button>
+		<button type="button" class="report" onclick={report}>
+			<Bug size={18} />
+			Zgłoś
 		</button>
 		<a href="/" class="home-link">Wróć do pulpitu</a>
 	</div>
@@ -66,6 +96,28 @@
 		margin: 0;
 	}
 
+	.error-stack {
+		max-width: 100%;
+		text-align: left;
+		font-size: var(--font-size-0);
+		color: var(--color-text-2);
+		background: var(--surface-2);
+		border-radius: var(--radius-2);
+		padding: var(--size-2) var(--size-3);
+	}
+
+	.error-stack summary {
+		cursor: pointer;
+		font-weight: var(--font-weight-6);
+	}
+
+	.error-stack pre {
+		margin: var(--size-2) 0 0;
+		overflow-x: auto;
+		white-space: pre-wrap;
+		word-break: break-word;
+	}
+
 	.error-actions {
 		display: flex;
 		flex-wrap: wrap;
@@ -87,6 +139,11 @@
 		border: none;
 		border-radius: var(--radius-2);
 		cursor: pointer;
+	}
+
+	button.report {
+		color: var(--color-text-1);
+		background: var(--surface-3);
 	}
 
 	button:disabled {
