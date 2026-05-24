@@ -98,6 +98,7 @@ CREATE TABLE public.app_config (
     withdrawal_rate numeric(5,4) NOT NULL DEFAULT 0.04,
     coast_fire_target_age integer,
     expected_return_rate numeric(5,4) NOT NULL DEFAULT 0.07,
+    barista_monthly_income numeric(15,2),
     CONSTRAINT single_row CHECK ((id = 1))
 );
 

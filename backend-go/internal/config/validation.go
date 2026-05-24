@@ -111,6 +111,9 @@ func (r *request) validate() *validationError {
 			}
 		}
 	}
+	if r.BaristaMonthlyIncome != nil && r.BaristaMonthlyIncome.LessThan(decimal.Zero) {
+		return &validationError{"barista_monthly_income", "Value must be non-negative"}
+	}
 	return nil
 }
 

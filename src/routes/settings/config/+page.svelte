@@ -60,6 +60,11 @@
 	// tile". The backend treats a null coast_fire_target_age the same way.
 	let coastFireTargetAge = $state<number | null>(config?.coast_fire_target_age ?? null);
 	let expectedReturnRate = $state(Number(config?.expected_return_rate ?? 0.07));
+	// Barista FIRE: monthly part-time income, nullable. Backend hides the
+	// tile when null. Money field arrives as a JSON string when present.
+	let baristaMonthlyIncome = $state<number | null>(
+		config?.barista_monthly_income != null ? Number(config.barista_monthly_income) : null
+	);
 
 	let error = $state('');
 	let saving = $state(false);
@@ -126,7 +131,8 @@
 					monthly_mortgage_payment: monthlyMortgagePayment,
 					withdrawal_rate: withdrawalRate,
 					coast_fire_target_age: coastFireTargetAge,
-					expected_return_rate: expectedReturnRate
+					expected_return_rate: expectedReturnRate,
+					barista_monthly_income: baristaMonthlyIncome
 				})
 			});
 
@@ -400,6 +406,37 @@
 			/>
 			<span class="text-xs italic text-surface-700-300">
 				Realna stopa zwrotu używana do dyskontowania celu FIRE do dziś (np. 0.07 = 7%).
+			</span>
+		</label>
+	</div>
+
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header>
+			<h3 class="h3 flex items-center gap-2"><Flame size={20} /> Barista FIRE</h3>
+		</header>
+
+		<label class="label">
+			<span class="font-semibold text-sm">Miesięczny dochód z pracy dorywczej (PLN)</span>
+			<input
+				id="barista-monthly-income"
+				type="number"
+				min="0"
+				step="100"
+				placeholder="np. 3000 (puste = wyłączone)"
+				value={baristaMonthlyIncome ?? ''}
+				oninput={(e) => {
+					const v = (e.target as HTMLInputElement).value;
+					if (v === '') {
+						baristaMonthlyIncome = null;
+						return;
+					}
+					const n = Number(v);
+					baristaMonthlyIncome = Number.isNaN(n) ? null : n;
+				}}
+				class="input"
+			/>
+			<span class="text-xs italic text-surface-700-300">
+				Dochód z pracy na pół etatu pomniejsza wymagany kapitał. Puste = ukryj kartę Barista FIRE.
 			</span>
 		</label>
 	</div>

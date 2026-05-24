@@ -19,15 +19,20 @@ var liquidCategories = map[string]struct{}{
 // produce a meaningful number (monthly_expenses == 0, withdrawal_rate == 0,
 // or net_worth <= 0 for the progress percentage).
 type fireMetrics struct {
-	AnnualExpenses     *float64
-	FIRENumber         *float64
-	FIProgress         *float64
-	RunwayMonths       *float64
-	WithdrawalRate     *float64
-	CoastFIRENumber    *float64
-	CoastFIREGap       *float64
-	CoastFIRETargetAge *int
-	ExpectedReturnRate *float64
+	AnnualExpenses       *float64
+	FIRENumber           *float64
+	FIProgress           *float64
+	RunwayMonths         *float64
+	WithdrawalRate       *float64
+	CoastFIRENumber      *float64
+	CoastFIREGap         *float64
+	CoastFIRETargetAge   *int
+	ExpectedReturnRate   *float64
+	BaristaMonthlyIncome *float64
+	BaristaAnnualGap     *float64
+	BaristaFIRENumber    *float64
+	BaristaFIProgress    *float64
+	BaristaYearsToFI     *float64
 }
 
 // computeFIRE turns app_config + the latest snapshot's rows into the FIRE
@@ -78,8 +83,73 @@ func computeFIRE(latestRows []mergedRow, cfg AppConfig, netWorth float64) fireMe
 	runway := liquid / monthlyExpenses
 	out.RunwayMonths = &runway
 
-	addCoastFIRE(&out, cfg, netWorth, time.Now().UTC())
+	// Surface the configured expected return rate once when it's positive, so
+	// the wire field is independent of whether Coast or Barista FIRE actually
+	// consumed it. The UI uses this rate to label both years-to-FI captions.
+	if er, _ := cfg.ExpectedReturnRate.Float64(); er > 0 {
+		rate := er
+		out.ExpectedReturnRate = &rate
+	}
+
+	now := time.Now().UTC()
+	addCoastFIRE(&out, cfg, netWorth, now)
+	addBaristaFIRE(&out, cfg, netWorth)
 	return out
+}
+
+// addBaristaFIRE fills the Barista FIRE fields when a part-time monthly
+// income is configured and the existing FIRE inputs are valid. Math:
+//
+//	barista_annual_gap   = max(0, annual_expenses − barista_annual_income)
+//	barista_fire_number  = barista_annual_gap ÷ withdrawal_rate
+//	barista_fi_progress  = net_worth ÷ barista_fire_number × 100
+//	barista_years_to_fi  = ln(barista_fire_number ÷ net_worth) ÷ ln(1 + r)
+//
+// The years-to-FI projection assumes no future contributions — compounding
+// alone of today's net worth at the expected return rate. This is the most
+// conservative projection that doesn't require yet-another configured
+// "monthly savings" input, and it lines up with how Coast FIRE uses
+// expected_return_rate.
+func addBaristaFIRE(out *fireMetrics, cfg AppConfig, netWorth float64) {
+	if out.AnnualExpenses == nil || out.WithdrawalRate == nil {
+		return
+	}
+	if cfg.BaristaMonthlyIncome == nil {
+		return
+	}
+	monthly, _ := cfg.BaristaMonthlyIncome.Float64()
+	if monthly < 0 {
+		return
+	}
+	baristaAnnual := monthly * 12
+	bm := monthly
+	out.BaristaMonthlyIncome = &bm
+
+	gap := *out.AnnualExpenses - baristaAnnual
+	if gap < 0 {
+		gap = 0
+	}
+	out.BaristaAnnualGap = &gap
+
+	fire := gap / *out.WithdrawalRate
+	out.BaristaFIRENumber = &fire
+	if fire > 0 && netWorth > 0 {
+		progress := netWorth / fire * 100
+		out.BaristaFIProgress = &progress
+	}
+
+	// Years-to-FI is only meaningful when (a) we still have ground to cover
+	// (net_worth < fire), (b) net worth is positive (log undefined at 0/
+	// negative), and (c) the projection has a positive growth rate.
+	if fire <= 0 || netWorth <= 0 || netWorth >= fire {
+		return
+	}
+	expectedReturn, _ := cfg.ExpectedReturnRate.Float64()
+	if expectedReturn <= 0 {
+		return
+	}
+	years := math.Log(fire/netWorth) / math.Log(1+expectedReturn)
+	out.BaristaYearsToFI = &years
 }
 
 // addCoastFIRE fills the Coast FIRE fields when the inputs are sufficient:
@@ -121,8 +191,6 @@ func addCoastFIRE(out *fireMetrics, cfg AppConfig, netWorth float64, now time.Ti
 	out.CoastFIREGap = &gap
 	ta := targetAge
 	out.CoastFIRETargetAge = &ta
-	er := expectedReturn
-	out.ExpectedReturnRate = &er
 }
 
 // yearsBetween returns whole years from birth to now using the same

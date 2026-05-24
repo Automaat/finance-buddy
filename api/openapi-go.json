@@ -2302,6 +2302,10 @@
                     "allocation_stocks": {
                       "type": "integer"
                     },
+                    "barista_monthly_income": {
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "birth_date": {
                       "format": "date",
                       "type": "string"
@@ -2365,6 +2369,10 @@
                   "allocation_stocks": {
                     "type": "integer"
                   },
+                  "barista_monthly_income": {
+                    "nullable": true,
+                    "type": "string"
+                  },
                   "birth_date": {
                     "format": "date",
                     "type": "string"
@@ -2420,6 +2428,10 @@
                     },
                     "allocation_stocks": {
                       "type": "integer"
+                    },
+                    "barista_monthly_income": {
+                      "nullable": true,
+                      "type": "string"
                     },
                     "birth_date": {
                       "format": "date",
@@ -2778,6 +2790,31 @@
                     "metric_cards": {
                       "properties": {
                         "annual_expenses": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "barista_annual_gap": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "barista_fi_progress": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "barista_fire_number": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "barista_monthly_income": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "barista_years_to_fi": {
                           "format": "double",
                           "nullable": true,
                           "type": "number"

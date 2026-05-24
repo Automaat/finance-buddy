@@ -1655,6 +1655,7 @@ export interface paths {
                             allocation_gold?: number;
                             allocation_real_estate?: number;
                             allocation_stocks?: number;
+                            barista_monthly_income?: string | null;
                             /** Format: date */
                             birth_date?: string;
                             coast_fire_target_age?: number | null;
@@ -1686,6 +1687,7 @@ export interface paths {
                         allocation_gold?: number;
                         allocation_real_estate?: number;
                         allocation_stocks?: number;
+                        barista_monthly_income?: string | null;
                         /** Format: date */
                         birth_date?: string;
                         coast_fire_target_age?: number | null;
@@ -1711,6 +1713,7 @@ export interface paths {
                             allocation_gold?: number;
                             allocation_real_estate?: number;
                             allocation_stocks?: number;
+                            barista_monthly_income?: string | null;
                             /** Format: date */
                             birth_date?: string;
                             coast_fire_target_age?: number | null;
@@ -1964,6 +1967,16 @@ export interface paths {
                             metric_cards?: {
                                 /** Format: double */
                                 annual_expenses?: number | null;
+                                /** Format: double */
+                                barista_annual_gap?: number | null;
+                                /** Format: double */
+                                barista_fi_progress?: number | null;
+                                /** Format: double */
+                                barista_fire_number?: number | null;
+                                /** Format: double */
+                                barista_monthly_income?: number | null;
+                                /** Format: double */
+                                barista_years_to_fi?: number | null;
                                 /** Format: double */
                                 coast_fire_gap?: number | null;
                                 /** Format: double */

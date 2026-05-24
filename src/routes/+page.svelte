@@ -221,6 +221,10 @@
 			{@const coastGap = fire.coast_fire_gap}
 			{@const coastTargetAge = fire.coast_fire_target_age}
 			{@const coastReturnPct = ((fire.expected_return_rate ?? 0.07) * 100).toFixed(1)}
+			{@const baristaNum = fire.barista_fire_number}
+			{@const baristaProgress = fire.barista_fi_progress}
+			{@const baristaIncome = fire.barista_monthly_income}
+			{@const baristaYears = fire.barista_years_to_fi}
 			<div class="card preset-filled-surface-100-900 p-4 space-y-3">
 				<header class="flex items-start justify-between gap-2 flex-wrap">
 					<h3 class="h4 flex items-center gap-2"><Flame size={18} /> FIRE i runway</h3>
@@ -283,6 +287,40 @@
 							</div>
 							<div class="text-xs text-surface-700-300">
 								{surplus ? 'już osiągnięto Coast FIRE' : 'do osiągnięcia Coast FIRE'}
+							</div>
+						</div>
+					</div>
+				{/if}
+				{#if baristaNum != null && baristaIncome != null}
+					<div class="pt-3 border-t border-surface-200-800 space-y-2">
+						<div class="text-xs text-surface-700-300">
+							Praca dorywcza: {formatPLN(baristaIncome)}/mies.
+						</div>
+						<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+							<div class="space-y-1">
+								<div class="text-xs text-surface-700-300">FIRE — porównanie</div>
+								<div class="text-sm">
+									Klasyczne: <span class="font-bold">{firePLN}</span>
+								</div>
+								<div
+									class="text-sm"
+									title="barista_fire_number = max(0, annual_expenses − barista_annual_income) ÷ withdrawal_rate"
+								>
+									Barista: <span class="font-bold">{formatPLN(baristaNum)}</span>
+								</div>
+							</div>
+							<div class="space-y-1">
+								<div class="text-xs text-surface-700-300">Barista FI progress</div>
+								<div class="text-2xl font-bold">
+									{baristaProgress != null ? `${baristaProgress.toFixed(1)}%` : '—'}
+								</div>
+								{#if baristaYears != null}
+									<div class="text-xs text-surface-700-300">
+										FI za ~{baristaYears.toFixed(1)} lat (bez dopłat, {coastReturnPct}%/rok)
+									</div>
+								{:else if (baristaProgress ?? 0) >= 100}
+									<div class="text-xs text-success-600-400">już osiągnięto Barista FIRE</div>
+								{/if}
 							</div>
 						</div>
 					</div>
