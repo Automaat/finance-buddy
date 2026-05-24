@@ -667,6 +667,11 @@ CREATE TABLE public.recurring_transactions (
     updated_at timestamp without time zone NOT NULL DEFAULT (now() at time zone 'utc')
 );
 
+
+--
+-- Name: recurring_transactions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
 CREATE SEQUENCE public.recurring_transactions_id_seq
     AS integer
     START WITH 1
@@ -676,13 +681,6 @@ CREATE SEQUENCE public.recurring_transactions_id_seq
     CACHE 1;
 
 ALTER SEQUENCE public.recurring_transactions_id_seq OWNED BY public.recurring_transactions.id;
-ALTER TABLE ONLY public.recurring_transactions ALTER COLUMN id SET DEFAULT nextval('public.recurring_transactions_id_seq'::regclass);
-ALTER TABLE ONLY public.recurring_transactions ADD CONSTRAINT recurring_transactions_pkey PRIMARY KEY (id);
-ALTER TABLE ONLY public.recurring_transactions
-    ADD CONSTRAINT recurring_transactions_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.accounts(id) ON DELETE CASCADE;
-ALTER TABLE ONLY public.recurring_transactions
-    ADD CONSTRAINT recurring_transactions_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.users(id) ON DELETE RESTRICT;
-CREATE INDEX ix_recurring_transactions_active_account ON public.recurring_transactions USING btree (active, account_id);
 
 
 --
@@ -822,6 +820,13 @@ ALTER TABLE ONLY public.snapshots ALTER COLUMN id SET DEFAULT nextval('public.sn
 --
 
 ALTER TABLE ONLY public.transactions ALTER COLUMN id SET DEFAULT nextval('public.transactions_id_seq'::regclass);
+
+
+--
+-- Name: recurring_transactions id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recurring_transactions ALTER COLUMN id SET DEFAULT nextval('public.recurring_transactions_id_seq'::regclass);
 
 
 --
@@ -977,6 +982,21 @@ ALTER TABLE ONLY public.transactions
 
 
 --
+-- Name: recurring_transactions recurring_transactions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recurring_transactions
+    ADD CONSTRAINT recurring_transactions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ix_recurring_transactions_active_account; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_recurring_transactions_active_account ON public.recurring_transactions USING btree (active, account_id);
+
+
+--
 -- Name: snapshot_values uix_snapshot_account; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1110,6 +1130,14 @@ ALTER TABLE ONLY public.transactions
 
 
 --
+-- Name: recurring_transactions recurring_transactions_account_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recurring_transactions
+    ADD CONSTRAINT recurring_transactions_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.accounts(id) ON DELETE CASCADE;
+
+
+--
 -- Name: owner_user_id foreign keys; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1118,6 +1146,9 @@ ALTER TABLE ONLY public.accounts
 
 ALTER TABLE ONLY public.transactions
     ADD CONSTRAINT transactions_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.users(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.recurring_transactions
+    ADD CONSTRAINT recurring_transactions_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.users(id) ON DELETE RESTRICT;
 
 ALTER TABLE ONLY public.salary_records
     ADD CONSTRAINT salary_records_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.users(id) ON DELETE RESTRICT;
