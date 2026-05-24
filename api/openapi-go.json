@@ -4585,6 +4585,88 @@
         ]
       }
     },
+    "/api/investment/returns": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "as_of": {
+                      "type": "string"
+                    },
+                    "convergence_failed": {
+                      "type": "boolean"
+                    },
+                    "current_value": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "deposits": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "has_snapshot": {
+                      "type": "boolean"
+                    },
+                    "money_weighted_pct": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "net_contributed": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "period": {
+                      "type": "string"
+                    },
+                    "scope": {
+                      "properties": {
+                        "account_id": {
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "value": {
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "simple_roi_pct": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "since": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "valuation_change": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "withdrawals": {
+                      "format": "double",
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Contribution-adjusted (money-weighted) returns",
+        "tags": [
+          "investment"
+        ]
+      }
+    },
     "/api/investment/stock-stats": {
       "get": {
         "responses": {

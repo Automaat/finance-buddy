@@ -6,4 +6,5 @@ import "github.com/Automaat/finance-buddy/backend-go/internal/apispec"
 var APISpec = []apispec.Route{
 	{Method: "GET", Path: "/api/investment/stock-stats", Tag: "investment", Summary: "Stock ROI aggregates", Response: response{}},
 	{Method: "GET", Path: "/api/investment/bond-stats", Tag: "investment", Summary: "Bond ROI aggregates", Response: response{}},
+	{Method: "GET", Path: "/api/investment/returns", Tag: "investment", Summary: "Contribution-adjusted (money-weighted) returns", Response: returnsResponse{}},
 }

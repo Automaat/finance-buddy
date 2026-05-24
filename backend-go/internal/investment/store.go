@@ -4,8 +4,11 @@ package investment
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
 )
@@ -21,6 +24,128 @@ type CategoryStats struct {
 	TotalValue       decimal.Decimal
 	TotalContributed decimal.Decimal
 	HasAccounts      bool
+}
+
+// TransactionDated is a dated transaction in the cash-flow series used by the
+// returns endpoint. amount preserves the sign convention from the table
+// (positive = deposit, negative = withdrawal).
+type TransactionDated struct {
+	Date   time.Time
+	Amount decimal.Decimal
+}
+
+// ScopeFilter narrows the account set the returns endpoint operates over.
+// Exactly one of AccountID / Category / Wrapper / All should be set; All=true
+// means the whole household.
+type ScopeFilter struct {
+	AccountID *int
+	Category  *string
+	Wrapper   *string
+	All       bool
+}
+
+// PeriodWindow returns (since, asOf). A nil since means "since the first cash
+// flow in scope" (= "All").
+type PeriodWindow struct {
+	Since *time.Time
+	AsOf  time.Time
+}
+
+// ScopedFlows pulls all active transactions in scope between `since` (open)
+// and `asOf` (inclusive). Returns chronologically sorted.
+func (s *Store) ScopedFlows(ctx context.Context, scope ScopeFilter, w PeriodWindow) ([]TransactionDated, error) {
+	args := []any{w.AsOf}
+	clauses := []string{"a.is_active = true", "t.is_active = true", "t.date <= $1"}
+	if w.Since != nil {
+		args = append(args, *w.Since)
+		clauses = append(clauses, fmt.Sprintf("t.date >= $%d", len(args)))
+	}
+	switch {
+	case scope.AccountID != nil:
+		args = append(args, *scope.AccountID)
+		clauses = append(clauses, fmt.Sprintf("a.id = $%d", len(args)))
+	case scope.Category != nil:
+		args = append(args, *scope.Category)
+		clauses = append(clauses, fmt.Sprintf("a.category = $%d", len(args)))
+	case scope.Wrapper != nil:
+		args = append(args, *scope.Wrapper)
+		clauses = append(clauses, fmt.Sprintf("a.account_wrapper = $%d", len(args)))
+	}
+	where := ""
+	for i, c := range clauses {
+		if i == 0 {
+			where = "WHERE " + c
+		} else {
+			where += " AND " + c
+		}
+	}
+	q := `
+		SELECT t.date, t.amount
+		FROM transactions t
+		JOIN accounts a ON a.id = t.account_id
+		` + where + `
+		ORDER BY t.date ASC, t.id ASC`
+	rows, err := s.pool.Query(ctx, q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("scoped flows: %w", err)
+	}
+	defer rows.Close()
+	out := []TransactionDated{}
+	for rows.Next() {
+		var td TransactionDated
+		if err := rows.Scan(&td.Date, &td.Amount); err != nil {
+			return nil, fmt.Errorf("scan flow: %w", err)
+		}
+		out = append(out, td)
+	}
+	return out, rows.Err()
+}
+
+// LatestValueInScope returns the sum of snapshot_values at the latest
+// snapshot date on or before `asOf` for accounts matching scope. Returns
+// (zero, false) when no qualifying snapshot exists.
+func (s *Store) LatestValueInScope(ctx context.Context, scope ScopeFilter, asOf time.Time) (decimal.Decimal, time.Time, bool, error) {
+	args := []any{asOf}
+	scopeJoin := ""
+	switch {
+	case scope.AccountID != nil:
+		args = append(args, *scope.AccountID)
+		scopeJoin = fmt.Sprintf("AND sv.account_id = $%d", len(args))
+	case scope.Category != nil:
+		args = append(args, *scope.Category)
+		scopeJoin = fmt.Sprintf("AND a.category = $%d", len(args))
+	case scope.Wrapper != nil:
+		args = append(args, *scope.Wrapper)
+		scopeJoin = fmt.Sprintf("AND a.account_wrapper = $%d", len(args))
+	}
+	row := s.pool.QueryRow(ctx, `
+		WITH latest AS (
+			SELECT MAX(s.date) AS d
+			FROM snapshots s
+			JOIN snapshot_values sv ON sv.snapshot_id = s.id
+			JOIN accounts a ON a.id = sv.account_id
+			WHERE s.date <= $1
+			  AND a.is_active = true
+			  `+scopeJoin+`
+		)
+		SELECT COALESCE(SUM(sv.value), 0), latest.d
+		FROM snapshot_values sv
+		JOIN snapshots s ON s.id = sv.snapshot_id
+		JOIN accounts a ON a.id = sv.account_id, latest
+		WHERE s.date = latest.d
+		  AND a.is_active = true
+		  `+scopeJoin+`
+		GROUP BY latest.d`,
+		args...)
+	var value decimal.Decimal
+	var date time.Time
+	switch err := row.Scan(&value, &date); {
+	case errors.Is(err, pgx.ErrNoRows):
+		return decimal.Zero, time.Time{}, false, nil
+	case err != nil:
+		return decimal.Zero, time.Time{}, false, fmt.Errorf("latest value in scope: %w", err)
+	}
+	return value, date, true, nil
 }
 
 // StatsForCategory replicates backend/app/services/investment.get_category_stats:

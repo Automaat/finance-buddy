@@ -173,6 +173,7 @@ func registerLedgerRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger)
 	invHandler := investment.NewHandler(investment.NewStore(pool), logger)
 	r.Get("/api/investment/stock-stats", invHandler.StockStats)
 	r.Get("/api/investment/bond-stats", invHandler.BondStats)
+	r.Get("/api/investment/returns", invHandler.Returns)
 
 	simHandler := simulations.NewHandler(simulations.NewStore(pool), logger)
 	r.Post("/api/simulations/mortgage-vs-invest", simHandler.MortgageVsInvest)
