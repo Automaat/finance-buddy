@@ -24,6 +24,7 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/bonds"
 	"github.com/Automaat/finance-buddy/backend-go/internal/cpi"
 	"github.com/Automaat/finance-buddy/backend-go/internal/db"
+	"github.com/Automaat/finance-buddy/backend-go/internal/recurring"
 	"github.com/Automaat/finance-buddy/backend-go/internal/scheduler"
 	"github.com/Automaat/finance-buddy/backend-go/internal/server"
 )
@@ -110,6 +111,10 @@ func run() int {
 		// CPI monthly-refresh scheduler — replaces the Python APScheduler job.
 		sched := scheduler.NewCPIScheduler(cpi.NewStore(pool), cpi.NewGUSFetcher(), logger)
 		go sched.Run(ctx)
+
+		// Daily recurring-transaction generator (issue #384).
+		recSched := recurring.NewScheduler(recurring.NewStore(pool), logger)
+		go recSched.Run(ctx)
 	} else {
 		logger.Warn("no DB config (DATABASE_URL or PGHOST) — DB-backed endpoints will 404")
 	}

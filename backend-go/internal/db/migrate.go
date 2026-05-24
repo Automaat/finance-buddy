@@ -61,6 +61,44 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 	if err := addAppConfigWithdrawalRate(ctx, pool); err != nil {
 		return err
 	}
+	if err := createRecurringTransactionsTable(ctx, pool); err != nil {
+		return err
+	}
+	return nil
+}
+
+// createRecurringTransactionsTable creates the recurring_transactions table
+// for issue #384 on existing databases. New installs get it from schema.sql.
+// Idempotent via IF NOT EXISTS.
+func createRecurringTransactionsTable(ctx context.Context, pool *pgxpool.Pool) error {
+	stmts := []string{
+		`CREATE TABLE IF NOT EXISTS recurring_transactions (
+			id serial PRIMARY KEY,
+			account_id integer NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+			amount numeric(15,2) NOT NULL,
+			owner_user_id integer REFERENCES users(id) ON DELETE RESTRICT,
+			transaction_type varchar(20),
+			category varchar(50),
+			description varchar(200) NOT NULL DEFAULT '',
+			frequency varchar(16) NOT NULL,
+			day_of_month integer,
+			start_date date NOT NULL,
+			end_date date,
+			active boolean NOT NULL DEFAULT true,
+			skipped_dates date[] NOT NULL DEFAULT ARRAY[]::date[],
+			last_run_date date,
+			created_at timestamp without time zone NOT NULL DEFAULT (now() at time zone 'utc'),
+			updated_at timestamp without time zone NOT NULL DEFAULT (now() at time zone 'utc')
+		)`,
+		`ALTER TABLE recurring_transactions ADD COLUMN IF NOT EXISTS category varchar(50)`,
+		`CREATE INDEX IF NOT EXISTS ix_recurring_transactions_active_account
+		   ON recurring_transactions (active, account_id)`,
+	}
+	for _, stmt := range stmts {
+		if _, err := pool.Exec(ctx, stmt); err != nil {
+			return fmt.Errorf("create recurring_transactions: %w", err)
+		}
+	}
 	return nil
 }
 

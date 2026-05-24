@@ -3115,6 +3115,370 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/recurring": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List recurring templates */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            recurring?: {
+                                account_id?: number;
+                                active?: boolean;
+                                amount?: string;
+                                category?: string | null;
+                                created_at?: string;
+                                day_of_month?: number | null;
+                                description?: string;
+                                end_date?: string | null;
+                                frequency?: string;
+                                id?: number;
+                                last_run_date?: string | null;
+                                next_occurrence?: string | null;
+                                owner_user_id?: number | null;
+                                skipped_dates?: string[];
+                                start_date?: string;
+                                transaction_type?: string | null;
+                                updated_at?: string;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create a recurring template */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            account_id?: number;
+                            active?: boolean;
+                            amount?: string;
+                            category?: string | null;
+                            created_at?: string;
+                            day_of_month?: number | null;
+                            description?: string;
+                            end_date?: string | null;
+                            frequency?: string;
+                            id?: number;
+                            last_run_date?: string | null;
+                            next_occurrence?: string | null;
+                            owner_user_id?: number | null;
+                            skipped_dates?: string[];
+                            start_date?: string;
+                            transaction_type?: string | null;
+                            updated_at?: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/recurring/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a recurring template */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            account_id?: number;
+                            active?: boolean;
+                            amount?: string;
+                            category?: string | null;
+                            created_at?: string;
+                            day_of_month?: number | null;
+                            description?: string;
+                            end_date?: string | null;
+                            frequency?: string;
+                            id?: number;
+                            last_run_date?: string | null;
+                            next_occurrence?: string | null;
+                            owner_user_id?: number | null;
+                            skipped_dates?: string[];
+                            start_date?: string;
+                            transaction_type?: string | null;
+                            updated_at?: string;
+                        };
+                    };
+                };
+            };
+        };
+        /** Update a recurring template */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            account_id?: number;
+                            active?: boolean;
+                            amount?: string;
+                            category?: string | null;
+                            created_at?: string;
+                            day_of_month?: number | null;
+                            description?: string;
+                            end_date?: string | null;
+                            frequency?: string;
+                            id?: number;
+                            last_run_date?: string | null;
+                            next_occurrence?: string | null;
+                            owner_user_id?: number | null;
+                            skipped_dates?: string[];
+                            start_date?: string;
+                            transaction_type?: string | null;
+                            updated_at?: string;
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete a recurring template */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/recurring/{id}/run-now": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mint an ad-hoc transaction now */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            already_minted?: boolean;
+                            date?: string;
+                            transaction_id?: number | null;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/recurring/{id}/skip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Skip an occurrence */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            account_id?: number;
+                            active?: boolean;
+                            amount?: string;
+                            category?: string | null;
+                            created_at?: string;
+                            day_of_month?: number | null;
+                            description?: string;
+                            end_date?: string | null;
+                            frequency?: string;
+                            id?: number;
+                            last_run_date?: string | null;
+                            next_occurrence?: string | null;
+                            owner_user_id?: number | null;
+                            skipped_dates?: string[];
+                            start_date?: string;
+                            transaction_type?: string | null;
+                            updated_at?: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/recurring/{id}/unskip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume a previously skipped occurrence */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            account_id?: number;
+                            active?: boolean;
+                            amount?: string;
+                            category?: string | null;
+                            created_at?: string;
+                            day_of_month?: number | null;
+                            description?: string;
+                            end_date?: string | null;
+                            frequency?: string;
+                            id?: number;
+                            last_run_date?: string | null;
+                            next_occurrence?: string | null;
+                            owner_user_id?: number | null;
+                            skipped_dates?: string[];
+                            start_date?: string;
+                            transaction_type?: string | null;
+                            updated_at?: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/retirement/limits/{year}": {
         parameters: {
             query?: never;

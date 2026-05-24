@@ -4711,6 +4711,611 @@
         ]
       }
     },
+    "/api/recurring": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "recurring": {
+                      "items": {
+                        "properties": {
+                          "account_id": {
+                            "type": "integer"
+                          },
+                          "active": {
+                            "type": "boolean"
+                          },
+                          "amount": {
+                            "type": "string"
+                          },
+                          "category": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "type": "string"
+                          },
+                          "day_of_month": {
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "end_date": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "frequency": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "integer"
+                          },
+                          "last_run_date": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "next_occurrence": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "owner_user_id": {
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "skipped_dates": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "start_date": {
+                            "type": "string"
+                          },
+                          "transaction_type": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "updated_at": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List recurring templates",
+        "tags": [
+          "recurring"
+        ]
+      },
+      "post": {
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "account_id": {
+                      "type": "integer"
+                    },
+                    "active": {
+                      "type": "boolean"
+                    },
+                    "amount": {
+                      "type": "string"
+                    },
+                    "category": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "type": "string"
+                    },
+                    "day_of_month": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "end_date": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "frequency": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "last_run_date": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "next_occurrence": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "skipped_dates": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "start_date": {
+                      "type": "string"
+                    },
+                    "transaction_type": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "updated_at": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "summary": "Create a recurring template",
+        "tags": [
+          "recurring"
+        ]
+      }
+    },
+    "/api/recurring/{id}": {
+      "delete": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "summary": "Delete a recurring template",
+        "tags": [
+          "recurring"
+        ]
+      },
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "account_id": {
+                      "type": "integer"
+                    },
+                    "active": {
+                      "type": "boolean"
+                    },
+                    "amount": {
+                      "type": "string"
+                    },
+                    "category": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "type": "string"
+                    },
+                    "day_of_month": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "end_date": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "frequency": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "last_run_date": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "next_occurrence": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "skipped_dates": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "start_date": {
+                      "type": "string"
+                    },
+                    "transaction_type": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "updated_at": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get a recurring template",
+        "tags": [
+          "recurring"
+        ]
+      },
+      "put": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "account_id": {
+                      "type": "integer"
+                    },
+                    "active": {
+                      "type": "boolean"
+                    },
+                    "amount": {
+                      "type": "string"
+                    },
+                    "category": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "type": "string"
+                    },
+                    "day_of_month": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "end_date": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "frequency": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "last_run_date": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "next_occurrence": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "skipped_dates": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "start_date": {
+                      "type": "string"
+                    },
+                    "transaction_type": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "updated_at": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Update a recurring template",
+        "tags": [
+          "recurring"
+        ]
+      }
+    },
+    "/api/recurring/{id}/run-now": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "already_minted": {
+                      "type": "boolean"
+                    },
+                    "date": {
+                      "type": "string"
+                    },
+                    "transaction_id": {
+                      "nullable": true,
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "summary": "Mint an ad-hoc transaction now",
+        "tags": [
+          "recurring"
+        ]
+      }
+    },
+    "/api/recurring/{id}/skip": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "account_id": {
+                      "type": "integer"
+                    },
+                    "active": {
+                      "type": "boolean"
+                    },
+                    "amount": {
+                      "type": "string"
+                    },
+                    "category": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "type": "string"
+                    },
+                    "day_of_month": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "end_date": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "frequency": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "last_run_date": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "next_occurrence": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "skipped_dates": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "start_date": {
+                      "type": "string"
+                    },
+                    "transaction_type": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "updated_at": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Skip an occurrence",
+        "tags": [
+          "recurring"
+        ]
+      }
+    },
+    "/api/recurring/{id}/unskip": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "account_id": {
+                      "type": "integer"
+                    },
+                    "active": {
+                      "type": "boolean"
+                    },
+                    "amount": {
+                      "type": "string"
+                    },
+                    "category": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "type": "string"
+                    },
+                    "day_of_month": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "end_date": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "frequency": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "last_run_date": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "next_occurrence": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "owner_user_id": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "skipped_dates": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "start_date": {
+                      "type": "string"
+                    },
+                    "transaction_type": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "updated_at": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Resume a previously skipped occurrence",
+        "tags": [
+          "recurring"
+        ]
+      }
+    },
     "/api/retirement/limits/{year}": {
       "get": {
         "parameters": [

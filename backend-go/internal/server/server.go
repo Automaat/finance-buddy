@@ -33,6 +33,7 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/fx"
 	"github.com/Automaat/finance-buddy/backend-go/internal/goals"
 	"github.com/Automaat/finance-buddy/backend-go/internal/investment"
+	"github.com/Automaat/finance-buddy/backend-go/internal/recurring"
 	"github.com/Automaat/finance-buddy/backend-go/internal/retirement"
 	"github.com/Automaat/finance-buddy/backend-go/internal/salaries"
 	"github.com/Automaat/finance-buddy/backend-go/internal/simulations"
@@ -133,6 +134,17 @@ func registerLedgerRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger)
 	r.Get("/api/transactions", txHandler.ListAll)
 	r.Get("/api/transactions/counts", txHandler.Counts)
 	r.Get("/api/transactions/types", txHandler.Types)
+
+	recStore := recurring.NewStore(pool)
+	recHandler := recurring.NewHandler(recStore, logger)
+	r.Get("/api/recurring", recHandler.List)
+	r.Post("/api/recurring", recHandler.Create)
+	r.Get("/api/recurring/{id}", recHandler.Get)
+	r.Put("/api/recurring/{id}", recHandler.Update)
+	r.Delete("/api/recurring/{id}", recHandler.Delete)
+	r.Post("/api/recurring/{id}/run-now", recHandler.RunNow)
+	r.Post("/api/recurring/{id}/skip", recHandler.Skip)
+	r.Post("/api/recurring/{id}/unskip", recHandler.Unskip)
 
 	dpStore := debtpayments.NewStore(pool)
 	dpHandler := debtpayments.NewHandler(dpStore, logger)
