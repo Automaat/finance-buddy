@@ -32,6 +32,7 @@ import (
 	equitygrants "github.com/Automaat/finance-buddy/backend-go/internal/equity_grants"
 	"github.com/Automaat/finance-buddy/backend-go/internal/fx"
 	"github.com/Automaat/finance-buddy/backend-go/internal/goals"
+	"github.com/Automaat/finance-buddy/backend-go/internal/holdings"
 	"github.com/Automaat/finance-buddy/backend-go/internal/investment"
 	"github.com/Automaat/finance-buddy/backend-go/internal/recurring"
 	"github.com/Automaat/finance-buddy/backend-go/internal/retirement"
@@ -174,6 +175,18 @@ func registerLedgerRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger)
 	r.Get("/api/investment/stock-stats", invHandler.StockStats)
 	r.Get("/api/investment/bond-stats", invHandler.BondStats)
 	r.Get("/api/investment/returns", invHandler.Returns)
+
+	hStore := holdings.NewStore(pool)
+	hHandler := holdings.NewHandler(hStore, logger)
+	r.Get("/api/holdings", hHandler.Holdings)
+	r.Get("/api/holdings/securities", hHandler.ListSecurities)
+	r.Post("/api/holdings/securities", hHandler.CreateSecurity)
+	r.Delete("/api/holdings/securities/{id}", hHandler.DeleteSecurity)
+	r.Get("/api/holdings/securities/{id}/quotes", hHandler.ListQuotes)
+	r.Post("/api/holdings/securities/{id}/quotes", hHandler.UpsertQuote)
+	r.Get("/api/holdings/lots", hHandler.ListLots)
+	r.Post("/api/holdings/lots", hHandler.CreateLot)
+	r.Delete("/api/holdings/lots/{id}", hHandler.DeleteLot)
 
 	simHandler := simulations.NewHandler(simulations.NewStore(pool), logger)
 	r.Post("/api/simulations/mortgage-vs-invest", simHandler.MortgageVsInvest)

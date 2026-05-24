@@ -64,6 +64,56 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 	if err := createRecurringTransactionsTable(ctx, pool); err != nil {
 		return err
 	}
+	if err := createHoldingsTables(ctx, pool); err != nil {
+		return err
+	}
+	return nil
+}
+
+// createHoldingsTables creates the securities / lots / price_quotes tables
+// (issue #400) on existing databases. Fresh installs get them from schema.sql.
+// All statements are idempotent.
+func createHoldingsTables(ctx context.Context, pool *pgxpool.Pool) error {
+	stmts := []string{
+		`CREATE TABLE IF NOT EXISTS securities (
+			id serial PRIMARY KEY,
+			symbol varchar(32) NOT NULL,
+			isin varchar(12),
+			name varchar(200) NOT NULL,
+			asset_type varchar(16) NOT NULL,
+			currency varchar(3) NOT NULL DEFAULT 'PLN',
+			created_at timestamp without time zone NOT NULL DEFAULT (now() at time zone 'utc')
+		)`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS uq_securities_symbol ON securities (symbol)`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS uq_securities_isin ON securities (isin) WHERE isin IS NOT NULL`,
+		`CREATE TABLE IF NOT EXISTS lots (
+			id serial PRIMARY KEY,
+			account_id integer NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+			security_id integer NOT NULL REFERENCES securities(id) ON DELETE RESTRICT,
+			side varchar(8) NOT NULL,
+			quantity numeric(20,8) NOT NULL,
+			price numeric(20,6) NOT NULL,
+			fee numeric(15,2) NOT NULL DEFAULT 0,
+			date ` + "DATE" + ` NOT NULL,
+			created_at timestamp without time zone NOT NULL DEFAULT (now() at time zone 'utc')
+		)`,
+		`CREATE INDEX IF NOT EXISTS ix_lots_security_date ON lots (security_id, date)`,
+		`CREATE INDEX IF NOT EXISTS ix_lots_account ON lots (account_id)`,
+		`CREATE TABLE IF NOT EXISTS price_quotes (
+			id serial PRIMARY KEY,
+			security_id integer NOT NULL REFERENCES securities(id) ON DELETE CASCADE,
+			date ` + "DATE" + ` NOT NULL,
+			price numeric(20,6) NOT NULL,
+			source varchar(40) NOT NULL DEFAULT 'manual',
+			created_at timestamp without time zone NOT NULL DEFAULT (now() at time zone 'utc')
+		)`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS uq_price_quotes_security_date ON price_quotes (security_id, date)`,
+	}
+	for _, stmt := range stmts {
+		if _, err := pool.Exec(ctx, stmt); err != nil {
+			return fmt.Errorf("create holdings tables: %w", err)
+		}
+	}
 	return nil
 }
 

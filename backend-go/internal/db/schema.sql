@@ -648,6 +648,82 @@ CREATE TABLE public.transactions (
 -- Name: recurring_transactions; Type: TABLE; Schema: public; Owner: -
 --
 
+CREATE TABLE public.securities (
+    id integer NOT NULL,
+    symbol character varying(32) NOT NULL,
+    isin character varying(12),
+    name character varying(200) NOT NULL,
+    asset_type character varying(16) NOT NULL,
+    currency character varying(3) NOT NULL DEFAULT 'PLN',
+    created_at timestamp without time zone NOT NULL DEFAULT (now() at time zone 'utc')
+);
+
+CREATE SEQUENCE public.securities_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+ALTER SEQUENCE public.securities_id_seq OWNED BY public.securities.id;
+
+
+--
+-- Name: lots; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.lots (
+    id integer NOT NULL,
+    account_id integer NOT NULL,
+    security_id integer NOT NULL,
+    side character varying(8) NOT NULL,
+    quantity numeric(20,8) NOT NULL,
+    price numeric(20,6) NOT NULL,
+    fee numeric(15,2) NOT NULL DEFAULT 0,
+    date date NOT NULL,
+    created_at timestamp without time zone NOT NULL DEFAULT (now() at time zone 'utc')
+);
+
+CREATE SEQUENCE public.lots_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+ALTER SEQUENCE public.lots_id_seq OWNED BY public.lots.id;
+
+
+--
+-- Name: price_quotes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.price_quotes (
+    id integer NOT NULL,
+    security_id integer NOT NULL,
+    date date NOT NULL,
+    price numeric(20,6) NOT NULL,
+    source character varying(40) NOT NULL DEFAULT 'manual',
+    created_at timestamp without time zone NOT NULL DEFAULT (now() at time zone 'utc')
+);
+
+CREATE SEQUENCE public.price_quotes_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+ALTER SEQUENCE public.price_quotes_id_seq OWNED BY public.price_quotes.id;
+
+
+--
+-- Name: recurring_transactions; Type: TABLE; Schema: public; Owner: -
+--
+
 CREATE TABLE public.recurring_transactions (
     id integer NOT NULL,
     account_id integer NOT NULL,
@@ -828,6 +904,10 @@ ALTER TABLE ONLY public.transactions ALTER COLUMN id SET DEFAULT nextval('public
 
 ALTER TABLE ONLY public.recurring_transactions ALTER COLUMN id SET DEFAULT nextval('public.recurring_transactions_id_seq'::regclass);
 
+ALTER TABLE ONLY public.securities ALTER COLUMN id SET DEFAULT nextval('public.securities_id_seq'::regclass);
+ALTER TABLE ONLY public.lots ALTER COLUMN id SET DEFAULT nextval('public.lots_id_seq'::regclass);
+ALTER TABLE ONLY public.price_quotes ALTER COLUMN id SET DEFAULT nextval('public.price_quotes_id_seq'::regclass);
+
 
 --
 -- Name: accounts accounts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -997,6 +1077,38 @@ CREATE INDEX ix_recurring_transactions_active_account ON public.recurring_transa
 
 
 --
+-- Name: securities securities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.securities
+    ADD CONSTRAINT securities_pkey PRIMARY KEY (id);
+
+CREATE UNIQUE INDEX uq_securities_symbol ON public.securities USING btree (symbol);
+CREATE UNIQUE INDEX uq_securities_isin ON public.securities USING btree (isin) WHERE isin IS NOT NULL;
+
+
+--
+-- Name: lots lots_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.lots
+    ADD CONSTRAINT lots_pkey PRIMARY KEY (id);
+
+CREATE INDEX ix_lots_security_date ON public.lots USING btree (security_id, date);
+CREATE INDEX ix_lots_account ON public.lots USING btree (account_id);
+
+
+--
+-- Name: price_quotes price_quotes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.price_quotes
+    ADD CONSTRAINT price_quotes_pkey PRIMARY KEY (id);
+
+CREATE UNIQUE INDEX uq_price_quotes_security_date ON public.price_quotes USING btree (security_id, date);
+
+
+--
 -- Name: snapshot_values uix_snapshot_account; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1149,6 +1261,13 @@ ALTER TABLE ONLY public.transactions
 
 ALTER TABLE ONLY public.recurring_transactions
     ADD CONSTRAINT recurring_transactions_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.users(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.lots
+    ADD CONSTRAINT lots_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.accounts(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.lots
+    ADD CONSTRAINT lots_security_id_fkey FOREIGN KEY (security_id) REFERENCES public.securities(id) ON DELETE RESTRICT;
+ALTER TABLE ONLY public.price_quotes
+    ADD CONSTRAINT price_quotes_security_id_fkey FOREIGN KEY (security_id) REFERENCES public.securities(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.salary_records
     ADD CONSTRAINT salary_records_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.users(id) ON DELETE RESTRICT;
