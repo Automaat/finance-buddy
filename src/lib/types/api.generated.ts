@@ -3808,6 +3808,65 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/simulations/wibor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** WIBOR rate-shock scenarios */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            inputs?: {
+                                /** Format: double */
+                                base_annual_rate?: number;
+                                /** Format: double */
+                                base_payment?: number;
+                                remaining_months?: number;
+                                /** Format: double */
+                                remaining_principal?: number;
+                            };
+                            scenarios?: {
+                                /** Format: double */
+                                annual_rate?: number;
+                                /** Format: double */
+                                delta_pp?: number;
+                                /** Format: double */
+                                monthly_payment?: number;
+                                rate_floored?: boolean;
+                                term_months?: number;
+                                /** Format: double */
+                                total_interest?: number;
+                                yearly_balances?: number[];
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/snapshots": {
         parameters: {
             query?: never;
