@@ -22,6 +22,64 @@ func TestAllReturnsDefensiveCopy(t *testing.T) {
 	}
 }
 
+// TestPolish2026Values pins the 2026 numeric values against this test as
+// the canonical assertion — issue #545 calls these out specifically. A
+// silent change to the table (typo, decimal drift) trips this immediately
+// before propagating into simulations, dashboard, or settings.
+func TestPolish2026Values(t *testing.T) {
+	t.Parallel()
+	cases := map[string]string{
+		"ike_limit_2026":                "28260",
+		"ikze_limit_2026":               "11304",
+		"ikze_limit_b2b_2026":           "16956",
+		"ppk_below_threshold_2026":      "5767",
+		"minimum_wage_2026":             "4806",
+		"pit_threshold_first_2026":      "120000",
+		"pit_rate_first_2026":           "0.12",
+		"pit_rate_second_2026":          "0.32",
+		"capital_gains_tax_2026":        "0.19",
+		"pit_free_amount_2026":          "30000",
+		"pit_solidarity_threshold_2026": "1000000",
+		"pit_solidarity_rate_2026":      "0.04",
+		"zus_cap_30x_2026":              "282600",
+		"b2b_liniowy_rate_2026":         "0.19",
+		"ryczalt_it_rate_2026":          "0.12",
+	}
+	for key, want := range cases {
+		r, ok := Get(key)
+		if !ok {
+			t.Errorf("missing rule %q", key)
+			continue
+		}
+		if r.Value.String() != want {
+			t.Errorf("%s value = %q, want %q", key, r.Value.String(), want)
+		}
+		if r.Year != 2026 {
+			t.Errorf("%s year = %d, want 2026", key, r.Year)
+		}
+	}
+}
+
+func TestMustFloat64Resolves(t *testing.T) {
+	t.Parallel()
+	if got := MustFloat64("ike_limit_2026"); got != 28260 {
+		t.Errorf("MustFloat64(ike_limit_2026) = %v, want 28260", got)
+	}
+	if got := MustFloat64("pit_rate_first_2026"); got != 0.12 {
+		t.Errorf("MustFloat64(pit_rate_first_2026) = %v, want 0.12", got)
+	}
+}
+
+func TestMustFloat64PanicsOnUnknown(t *testing.T) {
+	t.Parallel()
+	defer func() {
+		if recover() == nil {
+			t.Error("expected panic on unknown key")
+		}
+	}()
+	MustFloat64("does_not_exist")
+}
+
 func TestRuleKeysAreUnique(t *testing.T) {
 	t.Parallel()
 	seen := make(map[string]struct{}, len(Polish2026))

@@ -50,6 +50,12 @@ api/openapi-go.json
 # Generated frontend API types — openapi-typescript owns the format
 src/lib/types/api.generated.ts
 
+# Generated typed PL constants — emitted by backend-go/cmd/gen-rules.
+# Prettier's line-wrap rules don't round-trip cleanly with the Go template
+# (long Polish descriptions hit printWidth), so the generator owns the
+# format and the CI drift check enforces it.
+src/lib/utils/pl_rules.generated.ts
+
 # Black-box test golden snapshots — Python's json.dump owns the format
 backend-bb-tests/golden
 

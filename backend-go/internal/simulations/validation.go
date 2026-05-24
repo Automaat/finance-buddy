@@ -1,11 +1,23 @@
 package simulations
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+	"strconv"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/rules"
+)
 
 type validationError struct {
 	Field string
 	Msg   string
 }
+
+// ppkBelowThresholdSalary is the wage cap (1.2× minimum wage) below which a
+// PPK participant may lower their employee contribution from 2% to 0.5%.
+// Centralized via the rules package (#545) so the validator + frontend +
+// error message all read the same number.
+var ppkBelowThresholdSalary = rules.MustFloat64("ppk_below_threshold_2026")
 
 // --- mortgage ---
 
@@ -369,10 +381,13 @@ func parsePPK(raw json.RawMessage) ([]ppkInput, *validationError) {
 		if a.MonthlyGrossSalary < 0 {
 			return nil, &validationError{Field: "monthly_gross_salary", Msg: "Monthly gross salary cannot be negative"}
 		}
-		if a.SalaryBelowThreshold && a.MonthlyGrossSalary > 5767.0 {
+		if a.SalaryBelowThreshold && a.MonthlyGrossSalary > ppkBelowThresholdSalary {
 			return nil, &validationError{
 				Field: "salary_below_threshold",
-				Msg:   "salary_below_threshold cannot be True when monthly_gross_salary exceeds 5767 PLN.",
+				Msg: fmt.Sprintf(
+					"salary_below_threshold cannot be True when monthly_gross_salary exceeds %s PLN.",
+					strconv.FormatFloat(ppkBelowThresholdSalary, 'f', -1, 64),
+				),
 			}
 		}
 		out = append(out, a)

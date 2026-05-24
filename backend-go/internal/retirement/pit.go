@@ -1,14 +1,18 @@
 package retirement
 
-// Polish PIT brackets (2024+ — kwota wolna 30k, próg 120k, plus solidarity
-// surcharge on annual income above PLN 1M). Mirrors src/lib/utils/pl_tax.ts.
-const (
-	pitFreeAmount       = 30_000.0
-	pitThresholdAnnual  = 120_000.0
-	pitLowRate          = 0.12
-	pitHighRate         = 0.32
-	solidarityThreshold = 1_000_000.0
-	solidarityRate      = 0.04
+import "github.com/Automaat/finance-buddy/backend-go/internal/rules"
+
+// Polish PIT brackets (kwota wolna 30k, próg 120k, plus solidarity
+// surcharge on annual income above PLN 1M). All values sourced from the
+// centralized rules table (#545) — the wrapping vars exist so callers
+// keep using local Go identifiers.
+var (
+	pitFreeAmount       = rules.MustFloat64("pit_free_amount_2026")
+	pitThresholdAnnual  = rules.MustFloat64("pit_threshold_first_2026")
+	pitLowRate          = rules.MustFloat64("pit_rate_first_2026")
+	pitHighRate         = rules.MustFloat64("pit_rate_second_2026")
+	solidarityThreshold = rules.MustFloat64("pit_solidarity_threshold_2026")
+	solidarityRate      = rules.MustFloat64("pit_solidarity_rate_2026")
 )
 
 // MarginalPITRate returns the applicable marginal rate for the next zloty

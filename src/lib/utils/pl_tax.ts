@@ -37,22 +37,30 @@ export interface TaxConstants {
 	ryczaltHighThresholdAnnual: number;
 }
 
+import { PL_RULES } from './pl_rules.generated';
+
+// Tax + ZUS constants. PIT rates, capital-gains, ZUS cap, kwota wolna are
+// sourced from the generated rules table (#545) so the same numbers drive
+// settings/dashboard/simulations and the salary calculator. ZUS-specific
+// contribution rates (emerytalne, rentowe, chorobowe, zdrowotna) and the
+// ryczałt health bands stay local — they're not yet in the rules table
+// because they aren't read by other features.
 const CONSTANTS_2024: TaxConstants = {
 	year: 2024,
 	zusEmerytalne: 0.0976,
 	zusRentowe: 0.015,
 	zusChorobowe: 0.0245,
-	zusCapAnnual: 282_600,
+	zusCapAnnual: PL_RULES['zus_cap_30x_2026'].value,
 	healthRate: 0.09,
-	pitLowRate: 0.12,
-	pitHighRate: 0.32,
-	pitThresholdAnnual: 120_000,
-	freeAmountAnnual: 30_000,
+	pitLowRate: PL_RULES['pit_rate_first_2026'].value,
+	pitHighRate: PL_RULES['pit_rate_second_2026'].value,
+	pitThresholdAnnual: PL_RULES['pit_threshold_first_2026'].value,
+	freeAmountAnnual: PL_RULES['pit_free_amount_2026'].value,
 	kupMonthly: 250,
-	b2bLiniowyRate: 0.19,
+	b2bLiniowyRate: PL_RULES['b2b_liniowy_rate_2026'].value,
 	b2bLiniowyHealthRate: 0.049,
 	b2bLiniowyHealthDeductionCapAnnual: 11_600,
-	ryczaltItRate: 0.12,
+	ryczaltItRate: PL_RULES['ryczalt_it_rate_2026'].value,
 	ryczaltHealthLowMonthly: 419.46,
 	ryczaltHealthMidMonthly: 699.11,
 	ryczaltHealthHighMonthly: 1258.39,

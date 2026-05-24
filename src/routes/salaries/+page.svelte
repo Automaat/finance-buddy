@@ -10,6 +10,7 @@
 	import { formatPLN } from '$lib/utils/format';
 	import { buildCpiLookup, inflationAdjust, parseIsoDate } from '$lib/utils/inflation';
 	import { grossToNet, type PlContractType } from '$lib/utils/pl_tax';
+	import { PL_RULES } from '$lib/utils/pl_rules.generated';
 	import {
 		Plus,
 		Banknote,
@@ -179,7 +180,8 @@
 	// Capital gains rate for equity sold under art. 24 ust. 11 PIT — the default
 	// tax treatment for foreign-parent ESOPs. Applied to paper value for the
 	// "net" estimate only; real net depends on actual sale and tax_treatment.
-	const EQUITY_CAPITAL_GAINS_RATE = 0.19;
+	// Sourced from the centralized rules table (#545).
+	const EQUITY_CAPITAL_GAINS_RATE = PL_RULES['capital_gains_tax_2026'].value;
 
 	function pad2(n: number): string {
 		return n.toString().padStart(2, '0');

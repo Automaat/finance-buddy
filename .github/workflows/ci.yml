@@ -135,6 +135,17 @@ jobs:
           fi
         working-directory: backend-go
 
+      - name: PL rules TS drift check
+        run: |
+          go run ./cmd/gen-rules
+          if ! git diff --exit-code ../src/lib/utils/pl_rules.generated.ts; then
+            echo "::error::src/lib/utils/pl_rules.generated.ts is stale." \
+                 "Regenerate with: (cd backend-go && go run ./cmd/gen-rules)" \
+                 "and commit the result."
+            exit 1
+          fi
+        working-directory: backend-go
+
   lint-go:
     runs-on: ubuntu-24.04
     steps:

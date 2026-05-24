@@ -9,12 +9,16 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/rules"
 )
 
 // Default 2026 contribution limits — used when retirement_limits has no row.
-const (
-	defaultIKELimit  = 28260.0
-	defaultIKZELimit = 11304.0
+// Sourced from the centralized rules table (#545) so the literal lives in
+// one place and carries citation metadata for the UI.
+var (
+	defaultIKELimit  = rules.MustFloat64("ike_limit_2026")
+	defaultIKZELimit = rules.MustFloat64("ikze_limit_2026")
 )
 
 // Store handles the DB reads for prefill + the retirement-limit lookup.
