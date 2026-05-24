@@ -41,6 +41,9 @@ type fireMetrics struct {
 	LeanFIProgress       *float64
 	FatFIRENumber        *float64
 	FatFIProgress        *float64
+	MonthlySavings       *float64
+	FIYearsRemaining     *float64
+	FIProjectedDate      *string
 }
 
 // bridgeTargetAge is the age the bridge-to-60 metric projects to — IKE
@@ -128,7 +131,67 @@ func computeFIRE(latestRows []mergedRow, cfg AppConfig, netWorth float64) fireMe
 	addCoastFIRE(&out, cfg, netWorth, now)
 	addBaristaFIRE(&out, cfg, netWorth)
 	addBridgeToAccessAge(&out, latestRows, cfg, netWorth, now)
+	addFIProjection(&out, cfg, netWorth, now)
 	return out
+}
+
+// addFIProjection fills FIYearsRemaining + FIProjectedDate from net worth,
+// FIRE number, monthly savings, and expected real return. Closed form of
+// the annuity-future-value equation:
+//
+//	NW × (1+r)^t + S × ((1+r)^t − 1) ÷ r = FIRE
+//	→ t = ln((FIRE × r + S) ÷ (NW × r + S)) ÷ ln(1 + r)
+//
+// Edge cases (return early without setting the projection fields → empty
+// state on the frontend):
+//   - monthly_savings is null OR ≤ 0 → "configure savings" empty state
+//   - FIRE number missing → base inputs incomplete; nothing to project
+//   - net worth ≥ FIRE → already at FI: years = 0, date = today
+//   - r ≤ 0 → degrades to linear (FIRE − NW) ÷ S years
+//   - r > 0 with negative net worth large enough that NW×r + S ≤ 0 → leave nil
+func addFIProjection(out *fireMetrics, cfg AppConfig, netWorth float64, now time.Time) {
+	if cfg.MonthlySavings == nil {
+		return
+	}
+	monthly, _ := cfg.MonthlySavings.Float64()
+	if monthly <= 0 {
+		return
+	}
+	out.MonthlySavings = &monthly
+	if out.FIRENumber == nil {
+		return
+	}
+	fire := *out.FIRENumber
+	if fire <= 0 {
+		return
+	}
+
+	annualSavings := monthly * 12
+	years := 0.0
+	if netWorth >= fire {
+		years = 0
+	} else {
+		r := 0.0
+		if out.ExpectedReturnRate != nil {
+			r = *out.ExpectedReturnRate
+		}
+		if r <= 0 {
+			years = (fire - netWorth) / annualSavings
+		} else {
+			num := fire*r + annualSavings
+			den := netWorth*r + annualSavings
+			if den <= 0 || num <= 0 {
+				return
+			}
+			years = math.Log(num/den) / math.Log(1+r)
+		}
+	}
+	if math.IsNaN(years) || math.IsInf(years, 0) || years < 0 {
+		return
+	}
+	out.FIYearsRemaining = &years
+	date := now.AddDate(0, int(math.Round(years*12)), 0).Format("2006-01")
+	out.FIProjectedDate = &date
 }
 
 // addFIREBands fills the Lean / Fat FIRE bands when configured. Math is the

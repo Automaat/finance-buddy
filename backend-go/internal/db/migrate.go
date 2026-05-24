@@ -70,6 +70,9 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 	if err := addAppConfigFIREBands(ctx, pool); err != nil {
 		return err
 	}
+	if err := addAppConfigMonthlySavings(ctx, pool); err != nil {
+		return err
+	}
 	if err := createRecurringTransactionsTable(ctx, pool); err != nil {
 		return err
 	}
@@ -104,6 +107,18 @@ func createSimulationScenariosTable(ctx context.Context, pool *pgxpool.Pool) err
 		if _, err := pool.Exec(ctx, stmt); err != nil {
 			return fmt.Errorf("create simulation_scenarios: %w", err)
 		}
+	}
+	return nil
+}
+
+// addAppConfigMonthlySavings adds the monthly_savings input feeding the
+// projected-FI-date metric (issue #551). Nullable — when unset, the FI
+// projection tile shows an empty state asking the user to configure it.
+func addAppConfigMonthlySavings(ctx context.Context, pool *pgxpool.Pool) error {
+	if _, err := pool.Exec(ctx, `
+		ALTER TABLE app_config
+		ADD COLUMN IF NOT EXISTS monthly_savings numeric(15,2)`); err != nil {
+		return fmt.Errorf("add monthly_savings to app_config: %w", err)
 	}
 	return nil
 }

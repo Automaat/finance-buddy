@@ -101,6 +101,7 @@ CREATE TABLE public.app_config (
     barista_monthly_income numeric(15,2),
     lean_monthly_expenses numeric(15,2),
     fat_monthly_expenses numeric(15,2),
+    monthly_savings numeric(15,2),
     CONSTRAINT single_row CHECK ((id = 1))
 );
 

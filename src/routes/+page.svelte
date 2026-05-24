@@ -241,6 +241,9 @@
 			{@const leanProgress = fire.lean_fi_progress}
 			{@const fatFire = fire.fat_fire_number}
 			{@const fatProgress = fire.fat_fi_progress}
+			{@const fiYears = fire.fi_years_remaining}
+			{@const fiDate = fire.fi_projected_date}
+			{@const monthlySavings = fire.monthly_savings}
 			{@const bridgeYears = fire.bridge_years}
 			{@const bridgeNeeded = fire.bridge_capital_needed}
 			{@const bridgeLiquid = fire.bridge_liquid_capital}
@@ -351,6 +354,38 @@
 									</div>
 								</div>
 							{/if}
+						</div>
+					</div>
+				{/if}
+				{#if fiYears != null && fiDate != null && monthlySavings != null}
+					{@const [year, month] = fiDate.split('-')}
+					<div class="pt-3 border-t border-surface-200-800 grid grid-cols-1 sm:grid-cols-2 gap-3">
+						<div class="space-y-1">
+							<div
+								class="text-xs text-surface-700-300"
+								title="t = ln((FIRE×r + S) ÷ (NW×r + S)) ÷ ln(1+r)&#10;NW = wartość netto · S = roczne oszczędności · r = expected_return_rate · FIRE = roczne wydatki ÷ withdrawal_rate"
+							>
+								Prognozowana data FI
+							</div>
+							<div class="text-2xl font-bold">{month}/{year}</div>
+							<div class="text-xs text-surface-700-300">
+								~{fiYears.toFixed(1)} lat · oszczędności {formatPLN(monthlySavings)}/mies.
+							</div>
+						</div>
+						<div class="space-y-1">
+							<div class="text-xs text-surface-700-300">Lata do FI</div>
+							<div class="text-2xl font-bold">{fiYears.toFixed(1)}</div>
+							<div class="text-xs text-surface-700-300">
+								przy {coastReturnPct}%/rok zwrotu i bieżących wpłatach
+							</div>
+						</div>
+					</div>
+				{:else if monthlySavings == null && hasBase}
+					<div class="pt-3 border-t border-surface-200-800 text-sm text-surface-700-300">
+						<div class="font-semibold mb-1">Prognozowana data FI</div>
+						<div class="italic">
+							Wprowadź miesięczne oszczędności w
+							<a href="/settings/config" class="underline">konfiguracji</a>, aby zobaczyć datę FI.
 						</div>
 					</div>
 				{/if}

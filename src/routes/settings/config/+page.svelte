@@ -74,6 +74,11 @@
 	let fatMonthlyExpenses = $state<number | null>(
 		config?.fat_monthly_expenses != null ? Number(config.fat_monthly_expenses) : null
 	);
+	// Monthly savings: drives the projected-FI-date metric. Null = empty
+	// state ("set monthly savings to see FI date"); backend hides the tile.
+	let monthlySavings = $state<number | null>(
+		config?.monthly_savings != null ? Number(config.monthly_savings) : null
+	);
 
 	let error = $state('');
 	let saving = $state(false);
@@ -143,7 +148,8 @@
 					expected_return_rate: expectedReturnRate,
 					barista_monthly_income: baristaMonthlyIncome,
 					lean_monthly_expenses: leanMonthlyExpenses,
-					fat_monthly_expenses: fatMonthlyExpenses
+					fat_monthly_expenses: fatMonthlyExpenses,
+					monthly_savings: monthlySavings
 				})
 			});
 
@@ -504,6 +510,38 @@
 				}}
 				class="input"
 			/>
+		</label>
+	</div>
+
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header>
+			<h3 class="h3 flex items-center gap-2"><Flame size={20} /> Projekcja daty FI</h3>
+		</header>
+
+		<label class="label">
+			<span class="font-semibold text-sm">Miesięczne oszczędności (PLN)</span>
+			<input
+				id="monthly-savings"
+				type="number"
+				min="0"
+				step="100"
+				placeholder="np. 4000 (puste = ukryj kartę)"
+				value={monthlySavings ?? ''}
+				oninput={(e) => {
+					const v = (e.target as HTMLInputElement).value;
+					if (v === '') {
+						monthlySavings = null;
+						return;
+					}
+					const n = Number(v);
+					monthlySavings = Number.isNaN(n) ? null : n;
+				}}
+				class="input"
+			/>
+			<span class="text-xs italic text-surface-700-300">
+				Kwota odkładana co miesiąc. Razem z wartością netto, FIRE i oczekiwaną stopą zwrotu wyznacza
+				prognozowaną datę FI.
+			</span>
 		</label>
 	</div>
 

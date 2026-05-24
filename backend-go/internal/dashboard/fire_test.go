@@ -345,6 +345,107 @@ func TestAddFIREBandsZeroMonthlyStaysNil(t *testing.T) {
 	}
 }
 
+func TestAddFIProjectionHappyPath(t *testing.T) {
+	t.Parallel()
+	// monthly=5000 → annual=60000 → fire=60000/0.04=1.5M.
+	// Savings 4000/mo = 48k/yr. r=0.07. NW=200k.
+	// t = ln((1.5M×0.07 + 48k) / (200k×0.07 + 48k)) / ln(1.07)
+	//   = ln(153000 / 62000) / ln(1.07) ≈ ln(2.4677) / 0.0677 ≈ 13.36 years
+	savings := decimal.NewFromInt(4000)
+	cfg := AppConfig{
+		MonthlyExpenses:    decimal.NewFromInt(5000),
+		WithdrawalRate:     decimal.RequireFromString("0.04"),
+		ExpectedReturnRate: decimal.RequireFromString("0.07"),
+		MonthlySavings:     &savings,
+	}
+	got := computeFIRE(nil, cfg, 200_000)
+	if got.FIYearsRemaining == nil {
+		t.Fatal("expected fi_years_remaining set")
+	}
+	want := math.Log((1_500_000.0*0.07+48_000)/(200_000.0*0.07+48_000)) / math.Log(1.07)
+	if !approxEqual(*got.FIYearsRemaining, want, 0.01) {
+		t.Errorf("fi_years_remaining = %v, want ≈%v", *got.FIYearsRemaining, want)
+	}
+	if got.FIProjectedDate == nil {
+		t.Error("expected fi_projected_date set")
+	}
+	if got.MonthlySavings == nil || *got.MonthlySavings != 4000 {
+		t.Errorf("monthly_savings = %v, want 4000", got.MonthlySavings)
+	}
+}
+
+func TestAddFIProjectionZeroReturnLinear(t *testing.T) {
+	t.Parallel()
+	// r=0 → t = (fire − NW) / annualSavings = (1.5M − 0) / 60k = 25 years.
+	savings := decimal.NewFromInt(5000)
+	cfg := AppConfig{
+		MonthlyExpenses:    decimal.NewFromInt(5000),
+		WithdrawalRate:     decimal.RequireFromString("0.04"),
+		ExpectedReturnRate: decimal.Zero,
+		MonthlySavings:     &savings,
+	}
+	got := computeFIRE(nil, cfg, 0)
+	if got.FIYearsRemaining == nil || !approxEqual(*got.FIYearsRemaining, 25.0, 0.001) {
+		t.Fatalf("fi_years_remaining = %v, want 25", got.FIYearsRemaining)
+	}
+}
+
+func TestAddFIProjectionAlreadyAtFI(t *testing.T) {
+	t.Parallel()
+	savings := decimal.NewFromInt(1000)
+	cfg := AppConfig{
+		MonthlyExpenses:    decimal.NewFromInt(5000),
+		WithdrawalRate:     decimal.RequireFromString("0.04"),
+		ExpectedReturnRate: decimal.RequireFromString("0.07"),
+		MonthlySavings:     &savings,
+	}
+	got := computeFIRE(nil, cfg, 2_000_000)
+	if got.FIYearsRemaining == nil || *got.FIYearsRemaining != 0 {
+		t.Errorf("fi_years_remaining = %v, want 0 (already past FI)", got.FIYearsRemaining)
+	}
+}
+
+func TestAddFIProjectionNoSavingsStaysNil(t *testing.T) {
+	t.Parallel()
+	cfg := AppConfig{
+		MonthlyExpenses: decimal.NewFromInt(5000),
+		WithdrawalRate:  decimal.RequireFromString("0.04"),
+		// MonthlySavings unset → empty state.
+	}
+	got := computeFIRE(nil, cfg, 200_000)
+	if got.FIYearsRemaining != nil || got.FIProjectedDate != nil || got.MonthlySavings != nil {
+		t.Errorf("expected nil FI projection without monthly_savings, got %+v", got)
+	}
+}
+
+func TestAddFIProjectionZeroSavingsStaysNil(t *testing.T) {
+	t.Parallel()
+	zero := decimal.Zero
+	cfg := AppConfig{
+		MonthlyExpenses: decimal.NewFromInt(5000),
+		WithdrawalRate:  decimal.RequireFromString("0.04"),
+		MonthlySavings:  &zero,
+	}
+	got := computeFIRE(nil, cfg, 200_000)
+	if got.FIYearsRemaining != nil {
+		t.Errorf("expected nil fi_years_remaining for zero savings, got %v", *got.FIYearsRemaining)
+	}
+}
+
+func TestAddFIProjectionNoFIRENumberStaysNil(t *testing.T) {
+	t.Parallel()
+	savings := decimal.NewFromInt(4000)
+	cfg := AppConfig{
+		MonthlyExpenses: decimal.Zero, // → no FIRE number
+		WithdrawalRate:  decimal.RequireFromString("0.04"),
+		MonthlySavings:  &savings,
+	}
+	got := computeFIRE(nil, cfg, 200_000)
+	if got.FIYearsRemaining != nil {
+		t.Errorf("expected nil fi_years_remaining without FIRE number, got %v", *got.FIYearsRemaining)
+	}
+}
+
 func TestLockedWrapperValueOfFiltersCorrectly(t *testing.T) {
 	t.Parallel()
 	rows := []mergedRow{

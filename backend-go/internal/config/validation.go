@@ -128,6 +128,7 @@ func requireNonNegative(r *request) *validationError {
 		{"barista_monthly_income", r.BaristaMonthlyIncome},
 		{"lean_monthly_expenses", r.LeanMonthlyExpenses},
 		{"fat_monthly_expenses", r.FatMonthlyExpenses},
+		{"monthly_savings", r.MonthlySavings},
 	}
 	for _, c := range checks {
 		if c.val != nil && c.val.LessThan(decimal.Zero) {
