@@ -76,6 +76,13 @@ func computeFIRE(latestRows []mergedRow, cfg AppConfig, netWorth float64) fireMe
 
 	monthlyExpenses, _ := cfg.MonthlyExpenses.Float64()
 	withdrawalRate, _ := cfg.WithdrawalRate.Float64()
+
+	// FIRE bands stand on their own — a user can configure just Lean and/or
+	// Fat without setting Base monthly_expenses. Run the band computation up
+	// front so the early-return below (which fires when base monthly is 0)
+	// doesn't drop them.
+	addFIREBands(&out, cfg, netWorth, withdrawalRate)
+
 	if monthlyExpenses <= 0 {
 		return out
 	}
@@ -121,7 +128,6 @@ func computeFIRE(latestRows []mergedRow, cfg AppConfig, netWorth float64) fireMe
 	addCoastFIRE(&out, cfg, netWorth, now)
 	addBaristaFIRE(&out, cfg, netWorth)
 	addBridgeToAccessAge(&out, latestRows, cfg, netWorth, now)
-	addFIREBands(&out, cfg, netWorth, withdrawalRate)
 	return out
 }
 

@@ -306,6 +306,31 @@ func TestAddFIREBandsZeroWithdrawalRateStaysNil(t *testing.T) {
 	}
 }
 
+func TestAddFIREBandsComputeWithoutBaseMonthlyExpenses(t *testing.T) {
+	t.Parallel()
+	// Base monthly_expenses is 0 (early-return path for the Base FIRE block),
+	// but Lean / Fat bands should still compute on their own.
+	lean := decimal.NewFromInt(3000)
+	fat := decimal.NewFromInt(8000)
+	cfg := AppConfig{
+		MonthlyExpenses:     decimal.Zero,
+		WithdrawalRate:      decimal.RequireFromString("0.04"),
+		LeanMonthlyExpenses: &lean,
+		FatMonthlyExpenses:  &fat,
+	}
+	got := computeFIRE(nil, cfg, 500_000)
+	if got.LeanFIRENumber == nil || *got.LeanFIRENumber != 900_000 {
+		t.Fatalf("lean_fire_number = %v, want 900000 even when base monthly == 0", got.LeanFIRENumber)
+	}
+	if got.FatFIRENumber == nil || *got.FatFIRENumber != 2_400_000 {
+		t.Fatalf("fat_fire_number = %v, want 2.4M even when base monthly == 0", got.FatFIRENumber)
+	}
+	// Base FIRE block stays nil because monthly_expenses == 0.
+	if got.AnnualExpenses != nil || got.FIRENumber != nil {
+		t.Errorf("expected Base FIRE block nil with zero monthly_expenses, got %+v", got)
+	}
+}
+
 func TestAddFIREBandsZeroMonthlyStaysNil(t *testing.T) {
 	t.Parallel()
 	lean := decimal.Zero
