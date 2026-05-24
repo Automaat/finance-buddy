@@ -28,12 +28,22 @@ describe('GlobalErrorCapture', () => {
 		render(GlobalErrorCapture);
 		const promise = Promise.reject(new Error('rejected'));
 		promise.catch(() => {}); // suppress vitest unhandled-rejection warning
-		window.dispatchEvent(
-			new PromiseRejectionEvent('unhandledrejection', {
+		// PromiseRejectionEvent may not be implemented in every jsdom build —
+		// fall back to a plain Event with the same shape.
+		type RejectionLike = Event & { promise: Promise<unknown>; reason: unknown };
+		let event: RejectionLike;
+		if (typeof PromiseRejectionEvent === 'function') {
+			event = new PromiseRejectionEvent('unhandledrejection', {
 				promise,
 				reason: new Error('rejected')
-			})
-		);
+			}) as RejectionLike;
+		} else {
+			const ev = new Event('unhandledrejection') as RejectionLike;
+			ev.promise = promise;
+			ev.reason = new Error('rejected');
+			event = ev;
+		}
+		window.dispatchEvent(event);
 		expect(toastSpy).toHaveBeenCalledOnce();
 		expect(toastSpy.mock.calls[0][0]).toContain('rejected');
 	});
