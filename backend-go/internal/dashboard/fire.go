@@ -39,15 +39,17 @@ type fireMetrics struct {
 	BridgeCapitalGap     *float64
 }
 
-// wrapperAccessAge is the age at which Polish IKE/PPK retirement wrappers
-// become accessible without tax penalty. IKZE is technically age 65, but
-// 60 is the bridge-FIRE target the issue calls out (#546) and matches IKE
-// + PPK which are the two largest wrappers most users hold.
-const wrapperAccessAge = 60
+// bridgeTargetAge is the age the bridge-to-60 metric projects to — IKE
+// and PPK unlock at 60, IKZE technically at 65. We use 60 as the single
+// bridge horizon because it's what the issue (#546) titled the metric
+// after and matches the two largest wrappers most users hold; the IKZE
+// over-count is small relative to the bridge horizon and intentionally
+// conservative (over-estimates liquid capital, not under-).
+const bridgeTargetAge = 60
 
 // lockedWrapperCategories enumerates the account wrappers excluded from
 // bridge-to-60 liquid capital — money in these wrappers can't be tapped
-// before wrapperAccessAge without tax penalty, so it doesn't count toward
+// before bridgeTargetAge without tax penalty, so it doesn't count toward
 // the capital needed to bridge to access age.
 var lockedWrapperCategories = map[string]struct{}{
 	"IKE":  {},
@@ -123,7 +125,7 @@ func computeFIRE(latestRows []mergedRow, cfg AppConfig, netWorth float64) fireMe
 // age, and how much liquid capital (net worth minus locked-wrapper balances)
 // is currently available against that target. Math:
 //
-//	bridge_years         = max(0, wrapperAccessAge − current_age)
+//	bridge_years         = max(0, bridgeTargetAge − current_age)
 //	bridge_capital_needed = annual_expenses × bridge_years
 //	bridge_liquid_capital = net_worth − Σ(IKE + IKZE + PPK asset balances)
 //	bridge_capital_gap    = bridge_capital_needed − bridge_liquid_capital
@@ -144,7 +146,7 @@ func addBridgeToAccessAge(out *fireMetrics, latestRows []mergedRow, cfg AppConfi
 		return
 	}
 	currentAge := yearsBetween(cfg.BirthDate, now)
-	years := wrapperAccessAge - currentAge
+	years := bridgeTargetAge - currentAge
 	if years <= 0 {
 		return
 	}

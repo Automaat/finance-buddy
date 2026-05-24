@@ -105,6 +105,16 @@
 			toast.error('Nie udało się zapisać limitów. Spróbuj ponownie później.');
 		}
 	}
+
+	// Polish plural form of "rok" (year). 1 → rok; 2–4 (except 12–14) → lata;
+	// everything else → lat. Inline because it's the only spot that needs it.
+	function plYears(n: number): string {
+		if (n === 1) return 'rok';
+		const last = n % 10;
+		const lastTwo = n % 100;
+		if (last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14)) return 'lata';
+		return 'lat';
+	}
 </script>
 
 <svelte:head>
@@ -333,12 +343,14 @@
 					{@const bridgeSurplus = bridgeGap < 0}
 					{@const bridgeExact = bridgeGap === 0}
 					{@const bridgeOK = bridgeGap <= 0}
+					{@const bridgeYearsLabel = plYears(bridgeYears)}
 					<div class="pt-3 border-t border-surface-200-800 space-y-2">
 						<div
 							class="text-xs text-surface-700-300"
 							title="bridge_capital_needed = annual_expenses × (60 − current_age)&#10;bridge_liquid_capital = wartość netto − (IKE + IKZE + PPK)&#10;bridge_capital_gap = needed − liquid (dodatni = niedobór, ujemny = nadwyżka)"
 						>
-							Bridge do 60 ({bridgeYears} lat)
+							Bridge do 60 ({bridgeYears}
+							{bridgeYearsLabel})
 						</div>
 						<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
 							<div class="space-y-1">
