@@ -197,6 +197,11 @@ type metricCardsWire struct {
 	CoastFIREGap            *pyFloat `json:"coast_fire_gap"`
 	CoastFIRETargetAge      *int     `json:"coast_fire_target_age"`
 	ExpectedReturnRate      *pyFloat `json:"expected_return_rate"`
+	BaristaMonthlyIncome    *pyFloat `json:"barista_monthly_income"`
+	BaristaAnnualGap        *pyFloat `json:"barista_annual_gap"`
+	BaristaFIRENumber       *pyFloat `json:"barista_fire_number"`
+	BaristaFIProgress       *pyFloat `json:"barista_fi_progress"`
+	BaristaYearsToFI        *pyFloat `json:"barista_years_to_fi"`
 }
 
 type allocationBreakdownWire struct {
@@ -337,6 +342,11 @@ func metricCardsToWire(m metricCards) metricCardsWire {
 		CoastFIREGap:            floatPtr(m.CoastFIREGap),
 		CoastFIRETargetAge:      m.CoastFIRETargetAge,
 		ExpectedReturnRate:      floatPtr(m.ExpectedReturnRate),
+		BaristaMonthlyIncome:    floatPtr(m.BaristaMonthlyIncome),
+		BaristaAnnualGap:        floatPtr(m.BaristaAnnualGap),
+		BaristaFIRENumber:       floatPtr(m.BaristaFIRENumber),
+		BaristaFIProgress:       floatPtr(m.BaristaFIProgress),
+		BaristaYearsToFI:        floatPtr(m.BaristaYearsToFI),
 	}
 }
 

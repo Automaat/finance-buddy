@@ -18,20 +18,21 @@ import (
 // Config mirrors backend/app/models/app_config.AppConfig — DB column names
 // and types kept identical for parity-suite assertions.
 type Config struct {
-	ID                      int             `json:"id"`
-	BirthDate               time.Time       `json:"birth_date"`
-	RetirementAge           int             `json:"retirement_age"`
-	RetirementMonthlySalary decimal.Decimal `json:"retirement_monthly_salary"`
-	AllocationRealEstate    int             `json:"allocation_real_estate"`
-	AllocationStocks        int             `json:"allocation_stocks"`
-	AllocationBonds         int             `json:"allocation_bonds"`
-	AllocationGold          int             `json:"allocation_gold"`
-	AllocationCommodities   int             `json:"allocation_commodities"`
-	MonthlyExpenses         decimal.Decimal `json:"monthly_expenses"`
-	MonthlyMortgagePayment  decimal.Decimal `json:"monthly_mortgage_payment"`
-	WithdrawalRate          decimal.Decimal `json:"withdrawal_rate"`
-	CoastFIRETargetAge      *int            `json:"coast_fire_target_age"`
-	ExpectedReturnRate      decimal.Decimal `json:"expected_return_rate"`
+	ID                      int              `json:"id"`
+	BirthDate               time.Time        `json:"birth_date"`
+	RetirementAge           int              `json:"retirement_age"`
+	RetirementMonthlySalary decimal.Decimal  `json:"retirement_monthly_salary"`
+	AllocationRealEstate    int              `json:"allocation_real_estate"`
+	AllocationStocks        int              `json:"allocation_stocks"`
+	AllocationBonds         int              `json:"allocation_bonds"`
+	AllocationGold          int              `json:"allocation_gold"`
+	AllocationCommodities   int              `json:"allocation_commodities"`
+	MonthlyExpenses         decimal.Decimal  `json:"monthly_expenses"`
+	MonthlyMortgagePayment  decimal.Decimal  `json:"monthly_mortgage_payment"`
+	WithdrawalRate          decimal.Decimal  `json:"withdrawal_rate"`
+	CoastFIRETargetAge      *int             `json:"coast_fire_target_age"`
+	ExpectedReturnRate      decimal.Decimal  `json:"expected_return_rate"`
+	BaristaMonthlyIncome    *decimal.Decimal `json:"barista_monthly_income"`
 }
 
 // ErrNotFound is returned when no row exists at id=1.
@@ -52,7 +53,8 @@ const selectColumns = `
 	allocation_real_estate, allocation_stocks, allocation_bonds,
 	allocation_gold, allocation_commodities,
 	monthly_expenses, monthly_mortgage_payment, withdrawal_rate,
-	coast_fire_target_age, expected_return_rate
+	coast_fire_target_age, expected_return_rate,
+	barista_monthly_income
 `
 
 // Get returns the singleton config or ErrNotFound.
@@ -80,8 +82,9 @@ func (s *Store) Upsert(ctx context.Context, in *Config) (*Config, error) {
 			allocation_real_estate, allocation_stocks, allocation_bonds,
 			allocation_gold, allocation_commodities,
 			monthly_expenses, monthly_mortgage_payment, withdrawal_rate,
-			coast_fire_target_age, expected_return_rate
-		) VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+			coast_fire_target_age, expected_return_rate,
+			barista_monthly_income
+		) VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		ON CONFLICT (id) DO UPDATE SET
 			birth_date = EXCLUDED.birth_date,
 			retirement_age = EXCLUDED.retirement_age,
@@ -95,7 +98,8 @@ func (s *Store) Upsert(ctx context.Context, in *Config) (*Config, error) {
 			monthly_mortgage_payment = EXCLUDED.monthly_mortgage_payment,
 			withdrawal_rate = EXCLUDED.withdrawal_rate,
 			coast_fire_target_age = EXCLUDED.coast_fire_target_age,
-			expected_return_rate = EXCLUDED.expected_return_rate
+			expected_return_rate = EXCLUDED.expected_return_rate,
+			barista_monthly_income = EXCLUDED.barista_monthly_income
 		RETURNING `+selectColumns,
 		in.BirthDate,
 		in.RetirementAge,
@@ -110,6 +114,7 @@ func (s *Store) Upsert(ctx context.Context, in *Config) (*Config, error) {
 		in.WithdrawalRate,
 		in.CoastFIRETargetAge,
 		in.ExpectedReturnRate,
+		in.BaristaMonthlyIncome,
 	)
 	c, err := scanConfig(row)
 	if err != nil {
@@ -135,6 +140,7 @@ func scanConfig(row pgx.Row) (*Config, error) {
 		&c.WithdrawalRate,
 		&c.CoastFIRETargetAge,
 		&c.ExpectedReturnRate,
+		&c.BaristaMonthlyIncome,
 	)
 	if err != nil {
 		return nil, err

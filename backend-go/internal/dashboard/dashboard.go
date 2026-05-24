@@ -49,6 +49,11 @@ type metricCards struct {
 	CoastFIREGap            *float64
 	CoastFIRETargetAge      *int
 	ExpectedReturnRate      *float64
+	BaristaMonthlyIncome    *float64
+	BaristaAnnualGap        *float64
+	BaristaFIRENumber       *float64
+	BaristaFIProgress       *float64
+	BaristaYearsToFI        *float64
 }
 
 type allocationBreakdown struct {

@@ -244,6 +244,116 @@ func TestAddCoastFIREZeroReturnRateStaysNil(t *testing.T) {
 	}
 }
 
+func TestAddBaristaFIREHappyPath(t *testing.T) {
+	t.Parallel()
+	// Monthly expenses 5000 → annual 60000. Barista income 2000/mo → annual
+	// 24000. Gap = 36000. Withdrawal 0.04 → barista FIRE = 900000.
+	monthly := decimal.NewFromInt(2000)
+	cfg := AppConfig{
+		MonthlyExpenses:      decimal.NewFromInt(5000),
+		WithdrawalRate:       decimal.RequireFromString("0.04"),
+		ExpectedReturnRate:   decimal.RequireFromString("0.07"),
+		BaristaMonthlyIncome: &monthly,
+	}
+	got := computeFIRE(nil, cfg, 500_000)
+
+	if got.BaristaMonthlyIncome == nil || *got.BaristaMonthlyIncome != 2000 {
+		t.Fatalf("barista_monthly_income = %v, want 2000", got.BaristaMonthlyIncome)
+	}
+	if got.BaristaAnnualGap == nil || *got.BaristaAnnualGap != 36_000 {
+		t.Fatalf("barista_annual_gap = %v, want 36000", got.BaristaAnnualGap)
+	}
+	if got.BaristaFIRENumber == nil || *got.BaristaFIRENumber != 900_000 {
+		t.Fatalf("barista_fire_number = %v, want 900000", got.BaristaFIRENumber)
+	}
+	// progress = 500k / 900k * 100 ≈ 55.56%
+	if got.BaristaFIProgress == nil || !approxEqual(*got.BaristaFIProgress, 55.5555, 0.01) {
+		t.Errorf("barista_fi_progress = %v, want ≈55.56", got.BaristaFIProgress)
+	}
+	// years = log(900000/500000) / log(1.07) ≈ 8.69
+	wantYears := math.Log(900_000.0/500_000.0) / math.Log(1.07)
+	if got.BaristaYearsToFI == nil || !approxEqual(*got.BaristaYearsToFI, wantYears, 0.01) {
+		t.Errorf("barista_years_to_fi = %v, want ≈%v", got.BaristaYearsToFI, wantYears)
+	}
+}
+
+func TestAddBaristaFIREIncomeCoversAllExpenses(t *testing.T) {
+	t.Parallel()
+	// Barista income 6000/mo > expenses 5000/mo → gap clamps to 0,
+	// FIRE number = 0, progress + years-to-FI stay nil.
+	monthly := decimal.NewFromInt(6000)
+	cfg := AppConfig{
+		MonthlyExpenses:      decimal.NewFromInt(5000),
+		WithdrawalRate:       decimal.RequireFromString("0.04"),
+		ExpectedReturnRate:   decimal.RequireFromString("0.07"),
+		BaristaMonthlyIncome: &monthly,
+	}
+	got := computeFIRE(nil, cfg, 500_000)
+
+	if got.BaristaAnnualGap == nil || *got.BaristaAnnualGap != 0 {
+		t.Fatalf("barista_annual_gap = %v, want 0", got.BaristaAnnualGap)
+	}
+	if got.BaristaFIRENumber == nil || *got.BaristaFIRENumber != 0 {
+		t.Fatalf("barista_fire_number = %v, want 0", got.BaristaFIRENumber)
+	}
+	if got.BaristaFIProgress != nil {
+		t.Errorf("expected nil barista_fi_progress when fire = 0, got %v", *got.BaristaFIProgress)
+	}
+	if got.BaristaYearsToFI != nil {
+		t.Errorf("expected nil barista_years_to_fi when fire = 0, got %v", *got.BaristaYearsToFI)
+	}
+}
+
+func TestAddBaristaFIRENetWorthAlreadyAtTarget(t *testing.T) {
+	t.Parallel()
+	// Net worth already exceeds barista FIRE → years-to-FI nil (already there).
+	monthly := decimal.NewFromInt(2000)
+	cfg := AppConfig{
+		MonthlyExpenses:      decimal.NewFromInt(5000),
+		WithdrawalRate:       decimal.RequireFromString("0.04"),
+		ExpectedReturnRate:   decimal.RequireFromString("0.07"),
+		BaristaMonthlyIncome: &monthly,
+	}
+	got := computeFIRE(nil, cfg, 1_500_000)
+	if got.BaristaYearsToFI != nil {
+		t.Errorf("expected nil barista_years_to_fi when net worth ≥ target, got %v", *got.BaristaYearsToFI)
+	}
+	if got.BaristaFIProgress == nil || *got.BaristaFIProgress <= 100 {
+		t.Errorf("expected progress > 100%%, got %v", got.BaristaFIProgress)
+	}
+}
+
+func TestAddBaristaFIRENoIncomeStaysNil(t *testing.T) {
+	t.Parallel()
+	cfg := AppConfig{
+		MonthlyExpenses:    decimal.NewFromInt(5000),
+		WithdrawalRate:     decimal.RequireFromString("0.04"),
+		ExpectedReturnRate: decimal.RequireFromString("0.07"),
+	}
+	got := computeFIRE(nil, cfg, 500_000)
+	if got.BaristaFIRENumber != nil || got.BaristaAnnualGap != nil {
+		t.Errorf("expected nil barista fields without configured income, got %+v", got)
+	}
+}
+
+func TestAddBaristaFIREZeroReturnRateNoYears(t *testing.T) {
+	t.Parallel()
+	monthly := decimal.NewFromInt(2000)
+	cfg := AppConfig{
+		MonthlyExpenses:      decimal.NewFromInt(5000),
+		WithdrawalRate:       decimal.RequireFromString("0.04"),
+		ExpectedReturnRate:   decimal.Zero,
+		BaristaMonthlyIncome: &monthly,
+	}
+	got := computeFIRE(nil, cfg, 500_000)
+	if got.BaristaFIRENumber == nil {
+		t.Fatal("expected barista_fire_number set even without return rate")
+	}
+	if got.BaristaYearsToFI != nil {
+		t.Errorf("expected nil barista_years_to_fi when return rate ≤ 0, got %v", *got.BaristaYearsToFI)
+	}
+}
+
 func TestAddCoastFIRENoFIRENumberStaysNil(t *testing.T) {
 	t.Parallel()
 	birth := time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC)

@@ -215,3 +215,29 @@ func TestValidateExpectedReturnRateAllowed(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateBaristaMonthlyIncomeNegative(t *testing.T) {
+	r := validRequest()
+	d := decimal.NewFromInt(-1)
+	r.BaristaMonthlyIncome = &d
+	if err := r.validate(); err == nil || err.Field != "barista_monthly_income" {
+		t.Fatalf("expected barista_monthly_income error, got %+v", err)
+	}
+}
+
+func TestValidateBaristaMonthlyIncomeZeroOK(t *testing.T) {
+	r := validRequest()
+	d := decimal.Zero
+	r.BaristaMonthlyIncome = &d
+	if err := r.validate(); err != nil {
+		t.Fatalf("expected zero barista_monthly_income to validate, got %+v", err)
+	}
+}
+
+func TestValidateBaristaMonthlyIncomeNilOK(t *testing.T) {
+	r := validRequest()
+	r.BaristaMonthlyIncome = nil
+	if err := r.validate(); err != nil {
+		t.Fatalf("expected nil barista_monthly_income to validate, got %+v", err)
+	}
+}

@@ -17,20 +17,21 @@ import (
 // Date is serialized as "YYYY-MM-DD". Decimal money fields are quoted JSON
 // strings with two decimals (Python Pydantic v2's default for Decimal).
 type response struct {
-	ID                      int       `json:"id"`
-	BirthDate               isoDate   `json:"birth_date"`
-	RetirementAge           int       `json:"retirement_age"`
-	RetirementMonthlySalary moneyJSON `json:"retirement_monthly_salary"`
-	AllocationRealEstate    int       `json:"allocation_real_estate"`
-	AllocationStocks        int       `json:"allocation_stocks"`
-	AllocationBonds         int       `json:"allocation_bonds"`
-	AllocationGold          int       `json:"allocation_gold"`
-	AllocationCommodities   int       `json:"allocation_commodities"`
-	MonthlyExpenses         moneyJSON `json:"monthly_expenses"`
-	MonthlyMortgagePayment  moneyJSON `json:"monthly_mortgage_payment"`
-	WithdrawalRate          rateJSON  `json:"withdrawal_rate"`
-	CoastFIRETargetAge      *int      `json:"coast_fire_target_age"`
-	ExpectedReturnRate      rateJSON  `json:"expected_return_rate"`
+	ID                      int        `json:"id"`
+	BirthDate               isoDate    `json:"birth_date"`
+	RetirementAge           int        `json:"retirement_age"`
+	RetirementMonthlySalary moneyJSON  `json:"retirement_monthly_salary"`
+	AllocationRealEstate    int        `json:"allocation_real_estate"`
+	AllocationStocks        int        `json:"allocation_stocks"`
+	AllocationBonds         int        `json:"allocation_bonds"`
+	AllocationGold          int        `json:"allocation_gold"`
+	AllocationCommodities   int        `json:"allocation_commodities"`
+	MonthlyExpenses         moneyJSON  `json:"monthly_expenses"`
+	MonthlyMortgagePayment  moneyJSON  `json:"monthly_mortgage_payment"`
+	WithdrawalRate          rateJSON   `json:"withdrawal_rate"`
+	CoastFIRETargetAge      *int       `json:"coast_fire_target_age"`
+	ExpectedReturnRate      rateJSON   `json:"expected_return_rate"`
+	BaristaMonthlyIncome    *moneyJSON `json:"barista_monthly_income"`
 }
 
 // request is the PUT body. Date arrives as "YYYY-MM-DD" and money as either
@@ -49,6 +50,7 @@ type request struct {
 	WithdrawalRate          *decimal.Decimal `json:"withdrawal_rate"`
 	CoastFIRETargetAge      *int             `json:"coast_fire_target_age"`
 	ExpectedReturnRate      *decimal.Decimal `json:"expected_return_rate"`
+	BaristaMonthlyIncome    *decimal.Decimal `json:"barista_monthly_income"`
 }
 
 func toResponse(c *Config) response {
@@ -67,7 +69,18 @@ func toResponse(c *Config) response {
 		WithdrawalRate:          rateJSON(c.WithdrawalRate),
 		CoastFIRETargetAge:      c.CoastFIRETargetAge,
 		ExpectedReturnRate:      rateJSON(c.ExpectedReturnRate),
+		BaristaMonthlyIncome:    moneyPtr(c.BaristaMonthlyIncome),
 	}
+}
+
+// moneyPtr lifts a nullable decimal into the JSON-wire moneyJSON pointer
+// shape — nil decimals become nil JSON, mirroring the *int CoastFIRE field.
+func moneyPtr(d *decimal.Decimal) *moneyJSON {
+	if d == nil {
+		return nil
+	}
+	m := moneyJSON(*d)
+	return &m
 }
 
 // Handler returns the chi-compatible HTTP handler for GET + PUT /api/config.
@@ -146,6 +159,7 @@ func (r *request) toConfig() *Config {
 		WithdrawalRate:          rate,
 		CoastFIRETargetAge:      r.CoastFIRETargetAge,
 		ExpectedReturnRate:      expectedReturn,
+		BaristaMonthlyIncome:    r.BaristaMonthlyIncome,
 	}
 }
 

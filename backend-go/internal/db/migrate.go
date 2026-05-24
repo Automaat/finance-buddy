@@ -64,11 +64,26 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 	if err := addAppConfigCoastFIRE(ctx, pool); err != nil {
 		return err
 	}
+	if err := addAppConfigBaristaFIRE(ctx, pool); err != nil {
+		return err
+	}
 	if err := createRecurringTransactionsTable(ctx, pool); err != nil {
 		return err
 	}
 	if err := createHoldingsTables(ctx, pool); err != nil {
 		return err
+	}
+	return nil
+}
+
+// addAppConfigBaristaFIRE adds the Barista FIRE input to app_config (issue
+// #552): an optional `barista_monthly_income`. Nullable on purpose — when
+// unset the Barista FIRE tile is hidden, matching the Coast FIRE convention.
+func addAppConfigBaristaFIRE(ctx context.Context, pool *pgxpool.Pool) error {
+	if _, err := pool.Exec(ctx, `
+		ALTER TABLE app_config
+		ADD COLUMN IF NOT EXISTS barista_monthly_income numeric(15,2)`); err != nil {
+		return fmt.Errorf("add barista_monthly_income to app_config: %w", err)
 	}
 	return nil
 }
