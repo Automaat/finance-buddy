@@ -166,7 +166,7 @@ func customizeScalar(_ string, t reflect.Type, _ reflect.StructTag, schema *open
 	case "pyFloat":
 		schema.Type = &openapi3.Types{"number"}
 		schema.Properties = nil
-	case "moneyJSON", "ppkRate", "rateJSON":
+	case "moneyJSON", "ppkRate", "rateJSON", "dimString":
 		schema.Type = &openapi3.Types{"string"}
 		schema.Properties = nil
 	case "isoDate":

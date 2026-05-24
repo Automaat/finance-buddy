@@ -10,7 +10,9 @@
 		CheckCircle2,
 		AlertTriangle,
 		Gauge,
-		Flame
+		Flame,
+		BookOpen,
+		ExternalLink
 	} from 'lucide-svelte';
 	import { resolveApiUrl } from '$lib/api';
 	import { invalidateAll } from '$app/navigation';
@@ -82,6 +84,33 @@
 
 	let error = $state('');
 	let saving = $state(false);
+
+	// Polish-rules sources (#553) — loaded once on mount, displayed read-only
+	// in a card at the bottom so users can audit where the app's hardcoded
+	// constants come from. Failure is silent: the card just stays hidden.
+	interface PLRule {
+		key: string;
+		name: string;
+		category: string;
+		value: string;
+		unit: string;
+		year: number;
+		effective_date: string;
+		source_url: string;
+		last_checked_date: string;
+		description: string;
+	}
+	let plRules: PLRule[] = $state([]);
+	$effect(() => {
+		fetch(`${apiUrl}/api/rules`)
+			.then((r) => (r.ok ? r.json() : { rules: [] }))
+			.then((b) => {
+				plRules = (b.rules ?? []) as PLRule[];
+			})
+			.catch(() => {
+				plRules = [];
+			});
+	});
 
 	const marketSum = $derived(
 		allocationStocks + allocationBonds + allocationGold + allocationCommodities
@@ -557,4 +586,57 @@
 	>
 		{saving ? 'Zapisywanie...' : 'Zapisz konfigurację'}
 	</button>
+
+	{#if plRules.length > 0}
+		<div class="card preset-filled-surface-100-900 p-4 space-y-3">
+			<header>
+				<h3 class="h3 flex items-center gap-2">
+					<BookOpen size={20} /> Źródła stałych PL ({plRules[0].year})
+				</h3>
+				<p class="text-xs italic text-surface-700-300 mt-1">
+					Polskie wartości graniczne używane przez symulacje i dashboard. Każda pozycja wskazuje
+					oficjalne źródło i datę ostatniej weryfikacji przez maintainera.
+				</p>
+			</header>
+			<div class="overflow-x-auto">
+				<table class="table w-full text-sm">
+					<thead>
+						<tr>
+							<th class="text-left">Nazwa</th>
+							<th class="text-right">Wartość</th>
+							<th class="text-left">Obowiązuje od</th>
+							<th class="text-left">Ostatnia weryfikacja</th>
+							<th class="text-left">Źródło</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each plRules as r (r.key)}
+							<tr>
+								<td>
+									<div class="font-semibold">{r.name}</div>
+									<div class="text-xs text-surface-700-300">{r.description}</div>
+								</td>
+								<td class="text-right whitespace-nowrap">
+									{r.value}
+									<span class="text-xs text-surface-700-300">{r.unit}</span>
+								</td>
+								<td class="whitespace-nowrap">{r.effective_date}</td>
+								<td class="whitespace-nowrap">{r.last_checked_date}</td>
+								<td>
+									<a
+										href={r.source_url}
+										target="_blank"
+										rel="noopener noreferrer"
+										class="text-primary-600-400 underline inline-flex items-center gap-1"
+									>
+										link <ExternalLink size={12} />
+									</a>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	{/if}
 </div>
