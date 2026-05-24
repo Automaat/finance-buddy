@@ -2317,8 +2317,16 @@
                     "expected_return_rate": {
                       "type": "string"
                     },
+                    "fat_monthly_expenses": {
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "id": {
                       "type": "integer"
+                    },
+                    "lean_monthly_expenses": {
+                      "nullable": true,
+                      "type": "string"
                     },
                     "monthly_expenses": {
                       "type": "string"
@@ -2385,6 +2393,14 @@
                     "nullable": true,
                     "type": "string"
                   },
+                  "fat_monthly_expenses": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "lean_monthly_expenses": {
+                    "nullable": true,
+                    "type": "string"
+                  },
                   "monthly_expenses": {
                     "type": "string"
                   },
@@ -2444,8 +2460,16 @@
                     "expected_return_rate": {
                       "type": "string"
                     },
+                    "fat_monthly_expenses": {
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "id": {
                       "type": "integer"
+                    },
+                    "lean_monthly_expenses": {
+                      "nullable": true,
+                      "type": "string"
                     },
                     "monthly_expenses": {
                       "type": "string"
@@ -2866,6 +2890,16 @@
                           "nullable": true,
                           "type": "number"
                         },
+                        "fat_fi_progress": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "fat_fire_number": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        },
                         "fi_progress": {
                           "format": "double",
                           "nullable": true,
@@ -2892,6 +2926,16 @@
                         },
                         "investment_returns": {
                           "format": "double",
+                          "type": "number"
+                        },
+                        "lean_fi_progress": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "lean_fire_number": {
+                          "format": "double",
+                          "nullable": true,
                           "type": "number"
                         },
                         "mortgage_months_left": {

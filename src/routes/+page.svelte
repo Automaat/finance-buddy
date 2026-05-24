@@ -220,8 +220,10 @@
 			</div>
 		</div>
 
-		{#if dashboard.metric_cards?.fire_number != null && dashboard.metric_cards?.runway_months != null}
-			{@const fire = dashboard.metric_cards}
+		{@const _fire = dashboard.metric_cards}
+		{#if _fire?.fire_number != null || _fire?.runway_months != null || _fire?.lean_fire_number != null || _fire?.fat_fire_number != null}
+			{@const fire = _fire!}
+			{@const hasBase = fire.fire_number != null && fire.runway_months != null}
 			{@const progress = fire.fi_progress}
 			{@const annualExpensesPLN = formatPLN(fire.annual_expenses ?? 0)}
 			{@const firePLN = formatPLN(fire.fire_number ?? 0)}
@@ -235,6 +237,10 @@
 			{@const baristaProgress = fire.barista_fi_progress}
 			{@const baristaIncome = fire.barista_monthly_income}
 			{@const baristaYears = fire.barista_years_to_fi}
+			{@const leanFire = fire.lean_fire_number}
+			{@const leanProgress = fire.lean_fi_progress}
+			{@const fatFire = fire.fat_fire_number}
+			{@const fatProgress = fire.fat_fi_progress}
 			{@const bridgeYears = fire.bridge_years}
 			{@const bridgeNeeded = fire.bridge_capital_needed}
 			{@const bridgeLiquid = fire.bridge_liquid_capital}
@@ -242,39 +248,43 @@
 			<div class="card preset-filled-surface-100-900 p-4 space-y-3">
 				<header class="flex items-start justify-between gap-2 flex-wrap">
 					<h3 class="h4 flex items-center gap-2"><Flame size={18} /> FIRE i runway</h3>
-					<span
-						class="text-xs text-surface-700-300"
-						title="annual_expenses = miesięczne wydatki × 12&#10;FIRE = annual_expenses ÷ withdrawal_rate (np. ÷ 0.04 = ×25)&#10;FI = wartość netto ÷ FIRE × 100%&#10;runway = aktywa płynne (bank + saving_account) ÷ miesięczne wydatki"
-					>
-						SWR {wrPct}% · ø {annualExpensesPLN}/rok
-					</span>
+					{#if hasBase}
+						<span
+							class="text-xs text-surface-700-300"
+							title="annual_expenses = miesięczne wydatki × 12&#10;FIRE = annual_expenses ÷ withdrawal_rate (np. ÷ 0.04 = ×25)&#10;FI = wartość netto ÷ FIRE × 100%&#10;runway = aktywa płynne (bank + saving_account) ÷ miesięczne wydatki"
+						>
+							SWR {wrPct}% · ø {annualExpensesPLN}/rok
+						</span>
+					{/if}
 				</header>
-				<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-					<div class="space-y-1">
-						<div class="text-xs text-surface-700-300">FI progress</div>
-						<div class="text-2xl font-bold">
-							{progress != null ? `${progress.toFixed(1)}%` : '—'}
+				{#if hasBase}
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+						<div class="space-y-1">
+							<div class="text-xs text-surface-700-300">FI progress</div>
+							<div class="text-2xl font-bold">
+								{progress != null ? `${progress.toFixed(1)}%` : '—'}
+							</div>
+							<div class="h-2 rounded-full bg-surface-200-800 overflow-hidden">
+								<div
+									class="h-full transition-all {(progress ?? 0) >= 100
+										? 'bg-success-500'
+										: (progress ?? 0) >= 50
+											? 'bg-warning-500'
+											: 'bg-primary-500'}"
+									style="width: {Math.min(progress ?? 0, 100)}%"
+								></div>
+							</div>
+							<div class="text-xs text-surface-700-300">cel: {firePLN}</div>
 						</div>
-						<div class="h-2 rounded-full bg-surface-200-800 overflow-hidden">
-							<div
-								class="h-full transition-all {(progress ?? 0) >= 100
-									? 'bg-success-500'
-									: (progress ?? 0) >= 50
-										? 'bg-warning-500'
-										: 'bg-primary-500'}"
-								style="width: {Math.min(progress ?? 0, 100)}%"
-							></div>
+						<div class="space-y-1">
+							<div class="text-xs text-surface-700-300">Runway</div>
+							<div class="text-2xl font-bold">{runwayLabel} mies.</div>
+							<div class="text-xs text-surface-700-300">
+								ile miesięcy wydatków pokrywają aktywa płynne
+							</div>
 						</div>
-						<div class="text-xs text-surface-700-300">cel: {firePLN}</div>
 					</div>
-					<div class="space-y-1">
-						<div class="text-xs text-surface-700-300">Runway</div>
-						<div class="text-2xl font-bold">{runwayLabel} mies.</div>
-						<div class="text-xs text-surface-700-300">
-							ile miesięcy wydatków pokrywają aktywa płynne
-						</div>
-					</div>
-				</div>
+				{/if}
 				{#if coastNum != null && coastGap != null && coastTargetAge != null}
 					{@const surplus = coastGap <= 0}
 					<div class="pt-3 border-t border-surface-200-800 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -302,6 +312,45 @@
 							<div class="text-xs text-surface-700-300">
 								{surplus ? 'już osiągnięto Coast FIRE' : 'do osiągnięcia Coast FIRE'}
 							</div>
+						</div>
+					</div>
+				{/if}
+				{#if leanFire != null || fatFire != null}
+					<div class="{hasBase ? 'pt-3 border-t border-surface-200-800' : ''} space-y-2">
+						<div
+							class="text-xs text-surface-700-300"
+							title="Każde pasmo = roczne wydatki danego poziomu ÷ withdrawal_rate. Bazowe = Twoje zwykłe miesięczne wydatki."
+						>
+							Pasma FIRE
+						</div>
+						<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+							{#if leanFire != null}
+								<div class="space-y-1">
+									<div class="text-xs text-surface-700-300">Lean FIRE</div>
+									<div class="text-xl font-bold">{formatPLN(leanFire)}</div>
+									<div class="text-xs text-surface-700-300">
+										{leanProgress != null ? `${leanProgress.toFixed(1)}% celu` : 'brak danych'}
+									</div>
+								</div>
+							{/if}
+							{#if hasBase}
+								<div class="space-y-1">
+									<div class="text-xs text-surface-700-300">Base FIRE</div>
+									<div class="text-xl font-bold">{firePLN}</div>
+									<div class="text-xs text-surface-700-300">
+										{progress != null ? `${progress.toFixed(1)}% celu` : 'brak danych'}
+									</div>
+								</div>
+							{/if}
+							{#if fatFire != null}
+								<div class="space-y-1">
+									<div class="text-xs text-surface-700-300">Fat FIRE</div>
+									<div class="text-xl font-bold">{formatPLN(fatFire)}</div>
+									<div class="text-xs text-surface-700-300">
+										{fatProgress != null ? `${fatProgress.toFixed(1)}% celu` : 'brak danych'}
+									</div>
+								</div>
+							{/if}
 						</div>
 					</div>
 				{/if}

@@ -111,8 +111,28 @@ func (r *request) validate() *validationError {
 			}
 		}
 	}
-	if r.BaristaMonthlyIncome != nil && r.BaristaMonthlyIncome.LessThan(decimal.Zero) {
-		return &validationError{"barista_monthly_income", "Value must be non-negative"}
+	if vErr := requireNonNegative(r); vErr != nil {
+		return vErr
+	}
+	return nil
+}
+
+// requireNonNegative bundles the simple "field >= 0 when present" checks for
+// the FIRE-band + Barista inputs so they don't push the main validator past
+// the funlen threshold.
+func requireNonNegative(r *request) *validationError {
+	checks := []struct {
+		name string
+		val  *decimal.Decimal
+	}{
+		{"barista_monthly_income", r.BaristaMonthlyIncome},
+		{"lean_monthly_expenses", r.LeanMonthlyExpenses},
+		{"fat_monthly_expenses", r.FatMonthlyExpenses},
+	}
+	for _, c := range checks {
+		if c.val != nil && c.val.LessThan(decimal.Zero) {
+			return &validationError{c.name, "Value must be non-negative"}
+		}
 	}
 	return nil
 }

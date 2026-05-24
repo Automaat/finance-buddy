@@ -1660,7 +1660,9 @@ export interface paths {
                             birth_date?: string;
                             coast_fire_target_age?: number | null;
                             expected_return_rate?: string;
+                            fat_monthly_expenses?: string | null;
                             id?: number;
+                            lean_monthly_expenses?: string | null;
                             monthly_expenses?: string;
                             monthly_mortgage_payment?: string;
                             retirement_age?: number;
@@ -1692,6 +1694,8 @@ export interface paths {
                         birth_date?: string;
                         coast_fire_target_age?: number | null;
                         expected_return_rate?: string | null;
+                        fat_monthly_expenses?: string | null;
+                        lean_monthly_expenses?: string | null;
                         monthly_expenses?: string;
                         monthly_mortgage_payment?: string;
                         retirement_age?: number;
@@ -1718,7 +1722,9 @@ export interface paths {
                             birth_date?: string;
                             coast_fire_target_age?: number | null;
                             expected_return_rate?: string;
+                            fat_monthly_expenses?: string | null;
                             id?: number;
+                            lean_monthly_expenses?: string | null;
                             monthly_expenses?: string;
                             monthly_mortgage_payment?: string;
                             retirement_age?: number;
@@ -1996,6 +2002,10 @@ export interface paths {
                                 /** Format: double */
                                 expected_return_rate?: number | null;
                                 /** Format: double */
+                                fat_fi_progress?: number | null;
+                                /** Format: double */
+                                fat_fire_number?: number | null;
+                                /** Format: double */
                                 fi_progress?: number | null;
                                 /** Format: double */
                                 fire_number?: number | null;
@@ -2007,6 +2017,10 @@ export interface paths {
                                 investment_contributions?: number;
                                 /** Format: double */
                                 investment_returns?: number;
+                                /** Format: double */
+                                lean_fi_progress?: number | null;
+                                /** Format: double */
+                                lean_fire_number?: number | null;
                                 mortgage_months_left?: number;
                                 /** Format: double */
                                 mortgage_remaining?: number;
