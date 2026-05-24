@@ -179,9 +179,8 @@ type wiborScenarioWire struct {
 }
 
 type wiborResponse struct {
-	Inputs      wiborInputsWire     `json:"inputs"`
-	BasePayment pyFloat             `json:"base_payment"`
-	Scenarios   []wiborScenarioWire `json:"scenarios"`
+	Inputs    wiborInputsWire     `json:"inputs"`
+	Scenarios []wiborScenarioWire `json:"scenarios"`
 }
 
 // WiborScenarios serves POST /api/simulations/wibor.
@@ -202,9 +201,8 @@ func (h *Handler) WiborScenarios(w http.ResponseWriter, r *http.Request) {
 			RemainingPrincipal: pyFloat(in.RemainingPrincipal),
 			BaseAnnualRate:     pyFloat(in.BaseAnnualRate),
 			RemainingMonths:    in.RemainingMonths,
-			BasePayment:        pyFloat(in.BasePayment),
+			BasePayment:        pyFloat(result.BasePayment),
 		},
-		BasePayment: pyFloat(result.BasePayment),
 	}
 	resp.Scenarios = make([]wiborScenarioWire, 0, len(result.Scenarios))
 	for _, s := range result.Scenarios {

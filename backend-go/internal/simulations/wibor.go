@@ -27,7 +27,7 @@ type WiborScenarioRow struct {
 	RateFloored bool
 	// YearlyBalances are end-of-year mortgage balances under the
 	// rescheduled-payment scenario (bank recalcs payment to keep the
-	// original term). Length == ceil(TermMonths/12) at most.
+	// original term). Length == ceil(RemainingMonths/12).
 	YearlyBalances []float64
 }
 

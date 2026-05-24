@@ -87,7 +87,7 @@ func buildWiborInputs(raw map[string]json.RawMessage) (WiborScenarioInputs, *val
 		return in, vErr
 	}
 	if in.BaseAnnualRate <= 0 || in.BaseAnnualRate > 30 {
-		return in, &validationError{Field: "base_annual_rate", Msg: "Base annual rate must be between 0 and 30%"}
+		return in, &validationError{Field: "base_annual_rate", Msg: "Base annual rate must be > 0 and <= 30%"}
 	}
 	in.RemainingMonths, vErr = requireInt(raw, "remaining_months")
 	if vErr != nil {

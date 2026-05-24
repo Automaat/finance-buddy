@@ -16,8 +16,15 @@
 		yearly_balances: number[];
 	}
 
-	interface WiborResponse {
+	interface WiborInputs {
+		remaining_principal: number;
+		base_annual_rate: number;
+		remaining_months: number;
 		base_payment: number;
+	}
+
+	interface WiborResponse {
+		inputs: WiborInputs;
 		scenarios: ScenarioRow[];
 	}
 
@@ -26,7 +33,10 @@
 	let remainingMonths = $state(240);
 	let basePayment = $state(0);
 
-	let results: WiborResponse | null = $state(null);
+	let results = $state<WiborResponse | null>(null);
+	const baselinePayment = $derived(
+		results?.scenarios.find((s) => s.delta_pp === 0)?.monthly_payment ?? 0
+	);
 	let loading = $state(false);
 	let error = $state('');
 	let chartContainer: HTMLDivElement | undefined = $state();
@@ -36,6 +46,11 @@
 	async function runSimulation(): Promise<void> {
 		loading = true;
 		error = '';
+		if (chartHandle) {
+			chartHandle.dispose();
+			chartHandle = null;
+			chart = null;
+		}
 		results = null;
 		try {
 			const apiUrl = resolveApiUrl();
@@ -254,15 +269,15 @@
 									<td class="text-right">{row.annual_rate.toFixed(2)}%</td>
 									<td class="text-right">{formatCurrency(row.monthly_payment)} PLN</td>
 									<td
-										class="text-right {row.monthly_payment > results.base_payment
+										class="text-right {row.monthly_payment > baselinePayment
 											? 'text-error-500'
-											: row.monthly_payment < results.base_payment
+											: row.monthly_payment < baselinePayment
 												? 'text-success-500'
 												: ''}"
 									>
-										{#if results.base_payment > 0 && row.delta_pp !== 0}
-											{row.monthly_payment > results.base_payment ? '+' : ''}{formatCurrency(
-												row.monthly_payment - results.base_payment
+										{#if row.delta_pp !== 0}
+											{row.monthly_payment > baselinePayment ? '+' : ''}{formatCurrency(
+												row.monthly_payment - baselinePayment
 											)} PLN
 										{:else}
 											—
