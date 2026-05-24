@@ -4,6 +4,8 @@
 	import Toast from '$lib/components/Toast.svelte';
 	import Confirm from '$lib/components/Confirm.svelte';
 	import KeyboardShortcuts from '$lib/components/KeyboardShortcuts.svelte';
+	import BottomSheet from '$lib/components/BottomSheet.svelte';
+	import { navPrefs } from '$lib/stores/navPrefs.svelte';
 	import {
 		LayoutDashboard,
 		TrendingUp,
@@ -20,7 +22,8 @@
 		Target,
 		User,
 		ShieldCheck,
-		LogOut
+		LogOut,
+		MoreHorizontal
 	} from 'lucide-svelte';
 	import type { LayoutData } from './$types';
 
@@ -42,12 +45,27 @@
 		{ href: '/settings', label: 'Ustawienia', icon: Settings }
 	];
 
+	const navByHref = new Map(navItems.map((i) => [i.href, i]));
+
+	const pinnedItems = $derived(
+		navPrefs.pinned.map((href) => navByHref.get(href)).filter((i) => i !== undefined)
+	);
+	const overflowItems = $derived(navItems.filter((i) => !navPrefs.pinned.includes(i.href)));
+
 	const isLoginPage = $derived($page.url.pathname === '/login');
+
+	let moreOpen = $state(false);
 
 	function isActive(href: string): boolean {
 		if (href === '/simulations') return $page.url.pathname.startsWith('/simulations');
 		if (href === '/settings') return $page.url.pathname.startsWith('/settings');
 		return $page.url.pathname === href;
+	}
+
+	const overflowActive = $derived(overflowItems.some((i) => isActive(i.href)));
+
+	function closeMore() {
+		moreOpen = false;
 	}
 </script>
 
@@ -124,20 +142,52 @@
 			</main>
 
 			<nav
-				class="md:hidden fixed bottom-0 left-0 right-0 z-30 flex overflow-x-auto bg-surface-100-900 border-t border-surface-200-800"
+				class="md:hidden fixed bottom-0 left-0 right-0 z-30 grid bg-surface-100-900 border-t border-surface-200-800 pb-[env(safe-area-inset-bottom)]"
+				style:grid-template-columns="repeat({pinnedItems.length + 1}, minmax(0, 1fr))"
 				aria-label="Mobile navigation"
 			>
-				{#each navItems as item}
+				{#each pinnedItems as item}
 					<a
 						href={item.href}
-						class="flex flex-col items-center justify-center gap-1 min-w-16 shrink-0 px-3 py-2 text-[10px]
+						class="flex flex-col items-center justify-center gap-1 px-1 py-2 text-[10px]
 							{isActive(item.href) ? 'text-primary-500 font-semibold' : 'text-surface-700-300'}"
 					>
 						<item.icon size={20} />
-						<span class="whitespace-nowrap">{item.label}</span>
+						<span class="whitespace-nowrap truncate max-w-full">{item.label}</span>
 					</a>
 				{/each}
+				<button
+					type="button"
+					class="flex flex-col items-center justify-center gap-1 px-1 py-2 text-[10px]
+						{overflowActive || moreOpen ? 'text-primary-500 font-semibold' : 'text-surface-700-300'}"
+					aria-label="Więcej opcji nawigacji"
+					aria-expanded={moreOpen}
+					onclick={() => (moreOpen = true)}
+				>
+					<MoreHorizontal size={20} />
+					<span class="whitespace-nowrap">Więcej</span>
+				</button>
 			</nav>
+
+			<BottomSheet open={moreOpen} title="Więcej" onClose={closeMore}>
+				<ul class="grid grid-cols-4 gap-2">
+					{#each overflowItems as item}
+						<li>
+							<a
+								href={item.href}
+								onclick={closeMore}
+								class="flex flex-col items-center justify-center gap-1 p-3 rounded-container text-[11px]
+									{isActive(item.href)
+									? 'preset-filled-primary-500 font-semibold'
+									: 'hover:preset-tonal-primary text-surface-800-200'}"
+							>
+								<item.icon size={22} />
+								<span class="text-center leading-tight">{item.label}</span>
+							</a>
+						</li>
+					{/each}
+				</ul>
+			</BottomSheet>
 		</div>
 	</div>
 {/if}
