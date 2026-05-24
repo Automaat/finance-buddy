@@ -105,6 +105,16 @@
 			toast.error('Nie udało się zapisać limitów. Spróbuj ponownie później.');
 		}
 	}
+
+	// Polish plural form of "rok" (year). 1 → rok; 2–4 (except 12–14) → lata;
+	// everything else → lat. Inline because it's the only spot that needs it.
+	function plYears(n: number): string {
+		if (n === 1) return 'rok';
+		const last = n % 10;
+		const lastTwo = n % 100;
+		if (last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14)) return 'lata';
+		return 'lat';
+	}
 </script>
 
 <svelte:head>
@@ -225,6 +235,10 @@
 			{@const baristaProgress = fire.barista_fi_progress}
 			{@const baristaIncome = fire.barista_monthly_income}
 			{@const baristaYears = fire.barista_years_to_fi}
+			{@const bridgeYears = fire.bridge_years}
+			{@const bridgeNeeded = fire.bridge_capital_needed}
+			{@const bridgeLiquid = fire.bridge_liquid_capital}
+			{@const bridgeGap = fire.bridge_capital_gap}
 			<div class="card preset-filled-surface-100-900 p-4 space-y-3">
 				<header class="flex items-start justify-between gap-2 flex-wrap">
 					<h3 class="h4 flex items-center gap-2"><Flame size={18} /> FIRE i runway</h3>
@@ -321,6 +335,48 @@
 								{:else if (baristaProgress ?? 0) >= 100}
 									<div class="text-xs text-success-600-400">już osiągnięto Barista FIRE</div>
 								{/if}
+							</div>
+						</div>
+					</div>
+				{/if}
+				{#if bridgeYears != null && bridgeNeeded != null && bridgeLiquid != null && bridgeGap != null}
+					{@const bridgeSurplus = bridgeGap < 0}
+					{@const bridgeExact = bridgeGap === 0}
+					{@const bridgeOK = bridgeGap <= 0}
+					{@const bridgeYearsLabel = plYears(bridgeYears)}
+					<div class="pt-3 border-t border-surface-200-800 space-y-2">
+						<div
+							class="text-xs text-surface-700-300"
+							title="bridge_capital_needed = annual_expenses × (60 − current_age)&#10;bridge_liquid_capital = wartość netto − (IKE + IKZE + PPK)&#10;bridge_capital_gap = needed − liquid (dodatni = niedobór, ujemny = nadwyżka)"
+						>
+							Bridge do 60 ({bridgeYears}
+							{bridgeYearsLabel})
+						</div>
+						<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+							<div class="space-y-1">
+								<div class="text-xs text-surface-700-300">Potrzebne</div>
+								<div class="text-xl font-bold">{formatPLN(bridgeNeeded)}</div>
+								<div class="text-xs text-surface-700-300">wydatki × lata do 60</div>
+							</div>
+							<div class="space-y-1">
+								<div class="text-xs text-surface-700-300">Płynne</div>
+								<div class="text-xl font-bold">{formatPLN(bridgeLiquid)}</div>
+								<div class="text-xs text-surface-700-300">netto bez IKE/IKZE/PPK</div>
+							</div>
+							<div class="space-y-1">
+								<div class="text-xs text-surface-700-300">
+									{#if bridgeSurplus}Nadwyżka{:else if bridgeExact}Pokryty{:else}Brakuje{/if}
+								</div>
+								<div
+									class="text-xl font-bold {bridgeOK
+										? 'text-success-600-400'
+										: 'text-warning-600-400'}"
+								>
+									{formatPLN(Math.abs(bridgeGap))}
+								</div>
+								<div class="text-xs text-surface-700-300">
+									{bridgeOK ? 'mostek pokryty' : 'do uzbierania w aktywach płynnych'}
+								</div>
 							</div>
 						</div>
 					</div>

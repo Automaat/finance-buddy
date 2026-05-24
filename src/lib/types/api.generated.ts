@@ -1978,6 +1978,13 @@ export interface paths {
                                 /** Format: double */
                                 barista_years_to_fi?: number | null;
                                 /** Format: double */
+                                bridge_capital_gap?: number | null;
+                                /** Format: double */
+                                bridge_capital_needed?: number | null;
+                                /** Format: double */
+                                bridge_liquid_capital?: number | null;
+                                bridge_years?: number | null;
+                                /** Format: double */
                                 coast_fire_gap?: number | null;
                                 /** Format: double */
                                 coast_fire_number?: number | null;

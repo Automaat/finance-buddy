@@ -33,6 +33,28 @@ type fireMetrics struct {
 	BaristaFIRENumber    *float64
 	BaristaFIProgress    *float64
 	BaristaYearsToFI     *float64
+	BridgeYears          *int
+	BridgeCapitalNeeded  *float64
+	BridgeLiquidCapital  *float64
+	BridgeCapitalGap     *float64
+}
+
+// bridgeTargetAge is the age the bridge-to-60 metric projects to — IKE
+// and PPK unlock at 60, IKZE technically at 65. We use 60 as the single
+// bridge horizon because it's what the issue (#546) titled the metric
+// after and matches the two largest wrappers most users hold; the IKZE
+// over-count is small relative to the bridge horizon and intentionally
+// conservative (over-estimates liquid capital, not under-).
+const bridgeTargetAge = 60
+
+// lockedWrapperCategories enumerates the account wrappers excluded from
+// bridge-to-60 liquid capital — money in these wrappers can't be tapped
+// before bridgeTargetAge without tax penalty, so it doesn't count toward
+// the capital needed to bridge to access age.
+var lockedWrapperCategories = map[string]struct{}{
+	"IKE":  {},
+	"IKZE": {},
+	"PPK":  {},
 }
 
 // computeFIRE turns app_config + the latest snapshot's rows into the FIRE
@@ -94,7 +116,73 @@ func computeFIRE(latestRows []mergedRow, cfg AppConfig, netWorth float64) fireMe
 	now := time.Now().UTC()
 	addCoastFIRE(&out, cfg, netWorth, now)
 	addBaristaFIRE(&out, cfg, netWorth)
+	addBridgeToAccessAge(&out, latestRows, cfg, netWorth, now)
 	return out
+}
+
+// addBridgeToAccessAge fills the bridge-to-60 fields: how much liquid /
+// taxable capital is needed to cover expenses until Polish IKE/PPK access
+// age, and how much liquid capital (net worth minus locked-wrapper balances)
+// is currently available against that target. Math:
+//
+//	bridge_years         = max(0, bridgeTargetAge − current_age)
+//	bridge_capital_needed = annual_expenses × bridge_years
+//	bridge_liquid_capital = net_worth − Σ(IKE + IKZE + PPK asset balances)
+//	bridge_capital_gap    = bridge_capital_needed − bridge_liquid_capital
+//
+// The needed figure is intentionally conservative — no growth assumption,
+// since bridge capital is typically held in lower-volatility instruments
+// (bonds, savings) where compounding doesn't materially change the result
+// over the short bridge horizon.
+//
+// All fields stay nil when the user is already at/past access age, the
+// birth date is unset, or monthly expenses aren't configured (in which
+// case AnnualExpenses is nil and the bridge math has no meaningful input).
+func addBridgeToAccessAge(out *fireMetrics, latestRows []mergedRow, cfg AppConfig, netWorth float64, now time.Time) {
+	if out.AnnualExpenses == nil {
+		return
+	}
+	if cfg.BirthDate.IsZero() {
+		return
+	}
+	currentAge := yearsBetween(cfg.BirthDate, now)
+	years := bridgeTargetAge - currentAge
+	if years <= 0 {
+		return
+	}
+	out.BridgeYears = &years
+
+	needed := *out.AnnualExpenses * float64(years)
+	out.BridgeCapitalNeeded = &needed
+
+	locked := lockedWrapperValueOf(latestRows)
+	liquid := netWorth - locked
+	out.BridgeLiquidCapital = &liquid
+
+	gap := needed - liquid
+	out.BridgeCapitalGap = &gap
+}
+
+// lockedWrapperValueOf sums latest-snapshot active asset-account values
+// whose account_wrapper is one of the Polish locked retirement wrappers
+// (IKE/IKZE/PPK). Mirrors retirementValueOf's filter shape — the two are
+// not identical: a non-wrapper account can be marked purpose=retirement,
+// and a wrapper account can theoretically be missing the retirement
+// purpose tag, so each metric uses the predicate that matches its meaning.
+func lockedWrapperValueOf(latestRows []mergedRow) float64 {
+	total := 0.0
+	for _, r := range latestRows {
+		if r.AccountID == nil || r.AccType == nil || *r.AccType != "asset" {
+			continue
+		}
+		if r.Wrapper == nil {
+			continue
+		}
+		if _, ok := lockedWrapperCategories[*r.Wrapper]; ok {
+			total += r.Value
+		}
+	}
+	return total
 }
 
 // addBaristaFIRE fills the Barista FIRE fields when a part-time monthly
