@@ -179,6 +179,78 @@ var Polish2026 = []Rule{
 		LastCheckedDate: lastChecked,
 		Description:     "Zryczałtowany podatek od zysków z inwestycji (oszczędności, akcje, fundusze).",
 	},
+	{
+		Key:             "pit_free_amount_2026",
+		Name:            "Kwota wolna od podatku PIT",
+		Category:        "pit",
+		Value:           decimal.NewFromInt(30000),
+		Unit:            "PLN",
+		Year:            2026,
+		EffectiveDate:   jan2026,
+		SourceURL:       "https://www.podatki.gov.pl/pit/abc-pit/skala-podatkowa/",
+		LastCheckedDate: lastChecked,
+		Description:     "Roczny dochód wolny od podatku w skali PIT.",
+	},
+	{
+		Key:             "pit_solidarity_threshold_2026",
+		Name:            "Próg daniny solidarnościowej",
+		Category:        "pit",
+		Value:           decimal.NewFromInt(1000000),
+		Unit:            "PLN",
+		Year:            2026,
+		EffectiveDate:   jan2026,
+		SourceURL:       "https://www.podatki.gov.pl/pit/abc-pit/danina-solidarnosciowa/",
+		LastCheckedDate: lastChecked,
+		Description:     "Roczny dochód, powyżej którego doliczana jest danina solidarnościowa.",
+	},
+	{
+		Key:             "pit_solidarity_rate_2026",
+		Name:            "Stawka daniny solidarnościowej",
+		Category:        "pit",
+		Value:           decimal.RequireFromString("0.04"),
+		Unit:            "udział",
+		Year:            2026,
+		EffectiveDate:   jan2026,
+		SourceURL:       "https://www.podatki.gov.pl/pit/abc-pit/danina-solidarnosciowa/",
+		LastCheckedDate: lastChecked,
+		Description:     "Dodatkowe 4% od nadwyżki dochodu ponad 1 mln PLN.",
+	},
+	{
+		Key:             "zus_cap_30x_2026",
+		Name:            "Limit 30-krotności (podstawa ZUS)",
+		Category:        "zus",
+		Value:           decimal.NewFromInt(282600),
+		Unit:            "PLN",
+		Year:            2026,
+		EffectiveDate:   jan2026,
+		SourceURL:       "https://www.zus.pl/baza-wiedzy/skladki-wskazniki-odsetki/skladki/wysokosc-skladek-na-ubezpieczenia-spoleczne",
+		LastCheckedDate: lastChecked,
+		Description:     "Roczna podstawa wymiaru składek emerytalnych i rentowych — przyjmowane 30× prognozowane przeciętne wynagrodzenie.",
+	},
+	{
+		Key:             "b2b_liniowy_rate_2026",
+		Name:            "PIT liniowy B2B",
+		Category:        "pit",
+		Value:           decimal.RequireFromString("0.19"),
+		Unit:            "udział",
+		Year:            2026,
+		EffectiveDate:   jan2026,
+		SourceURL:       "https://www.podatki.gov.pl/pit/abc-pit/zasady-opodatkowania/",
+		LastCheckedDate: lastChecked,
+		Description:     "Liniowa stawka 19% dla osób prowadzących pozarolniczą działalność gospodarczą.",
+	},
+	{
+		Key:             "ryczalt_it_rate_2026",
+		Name:            "Ryczałt IT (12%)",
+		Category:        "pit",
+		Value:           decimal.RequireFromString("0.12"),
+		Unit:            "udział",
+		Year:            2026,
+		EffectiveDate:   jan2026,
+		SourceURL:       "https://www.podatki.gov.pl/pit/abc-pit/zryczaltowane-formy-opodatkowania/ryczalt-od-przychodow-ewidencjonowanych/",
+		LastCheckedDate: lastChecked,
+		Description:     "Stawka ryczałtu od przychodów ewidencjonowanych dla branży IT (PKWiU 62.0x).",
+	},
 }
 
 // Get returns the rule for the given Key, or false if no rule matches.
@@ -199,6 +271,20 @@ func All() []Rule {
 	out := make([]Rule, len(Polish2026))
 	copy(out, Polish2026)
 	return out
+}
+
+// MustFloat64 returns the rule's Value as a float64 or panics if the key
+// is unknown. Use at package init time (or from a `var x = ...` block) to
+// pin a Go constant to the centralized table — the panic surfaces a typo
+// before the process serves traffic, which is what callers want for
+// long-lived defaults like default IKE/IKZE limits.
+func MustFloat64(key string) float64 {
+	r, ok := Get(key)
+	if !ok {
+		panic("rules: no rule with key " + key)
+	}
+	v, _ := r.Value.Float64()
+	return v
 }
 
 // ByCategory returns every rule whose Category matches. Preserves the

@@ -8,6 +8,8 @@ package zus
 
 import (
 	"math"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/rules"
 )
 
 // ZUS contribution rates (% of gross salary).
@@ -17,16 +19,21 @@ const (
 	contributionRateSubkontoOFE   = 0.0438
 )
 
-// 30x average salary cap — annual limit on contribution base (2026 estimate).
+// ZUS-specific contribution-base constants. Centralized PIT and ZUS-cap
+// values come from the rules package (#545); growth + lookahead horizons
+// stay local since they're tuning constants, not legal thresholds.
 const (
-	cap30x2026     = 282_600.0
 	capGrowthRate  = 0.05
-	pitRate        = 0.12
 	healthRate     = 0.09
-	annualFreeThr  = 30_000.0
 	baseCapYear    = 2026
 	monthsPerYear  = 12.0
 	suwakLookahead = 10
+)
+
+var (
+	cap30x2026    = rules.MustFloat64("zus_cap_30x_2026")
+	pitRate       = rules.MustFloat64("pit_rate_first_2026")
+	annualFreeThr = rules.MustFloat64("pit_free_amount_2026")
 )
 
 // lifeExpectancyMonths — GUS 2025 dalsze trwanie życia at retirement age.

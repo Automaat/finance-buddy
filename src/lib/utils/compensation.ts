@@ -52,15 +52,17 @@ export interface OfferBreakdown {
 
 // 2026 tax constants
 const ZUS_EMERYTALNE = 0.0976;
+import { PL_RULES } from './pl_rules.generated';
+
 const ZUS_RENTOWE = 0.015;
 const ZUS_CHOROBOWE = 0.0245;
 const ZUS_EMPLOYER = 0.2048;
-const ZUS_CAP = 282_600;
+const ZUS_CAP = PL_RULES['zus_cap_30x_2026'].value;
 const HEALTH_RATE = 0.09;
-const PIT_12 = 0.12;
-const PIT_32 = 0.32;
-const PIT_THRESHOLD = 120_000;
-const KWOTA_WOLNA = 30_000;
+const PIT_12 = PL_RULES['pit_rate_first_2026'].value;
+const PIT_32 = PL_RULES['pit_rate_second_2026'].value;
+const PIT_THRESHOLD = PL_RULES['pit_threshold_first_2026'].value;
+const KWOTA_WOLNA = PL_RULES['pit_free_amount_2026'].value;
 const KUP_MONTHLY = 250;
 const PPK_EE = 0.02;
 const PPK_ER = 0.015;
@@ -78,9 +80,9 @@ const B2B_HEALTH_RYCZALT_TIERS = [
 	{ max: 300_000, health: 831 },
 	{ max: Infinity, health: 1495 }
 ];
-const B2B_LINIOWY = 0.19;
-const B2B_RYCZALT_IT = 0.12;
-const RSU_TAX = 0.19;
+const B2B_LINIOWY = PL_RULES['b2b_liniowy_rate_2026'].value;
+const B2B_RYCZALT_IT = PL_RULES['ryczalt_it_rate_2026'].value;
+const RSU_TAX = PL_RULES['capital_gains_tax_2026'].value;
 const WORKING_DAYS = 21;
 const VACATION_DAYS = 26;
 

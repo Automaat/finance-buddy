@@ -11,6 +11,7 @@
 	} from '$lib/utils/charts/simulations';
 	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
 	import { ownerName, type OwnerOption } from '$lib/types/owners';
+	import { PL_RULES } from '$lib/utils/pl_rules.generated';
 
 	interface SimulationSummary {
 		total_final_balance: number;
@@ -56,7 +57,9 @@
 		monthly: number;
 	}
 
-	const SALARY_THRESHOLD_2026 = 5767;
+	// PPK below-threshold salary cap. Generated at build time from the
+	// centralized rules table (#545) — see backend-go/cmd/gen-rules.
+	const salaryThreshold = PL_RULES['ppk_below_threshold_2026'].value;
 
 	interface Props {
 		data: PageData;
@@ -307,8 +310,8 @@
 			for (const ppk of ppkAccounts) {
 				if (!ppk.enabled) continue;
 				const label = ownerName(owners, ppk.ownerUserId);
-				if (ppk.salary > SALARY_THRESHOLD_2026 && ppk.belowThreshold) {
-					error = `PPK ${label}: Wynagrodzenie przekracza próg (${SALARY_THRESHOLD_2026} PLN)`;
+				if (ppk.salary > salaryThreshold && ppk.belowThreshold) {
+					error = `PPK ${label}: Wynagrodzenie przekracza próg (${salaryThreshold} PLN)`;
 					loading = false;
 					return;
 				}
@@ -665,7 +668,7 @@
 									class="checkbox mt-0.5"
 								/>
 								<span class="text-sm"
-									>Wynagrodzenie poniżej progu ({SALARY_THRESHOLD_2026} PLN)
+									>Wynagrodzenie poniżej progu ({salaryThreshold} PLN)
 									<span class="block text-xs text-surface-600-400"
 										>Dotyczy dopłaty rocznej 240 PLN</span
 									>
