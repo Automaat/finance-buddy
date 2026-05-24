@@ -33,6 +33,8 @@ type Config struct {
 	CoastFIRETargetAge      *int             `json:"coast_fire_target_age"`
 	ExpectedReturnRate      decimal.Decimal  `json:"expected_return_rate"`
 	BaristaMonthlyIncome    *decimal.Decimal `json:"barista_monthly_income"`
+	LeanMonthlyExpenses     *decimal.Decimal `json:"lean_monthly_expenses"`
+	FatMonthlyExpenses      *decimal.Decimal `json:"fat_monthly_expenses"`
 }
 
 // ErrNotFound is returned when no row exists at id=1.
@@ -54,7 +56,8 @@ const selectColumns = `
 	allocation_gold, allocation_commodities,
 	monthly_expenses, monthly_mortgage_payment, withdrawal_rate,
 	coast_fire_target_age, expected_return_rate,
-	barista_monthly_income
+	barista_monthly_income,
+	lean_monthly_expenses, fat_monthly_expenses
 `
 
 // Get returns the singleton config or ErrNotFound.
@@ -83,8 +86,9 @@ func (s *Store) Upsert(ctx context.Context, in *Config) (*Config, error) {
 			allocation_gold, allocation_commodities,
 			monthly_expenses, monthly_mortgage_payment, withdrawal_rate,
 			coast_fire_target_age, expected_return_rate,
-			barista_monthly_income
-		) VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+			barista_monthly_income,
+			lean_monthly_expenses, fat_monthly_expenses
+		) VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 		ON CONFLICT (id) DO UPDATE SET
 			birth_date = EXCLUDED.birth_date,
 			retirement_age = EXCLUDED.retirement_age,
@@ -99,7 +103,9 @@ func (s *Store) Upsert(ctx context.Context, in *Config) (*Config, error) {
 			withdrawal_rate = EXCLUDED.withdrawal_rate,
 			coast_fire_target_age = EXCLUDED.coast_fire_target_age,
 			expected_return_rate = EXCLUDED.expected_return_rate,
-			barista_monthly_income = EXCLUDED.barista_monthly_income
+			barista_monthly_income = EXCLUDED.barista_monthly_income,
+			lean_monthly_expenses = EXCLUDED.lean_monthly_expenses,
+			fat_monthly_expenses = EXCLUDED.fat_monthly_expenses
 		RETURNING `+selectColumns,
 		in.BirthDate,
 		in.RetirementAge,
@@ -115,6 +121,8 @@ func (s *Store) Upsert(ctx context.Context, in *Config) (*Config, error) {
 		in.CoastFIRETargetAge,
 		in.ExpectedReturnRate,
 		in.BaristaMonthlyIncome,
+		in.LeanMonthlyExpenses,
+		in.FatMonthlyExpenses,
 	)
 	c, err := scanConfig(row)
 	if err != nil {
@@ -141,6 +149,8 @@ func scanConfig(row pgx.Row) (*Config, error) {
 		&c.CoastFIRETargetAge,
 		&c.ExpectedReturnRate,
 		&c.BaristaMonthlyIncome,
+		&c.LeanMonthlyExpenses,
+		&c.FatMonthlyExpenses,
 	)
 	if err != nil {
 		return nil, err

@@ -37,6 +37,10 @@ type fireMetrics struct {
 	BridgeCapitalNeeded  *float64
 	BridgeLiquidCapital  *float64
 	BridgeCapitalGap     *float64
+	LeanFIRENumber       *float64
+	LeanFIProgress       *float64
+	FatFIRENumber        *float64
+	FatFIProgress        *float64
 }
 
 // bridgeTargetAge is the age the bridge-to-60 metric projects to — IKE
@@ -117,7 +121,45 @@ func computeFIRE(latestRows []mergedRow, cfg AppConfig, netWorth float64) fireMe
 	addCoastFIRE(&out, cfg, netWorth, now)
 	addBaristaFIRE(&out, cfg, netWorth)
 	addBridgeToAccessAge(&out, latestRows, cfg, netWorth, now)
+	addFIREBands(&out, cfg, netWorth, withdrawalRate)
 	return out
+}
+
+// addFIREBands fills the Lean / Fat FIRE bands when configured. Math is the
+// classic FIRE formula applied to alternate monthly-expense levels:
+//
+//	band_fire_number = band_monthly_expenses × 12 ÷ withdrawal_rate
+//	band_fi_progress = net_worth ÷ band_fire_number × 100
+//
+// The Base band is the existing FIRENumber / FIProgress pair — not
+// duplicated here. Each band is independently nullable: a user can configure
+// just Lean, just Fat, both, or neither.
+func addFIREBands(out *fireMetrics, cfg AppConfig, netWorth, withdrawalRate float64) {
+	if withdrawalRate <= 0 {
+		return
+	}
+	if cfg.LeanMonthlyExpenses != nil {
+		monthly, _ := cfg.LeanMonthlyExpenses.Float64()
+		if monthly > 0 {
+			fire := monthly * 12 / withdrawalRate
+			out.LeanFIRENumber = &fire
+			if fire > 0 && netWorth > 0 {
+				progress := netWorth / fire * 100
+				out.LeanFIProgress = &progress
+			}
+		}
+	}
+	if cfg.FatMonthlyExpenses != nil {
+		monthly, _ := cfg.FatMonthlyExpenses.Float64()
+		if monthly > 0 {
+			fire := monthly * 12 / withdrawalRate
+			out.FatFIRENumber = &fire
+			if fire > 0 && netWorth > 0 {
+				progress := netWorth / fire * 100
+				out.FatFIProgress = &progress
+			}
+		}
+	}
 }
 
 // addBridgeToAccessAge fills the bridge-to-60 fields: how much liquid /

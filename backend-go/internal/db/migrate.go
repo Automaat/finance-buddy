@@ -67,6 +67,9 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 	if err := addAppConfigBaristaFIRE(ctx, pool); err != nil {
 		return err
 	}
+	if err := addAppConfigFIREBands(ctx, pool); err != nil {
+		return err
+	}
 	if err := createRecurringTransactionsTable(ctx, pool); err != nil {
 		return err
 	}
@@ -100,6 +103,24 @@ func createSimulationScenariosTable(ctx context.Context, pool *pgxpool.Pool) err
 	for _, stmt := range stmts {
 		if _, err := pool.Exec(ctx, stmt); err != nil {
 			return fmt.Errorf("create simulation_scenarios: %w", err)
+		}
+	}
+	return nil
+}
+
+// addAppConfigFIREBands adds the Lean and Fat FIRE monthly-expense bands
+// to app_config (issue #550). Both nullable — when unset the band tile is
+// hidden and only the existing Base FIRE number (monthly_expenses) shows.
+func addAppConfigFIREBands(ctx context.Context, pool *pgxpool.Pool) error {
+	stmts := []string{
+		`ALTER TABLE app_config
+		ADD COLUMN IF NOT EXISTS lean_monthly_expenses numeric(15,2)`,
+		`ALTER TABLE app_config
+		ADD COLUMN IF NOT EXISTS fat_monthly_expenses numeric(15,2)`,
+	}
+	for _, stmt := range stmts {
+		if _, err := pool.Exec(ctx, stmt); err != nil {
+			return fmt.Errorf("add fire bands to app_config: %w", err)
 		}
 	}
 	return nil

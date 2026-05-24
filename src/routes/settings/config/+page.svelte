@@ -65,6 +65,15 @@
 	let baristaMonthlyIncome = $state<number | null>(
 		config?.barista_monthly_income != null ? Number(config.barista_monthly_income) : null
 	);
+	// FIRE bands: optional Lean / Fat monthly expenses. Base = monthly_expenses
+	// (the existing field). Each band is independently nullable; null = band
+	// tile hidden on the dashboard.
+	let leanMonthlyExpenses = $state<number | null>(
+		config?.lean_monthly_expenses != null ? Number(config.lean_monthly_expenses) : null
+	);
+	let fatMonthlyExpenses = $state<number | null>(
+		config?.fat_monthly_expenses != null ? Number(config.fat_monthly_expenses) : null
+	);
 
 	let error = $state('');
 	let saving = $state(false);
@@ -132,7 +141,9 @@
 					withdrawal_rate: withdrawalRate,
 					coast_fire_target_age: coastFireTargetAge,
 					expected_return_rate: expectedReturnRate,
-					barista_monthly_income: baristaMonthlyIncome
+					barista_monthly_income: baristaMonthlyIncome,
+					lean_monthly_expenses: leanMonthlyExpenses,
+					fat_monthly_expenses: fatMonthlyExpenses
 				})
 			});
 
@@ -438,6 +449,61 @@
 			<span class="text-xs italic text-surface-700-300">
 				Dochód z pracy na pół etatu pomniejsza wymagany kapitał. Puste = ukryj kartę Barista FIRE.
 			</span>
+		</label>
+	</div>
+
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header>
+			<h3 class="h3 flex items-center gap-2"><Flame size={20} /> Pasma FIRE (Lean / Base / Fat)</h3>
+		</header>
+
+		<p class="text-xs italic text-surface-700-300">
+			Bazowe pasmo używa „Miesięczne wydatki” powyżej. Lean i Fat to opcjonalne warianty
+			oszczędnościowy/luksusowy — puste = ukryj kartę.
+		</p>
+
+		<label class="label">
+			<span class="font-semibold text-sm">Lean FIRE — miesięczne wydatki (PLN)</span>
+			<input
+				id="lean-monthly-expenses"
+				type="number"
+				min="0"
+				step="100"
+				placeholder="np. 3000 (puste = wyłączone)"
+				value={leanMonthlyExpenses ?? ''}
+				oninput={(e) => {
+					const v = (e.target as HTMLInputElement).value;
+					if (v === '') {
+						leanMonthlyExpenses = null;
+						return;
+					}
+					const n = Number(v);
+					leanMonthlyExpenses = Number.isNaN(n) ? null : n;
+				}}
+				class="input"
+			/>
+		</label>
+
+		<label class="label">
+			<span class="font-semibold text-sm">Fat FIRE — miesięczne wydatki (PLN)</span>
+			<input
+				id="fat-monthly-expenses"
+				type="number"
+				min="0"
+				step="100"
+				placeholder="np. 12000 (puste = wyłączone)"
+				value={fatMonthlyExpenses ?? ''}
+				oninput={(e) => {
+					const v = (e.target as HTMLInputElement).value;
+					if (v === '') {
+						fatMonthlyExpenses = null;
+						return;
+					}
+					const n = Number(v);
+					fatMonthlyExpenses = Number.isNaN(n) ? null : n;
+				}}
+				class="input"
+			/>
 		</label>
 	</div>
 

@@ -58,6 +58,10 @@ type metricCards struct {
 	BridgeCapitalNeeded     *float64
 	BridgeLiquidCapital     *float64
 	BridgeCapitalGap        *float64
+	LeanFIRENumber          *float64
+	LeanFIProgress          *float64
+	FatFIRENumber           *float64
+	FatFIProgress           *float64
 }
 
 type allocationBreakdown struct {

@@ -235,6 +235,10 @@
 			{@const baristaProgress = fire.barista_fi_progress}
 			{@const baristaIncome = fire.barista_monthly_income}
 			{@const baristaYears = fire.barista_years_to_fi}
+			{@const leanFire = fire.lean_fire_number}
+			{@const leanProgress = fire.lean_fi_progress}
+			{@const fatFire = fire.fat_fire_number}
+			{@const fatProgress = fire.fat_fi_progress}
 			{@const bridgeYears = fire.bridge_years}
 			{@const bridgeNeeded = fire.bridge_capital_needed}
 			{@const bridgeLiquid = fire.bridge_liquid_capital}
@@ -302,6 +306,43 @@
 							<div class="text-xs text-surface-700-300">
 								{surplus ? 'już osiągnięto Coast FIRE' : 'do osiągnięcia Coast FIRE'}
 							</div>
+						</div>
+					</div>
+				{/if}
+				{#if leanFire != null || fatFire != null}
+					<div class="pt-3 border-t border-surface-200-800 space-y-2">
+						<div
+							class="text-xs text-surface-700-300"
+							title="Każde pasmo = roczne wydatki danego poziomu ÷ withdrawal_rate. Bazowe = Twoje zwykłe miesięczne wydatki."
+						>
+							Pasma FIRE
+						</div>
+						<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+							{#if leanFire != null}
+								<div class="space-y-1">
+									<div class="text-xs text-surface-700-300">Lean FIRE</div>
+									<div class="text-xl font-bold">{formatPLN(leanFire)}</div>
+									<div class="text-xs text-surface-700-300">
+										{leanProgress != null ? `${leanProgress.toFixed(1)}% celu` : 'brak danych'}
+									</div>
+								</div>
+							{/if}
+							<div class="space-y-1">
+								<div class="text-xs text-surface-700-300">Base FIRE</div>
+								<div class="text-xl font-bold">{firePLN}</div>
+								<div class="text-xs text-surface-700-300">
+									{progress != null ? `${progress.toFixed(1)}% celu` : 'brak danych'}
+								</div>
+							</div>
+							{#if fatFire != null}
+								<div class="space-y-1">
+									<div class="text-xs text-surface-700-300">Fat FIRE</div>
+									<div class="text-xl font-bold">{formatPLN(fatFire)}</div>
+									<div class="text-xs text-surface-700-300">
+										{fatProgress != null ? `${fatProgress.toFixed(1)}% celu` : 'brak danych'}
+									</div>
+								</div>
+							{/if}
 						</div>
 					</div>
 				{/if}
