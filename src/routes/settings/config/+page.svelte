@@ -366,11 +366,19 @@
 				type="number"
 				min="18"
 				max="100"
+				step="1"
 				placeholder="np. 65 (puste = wyłączone)"
 				value={coastFireTargetAge ?? ''}
 				oninput={(e) => {
 					const v = (e.target as HTMLInputElement).value;
-					coastFireTargetAge = v === '' ? null : Number(v);
+					// Backend stores target age as *int; force integer + drop NaN so
+					// the JSON encoder never sends a float that fails to decode.
+					if (v === '') {
+						coastFireTargetAge = null;
+						return;
+					}
+					const n = parseInt(v, 10);
+					coastFireTargetAge = Number.isNaN(n) ? null : n;
 				}}
 				class="input"
 			/>
