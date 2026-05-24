@@ -225,6 +225,10 @@
 			{@const baristaProgress = fire.barista_fi_progress}
 			{@const baristaIncome = fire.barista_monthly_income}
 			{@const baristaYears = fire.barista_years_to_fi}
+			{@const bridgeYears = fire.bridge_years}
+			{@const bridgeNeeded = fire.bridge_capital_needed}
+			{@const bridgeLiquid = fire.bridge_liquid_capital}
+			{@const bridgeGap = fire.bridge_capital_gap}
 			<div class="card preset-filled-surface-100-900 p-4 space-y-3">
 				<header class="flex items-start justify-between gap-2 flex-wrap">
 					<h3 class="h4 flex items-center gap-2"><Flame size={18} /> FIRE i runway</h3>
@@ -321,6 +325,46 @@
 								{:else if (baristaProgress ?? 0) >= 100}
 									<div class="text-xs text-success-600-400">już osiągnięto Barista FIRE</div>
 								{/if}
+							</div>
+						</div>
+					</div>
+				{/if}
+				{#if bridgeYears != null && bridgeNeeded != null && bridgeLiquid != null && bridgeGap != null}
+					{@const bridgeSurplus = bridgeGap < 0}
+					{@const bridgeExact = bridgeGap === 0}
+					{@const bridgeOK = bridgeGap <= 0}
+					<div class="pt-3 border-t border-surface-200-800 space-y-2">
+						<div
+							class="text-xs text-surface-700-300"
+							title="bridge_capital_needed = annual_expenses × (60 − current_age)&#10;bridge_liquid_capital = wartość netto − (IKE + IKZE + PPK)&#10;bridge_capital_gap = needed − liquid (dodatni = niedobór, ujemny = nadwyżka)"
+						>
+							Bridge do 60 ({bridgeYears} lat)
+						</div>
+						<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+							<div class="space-y-1">
+								<div class="text-xs text-surface-700-300">Potrzebne</div>
+								<div class="text-xl font-bold">{formatPLN(bridgeNeeded)}</div>
+								<div class="text-xs text-surface-700-300">wydatki × lata do 60</div>
+							</div>
+							<div class="space-y-1">
+								<div class="text-xs text-surface-700-300">Płynne</div>
+								<div class="text-xl font-bold">{formatPLN(bridgeLiquid)}</div>
+								<div class="text-xs text-surface-700-300">netto bez IKE/IKZE/PPK</div>
+							</div>
+							<div class="space-y-1">
+								<div class="text-xs text-surface-700-300">
+									{#if bridgeSurplus}Nadwyżka{:else if bridgeExact}Pokryty{:else}Brakuje{/if}
+								</div>
+								<div
+									class="text-xl font-bold {bridgeOK
+										? 'text-success-600-400'
+										: 'text-warning-600-400'}"
+								>
+									{formatPLN(Math.abs(bridgeGap))}
+								</div>
+								<div class="text-xs text-surface-700-300">
+									{bridgeOK ? 'mostek pokryty' : 'do uzbierania w aktywach płynnych'}
+								</div>
 							</div>
 						</div>
 					</div>

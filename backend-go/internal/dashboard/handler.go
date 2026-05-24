@@ -202,6 +202,10 @@ type metricCardsWire struct {
 	BaristaFIRENumber       *pyFloat `json:"barista_fire_number"`
 	BaristaFIProgress       *pyFloat `json:"barista_fi_progress"`
 	BaristaYearsToFI        *pyFloat `json:"barista_years_to_fi"`
+	BridgeYears             *int     `json:"bridge_years"`
+	BridgeCapitalNeeded     *pyFloat `json:"bridge_capital_needed"`
+	BridgeLiquidCapital     *pyFloat `json:"bridge_liquid_capital"`
+	BridgeCapitalGap        *pyFloat `json:"bridge_capital_gap"`
 }
 
 type allocationBreakdownWire struct {
@@ -347,6 +351,10 @@ func metricCardsToWire(m metricCards) metricCardsWire {
 		BaristaFIRENumber:       floatPtr(m.BaristaFIRENumber),
 		BaristaFIProgress:       floatPtr(m.BaristaFIProgress),
 		BaristaYearsToFI:        floatPtr(m.BaristaYearsToFI),
+		BridgeYears:             m.BridgeYears,
+		BridgeCapitalNeeded:     floatPtr(m.BridgeCapitalNeeded),
+		BridgeLiquidCapital:     floatPtr(m.BridgeLiquidCapital),
+		BridgeCapitalGap:        floatPtr(m.BridgeCapitalGap),
 	}
 }
 

@@ -497,6 +497,10 @@ func assignFIREMetrics(mc *metricCards, fire fireMetrics) {
 	mc.BaristaFIRENumber = fire.BaristaFIRENumber
 	mc.BaristaFIProgress = fire.BaristaFIProgress
 	mc.BaristaYearsToFI = fire.BaristaYearsToFI
+	mc.BridgeYears = fire.BridgeYears
+	mc.BridgeCapitalNeeded = fire.BridgeCapitalNeeded
+	mc.BridgeLiquidCapital = fire.BridgeLiquidCapital
+	mc.BridgeCapitalGap = fire.BridgeCapitalGap
 }
 
 // buildAllocationAnalysis is the shared allocation-analysis computation.

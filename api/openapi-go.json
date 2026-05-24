@@ -2819,6 +2819,25 @@
                           "nullable": true,
                           "type": "number"
                         },
+                        "bridge_capital_gap": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "bridge_capital_needed": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "bridge_liquid_capital": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "bridge_years": {
+                          "nullable": true,
+                          "type": "integer"
+                        },
                         "coast_fire_gap": {
                           "format": "double",
                           "nullable": true,

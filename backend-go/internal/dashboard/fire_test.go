@@ -20,6 +20,20 @@ func newAccountRow(category, accType string, value float64) mergedRow {
 	}
 }
 
+func newWrapperRow(wrapper string, value float64) mergedRow {
+	w := wrapper
+	t := "asset"
+	c := "stock"
+	id := 1
+	return mergedRow{
+		AccountID: &id,
+		AccType:   &t,
+		Category:  &c,
+		Wrapper:   &w,
+		Value:     value,
+	}
+}
+
 func TestComputeFIREHappyPath(t *testing.T) {
 	t.Parallel()
 	rows := []mergedRow{
@@ -129,6 +143,129 @@ func TestComputeFIRELiquidExcludesNonBank(t *testing.T) {
 	// Only the bank-asset row counts: 10000 / 2000 = 5.
 	if got.RunwayMonths == nil || *got.RunwayMonths != 5 {
 		t.Errorf("runway = %v, want 5", got.RunwayMonths)
+	}
+}
+
+func TestAddBridgeToAccessAgeHappyPath(t *testing.T) {
+	t.Parallel()
+	// currentAge ≈ 35 on 2025-01-01 → bridge_years = 25.
+	// annual_expenses = 60_000 → needed = 1_500_000.
+	// 200k IKE + 100k PPK + 50k IKZE = 350k locked → liquid = net_worth − 350k.
+	rows := []mergedRow{
+		newWrapperRow("IKE", 200_000),
+		newWrapperRow("PPK", 100_000),
+		newWrapperRow("IKZE", 50_000),
+		newAccountRow("bank", "asset", 80_000),
+		newAccountRow("stock", "asset", 100_000),
+	}
+	cfg := AppConfig{
+		MonthlyExpenses: decimal.NewFromInt(5000),
+		WithdrawalRate:  decimal.RequireFromString("0.04"),
+		BirthDate:       time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC),
+	}
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	var out fireMetrics
+	annual := 60_000.0
+	out.AnnualExpenses = &annual
+
+	addBridgeToAccessAge(&out, rows, cfg, 800_000, now)
+
+	if out.BridgeYears == nil || *out.BridgeYears != 25 {
+		t.Fatalf("bridge_years = %v, want 25", out.BridgeYears)
+	}
+	if out.BridgeCapitalNeeded == nil || *out.BridgeCapitalNeeded != 1_500_000 {
+		t.Fatalf("bridge_capital_needed = %v, want 1500000", out.BridgeCapitalNeeded)
+	}
+	// liquid = 800_000 − 350_000 = 450_000
+	if out.BridgeLiquidCapital == nil || *out.BridgeLiquidCapital != 450_000 {
+		t.Fatalf("bridge_liquid_capital = %v, want 450000", out.BridgeLiquidCapital)
+	}
+	// gap = needed − liquid = 1_500_000 − 450_000 = 1_050_000
+	if out.BridgeCapitalGap == nil || *out.BridgeCapitalGap != 1_050_000 {
+		t.Fatalf("bridge_capital_gap = %v, want 1050000", out.BridgeCapitalGap)
+	}
+}
+
+func TestAddBridgeToAccessAgePastAccessAgeStaysNil(t *testing.T) {
+	t.Parallel()
+	cfg := AppConfig{
+		BirthDate: time.Date(1960, 1, 1, 0, 0, 0, 0, time.UTC),
+	}
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	var out fireMetrics
+	annual := 60_000.0
+	out.AnnualExpenses = &annual
+	addBridgeToAccessAge(&out, nil, cfg, 800_000, now)
+	if out.BridgeYears != nil {
+		t.Errorf("bridge_years should be nil at/past access age, got %v", *out.BridgeYears)
+	}
+	if out.BridgeCapitalNeeded != nil {
+		t.Errorf("bridge_capital_needed should be nil at/past access age, got %v", *out.BridgeCapitalNeeded)
+	}
+}
+
+func TestAddBridgeToAccessAgeNoBirthDateStaysNil(t *testing.T) {
+	t.Parallel()
+	var out fireMetrics
+	annual := 60_000.0
+	out.AnnualExpenses = &annual
+	addBridgeToAccessAge(&out, nil, AppConfig{}, 800_000, time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC))
+	if out.BridgeYears != nil {
+		t.Errorf("bridge_years should be nil without birth date, got %v", *out.BridgeYears)
+	}
+}
+
+func TestAddBridgeToAccessAgeNoExpensesStaysNil(t *testing.T) {
+	t.Parallel()
+	cfg := AppConfig{
+		BirthDate: time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC),
+	}
+	var out fireMetrics // AnnualExpenses nil
+	addBridgeToAccessAge(&out, nil, cfg, 800_000, time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC))
+	if out.BridgeYears != nil {
+		t.Errorf("bridge_years should be nil without configured expenses, got %v", *out.BridgeYears)
+	}
+}
+
+func TestAddBridgeToAccessAgeLiquidCanBeNegative(t *testing.T) {
+	t.Parallel()
+	// All net worth is locked in wrappers → liquid goes negative (a real
+	// possibility for someone whose only assets are IKE/PPK + a mortgage).
+	rows := []mergedRow{newWrapperRow("IKE", 100_000)}
+	cfg := AppConfig{BirthDate: time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC)}
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	var out fireMetrics
+	annual := 60_000.0
+	out.AnnualExpenses = &annual
+
+	addBridgeToAccessAge(&out, rows, cfg, 50_000, now)
+	// liquid = 50_000 − 100_000 = −50_000 (allowed; surfaces real shortfall)
+	if out.BridgeLiquidCapital == nil || *out.BridgeLiquidCapital != -50_000 {
+		t.Errorf("bridge_liquid_capital = %v, want -50000", out.BridgeLiquidCapital)
+	}
+}
+
+func TestLockedWrapperValueOfFiltersCorrectly(t *testing.T) {
+	t.Parallel()
+	rows := []mergedRow{
+		newWrapperRow("IKE", 100_000),
+		newWrapperRow("IKZE", 50_000),
+		newWrapperRow("PPK", 30_000),
+		newWrapperRow("Regular", 200_000), // not locked
+		newAccountRow("bank", "asset", 80_000),
+	}
+	// Add a non-asset wrapper row (e.g., liability) — should not count.
+	liab := "liability"
+	w := "IKE"
+	cat := "housing"
+	id := 99
+	rows = append(rows, mergedRow{
+		AccountID: &id, AccType: &liab, Category: &cat, Wrapper: &w, Value: 500_000,
+	})
+	got := lockedWrapperValueOf(rows)
+	want := 100_000.0 + 50_000.0 + 30_000.0
+	if got != want {
+		t.Errorf("lockedWrapperValueOf = %v, want %v", got, want)
 	}
 }
 

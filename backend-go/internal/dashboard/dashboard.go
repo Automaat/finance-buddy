@@ -54,6 +54,10 @@ type metricCards struct {
 	BaristaFIRENumber       *float64
 	BaristaFIProgress       *float64
 	BaristaYearsToFI        *float64
+	BridgeYears             *int
+	BridgeCapitalNeeded     *float64
+	BridgeLiquidCapital     *float64
+	BridgeCapitalGap        *float64
 }
 
 type allocationBreakdown struct {
