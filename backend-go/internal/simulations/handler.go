@@ -159,6 +159,70 @@ func (h *Handler) MortgageVsInvest(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// --- WIBOR scenarios wire types ---
+
+type wiborInputsWire struct {
+	RemainingPrincipal pyFloat `json:"remaining_principal"`
+	BaseAnnualRate     pyFloat `json:"base_annual_rate"`
+	RemainingMonths    int     `json:"remaining_months"`
+	BasePayment        pyFloat `json:"base_payment"`
+}
+
+type wiborScenarioWire struct {
+	DeltaPP        pyFloat   `json:"delta_pp"`
+	AnnualRate     pyFloat   `json:"annual_rate"`
+	MonthlyPayment pyFloat   `json:"monthly_payment"`
+	TotalInterest  pyFloat   `json:"total_interest"`
+	TermMonths     int       `json:"term_months"`
+	RateFloored    bool      `json:"rate_floored"`
+	YearlyBalances []pyFloat `json:"yearly_balances"`
+}
+
+type wiborResponse struct {
+	Inputs    wiborInputsWire     `json:"inputs"`
+	Scenarios []wiborScenarioWire `json:"scenarios"`
+}
+
+// WiborScenarios serves POST /api/simulations/wibor.
+func (h *Handler) WiborScenarios(w http.ResponseWriter, r *http.Request) {
+	raw := map[string]json.RawMessage{}
+	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
+		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		return
+	}
+	in, vErr := buildWiborInputs(raw)
+	if vErr != nil {
+		writePydanticError(w, vErr)
+		return
+	}
+	result := SimulateWiborScenarios(in, DefaultWiborDeltas)
+	resp := wiborResponse{
+		Inputs: wiborInputsWire{
+			RemainingPrincipal: pyFloat(in.RemainingPrincipal),
+			BaseAnnualRate:     pyFloat(in.BaseAnnualRate),
+			RemainingMonths:    in.RemainingMonths,
+			BasePayment:        pyFloat(result.BasePayment),
+		},
+	}
+	resp.Scenarios = make([]wiborScenarioWire, 0, len(result.Scenarios))
+	for _, s := range result.Scenarios {
+		balances := make([]pyFloat, 0, len(s.YearlyBalances))
+		for _, b := range s.YearlyBalances {
+			balances = append(balances, pyFloat(b))
+		}
+		resp.Scenarios = append(resp.Scenarios, wiborScenarioWire{
+			DeltaPP:        pyFloat(s.DeltaPP),
+			AnnualRate:     pyFloat(s.AnnualRate),
+			MonthlyPayment: pyFloat(s.MonthlyPayment),
+			TotalInterest:  pyFloat(s.TotalInterest),
+			TermMonths:     s.TermMonths,
+			RateFloored:    s.RateFloored,
+			YearlyBalances: balances,
+		})
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
 // Prefill serves GET /api/simulations/prefill.
 func (h *Handler) Prefill(w http.ResponseWriter, r *http.Request) {
 	data, err := h.store.LoadPrefill(r.Context())

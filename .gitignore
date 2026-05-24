@@ -67,3 +67,4 @@ e2e/.auth/
 # Misc
 .vercel
 .netlify
+.claude/

@@ -69,6 +69,46 @@ func buildMortgageInputs(raw map[string]json.RawMessage) (MortgageInputs, *valid
 	return in, nil
 }
 
+// --- WIBOR scenarios ---
+
+func buildWiborInputs(raw map[string]json.RawMessage) (WiborScenarioInputs, *validationError) {
+	var in WiborScenarioInputs
+	var vErr *validationError
+
+	in.RemainingPrincipal, vErr = requireFloat(raw, "remaining_principal")
+	if vErr != nil {
+		return in, vErr
+	}
+	if in.RemainingPrincipal <= 0 {
+		return in, &validationError{Field: "remaining_principal", Msg: "Remaining principal must be positive"}
+	}
+	in.BaseAnnualRate, vErr = requireFloat(raw, "base_annual_rate")
+	if vErr != nil {
+		return in, vErr
+	}
+	if in.BaseAnnualRate <= 0 || in.BaseAnnualRate > 30 {
+		return in, &validationError{Field: "base_annual_rate", Msg: "Base annual rate must be > 0 and <= 30%"}
+	}
+	in.RemainingMonths, vErr = requireInt(raw, "remaining_months")
+	if vErr != nil {
+		return in, vErr
+	}
+	if in.RemainingMonths < 1 || in.RemainingMonths > 600 {
+		return in, &validationError{Field: "remaining_months", Msg: "Remaining months must be between 1 and 600"}
+	}
+	if v, ok := raw["base_payment"]; ok && !isNullRaw(v) {
+		f, err := floatFromRaw(v)
+		if err != nil {
+			return in, &validationError{Field: "base_payment", Msg: "must be a number"}
+		}
+		if f < 0 {
+			return in, &validationError{Field: "base_payment", Msg: "Base payment cannot be negative"}
+		}
+		in.BasePayment = f
+	}
+	return in, nil
+}
+
 // --- retirement ---
 
 type ikeIkzeInput struct {

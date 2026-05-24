@@ -5597,6 +5597,85 @@
         ]
       }
     },
+    "/api/simulations/wibor": {
+      "post": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "inputs": {
+                      "properties": {
+                        "base_annual_rate": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "base_payment": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "remaining_months": {
+                          "type": "integer"
+                        },
+                        "remaining_principal": {
+                          "format": "double",
+                          "type": "number"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "scenarios": {
+                      "items": {
+                        "properties": {
+                          "annual_rate": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "delta_pp": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "monthly_payment": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "rate_floored": {
+                            "type": "boolean"
+                          },
+                          "term_months": {
+                            "type": "integer"
+                          },
+                          "total_interest": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "yearly_balances": {
+                            "items": {
+                              "format": "double",
+                              "type": "number"
+                            },
+                            "type": "array"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "WIBOR rate-shock scenarios",
+        "tags": [
+          "simulations"
+        ]
+      }
+    },
     "/api/snapshots": {
       "get": {
         "responses": {
