@@ -4,6 +4,7 @@
 	const tabs = [
 		{ href: '/simulations', label: 'Emerytalne' },
 		{ href: '/simulations/mortgage', label: 'Hipoteka' },
+		{ href: '/simulations/wibor', label: 'WIBOR' },
 		{ href: '/simulations/zus', label: 'Emerytura ZUS' },
 		{ href: '/simulations/kalkulator', label: 'Kalkulator' }
 	];
