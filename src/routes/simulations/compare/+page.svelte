@@ -152,7 +152,7 @@
 						headers: { 'Content-Type': 'application/json' },
 						body: JSON.stringify(inputsToRequestBody(s.inputs_json))
 					});
-					if (!r.ok) throw new Error(`${s.name}: HTTP ${r.status}`);
+					if (!r.ok) throw new Error(`HTTP ${r.status}`);
 					const body = await r.json();
 					return { scenario: s, summary: body.summary as SimulationSummary };
 				})
@@ -160,7 +160,8 @@
 			const errs: string[] = [];
 			const ok = settled.flatMap((res, i) => {
 				if (res.status === 'fulfilled') return [res.value];
-				errs.push(`${chosen[i].name}: ${res.reason}`);
+				const reason = res.reason instanceof Error ? res.reason.message : String(res.reason);
+				errs.push(`${chosen[i].name}: ${reason}`);
 				return [];
 			});
 			if (errs.length) error = errs.join('; ');
@@ -191,6 +192,15 @@
 
 	function fmtPct(v: number): string {
 		return (v * 100).toFixed(1) + '%';
+	}
+
+	// Backend returns naive UTC strings; new Date() would re-anchor those to
+	// the browser's local zone. Append Z when missing so the rendered moment
+	// matches the server clock. Guarded so a future migration to suffixed
+	// strings doesn't double-up.
+	function fmtUpdatedAt(s: string): string {
+		const utc = s.endsWith('Z') ? s : s + 'Z';
+		return new Date(utc).toLocaleDateString('pl-PL');
 	}
 
 	// Per-row min/max for color-coding so differences are easy to scan.
@@ -245,6 +255,30 @@
 				)
 			: { min: 0, max: 0 }
 	);
+	const contributionsExtremes = $derived(
+		results.length
+			? rowExtreme(
+					results.map((r) => r.summary.total_contributions),
+					'higher'
+				)
+			: { min: 0, max: 0 }
+	);
+	const returnsExtremes = $derived(
+		results.length
+			? rowExtreme(
+					results.map((r) => r.summary.total_returns),
+					'higher'
+				)
+			: { min: 0, max: 0 }
+	);
+	const nominalIncomeExtremes = $derived(
+		results.length
+			? rowExtreme(
+					results.map((r) => r.summary.estimated_monthly_income),
+					'higher'
+				)
+			: { min: 0, max: 0 }
+	);
 
 	onMount(() => {
 		loadScenarios();
@@ -289,7 +323,7 @@
 							{s.name}
 						</label>
 						<span class="text-xs text-surface-700-300">
-							{new Date(s.updated_at + 'Z').toLocaleDateString('pl-PL')}
+							{fmtUpdatedAt(s.updated_at)}
 						</span>
 					</li>
 				{/each}
@@ -405,19 +439,32 @@
 					<tr>
 						<td>Wpłaty łącznie</td>
 						{#each results as r (r.scenario.id)}
-							<td class="text-right">{fmtPLN(r.summary.total_contributions)}</td>
+							<td
+								class="text-right {cellClass(r.summary.total_contributions, contributionsExtremes)}"
+							>
+								{fmtPLN(r.summary.total_contributions)}
+							</td>
 						{/each}
 					</tr>
 					<tr>
 						<td>Zwroty łącznie</td>
 						{#each results as r (r.scenario.id)}
-							<td class="text-right">{fmtPLN(r.summary.total_returns)}</td>
+							<td class="text-right {cellClass(r.summary.total_returns, returnsExtremes)}">
+								{fmtPLN(r.summary.total_returns)}
+							</td>
 						{/each}
 					</tr>
 					<tr>
 						<td>Miesięczny dochód (nominalny)</td>
 						{#each results as r (r.scenario.id)}
-							<td class="text-right">{fmtPLN(r.summary.estimated_monthly_income)}</td>
+							<td
+								class="text-right {cellClass(
+									r.summary.estimated_monthly_income,
+									nominalIncomeExtremes
+								)}"
+							>
+								{fmtPLN(r.summary.estimated_monthly_income)}
+							</td>
 						{/each}
 					</tr>
 					<tr>
