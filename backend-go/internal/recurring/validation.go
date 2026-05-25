@@ -105,11 +105,11 @@ func readCadence(raw map[string]json.RawMessage, in *CreateInput) *validationErr
 }
 
 func readDatesAndActive(raw map[string]json.RawMessage, in *CreateInput) *validationError {
-	startStr, err := requireDate(raw, "start_date")
+	startDate, err := requireDate(raw, "start_date")
 	if err != nil {
 		return err
 	}
-	in.StartDate = startStr
+	in.StartDate = startDate
 	if v, ok := raw["end_date"]; ok && string(v) != "null" {
 		var s string
 		if jerr := json.Unmarshal(v, &s); jerr != nil {
