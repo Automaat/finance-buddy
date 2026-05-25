@@ -5,7 +5,6 @@ function baseInputs(overrides: Partial<OptionInputs> = {}): OptionInputs {
 	const drift: Record<OptionKey, number> = {
 		ikze: 0,
 		ike: 0,
-		ppk: 0,
 		mortgage: 0,
 		bonds: 0,
 		brokerage: 0
@@ -15,8 +14,6 @@ function baseInputs(overrides: Partial<OptionInputs> = {}): OptionInputs {
 		marginalPitRate: 0.32,
 		ikzeRemainingPLN: 5000,
 		ikeRemainingPLN: 10000,
-		ppkEmployerMatchRate: 0.015,
-		ppkMatched: true,
 		mortgageAPRPct: 7,
 		mortgageRemainingPLN: 200000,
 		bondsYieldPct: 6,
@@ -41,12 +38,6 @@ describe('rankOptions', () => {
 		expect(ranked[ranked.length - 1].option).toBe('ikze');
 	});
 
-	it('marks PPK unavailable when no active match', () => {
-		const ranked = rankOptions(baseInputs({ ppkMatched: false }));
-		const ppk = ranked.find((r) => r.option === 'ppk');
-		expect(ppk?.available).toBe(false);
-	});
-
 	it('marks mortgage unavailable when no remaining principal', () => {
 		const ranked = rankOptions(baseInputs({ mortgageRemainingPLN: 0 }));
 		const m = ranked.find((r) => r.option === 'mortgage');
@@ -69,16 +60,14 @@ describe('rankOptions', () => {
 		const skew: Record<OptionKey, number> = {
 			ikze: 0,
 			ike: 0,
-			ppk: 0,
 			mortgage: 0,
 			bonds: 10,
 			brokerage: 0
 		};
-		// Strip the IKZE/PPK incentives so bonds wins on drift alone.
+		// Strip the IKZE incentive so bonds wins on drift alone.
 		const ranked = rankOptions(
 			baseInputs({
 				marginalPitRate: 0,
-				ppkMatched: false,
 				mortgageRemainingPLN: 0,
 				allocationDrift: skew
 			})
@@ -120,7 +109,6 @@ describe('rankOptions', () => {
 		const ranked = rankOptions(
 			baseInputs({
 				marginalPitRate: 0,
-				ppkMatched: false,
 				mortgageRemainingPLN: 0,
 				bondsYieldPct: 0,
 				brokerageReturnPct: 10,

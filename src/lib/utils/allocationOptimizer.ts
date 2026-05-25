@@ -1,6 +1,6 @@
 import { PL_RULES } from './pl_rules.generated';
 
-export type OptionKey = 'ikze' | 'ike' | 'ppk' | 'mortgage' | 'bonds' | 'brokerage';
+export type OptionKey = 'ikze' | 'ike' | 'mortgage' | 'bonds' | 'brokerage';
 
 export interface OptionInputs {
 	// Amount the user plans to contribute. Used to scale benefit factors
@@ -11,8 +11,6 @@ export interface OptionInputs {
 	marginalPitRate: number;
 	ikzeRemainingPLN: number;
 	ikeRemainingPLN: number;
-	ppkEmployerMatchRate: number;
-	ppkMatched: boolean;
 	mortgageAPRPct: number;
 	mortgageRemainingPLN: number;
 	bondsYieldPct: number;
@@ -38,7 +36,6 @@ export interface OptionScore {
 export const OPTION_NAMES: Record<OptionKey, string> = {
 	ikze: 'IKZE',
 	ike: 'IKE',
-	ppk: 'PPK',
 	mortgage: 'Nadpłata hipoteki',
 	bonds: 'Obligacje skarbowe',
 	brokerage: 'Konto maklerskie'
@@ -51,7 +48,6 @@ const LIQUIDITY_BASE: Record<OptionKey, number> = {
 	bonds: -1,
 	ike: -3,
 	ikze: -5,
-	ppk: -5,
 	mortgage: -4
 };
 
@@ -128,24 +124,6 @@ function scoreIKE(input: OptionInputs): OptionScore {
 	};
 }
 
-function scorePPK(input: OptionInputs): OptionScore {
-	const factors: ScoreFactor[] = [
-		{ label: 'Dopłata pracodawcy', pp: pp(input.ppkEmployerMatchRate) },
-		driftFactor('ppk', input.allocationDrift),
-		liquidityFactor('ppk', input.liquidityNeedScore)
-	];
-	return {
-		option: 'ppk',
-		name: OPTION_NAMES.ppk,
-		available: input.ppkMatched,
-		availabilityReason: input.ppkMatched
-			? undefined
-			: 'Brak aktywnego PPK lub limit pracodawcy wykorzystany',
-		factors,
-		total: factors.reduce((sum, f) => sum + f.pp, 0)
-	};
-}
-
 function scoreMortgage(input: OptionInputs): OptionScore {
 	const coverage = limitCoverage(input.amountPLN, input.mortgageRemainingPLN);
 	const factors: ScoreFactor[] = [
@@ -203,7 +181,6 @@ export function rankOptions(input: OptionInputs): OptionScore[] {
 	const all = [
 		scoreIKZE(input),
 		scoreIKE(input),
-		scorePPK(input),
 		scoreMortgage(input),
 		scoreBonds(input),
 		scoreBrokerage(input)

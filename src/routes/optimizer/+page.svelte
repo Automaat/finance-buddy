@@ -1,45 +1,45 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { rankOptions, type OptionInputs, type OptionKey } from '$lib/utils/allocationOptimizer';
 	import { formatPLN } from '$lib/utils/format';
 	import { Compass, TrendingUp } from 'lucide-svelte';
+	import type { PageData } from './$types';
+
+	interface Props {
+		data: PageData;
+	}
+	let { data }: Props = $props();
 
 	let amount = $state(1000);
 	let marginalPitRate = $state(0.32);
-	let ikzeRemainingPLN = $state(5000);
-	let ikeRemainingPLN = $state(15000);
-	let ppkEmployerMatchRate = $state(0.015);
-	let ppkMatched = $state(true);
+	// IKE/IKZE remaining limits come from /api/retirement/stats — summed across
+	// owners for the current year. Read-only here; managed on the retirement page.
+	const ikzeRemainingPLN = $derived(data?.ikzeRemainingPLN ?? 0);
+	const ikeRemainingPLN = $derived(data?.ikeRemainingPLN ?? 0);
 	let mortgageAPRPct = $state(7);
 	let mortgageRemainingPLN = $state(0);
 	let bondsYieldPct = $state(6.75);
-	let brokerageReturnPct = $state(7);
+	let brokerageReturnPct = $state(untrack(() => data?.defaults?.annualReturnPct ?? 7));
 	let liquidityNeedScore = $state(1);
 
-	type DriftEntry = { key: OptionKey; label: string; pp: number };
-	let drift = $state<DriftEntry[]>([
-		{ key: 'ikze', label: 'IKZE', pp: 0 },
-		{ key: 'ike', label: 'IKE', pp: 0 },
-		{ key: 'ppk', label: 'PPK', pp: 0 },
-		{ key: 'mortgage', label: 'Nadpłata hipoteki', pp: 0 },
-		{ key: 'bonds', label: 'Obligacje', pp: 0 },
-		{ key: 'brokerage', label: 'Maklerskie', pp: 0 }
-	]);
+	const FALLBACK_DRIFT: Record<OptionKey, number> = {
+		ikze: 0,
+		ike: 0,
+		mortgage: 0,
+		bonds: 0,
+		brokerage: 0
+	};
 
 	const inputs = $derived<OptionInputs>({
 		amountPLN: amount,
 		marginalPitRate,
 		ikzeRemainingPLN,
 		ikeRemainingPLN,
-		ppkEmployerMatchRate,
-		ppkMatched,
 		mortgageAPRPct,
 		mortgageRemainingPLN,
 		bondsYieldPct,
 		brokerageReturnPct,
-		allocationDrift: Object.fromEntries(drift.map((d) => [d.key, d.pp])) as Record<
-			OptionKey,
-			number
-		>,
+		allocationDrift: data?.allocationDrift ?? FALLBACK_DRIFT,
 		liquidityNeedScore
 	});
 
@@ -61,8 +61,8 @@
 			Optymalizator następnych 1000 PLN
 		</h1>
 		<p class="text-surface-700-300 text-sm">
-			Porównaj IKZE, IKE, PPK, nadpłatę hipoteki, obligacje i maklerskie — ranking według
-			oczekiwanej korzyści w pkt. proc.
+			Porównaj IKZE, IKE, nadpłatę hipoteki, obligacje i maklerskie — ranking według oczekiwanej
+			korzyści w pkt. proc.
 		</p>
 	</header>
 
@@ -82,32 +82,6 @@
 					step="0.01"
 					class="input w-full"
 					bind:value={marginalPitRate}
-				/>
-			</label>
-			<label class="space-y-1">
-				<span class="text-xs font-semibold">Pozostały limit IKZE (PLN)</span>
-				<input type="number" min="0" class="input w-full" bind:value={ikzeRemainingPLN} />
-			</label>
-			<label class="space-y-1">
-				<span class="text-xs font-semibold">Pozostały limit IKE (PLN)</span>
-				<input type="number" min="0" class="input w-full" bind:value={ikeRemainingPLN} />
-			</label>
-			<label class="space-y-1 flex flex-col">
-				<span class="text-xs font-semibold">PPK aktywne</span>
-				<select bind:value={ppkMatched} class="input">
-					<option value={true}>Tak</option>
-					<option value={false}>Nie</option>
-				</select>
-			</label>
-			<label class="space-y-1">
-				<span class="text-xs font-semibold">Stawka pracodawcy PPK (np. 0.015)</span>
-				<input
-					type="number"
-					min="0"
-					max="1"
-					step="0.001"
-					class="input w-full"
-					bind:value={ppkEmployerMatchRate}
 				/>
 			</label>
 			<label class="space-y-1">
@@ -143,16 +117,6 @@
 					bind:value={liquidityNeedScore}
 				/>
 			</label>
-		</div>
-
-		<h3 class="h5">Dryft alokacji (pp, „+” = pod celem)</h3>
-		<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-			{#each drift as d (d.key)}
-				<label class="space-y-1">
-					<span class="text-xs font-semibold">{d.label}</span>
-					<input type="number" step="0.5" class="input w-full" bind:value={d.pp} />
-				</label>
-			{/each}
 		</div>
 	</section>
 
@@ -195,8 +159,8 @@
 		</ol>
 		<p class="text-xs text-surface-600-400">
 			Wynik wyrażony w pkt. proc. odnosi się do kwoty wpłaty: 5 pp ≈ 5% nadwyżki w pierwszym roku.
-			Tę kalkulację należy traktować jako szybką orientację — Belka, ulga IKZE i dopłata PPK są
-			przybliżeniami. Złoty standard to indywidualny rachunek z doradcą.
+			Tę kalkulację należy traktować jako szybką orientację — Belka i ulga IKZE są przybliżeniami.
+			Złoty standard to indywidualny rachunek z doradcą.
 		</p>
 	</section>
 </div>
