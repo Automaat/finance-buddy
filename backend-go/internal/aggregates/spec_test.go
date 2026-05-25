@@ -31,6 +31,9 @@ func TestComputeAggregates_EmptyValuesProducesSharedZeroRow(t *testing.T) {
 		t.Errorf("want all zero, got assets=%s liab=%s nw=%s",
 			row.TotalAssets, row.TotalLiabilities, row.NetWorth)
 	}
+	if row.Allocation == nil {
+		t.Errorf("Allocation: want empty slice (not nil) so JSON marshals to []")
+	}
 	if len(row.Allocation) != 0 {
 		t.Errorf("Allocation: want empty, got %v", row.Allocation)
 	}
