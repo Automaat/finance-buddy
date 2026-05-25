@@ -1,21 +1,18 @@
 package retirement
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
-	"math"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/shopspring/decimal"
 )
 
 type yearlyStat struct {
@@ -143,37 +140,8 @@ func (h *Handler) buildYearlyStat(ctx context.Context, year int, wrapper string,
 	if !configured {
 		return yearlyStat{}, false, nil
 	}
+	stat := computeYearlyStat(year, wrapper, ownerUserID, totals, limit.LimitAmount)
 	totalF, _ := totals.Total.Float64()
-	employeeF, _ := totals.Employee.Float64()
-	employerF, _ := totals.Employer.Float64()
-	if totalF > employeeF+employerF {
-		employeeF += totalF - (employeeF + employerF)
-	}
-	limitF, _ := limit.LimitAmount.Float64()
-	remaining := limitF - totalF
-	if remaining < 0 {
-		remaining = 0
-	}
-	percentage := 0.0
-	if limitF > 0 {
-		percentage = totalF / limitF * 100
-	}
-	lAmt := pyFloat(limitF)
-	rem := pyFloat(remaining)
-	pct := pyFloat(math.Round(percentage*10) / 10)
-	stat := yearlyStat{
-		Year: year, AccountWrapper: wrapper, OwnerUserID: ownerUserID,
-		LimitAmount:         &lAmt,
-		TotalContributed:    pyFloat(totalF),
-		EmployeeContributed: pyFloat(employeeF),
-		EmployerContributed: pyFloat(employerF),
-		Remaining:           &rem,
-		PercentageUsed:      &pct,
-		// is_warning uses the unrounded percentage — Python computes it from
-		// the raw value, so 89.95% must NOT flip the flag even though it
-		// rounds to 90.0 in percentage_used.
-		IsWarning: percentage >= 90,
-	}
 	if wrapper == "IKZE" && totalF > 0 {
 		if rate, savings, ok := h.estimateIKZEPITSavings(ctx, ownerUserID, year, totalF); ok {
 			r := pyFloat(rate)
@@ -248,34 +216,11 @@ func (h *Handler) buildPPKStat(ctx context.Context, ownerUserID *int) (ppkStat, 
 	if err != nil {
 		return ppkStat{}, false, err
 	}
-	totalF, _ := totals.Total.Float64()
-	employeeF, _ := totals.Employee.Float64()
-	employerF, _ := totals.Employer.Float64()
-	governmentF, _ := totals.Government.Float64()
-	if totalF > employeeF+employerF+governmentF {
-		employeeF += totalF - (employeeF + employerF + governmentF)
-	}
 	latest, err := h.store.LatestSnapshotValueSum(ctx, accountIDs)
 	if err != nil {
 		return ppkStat{}, false, err
 	}
-	totalValue, _ := latest.Float64()
-	returns := totalValue - totalF
-	roi := 0.0
-	if totalF > 0 {
-		roi = returns / totalF * 100
-	}
-	roiRounded := math.Round(roi*100) / 100
-	return ppkStat{
-		OwnerUserID:           ownerUserID,
-		TotalValue:            pyFloat(totalValue),
-		EmployeeContributed:   pyFloat(employeeF),
-		EmployerContributed:   pyFloat(employerF),
-		GovernmentContributed: pyFloat(governmentF),
-		TotalContributed:      pyFloat(totalF),
-		Returns:               pyFloat(returns),
-		ROIPercentage:         pyFloat(roiRounded),
-	}, true, nil
+	return computePPKStat(ownerUserID, totals, latest), true, nil
 }
 
 // LimitsForYear serves GET /api/retirement/limits/{year}.
@@ -380,9 +325,7 @@ func (h *Handler) GeneratePPKContributions(w http.ResponseWriter, r *http.Reques
 		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	hundred := decimal.NewFromInt(100)
-	employeeAmt := gross.Mul(employeeRate).Div(hundred)
-	employerAmt := gross.Mul(employerRate).Div(hundred)
+	employeeAmt, employerAmt := computePPKContributionAmounts(gross, employeeRate, employerRate)
 	accountID, err := h.store.ActivePPKAccountForOwner(r.Context(), req.OwnerUserID)
 	if err != nil {
 		if errors.Is(err, ErrNoPPKAccount) {
@@ -419,49 +362,7 @@ func (h *Handler) GeneratePPKContributions(w http.ResponseWriter, r *http.Reques
 		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	writeJSON(w, http.StatusOK, buildPPKGenerateResponse(req, gross, employeeAmt, employerAmt, subsidy, result))
-}
-
-func buildPPKGenerateResponse(
-	req generateRequest,
-	gross, employeeAmt, employerAmt decimal.Decimal,
-	subsidy SubsidyConfig,
-	result PPKContributionResult,
-) ppkGenerateResponse {
-	grossF, _ := gross.Float64()
-	empF, _ := employeeAmt.Float64()
-	emprF, _ := employerAmt.Float64()
-	govF := 0.0
-	welcomeApplied := result.WelcomeID != nil
-	annualApplied := result.AnnualID != nil
-	if welcomeApplied {
-		w, _ := subsidy.WelcomeAmount.Float64()
-		govF += w
-	}
-	if annualApplied {
-		a, _ := subsidy.AnnualAmount.Float64()
-		govF += a
-	}
-	ids := []int{result.EmployeeID, result.EmployerID}
-	if result.WelcomeID != nil {
-		ids = append(ids, *result.WelcomeID)
-	}
-	if result.AnnualID != nil {
-		ids = append(ids, *result.AnnualID)
-	}
-	return ppkGenerateResponse{
-		OwnerUserID:         req.OwnerUserID,
-		Month:               req.Month,
-		Year:                req.Year,
-		GrossSalary:         pyFloat(grossF),
-		EmployeeAmount:      pyFloat(empF),
-		EmployerAmount:      pyFloat(emprF),
-		GovernmentAmount:    pyFloat(govF),
-		WelcomeApplied:      welcomeApplied,
-		AnnualApplied:       annualApplied,
-		TotalAmount:         pyFloat(empF + emprF + govF),
-		TransactionsCreated: ids,
-	}
+	writeJSON(w, http.StatusOK, computePPKGenerateResponse(req, gross, employeeAmt, employerAmt, subsidy, result))
 }
 
 // errBadOwnerParam marks a non-integer owner_user_id query value.
@@ -493,200 +394,6 @@ func ownerLabel(id *int) string {
 		return "Shared"
 	}
 	return strconv.Itoa(*id)
-}
-
-// --- request parsing ---
-
-type limitRequest struct {
-	Year           int
-	AccountWrapper string
-	OwnerUserID    *int
-	LimitAmount    decimal.Decimal
-	Notes          *string
-}
-
-var validWrappers = map[string]struct{}{
-	"IKE": {}, "IKZE": {}, "PPK": {},
-}
-
-func buildLimitRequest(raw map[string]json.RawMessage, now func() time.Time) (limitRequest, *validationError) {
-	var r limitRequest
-	currentYear := now().UTC().Year()
-	year, vErr := requireIntRange(raw, "year", 2000, currentYear+10,
-		fmt.Sprintf("Year must be between 2000 and %d", currentYear+10))
-	if vErr != nil {
-		return r, vErr
-	}
-	r.Year = year
-
-	wrap, vErr := requireEnumString(raw, "account_wrapper", validWrappers)
-	if vErr != nil {
-		return r, vErr
-	}
-	r.AccountWrapper = wrap
-
-	owner, vErr := requireIntOrNull(raw, "owner_user_id")
-	if vErr != nil {
-		return r, vErr
-	}
-	r.OwnerUserID = owner
-
-	amt, vErr := requirePositiveDecimal(raw, "limit_amount", "Limit amount must be greater than 0")
-	if vErr != nil {
-		return r, vErr
-	}
-	r.LimitAmount = amt
-
-	if v, ok := raw["notes"]; ok && !isNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return r, &validationError{Field: "notes", Msg: "must be a string"}
-		}
-		r.Notes = &s
-	}
-	return r, nil
-}
-
-type generateRequest struct {
-	OwnerUserID    *int
-	Month          int
-	Year           int
-	IncludeWelcome bool
-	IncludeAnnual  bool
-}
-
-func buildGenerateRequest(raw map[string]json.RawMessage, now func() time.Time) (generateRequest, *validationError) {
-	var r generateRequest
-	// PPK contributions are always generated for a specific person — a null
-	// (jointly owned) owner is rejected up front rather than failing later
-	// with a confusing 404.
-	owner, vErr := requireInt(raw, "owner_user_id")
-	if vErr != nil {
-		return r, vErr
-	}
-	r.OwnerUserID = &owner
-
-	month, vErr := requireIntRange(raw, "month", 1, 12, "Month must be between 1 and 12")
-	if vErr != nil {
-		return r, vErr
-	}
-	r.Month = month
-
-	currentYear := now().UTC().Year()
-	year, vErr := requireIntRange(raw, "year", 2019, currentYear+1,
-		fmt.Sprintf("Year must be between 2019 and %d", currentYear+1))
-	if vErr != nil {
-		return r, vErr
-	}
-	r.Year = year
-
-	welcome, vErr := optionalBool(raw, "include_welcome_subsidy")
-	if vErr != nil {
-		return r, vErr
-	}
-	r.IncludeWelcome = welcome
-	annual, vErr := optionalBool(raw, "include_annual_subsidy")
-	if vErr != nil {
-		return r, vErr
-	}
-	r.IncludeAnnual = annual
-	return r, nil
-}
-
-// optionalBool reads a boolean key. Missing/null returns false; a present
-// non-bool value (e.g. "true" sent as a string) is rejected so the client
-// gets a 422 instead of silently degrading to false.
-func optionalBool(raw map[string]json.RawMessage, key string) (bool, *validationError) {
-	v, ok := raw[key]
-	if !ok || isNull(v) {
-		return false, nil
-	}
-	var b bool
-	if err := json.Unmarshal(v, &b); err != nil {
-		return false, &validationError{Field: key, Msg: "must be a boolean"}
-	}
-	return b, nil
-}
-
-// --- helpers ---
-
-// requireInt reads an integer key that must be present and non-null.
-func requireInt(raw map[string]json.RawMessage, key string) (int, *validationError) {
-	v, ok := raw[key]
-	if !ok || isNull(v) {
-		return 0, &validationError{Field: key, Msg: "Field required"}
-	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return 0, &validationError{Field: key, Msg: "must be an integer"}
-	}
-	return n, nil
-}
-
-// requireIntOrNull reads an integer key that must be present; an explicit
-// null is allowed and yields nil (jointly owned).
-func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *validationError) {
-	v, ok := raw[key]
-	if !ok {
-		return nil, &validationError{Field: key, Msg: "Field required"}
-	}
-	if isNull(v) {
-		return nil, nil
-	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return nil, &validationError{Field: key, Msg: "must be an integer"}
-	}
-	return &n, nil
-}
-
-func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *validationError) {
-	v, ok := raw[key]
-	if !ok || isNull(v) {
-		return "", &validationError{Field: key, Msg: "Field required"}
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &validationError{Field: key, Msg: "must be a string"}
-	}
-	if _, ok := allowed[s]; !ok {
-		return "", &validationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
-	}
-	return s, nil
-}
-
-func requireIntRange(raw map[string]json.RawMessage, key string, lo, hi int, msg string) (int, *validationError) {
-	v, ok := raw[key]
-	if !ok || isNull(v) {
-		return 0, &validationError{Field: key, Msg: "Field required"}
-	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return 0, &validationError{Field: key, Msg: "must be an integer"}
-	}
-	if n < lo || n > hi {
-		return 0, &validationError{Field: key, Msg: msg}
-	}
-	return n, nil
-}
-
-func requirePositiveDecimal(raw map[string]json.RawMessage, key, msg string) (decimal.Decimal, *validationError) {
-	v, ok := raw[key]
-	if !ok || isNull(v) {
-		return decimal.Decimal{}, &validationError{Field: key, Msg: "Field required"}
-	}
-	d, err := decimal.NewFromString(string(bytes.TrimSpace(v)))
-	if err != nil {
-		return decimal.Decimal{}, &validationError{Field: key, Msg: "must be a number"}
-	}
-	if !d.IsPositive() {
-		return decimal.Decimal{}, &validationError{Field: key, Msg: msg}
-	}
-	return d, nil
-}
-
-func isNull(v json.RawMessage) bool {
-	return bytes.Equal(bytes.TrimSpace(v), []byte("null"))
 }
 
 // wire type
