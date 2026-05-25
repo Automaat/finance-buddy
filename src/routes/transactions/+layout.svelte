@@ -1,15 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import type { LayoutData } from './$types';
 
-	let { children, data }: { children: import('svelte').Snippet; data: LayoutData } = $props();
+	const tabs = [
+		{ href: '/transactions', label: 'Transakcje' },
+		{ href: '/transactions/recurring', label: 'Cykliczne' }
+	];
 
-	const tabs = $derived([
-		{ href: '/settings/config', label: 'Konfiguracja' },
-		{ href: '/settings/allocation', label: 'Cele alokacji' },
-		{ href: '/settings/navigation', label: 'Nawigacja' },
-		...(data.user?.isAdmin ? [{ href: '/settings/users', label: 'Użytkownicy' }] : [])
-	]);
+	let { children } = $props();
 </script>
 
 <div class="tabs">

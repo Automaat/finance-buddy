@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { resolveApiUrl } from '$lib/api';
 	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
 	import { buildMonteCarloFanOption, type MonteCarloResult } from '$lib/utils/charts/montecarlo';
@@ -7,15 +8,24 @@
 	import IKZEPITTracker from '$lib/components/IKZEPITTracker.svelte';
 	import IKZEOptimizer from '$lib/components/IKZEOptimizer.svelte';
 	import FireGapChart from '$lib/components/FireGapChart.svelte';
+	import type { PageData } from './$types';
 
+	interface Props {
+		data: PageData;
+	}
+	let { data }: Props = $props();
+
+	// Initial values pulled from app_config where mappings exist. Fields
+	// without config equivalents (volatility, life expectancy, annual
+	// contribution) stay as numeric placeholders.
 	let currentPortfolio = $state(100000);
 	let annualContribution = $state(20000);
-	let expectedReturn = $state(6);
+	let expectedReturn = $state(untrack(() => data?.defaults?.annualReturnPct ?? 6));
 	let volatility = $state(15);
-	let currentAge = $state(35);
-	let retirementAge = $state(65);
+	let currentAge = $state(untrack(() => data?.defaults?.currentAge ?? 35));
+	let retirementAge = $state(untrack(() => data?.defaults?.retirementAge ?? 65));
 	let lifeExpectancy = $state(90);
-	let annualWithdrawal = $state(40000);
+	let annualWithdrawal = $state(untrack(() => data?.defaults?.annualExpensesPLN ?? 40000));
 
 	let useAllocation = $state(false);
 	let allocStocks = $state(60);

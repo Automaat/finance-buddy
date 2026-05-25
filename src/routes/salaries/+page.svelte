@@ -19,7 +19,6 @@
 	import { PL_RULES } from '$lib/utils/pl_rules.generated';
 	import {
 		Plus,
-		Banknote,
 		TrendingUp,
 		Search,
 		BarChart3,
@@ -62,7 +61,6 @@
 	const defaultOwnerId = $derived<number | null>(owners.length > 0 ? owners[0].id : null);
 	const cpiSeries = $derived(data.cpiSeries as CpiSeries);
 	const inflationContext = $derived(data.salaries.inflation_context ?? {});
-	const inflationEntries = $derived(Object.values(inflationContext));
 
 	let showNominal = $state(true);
 	let showReal = $state(false);
@@ -87,9 +85,6 @@
 	let chart: echarts.ECharts | undefined;
 	let chartHandle: ChartHandle | undefined;
 
-	let filterOwnerUserId = $state<number | null>(
-		untrack(() => (data.filters.owner_user_id ? Number(data.filters.owner_user_id) : null))
-	);
 	let filterDateFrom = $state(untrack(() => data.filters.date_from || ''));
 	let filterDateTo = $state(untrack(() => data.filters.date_to || ''));
 	let filterCompany = $state(untrack(() => data.filters.company || ''));
@@ -108,50 +103,46 @@
 
 	const currentYear = new Date().getFullYear();
 
-	const latestContractByOwner = $derived.by(() => {
-		const map = new Map<number | null, string>();
-		for (const r of data.salaries.salary_records) {
-			if (!map.has(r.owner_user_id)) map.set(r.owner_user_id, r.contract_type);
-		}
-		return map;
-	});
+	// activeOwnerId drives the whole page: total compensation, filter card, and
+	// client-side filtering of bonuses/equity. Initialize from URL filter if
+	// present so deep-links keep working. filterOwnerUserId is derived from
+	// activeOwnerId so the URL filter and the visible-data filter cannot drift.
+	let activeOwnerId = $state<number | null>(
+		untrack(() => {
+			const urlOwner = data.filters.owner_user_id;
+			if (urlOwner) return Number(urlOwner);
+			return defaultOwnerId;
+		})
+	);
+	const filterOwnerUserId = $derived(activeOwnerId);
 
-	function netMonthlyForOwner(ownerUserId: number | null, grossMonthly: number): number | null {
-		const ct = latestContractByOwner.get(ownerUserId);
-		if (!ct) return null;
-		const allowed: PlContractType[] = ['UOP', 'B2B', 'UZ', 'UoD'];
-		if (!allowed.includes(ct as PlContractType)) return null;
-		const breakdown = grossToNet(grossMonthly, ct as PlContractType, currentYear);
-		return breakdown.netAnnual / 12;
+	const inflationEntries = $derived(
+		Object.values(inflationContext).filter(
+			(ctx) => activeOwnerId === null || ctx.owner_user_id === activeOwnerId
+		)
+	);
+
+	function setActiveOwner(id: number) {
+		activeOwnerId = id;
+		applyFilters();
 	}
 
-	type CurrentSalaryRow = {
-		name: string;
-		salary: number | null;
-		net: number | null;
-	};
-
-	const currentSalaryRows = $derived.by<CurrentSalaryRow[]>(() =>
-		Object.entries(data.salaries.current_salaries).map(([key, salary]) => {
-			const ownerUserId = Number(key);
-			return {
-				name: ownerName(owners, ownerUserId),
-				salary,
-				net: salary !== null ? netMonthlyForOwner(ownerUserId, salary) : null
-			};
-		})
+	const visibleSalaryRecords = $derived(
+		activeOwnerId === null
+			? data.salaries.salary_records
+			: data.salaries.salary_records.filter((r) => r.owner_user_id === activeOwnerId)
 	);
 
 	const allYears = $derived.by(() => {
 		const years = new Set<number>();
 		years.add(currentYear);
-		for (const r of data.salaries.salary_records) years.add(new Date(r.date).getFullYear());
+		for (const r of visibleSalaryRecords) years.add(new Date(r.date).getFullYear());
 		for (const b of data.bonuses?.bonus_events ?? []) years.add(new Date(b.date).getFullYear());
 		return [...years].sort((a, b) => b - a);
 	});
 
 	let totalCompYear = $state(new Date().getFullYear());
-	let totalCompOwner = $state<number | null>(untrack(() => defaultOwnerId));
+	const totalCompOwner = $derived(activeOwnerId);
 	let includeEquityInTotal = $state(false);
 
 	type OwnerCompSummary = {
@@ -178,7 +169,7 @@
 		const ownerUserId = totalCompOwner;
 		const yearEndIso = isoDateLocal(new Date(totalCompYear, 11, 31));
 
-		const latestSalary = data.salaries.salary_records.find(
+		const latestSalary = visibleSalaryRecords.find(
 			(r) => r.owner_user_id === ownerUserId && r.date <= yearEndIso
 		);
 		const baseMonthly = latestSalary?.gross_amount ?? 0;
@@ -254,8 +245,13 @@
 	);
 
 	const bonusEvents = $derived(data.bonuses?.bonus_events ?? []);
+	const visibleBonusEvents = $derived(
+		activeOwnerId === null
+			? bonusEvents
+			: bonusEvents.filter((b) => b.owner_user_id === activeOwnerId)
+	);
 	const bonusGroupedByCompany = $derived(
-		bonusEvents.reduce<Map<string, BonusEvent[]>>((acc, b) => {
+		visibleBonusEvents.reduce<Map<string, BonusEvent[]>>((acc, b) => {
 			const key = b.company || 'Nieokreślona firma';
 			if (!acc.has(key)) acc.set(key, []);
 			acc.get(key)!.push(b);
@@ -419,6 +415,11 @@
 	}
 
 	const equityGrants = $derived(data.equity?.equity_grants ?? []);
+	const visibleEquityGrants = $derived(
+		activeOwnerId === null
+			? equityGrants
+			: equityGrants.filter((g) => g.owner_user_id === activeOwnerId)
+	);
 
 	type EquityGroup = {
 		company: string;
@@ -438,7 +439,7 @@
 	// BinaryExpression inside @const initializers (chained `+`, reduce bodies).
 	const equityGroups = $derived.by<EquityGroup[]>(() => {
 		const byCompany = new Map<string, EquityGrant[]>();
-		for (const g of equityGrants) {
+		for (const g of visibleEquityGrants) {
 			const key = g.company || 'Nieokreślona firma';
 			if (!byCompany.has(key)) byCompany.set(key, []);
 			byCompany.get(key)!.push(g);
@@ -938,7 +939,7 @@
 	function getPreviousCompany(ownerUserId: number | null, date: string | null): string | null {
 		if (!date) return null;
 		return (
-			data.salaries.salary_records.find((r) => r.owner_user_id === ownerUserId && r.date === date)
+			visibleSalaryRecords.find((r) => r.owner_user_id === ownerUserId && r.date === date)
 				?.company ?? null
 		);
 	}
@@ -954,11 +955,11 @@
 	}
 
 	function clearFilters() {
-		filterOwnerUserId = null;
+		// Tabs own the owner filter — only reset date/company filters here.
 		filterDateFrom = '';
 		filterDateTo = '';
 		filterCompany = '';
-		goto('/salaries');
+		applyFilters();
 	}
 
 	function openNewSalaryModal() {
@@ -1104,7 +1105,7 @@
 	function buildSeries(): LineSeries[] {
 		const companyMap = new Map<string, Array<[string, number]>>();
 
-		data.salaries.salary_records.forEach((r) => {
+		visibleSalaryRecords.forEach((r) => {
 			const companyName = (r.company ?? '').trim() || 'Nieokreślona firma';
 			if (!companyMap.has(companyName)) companyMap.set(companyName, []);
 			companyMap.get(companyName)!.push([r.date, r.gross_amount]);
@@ -1223,7 +1224,7 @@
 
 	$effect(() => {
 		// Touch reactive dependencies so chart redraws on data + toggle changes.
-		void [data.salaries.salary_records, cpiSeries, showNominal, showReal, showInflationTracked];
+		void [visibleSalaryRecords, cpiSeries, showNominal, showReal, showInflationTracked];
 
 		if (!chartContainer) return;
 		if (!chartHandle) {
@@ -1259,6 +1260,23 @@
 	</button>
 </div>
 
+{#if owners.length > 1}
+	<div class="owner-tabs mb-4" role="tablist" aria-label="Właściciel">
+		{#each owners as owner (owner.id)}
+			<button
+				type="button"
+				role="tab"
+				aria-selected={activeOwnerId === owner.id}
+				class="owner-tab"
+				class:active={activeOwnerId === owner.id}
+				onclick={() => setActiveOwner(owner.id)}
+			>
+				{owner.name}
+			</button>
+		{/each}
+	</div>
+{/if}
+
 <div class="space-y-4">
 	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
 		<header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -1276,14 +1294,6 @@
 					<select class="select" bind:value={totalCompYear}>
 						{#each allYears as y (y)}
 							<option value={y}>{y}</option>
-						{/each}
-					</select>
-				</label>
-				<label class="label">
-					<span class="text-xs">Właściciel</span>
-					<select class="select" bind:value={totalCompOwner}>
-						{#each owners as owner (owner.id)}
-							<option value={owner.id}>{owner.name}</option>
 						{/each}
 					</select>
 				</label>
@@ -1350,90 +1360,6 @@
 
 	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
 		<header>
-			<h3 class="h3 flex items-center gap-2"><Banknote size={20} /> Aktualne wynagrodzenia</h3>
-		</header>
-		<div class="flex flex-wrap gap-6">
-			{#each currentSalaryRows as row (row.name)}
-				<div class="flex flex-col gap-1">
-					<span class="text-sm text-surface-700-300">{row.name}</span>
-					<strong class="text-lg">
-						{row.salary !== null ? formatPLN(row.salary) : 'Brak danych'}
-						{#if row.salary !== null}
-							<span class="text-xs font-normal text-surface-700-300">brutto</span>
-						{/if}
-					</strong>
-					{#if row.net !== null}
-						<span class="text-sm text-success-500 font-semibold">
-							≈ {formatPLN(row.net)} <span class="text-xs font-normal">netto/mc</span>
-						</span>
-					{/if}
-				</div>
-			{/each}
-		</div>
-	</div>
-
-	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
-		<header>
-			<h3 class="h3 flex items-center gap-2">
-				<Scale size={20} /> Wpływ inflacji (od ostatniej podwyżki)
-			</h3>
-			<p class="text-xs text-surface-700-300">
-				Źródło danych CPI: GUS (Wskaźnik cen towarów i usług konsumpcyjnych — ogółem)
-			</p>
-		</header>
-		{#if inflationEntries.length === 0}
-			<p class="text-sm text-surface-700-300">
-				Za mało danych — dodaj kolejną zmianę pensji lub poczekaj na świeże dane CPI, aby zobaczyć
-				realny wpływ inflacji.
-			</p>
-		{:else}
-			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-				{#each inflationEntries as ctx (ctx.owner_user_id)}
-					<div class="card preset-tonal-surface p-4 space-y-2">
-						<div class="flex items-baseline justify-between flex-wrap gap-2">
-							<strong class="text-lg">{ownerName(owners, ctx.owner_user_id)}</strong>
-							<span class="text-xs text-surface-700-300">
-								od {new Date(ctx.last_change_date).toLocaleDateString('pl-PL')}
-								{#if getPreviousCompany(ctx.owner_user_id, ctx.previous_change_date)}
-									· {getPreviousCompany(ctx.owner_user_id, ctx.previous_change_date)}
-								{/if}
-							</span>
-						</div>
-						<dl class="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-sm">
-							<dt class="text-surface-700-300">Poprzednia pensja:</dt>
-							<dd class="text-right font-semibold">{formatPLN(ctx.previous_salary)}</dd>
-
-							<dt class="text-surface-700-300">W dzisiejszych PLN:</dt>
-							<dd class="text-right font-semibold">
-								{formatPLN(ctx.previous_salary_in_today_pln)}
-							</dd>
-
-							<dt class="text-surface-700-300">Obecna pensja:</dt>
-							<dd class="text-right font-semibold">{formatPLN(ctx.current_salary)}</dd>
-
-							<dt class="font-semibold pt-1">Realna podwyżka:</dt>
-							<dd
-								class="text-right font-bold pt-1"
-								class:text-success-500={isNonNegative(ctx.real_change_pln)}
-								class:text-error-500={!isNonNegative(ctx.real_change_pln)}
-							>
-								{formatPlnSigned(ctx.real_change_pln)}
-								<span class="text-xs font-normal">
-									({formatPctSigned(ctx.real_change_pct)})
-								</span>
-							</dd>
-						</dl>
-						<p class="text-xs text-surface-700-300">
-							CPI na koniec: {ctx.cpi_as_of_year}
-						</p>
-					</div>
-				{/each}
-			</div>
-		{/if}
-	</div>
-
-	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
-		<header>
 			<h3 class="h3 flex items-center gap-2"><TrendingUp size={20} /> Progresja wynagrodzenia</h3>
 			<p class="text-xs text-surface-700-300">
 				Linia ciągła: pensja nominalna. Linia przerywana: nominalna przeliczona na dzisiejsze PLN wg
@@ -1469,17 +1395,7 @@
 				applyFilters();
 			}}
 		>
-			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-				<label class="label">
-					<span class="font-semibold text-sm">Właściciel</span>
-					<select class="select" bind:value={filterOwnerUserId}>
-						<option value={null}>Wszystkie</option>
-						{#each owners as owner (owner.id)}
-							<option value={owner.id}>{owner.name}</option>
-						{/each}
-					</select>
-				</label>
-
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 				<label class="label">
 					<span class="font-semibold text-sm">Firma</span>
 					<select class="select" bind:value={filterCompany}>
@@ -1514,7 +1430,7 @@
 		<header>
 			<h3 class="h3 flex items-center gap-2"><BarChart3 size={20} /> Historia zmian</h3>
 		</header>
-		{#if data.salaries.salary_records.length === 0}
+		{#if visibleSalaryRecords.length === 0}
 			<div class="text-center py-12 text-surface-700-300">
 				<p>Brak rekordów wynagrodzeń</p>
 			</div>
@@ -1532,7 +1448,7 @@
 						</tr>
 					</thead>
 					<tbody>
-						{#each data.salaries.salary_records as record}
+						{#each visibleSalaryRecords as record}
 							<tr>
 								<td>{new Date(record.date).toLocaleDateString('pl-PL')}</td>
 								<td>{ownerName(owners, record.owner_user_id)}</td>
@@ -1883,6 +1799,66 @@
 			</div>
 		{/if}
 	</div>
+
+	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+		<header>
+			<h3 class="h3 flex items-center gap-2">
+				<Scale size={20} /> Wpływ inflacji (od ostatniej podwyżki)
+			</h3>
+			<p class="text-xs text-surface-700-300">
+				Źródło danych CPI: GUS (Wskaźnik cen towarów i usług konsumpcyjnych — ogółem)
+			</p>
+		</header>
+		{#if inflationEntries.length === 0}
+			<p class="text-sm text-surface-700-300">
+				Za mało danych — dodaj kolejną zmianę pensji lub poczekaj na świeże dane CPI, aby zobaczyć
+				realny wpływ inflacji.
+			</p>
+		{:else}
+			<div class="grid grid-cols-1 gap-4">
+				{#each inflationEntries as ctx (ctx.owner_user_id)}
+					<div class="card preset-tonal-surface p-4 space-y-2">
+						<div class="flex items-baseline justify-between flex-wrap gap-2">
+							<strong class="text-lg">{ownerName(owners, ctx.owner_user_id)}</strong>
+							<span class="text-xs text-surface-700-300">
+								od {new Date(ctx.last_change_date).toLocaleDateString('pl-PL')}
+								{#if getPreviousCompany(ctx.owner_user_id, ctx.previous_change_date)}
+									· {getPreviousCompany(ctx.owner_user_id, ctx.previous_change_date)}
+								{/if}
+							</span>
+						</div>
+						<dl class="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-sm">
+							<dt class="text-surface-700-300">Poprzednia pensja:</dt>
+							<dd class="text-right font-semibold">{formatPLN(ctx.previous_salary)}</dd>
+
+							<dt class="text-surface-700-300">W dzisiejszych PLN:</dt>
+							<dd class="text-right font-semibold">
+								{formatPLN(ctx.previous_salary_in_today_pln)}
+							</dd>
+
+							<dt class="text-surface-700-300">Obecna pensja:</dt>
+							<dd class="text-right font-semibold">{formatPLN(ctx.current_salary)}</dd>
+
+							<dt class="font-semibold pt-1">Realna podwyżka:</dt>
+							<dd
+								class="text-right font-bold pt-1"
+								class:text-success-500={isNonNegative(ctx.real_change_pln)}
+								class:text-error-500={!isNonNegative(ctx.real_change_pln)}
+							>
+								{formatPlnSigned(ctx.real_change_pln)}
+								<span class="text-xs font-normal">
+									({formatPctSigned(ctx.real_change_pct)})
+								</span>
+							</dd>
+						</dl>
+						<p class="text-xs text-surface-700-300">
+							CPI na koniec: {ctx.cpi_as_of_year}
+						</p>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</div>
 </div>
 
 <SalaryFormModal
@@ -1933,3 +1909,38 @@
 	onSave={saveValuation}
 	onCancel={closeValuationModal}
 />
+
+<style>
+	.owner-tabs {
+		display: flex;
+		gap: var(--size-1);
+		border-bottom: 2px solid var(--surface-3);
+		overflow-x: auto;
+	}
+
+	.owner-tab {
+		padding: var(--size-2) var(--size-4);
+		font-size: var(--font-size-1);
+		font-weight: 500;
+		color: var(--color-text-3);
+		background: transparent;
+		border: none;
+		border-bottom: 2px solid transparent;
+		margin-bottom: -2px;
+		white-space: nowrap;
+		cursor: pointer;
+		transition:
+			color 0.15s,
+			border-color 0.15s;
+	}
+
+	.owner-tab:hover {
+		color: var(--color-text-1);
+	}
+
+	.owner-tab.active {
+		color: var(--color-primary);
+		border-bottom-color: var(--color-primary);
+		font-weight: 600;
+	}
+</style>
