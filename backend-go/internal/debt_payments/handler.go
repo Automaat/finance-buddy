@@ -274,8 +274,8 @@ func requireOwnerUserID(raw map[string]json.RawMessage) (*int, *httputil.Validat
 	if validation.IsNull(v) {
 		return nil, nil
 	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
+	n, err := validation.RawInt(v)
+	if err != nil {
 		return nil, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
 	}
 	return &n, nil
@@ -287,13 +287,12 @@ func requireDateNotFuture(raw map[string]json.RawMessage) (time.Time, *httputil.
 	if !ok || validation.IsNull(v) {
 		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	t, err := time.Parse("2006-01-02", s)
+	t, err := validation.RawDate(v)
 	if err != nil {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be YYYY-MM-DD"}
+		if validation.IsRawDateFormatError(err) {
+			return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be YYYY-MM-DD"}
+		}
+		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be a string"}
 	}
 	today := time.Now().UTC()
 	today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.UTC)
