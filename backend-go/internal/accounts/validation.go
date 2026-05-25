@@ -1,7 +1,6 @@
 package accounts
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -9,6 +8,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
+	"github.com/Automaat/finance-buddy/backend-go/internal/validation"
 )
 
 type createRequest struct {
@@ -98,7 +98,7 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 //     (Pydantic's `Wrapper | None` lets None through and the service writes it)
 func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.ValidationError) {
 	var p UpdatePatch
-	if v, ok := raw["name"]; ok && !isNull(v) {
+	if v, ok := raw["name"]; ok && !validation.IsNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
 			return p, &httputil.ValidationError{Field: "name", Msg: "must be a string"}
@@ -114,7 +114,7 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 	}
 	if v, ok := raw["owner_user_id"]; ok {
 		p.OwnerUserIDSet = true
-		if isNull(v) {
+		if validation.IsNull(v) {
 			p.OwnerUserID = nil
 		} else {
 			var n int
@@ -132,7 +132,7 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 	}
 	if v, ok := raw["account_wrapper"]; ok {
 		p.AccountWrapperSet = true
-		if isNull(v) {
+		if validation.IsNull(v) {
 			p.AccountWrapper = nil
 		} else {
 			var s string
@@ -147,24 +147,24 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 	}
 	if v, ok := raw["square_meters"]; ok {
 		p.SquareMetersSet = true
-		if isNull(v) {
+		if validation.IsNull(v) {
 			p.SquareMeters = nil
 		} else {
-			d, err := decimal.NewFromString(string(bytes.TrimSpace(v)))
+			d, err := validation.RawDecimal(v)
 			if err != nil {
 				return p, &httputil.ValidationError{Field: "square_meters", Msg: "must be a number"}
 			}
 			p.SquareMeters = &d
 		}
 	}
-	if v, ok := raw["receives_contributions"]; ok && !isNull(v) {
+	if v, ok := raw["receives_contributions"]; ok && !validation.IsNull(v) {
 		var b bool
 		if err := json.Unmarshal(v, &b); err != nil {
 			return p, &httputil.ValidationError{Field: "receives_contributions", Msg: "must be a boolean"}
 		}
 		p.ReceivesContributions = &b
 	}
-	if v, ok := raw["excluded_from_fire"]; ok && !isNull(v) {
+	if v, ok := raw["excluded_from_fire"]; ok && !validation.IsNull(v) {
 		var b bool
 		if err := json.Unmarshal(v, &b); err != nil {
 			return p, &httputil.ValidationError{Field: "excluded_from_fire", Msg: "must be a boolean"}
@@ -178,7 +178,7 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 
 func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var s string
@@ -199,7 +199,7 @@ func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httput
 	if !ok {
 		return nil, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
-	if isNull(v) {
+	if validation.IsNull(v) {
 		return nil, nil
 	}
 	var n int
@@ -211,7 +211,7 @@ func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httput
 
 func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var s string
@@ -229,7 +229,7 @@ func optionalString(raw map[string]json.RawMessage, key, fallback string) (strin
 	if !ok {
 		return fallback, nil
 	}
-	if isNull(v) {
+	if validation.IsNull(v) {
 		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
 	}
 	var s string
@@ -241,7 +241,7 @@ func optionalString(raw map[string]json.RawMessage, key, fallback string) (strin
 
 func optionalEnumOrNull(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (*string, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return nil, nil
 	}
 	var s string
@@ -256,10 +256,10 @@ func optionalEnumOrNull(raw map[string]json.RawMessage, key string, allowed map[
 
 func optionalDecimal(raw map[string]json.RawMessage, key string) (*decimal.Decimal, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return nil, nil
 	}
-	d, err := decimal.NewFromString(string(bytes.TrimSpace(v)))
+	d, err := validation.RawDecimal(v)
 	if err != nil {
 		return nil, &httputil.ValidationError{Field: key, Msg: "must be a number"}
 	}
@@ -271,7 +271,7 @@ func optionalBoolDefaultTrue(raw map[string]json.RawMessage, key string) (bool, 
 	if !ok {
 		return true, nil
 	}
-	if isNull(v) {
+	if validation.IsNull(v) {
 		return false, &httputil.ValidationError{Field: key, Msg: "must be a boolean"}
 	}
 	var b bool
@@ -283,7 +283,7 @@ func optionalBoolDefaultTrue(raw map[string]json.RawMessage, key string) (bool, 
 
 func optionalBoolDefaultFalse(raw map[string]json.RawMessage, key string) (bool, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return false, nil
 	}
 	var b bool
@@ -295,7 +295,7 @@ func optionalBoolDefaultFalse(raw map[string]json.RawMessage, key string) (bool,
 
 func patchEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}, dest **string) *httputil.ValidationError {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return nil
 	}
 	var s string
@@ -311,7 +311,7 @@ func patchEnumString(raw map[string]json.RawMessage, key string, allowed map[str
 
 func patchPlainString(raw map[string]json.RawMessage, key string, dest **string) *httputil.ValidationError {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return nil
 	}
 	var s string
@@ -320,8 +320,4 @@ func patchPlainString(raw map[string]json.RawMessage, key string, dest **string)
 	}
 	*dest = &s
 	return nil
-}
-
-func isNull(v json.RawMessage) bool {
-	return bytes.Equal(bytes.TrimSpace(v), []byte("null"))
 }

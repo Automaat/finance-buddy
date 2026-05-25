@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/validation"
 )
 
 func rawJSON(t *testing.T, m map[string]any) map[string]json.RawMessage {
@@ -310,8 +312,8 @@ func TestIsNullVariants(t *testing.T) {
 		{`""`, false},
 	}
 	for _, tc := range cases {
-		if got := isNull(json.RawMessage(tc.in)); got != tc.want {
-			t.Errorf("isNull(%q) = %v, want %v", tc.in, got, tc.want)
+		if got := validation.IsNull(json.RawMessage(tc.in)); got != tc.want {
+			t.Errorf("validation.IsNull(%q) = %v, want %v", tc.in, got, tc.want)
 		}
 	}
 }

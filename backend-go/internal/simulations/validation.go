@@ -7,6 +7,7 @@ import (
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 	"github.com/Automaat/finance-buddy/backend-go/internal/rules"
+	"github.com/Automaat/finance-buddy/backend-go/internal/validation"
 	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
@@ -58,7 +59,7 @@ func buildMortgageInputs(raw map[string]json.RawMessage) (MortgageInputs, *httpu
 		return in, &httputil.ValidationError{Field: "expected_annual_return", Msg: "Expected annual return must be between 0 and 50%"}
 	}
 	in.InflationRate = 3.0
-	if v, ok := raw["inflation_rate"]; ok && !isNullRaw(v) {
+	if v, ok := raw["inflation_rate"]; ok && !validation.IsNull(v) {
 		f, err := floatFromRaw(v)
 		if err != nil {
 			return in, &httputil.ValidationError{Field: "inflation_rate", Msg: "must be a number"}
@@ -68,7 +69,7 @@ func buildMortgageInputs(raw map[string]json.RawMessage) (MortgageInputs, *httpu
 		}
 		in.InflationRate = f
 	}
-	if v, ok := raw["enable_variable_rate"]; ok && !isNullRaw(v) {
+	if v, ok := raw["enable_variable_rate"]; ok && !validation.IsNull(v) {
 		var b bool
 		if err := json.Unmarshal(v, &b); err != nil {
 			return in, &httputil.ValidationError{Field: "enable_variable_rate", Msg: "must be a boolean"}
@@ -105,7 +106,7 @@ func buildWiborInputs(raw map[string]json.RawMessage) (WiborScenarioInputs, *htt
 	if in.RemainingMonths < 1 || in.RemainingMonths > 600 {
 		return in, &httputil.ValidationError{Field: "remaining_months", Msg: "Remaining months must be between 1 and 600"}
 	}
-	if v, ok := raw["base_payment"]; ok && !isNullRaw(v) {
+	if v, ok := raw["base_payment"]; ok && !validation.IsNull(v) {
 		f, err := floatFromRaw(v)
 		if err != nil {
 			return in, &httputil.ValidationError{Field: "base_payment", Msg: "must be a number"}
@@ -268,7 +269,7 @@ func parseSimAssumptions(raw map[string]json.RawMessage, in *simulationInputs) *
 	}
 	for _, rt := range rates {
 		v, ok := raw[rt.key]
-		if !ok || isNullRaw(v) {
+		if !ok || validation.IsNull(v) {
 			continue
 		}
 		f, err := floatFromRaw(v)
@@ -284,21 +285,21 @@ func parseSimAssumptions(raw map[string]json.RawMessage, in *simulationInputs) *
 }
 
 func parseSimAccounts(raw map[string]json.RawMessage, in *simulationInputs) *httputil.ValidationError {
-	if v, ok := raw["ike_ikze_accounts"]; ok && !isNullRaw(v) {
+	if v, ok := raw["ike_ikze_accounts"]; ok && !validation.IsNull(v) {
 		ike, vErr := parseIkeIkze(v)
 		if vErr != nil {
 			return vErr
 		}
 		in.IkeIkzeAccounts = ike
 	}
-	if v, ok := raw["ppk_accounts"]; ok && !isNullRaw(v) {
+	if v, ok := raw["ppk_accounts"]; ok && !validation.IsNull(v) {
 		ppk, vErr := parsePPK(v)
 		if vErr != nil {
 			return vErr
 		}
 		in.PPKAccounts = ppk
 	}
-	if v, ok := raw["brokerage_accounts"]; ok && !isNullRaw(v) {
+	if v, ok := raw["brokerage_accounts"]; ok && !validation.IsNull(v) {
 		brk, vErr := parseBrokerage(v)
 		if vErr != nil {
 			return vErr
@@ -420,7 +421,7 @@ func parseBrokerage(raw json.RawMessage) ([]brokerageInput, *httputil.Validation
 
 func requireFloat(raw map[string]json.RawMessage, key string) (float64, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNullRaw(v) {
+	if !ok || validation.IsNull(v) {
 		return 0, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	f, err := floatFromRaw(v)
@@ -432,7 +433,7 @@ func requireFloat(raw map[string]json.RawMessage, key string) (float64, *httputi
 
 func requireInt(raw map[string]json.RawMessage, key string) (int, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNullRaw(v) {
+	if !ok || validation.IsNull(v) {
 		return 0, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var n int
@@ -459,10 +460,6 @@ func floatFromRaw(v json.RawMessage) (float64, error) {
 		return 0, err
 	}
 	return f, nil
-}
-
-func isNullRaw(v json.RawMessage) bool {
-	return string(v) == "null"
 }
 
 // requiredStringField enforces a non-empty string for fields the Pydantic

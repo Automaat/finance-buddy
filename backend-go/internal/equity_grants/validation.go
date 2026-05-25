@@ -1,7 +1,6 @@
 package equitygrants
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -11,6 +10,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
+	"github.com/Automaat/finance-buddy/backend-go/internal/validation"
 )
 
 // createRequest is the parsed-and-validated input ready for Store.Create.
@@ -163,14 +163,14 @@ func requireGrantVesting(raw map[string]json.RawMessage, r *createRequest) *http
 }
 
 func optionalGrantLiquidity(raw map[string]json.RawMessage, r *createRequest) *httputil.ValidationError {
-	if v, ok := raw["requires_liquidity_event"]; ok && !isNull(v) {
+	if v, ok := raw["requires_liquidity_event"]; ok && !validation.IsNull(v) {
 		var b bool
 		if err := json.Unmarshal(v, &b); err != nil {
 			return &httputil.ValidationError{Field: "requires_liquidity_event", Msg: "must be a boolean"}
 		}
 		r.RequiresLiquidityEvent = b
 	}
-	if v, ok := raw["liquidity_event_date"]; ok && !isNull(v) {
+	if v, ok := raw["liquidity_event_date"]; ok && !validation.IsNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
 			return &httputil.ValidationError{Field: "liquidity_event_date", Msg: "must be a string"}
@@ -191,7 +191,7 @@ func optionalGrantTaxNotes(raw map[string]json.RawMessage, r *createRequest) *ht
 	}
 	r.TaxTreatment = tax
 
-	if v, ok := raw["notes"]; ok && !isNull(v) {
+	if v, ok := raw["notes"]; ok && !validation.IsNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
 			return &httputil.ValidationError{Field: "notes", Msg: "must be a string"}
@@ -239,7 +239,7 @@ func patchStrings(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Vali
 	if vErr := patchEnumString(raw, "tax_treatment", validTaxTreatments, &p.TaxTreatment); vErr != nil {
 		return vErr
 	}
-	if v, ok := raw["notes"]; ok && !isNull(v) {
+	if v, ok := raw["notes"]; ok && !validation.IsNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
 			return &httputil.ValidationError{Field: "notes", Msg: "must be a string"}
@@ -259,8 +259,8 @@ func patchNumbersAndBools(raw map[string]json.RawMessage, p *UpdatePatch) *httpu
 	if vErr := patchPositiveInt(raw, "vest_total_months", "Total vesting months must be greater than 0", &p.VestTotalMonths); vErr != nil {
 		return vErr
 	}
-	if v, ok := raw["strike_price"]; ok && !isNull(v) {
-		d, err := decimal.NewFromString(string(bytes.TrimSpace(v)))
+	if v, ok := raw["strike_price"]; ok && !validation.IsNull(v) {
+		d, err := validation.RawDecimal(v)
 		if err != nil {
 			return &httputil.ValidationError{Field: "strike_price", Msg: "must be a number"}
 		}
@@ -269,7 +269,7 @@ func patchNumbersAndBools(raw map[string]json.RawMessage, p *UpdatePatch) *httpu
 		}
 		p.StrikePrice = &d
 	}
-	if v, ok := raw["requires_liquidity_event"]; ok && !isNull(v) {
+	if v, ok := raw["requires_liquidity_event"]; ok && !validation.IsNull(v) {
 		var b bool
 		if err := json.Unmarshal(v, &b); err != nil {
 			return &httputil.ValidationError{Field: "requires_liquidity_event", Msg: "must be a boolean"}
@@ -289,7 +289,7 @@ func patchDates(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Valida
 		{"liquidity_event_date", &p.LiquidityEventDate},
 	} {
 		v, ok := raw[f.key]
-		if !ok || isNull(v) {
+		if !ok || validation.IsNull(v) {
 			continue
 		}
 		var s string
@@ -310,7 +310,7 @@ func patchDates(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Valida
 // actual JSON array reassigns the field.
 func patchSchedule(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.ValidationError {
 	v, ok := raw["vest_custom_schedule"]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return nil
 	}
 	schedule, vErr := parseCustomSchedule(v)
@@ -326,7 +326,7 @@ func patchSchedule(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Val
 
 func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var s string
@@ -342,7 +342,7 @@ func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string
 
 func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var s string
@@ -358,7 +358,7 @@ func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httput
 
 func requirePositiveInt(raw map[string]json.RawMessage, key, msg string) (int, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return 0, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var n int
@@ -373,7 +373,7 @@ func requirePositiveInt(raw map[string]json.RawMessage, key, msg string) (int, *
 
 func optionalNonNegativeInt(raw map[string]json.RawMessage, key, msg string, fallback int) (int, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return fallback, nil
 	}
 	var n int
@@ -388,7 +388,7 @@ func optionalNonNegativeInt(raw map[string]json.RawMessage, key, msg string, fal
 
 func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var s string
@@ -403,7 +403,7 @@ func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[s
 
 func optionalEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}, fallback string) (string, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return fallback, nil
 	}
 	var s string
@@ -418,7 +418,7 @@ func optionalEnumString(raw map[string]json.RawMessage, key string, allowed map[
 
 func optionalCurrency(raw map[string]json.RawMessage, fallback string) (string, *httputil.ValidationError) {
 	v, ok := raw["currency"]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return fallback, nil
 	}
 	var s string
@@ -434,10 +434,10 @@ func optionalCurrency(raw map[string]json.RawMessage, fallback string) (string, 
 
 func optionalNonNegativeDecimal(raw map[string]json.RawMessage, key, msg string) (*decimal.Decimal, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return nil, nil
 	}
-	d, err := decimal.NewFromString(string(bytes.TrimSpace(v)))
+	d, err := validation.RawDecimal(v)
 	if err != nil {
 		return nil, &httputil.ValidationError{Field: key, Msg: "must be a number"}
 	}
@@ -449,7 +449,7 @@ func optionalNonNegativeDecimal(raw map[string]json.RawMessage, key, msg string)
 
 func optionalCustomSchedule(raw map[string]json.RawMessage) ([]CustomScheduleEntry, *httputil.ValidationError) {
 	v, ok := raw["vest_custom_schedule"]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return nil, nil
 	}
 	return parseCustomSchedule(v)
@@ -516,7 +516,7 @@ func toFloat(v any) (float64, error) {
 
 func patchEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}, dest **string) *httputil.ValidationError {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return nil
 	}
 	var s string
@@ -532,7 +532,7 @@ func patchEnumString(raw map[string]json.RawMessage, key string, allowed map[str
 
 func patchNonEmptyString(raw map[string]json.RawMessage, key, emptyMsg string, dest **string) *httputil.ValidationError {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return nil
 	}
 	var s string
@@ -549,7 +549,7 @@ func patchNonEmptyString(raw map[string]json.RawMessage, key, emptyMsg string, d
 
 func patchCurrency(raw map[string]json.RawMessage, dest **string) *httputil.ValidationError {
 	v, ok := raw["currency"]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return nil
 	}
 	var s string
@@ -566,7 +566,7 @@ func patchCurrency(raw map[string]json.RawMessage, dest **string) *httputil.Vali
 
 func patchPositiveInt(raw map[string]json.RawMessage, key, msg string, dest **int) *httputil.ValidationError {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return nil
 	}
 	var n int
@@ -582,7 +582,7 @@ func patchPositiveInt(raw map[string]json.RawMessage, key, msg string, dest **in
 
 func patchNonNegativeIntPtr(raw map[string]json.RawMessage, key, msg string, dest **int) *httputil.ValidationError {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return nil
 	}
 	var n int
@@ -603,7 +603,7 @@ func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httput
 	if !ok {
 		return nil, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
-	if isNull(v) {
+	if validation.IsNull(v) {
 		return nil, nil
 	}
 	var n int
@@ -621,7 +621,7 @@ func patchOwnerUserID(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.
 		return nil
 	}
 	p.OwnerUserIDSet = true
-	if isNull(v) {
+	if validation.IsNull(v) {
 		p.OwnerUserID = nil
 		return nil
 	}
@@ -631,8 +631,4 @@ func patchOwnerUserID(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.
 	}
 	p.OwnerUserID = &n
 	return nil
-}
-
-func isNull(v json.RawMessage) bool {
-	return bytes.Equal(bytes.TrimSpace(v), []byte("null"))
 }

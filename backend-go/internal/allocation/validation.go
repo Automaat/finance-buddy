@@ -1,13 +1,13 @@
 package allocation
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 
 	"github.com/shopspring/decimal"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
+	"github.com/Automaat/finance-buddy/backend-go/internal/validation"
 )
 
 // validAllocationCategories are the asset-side categories users can target.
@@ -33,7 +33,7 @@ func validateCreate(req *createRequest) *httputil.ValidationError {
 // (owner_user_id / category) is delete + create.
 func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.ValidationError) {
 	var p UpdatePatch
-	if v, ok := raw["target_pct"]; ok && !isNull(v) {
+	if v, ok := raw["target_pct"]; ok && !validation.IsNull(v) {
 		var f float64
 		if err := json.Unmarshal(v, &f); err != nil {
 			return p, &httputil.ValidationError{Field: "target_pct", Msg: "must be a number"}
@@ -84,8 +84,4 @@ func validateReplaceBatch(items []replaceItem) *httputil.ValidationError {
 		}
 	}
 	return nil
-}
-
-func isNull(v json.RawMessage) bool {
-	return bytes.Equal(bytes.TrimSpace(v), []byte("null"))
 }

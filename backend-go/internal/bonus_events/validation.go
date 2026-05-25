@@ -1,7 +1,6 @@
 package bonusevents
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -10,6 +9,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
+	"github.com/Automaat/finance-buddy/backend-go/internal/validation"
 )
 
 // buildCreateRequest reads + validates the POST body. JSON numbers are parsed
@@ -65,7 +65,7 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 		return r, vErr
 	}
 
-	if v, ok := raw["notes"]; ok && !isNull(v) {
+	if v, ok := raw["notes"]; ok && !validation.IsNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
 			return r, &httputil.ValidationError{Field: "notes", Msg: "must be a string"}
@@ -89,7 +89,7 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 }
 
 func patchScalars(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.ValidationError {
-	if v, ok := raw["date"]; ok && !isNull(v) {
+	if v, ok := raw["date"]; ok && !validation.IsNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
 			return &httputil.ValidationError{Field: "date", Msg: "must be a string"}
@@ -103,8 +103,8 @@ func patchScalars(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Vali
 		}
 		p.Date = &t
 	}
-	if v, ok := raw["amount"]; ok && !isNull(v) {
-		d, err := decimal.NewFromString(string(bytes.TrimSpace(v)))
+	if v, ok := raw["amount"]; ok && !validation.IsNull(v) {
+		d, err := validation.RawDecimal(v)
 		if err != nil {
 			return &httputil.ValidationError{Field: "amount", Msg: "must be a number"}
 		}
@@ -113,7 +113,7 @@ func patchScalars(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Vali
 		}
 		p.Amount = &d
 	}
-	if v, ok := raw["currency"]; ok && !isNull(v) {
+	if v, ok := raw["currency"]; ok && !validation.IsNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
 			return &httputil.ValidationError{Field: "currency", Msg: "must be a string"}
@@ -124,7 +124,7 @@ func patchScalars(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Vali
 		}
 		p.Currency = &s
 	}
-	if v, ok := raw["company"]; ok && !isNull(v) {
+	if v, ok := raw["company"]; ok && !validation.IsNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
 			return &httputil.ValidationError{Field: "company", Msg: "must be a string"}
@@ -137,7 +137,7 @@ func patchScalars(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Vali
 	}
 	if v, ok := raw["owner_user_id"]; ok {
 		p.OwnerUserIDSet = true
-		if isNull(v) {
+		if validation.IsNull(v) {
 			p.OwnerUserID = nil
 		} else {
 			var n int
@@ -147,7 +147,7 @@ func patchScalars(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Vali
 			p.OwnerUserID = &n
 		}
 	}
-	if v, ok := raw["notes"]; ok && !isNull(v) {
+	if v, ok := raw["notes"]; ok && !validation.IsNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
 			return &httputil.ValidationError{Field: "notes", Msg: "must be a string"}
@@ -158,7 +158,7 @@ func patchScalars(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Vali
 }
 
 func patchEnums(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.ValidationError {
-	if v, ok := raw["type"]; ok && !isNull(v) {
+	if v, ok := raw["type"]; ok && !validation.IsNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
 			return &httputil.ValidationError{Field: "type", Msg: "must be a string"}
@@ -168,7 +168,7 @@ func patchEnums(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Valida
 		}
 		p.Type = &s
 	}
-	if v, ok := raw["contract_type"]; ok && !isNull(v) {
+	if v, ok := raw["contract_type"]; ok && !validation.IsNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
 			return &httputil.ValidationError{Field: "contract_type", Msg: "must be a string"}
@@ -185,7 +185,7 @@ func patchEnums(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Valida
 
 func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var s string
@@ -201,7 +201,7 @@ func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string
 
 func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var s string
@@ -217,10 +217,10 @@ func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httput
 
 func requirePositiveDecimal(raw map[string]json.RawMessage, key, msg string) (decimal.Decimal, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
-	d, err := decimal.NewFromString(string(bytes.TrimSpace(v)))
+	d, err := validation.RawDecimal(v)
 	if err != nil {
 		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "must be a number"}
 	}
@@ -232,7 +232,7 @@ func requirePositiveDecimal(raw map[string]json.RawMessage, key, msg string) (de
 
 func optionalCurrency(raw map[string]json.RawMessage, fallback string) (string, *httputil.ValidationError) {
 	v, ok := raw["currency"]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return fallback, nil
 	}
 	var s string
@@ -248,7 +248,7 @@ func optionalCurrency(raw map[string]json.RawMessage, fallback string) (string, 
 
 func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var s string
@@ -268,7 +268,7 @@ func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httput
 	if !ok {
 		return nil, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
-	if isNull(v) {
+	if validation.IsNull(v) {
 		return nil, nil
 	}
 	var n int
@@ -281,8 +281,4 @@ func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httput
 func today() time.Time {
 	now := time.Now().UTC()
 	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-}
-
-func isNull(v json.RawMessage) bool {
-	return bytes.Equal(bytes.TrimSpace(v), []byte("null"))
 }
