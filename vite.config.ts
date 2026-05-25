@@ -15,11 +15,14 @@ export default defineConfig({
 			provider: 'v8',
 			reporter: ['text', 'json', 'html', 'lcov'],
 			exclude: ['node_modules/**', '.svelte-kit/**', 'build/**', '**/*.config.*', '**/.*rc.*'],
+			// Thresholds are a ratchet against the current baseline, not a
+			// target — raise them as coverage improves so regressions can't
+			// slip past CI while the codebase already covers more.
 			thresholds: {
-				statements: 62,
-				branches: 43,
-				functions: 60,
-				lines: 64
+				statements: 78,
+				branches: 57,
+				functions: 81,
+				lines: 79
 			}
 		}
 	}
