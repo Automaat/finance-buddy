@@ -298,8 +298,8 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 	r.OwnerUserID = ownerID
 
 	if v, ok := raw["transaction_type"]; ok && !validation.IsNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
+		s, err := validation.RawString(v)
+		if err != nil {
 			return r, &httputil.ValidationError{Field: "transaction_type", Msg: "must be a string"}
 		}
 		if !IsValid(s) {
@@ -320,8 +320,8 @@ func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httput
 	if validation.IsNull(v) {
 		return nil, nil
 	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
+	n, err := validation.RawInt(v)
+	if err != nil {
 		return nil, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
 	}
 	return &n, nil
@@ -332,13 +332,12 @@ func requireDateNotFuture(raw map[string]json.RawMessage, key string) (time.Time
 	if !ok || validation.IsNull(v) {
 		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	t, err := time.Parse("2006-01-02", s)
+	t, err := validation.RawDate(v)
 	if err != nil {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be YYYY-MM-DD"}
+		if validation.IsRawDateFormatError(err) {
+			return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be YYYY-MM-DD"}
+		}
+		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be a string"}
 	}
 	today := time.Now().UTC()
 	today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.UTC)

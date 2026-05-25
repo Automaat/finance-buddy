@@ -43,6 +43,33 @@ func TestRawTrimmedString(t *testing.T) {
 	}
 }
 
+func TestRawDate(t *testing.T) {
+	d, err := RawDate(json.RawMessage(`"2026-05-25"`))
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if got := d.Format("2006-01-02"); got != "2026-05-25" {
+		t.Fatalf("got %s", got)
+	}
+	if _, err := RawDate(json.RawMessage(`"25/05/2026"`)); err == nil {
+		t.Fatal("expected error for invalid date")
+	}
+	if _, err := RawDate(json.RawMessage(`20260525`)); err == nil {
+		t.Fatal("expected error for non-string date")
+	}
+}
+
+func TestIsRawDateFormatError(t *testing.T) {
+	_, err := RawDate(json.RawMessage(`"25/05/2026"`))
+	if err == nil || !IsRawDateFormatError(err) {
+		t.Fatalf("format err = %v", err)
+	}
+	_, err = RawDate(json.RawMessage(`20260525`))
+	if err == nil || IsRawDateFormatError(err) {
+		t.Fatalf("type err = %v", err)
+	}
+}
+
 func TestRawInt(t *testing.T) {
 	n, err := RawInt(json.RawMessage(`42`))
 	if err != nil || n != 42 {

@@ -8,7 +8,9 @@ package validation
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"strings"
+	"time"
 
 	"github.com/shopspring/decimal"
 )
@@ -38,6 +40,21 @@ func RawTrimmedString(v json.RawMessage) (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(s), nil
+}
+
+// RawDate decodes a json.RawMessage as a YYYY-MM-DD date.
+func RawDate(v json.RawMessage) (time.Time, error) {
+	s, err := RawString(v)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return time.Parse("2006-01-02", s)
+}
+
+// IsRawDateFormatError reports whether err came from parsing a date string.
+func IsRawDateFormatError(err error) bool {
+	var parseErr *time.ParseError
+	return errors.As(err, &parseErr)
 }
 
 // RawInt decodes a json.RawMessage as an int.

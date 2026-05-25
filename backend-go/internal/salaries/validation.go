@@ -3,7 +3,6 @@ package salaries
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -66,13 +65,12 @@ func buildCreateRequest(raw map[string]json.RawMessage, now func() time.Time) (c
 func buildUpdatePatch(raw map[string]json.RawMessage, now func() time.Time) (UpdatePatch, *httputil.ValidationError) {
 	var p UpdatePatch
 	if v, ok := raw["date"]; ok && !validation.IsNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return p, &httputil.ValidationError{Field: "date", Msg: "must be a string"}
-		}
-		t, err := time.Parse("2006-01-02", s)
+		t, err := validation.RawDate(v)
 		if err != nil {
-			return p, &httputil.ValidationError{Field: "date", Msg: "must be YYYY-MM-DD"}
+			if validation.IsRawDateFormatError(err) {
+				return p, &httputil.ValidationError{Field: "date", Msg: "must be YYYY-MM-DD"}
+			}
+			return p, &httputil.ValidationError{Field: "date", Msg: "must be a string"}
 		}
 		if t.After(truncateDay(now().UTC())) {
 			return p, &httputil.ValidationError{Field: "date", Msg: "Date cannot be in the future"}
@@ -90,8 +88,8 @@ func buildUpdatePatch(raw map[string]json.RawMessage, now func() time.Time) (Upd
 		p.GrossAmount = &d
 	}
 	if v, ok := raw["contract_type"]; ok && !validation.IsNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
+		s, err := validation.RawString(v)
+		if err != nil {
 			return p, &httputil.ValidationError{Field: "contract_type", Msg: "must be a string"}
 		}
 		if _, ok := validContractTypes[s]; !ok {
@@ -100,11 +98,10 @@ func buildUpdatePatch(raw map[string]json.RawMessage, now func() time.Time) (Upd
 		p.ContractType = &s
 	}
 	if v, ok := raw["company"]; ok && !validation.IsNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
+		s, err := validation.RawTrimmedString(v)
+		if err != nil {
 			return p, &httputil.ValidationError{Field: "company", Msg: "must be a string"}
 		}
-		s = strings.TrimSpace(s)
 		if s == "" {
 			return p, &httputil.ValidationError{Field: "company", Msg: "Company cannot be empty"}
 		}
@@ -115,8 +112,8 @@ func buildUpdatePatch(raw map[string]json.RawMessage, now func() time.Time) (Upd
 		if validation.IsNull(v) {
 			p.OwnerUserID = nil
 		} else {
-			var n int
-			if err := json.Unmarshal(v, &n); err != nil {
+			n, err := validation.RawInt(v)
+			if err != nil {
 				return p, &httputil.ValidationError{Field: "owner_user_id", Msg: "must be an integer"}
 			}
 			p.OwnerUserID = &n
@@ -135,8 +132,8 @@ func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httput
 	if validation.IsNull(v) {
 		return nil, nil
 	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
+	n, err := validation.RawInt(v)
+	if err != nil {
 		return nil, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
 	}
 	return &n, nil
@@ -147,11 +144,10 @@ func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string
 	if !ok || validation.IsNull(v) {
 		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
+	s, err := validation.RawTrimmedString(v)
+	if err != nil {
 		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
 	}
-	s = strings.TrimSpace(s)
 	if s == "" {
 		return "", &httputil.ValidationError{Field: key, Msg: emptyMsg}
 	}
@@ -163,13 +159,12 @@ func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httput
 	if !ok || validation.IsNull(v) {
 		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	t, err := time.Parse("2006-01-02", s)
+	t, err := validation.RawDate(v)
 	if err != nil {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be YYYY-MM-DD"}
+		if validation.IsRawDateFormatError(err) {
+			return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be YYYY-MM-DD"}
+		}
+		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be a string"}
 	}
 	return t, nil
 }
@@ -194,8 +189,8 @@ func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[s
 	if !ok || validation.IsNull(v) {
 		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
+	s, err := validation.RawString(v)
+	if err != nil {
 		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
 	}
 	if _, ok := allowed[s]; !ok {
