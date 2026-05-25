@@ -1,18 +1,35 @@
 <script lang="ts">
 	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
-	import { projectFireGap, type FireGapInputs } from '$lib/utils/fireGap';
+	import { projectFireGap, type FireGapInputs, type PensionPriceBasis } from '$lib/utils/fireGap';
 	import { formatPLN } from '$lib/utils/format';
 	import { Scale } from 'lucide-svelte';
 
-	let currentAge = $state(35);
-	let retirementAge = $state(65);
-	let lifeExpectancy = $state(85);
-	let currentPortfolioPLN = $state(100000);
-	let annualContributionPLN = $state(20000);
-	let expectedReturnPct = $state(6);
-	let inflationPct = $state(3);
-	let withdrawalRatePct = $state(4);
-	let monthlyPensionNetPLN = $state(3500);
+	// All numeric props are $bindable so the retirement page can share its
+	// existing Monte Carlo inputs with this chart instead of asking the user
+	// to type them twice.
+	let {
+		currentAge = $bindable(35),
+		retirementAge = $bindable(65),
+		lifeExpectancy = $bindable(85),
+		currentPortfolioPLN = $bindable(100000),
+		annualContributionPLN = $bindable(20000),
+		expectedReturnPct = $bindable(6),
+		inflationPct = $bindable(3),
+		withdrawalRatePct = $bindable(4),
+		monthlyPensionNetPLN = $bindable(3500),
+		pensionBasis = $bindable<PensionPriceBasis>('today')
+	}: {
+		currentAge?: number;
+		retirementAge?: number;
+		lifeExpectancy?: number;
+		currentPortfolioPLN?: number;
+		annualContributionPLN?: number;
+		expectedReturnPct?: number;
+		inflationPct?: number;
+		withdrawalRatePct?: number;
+		monthlyPensionNetPLN?: number;
+		pensionBasis?: PensionPriceBasis;
+	} = $props();
 
 	const inputs = $derived<FireGapInputs>({
 		currentAge,
@@ -23,7 +40,8 @@
 		expectedReturnPct,
 		inflationPct,
 		withdrawalRatePct,
-		monthlyPensionNetPLN
+		monthlyPensionNetPLN,
+		pensionBasis
 	});
 
 	const rows = $derived(projectFireGap(inputs));
@@ -44,7 +62,7 @@
 		if (!container) {
 			handle?.dispose();
 			handle = null;
-			return;
+			return undefined;
 		}
 		if (!handle) handle = createChart(container);
 		handle.chart.setOption({
@@ -88,6 +106,13 @@
 				}
 			]
 		});
+		// Dispose the chart + ResizeObserver when the component is destroyed
+		// or the container ref is detached, so this widget can be re-mounted
+		// without leaking either.
+		return () => {
+			handle?.dispose();
+			handle = null;
+		};
 	});
 </script>
 
@@ -98,8 +123,8 @@
 			Luka FIRE vs ZUS
 		</h2>
 		<p class="text-sm text-surface-700-300">
-			Roczna luka między prywatnym portfelem a szacunkową emeryturą ZUS — używa założeń kalkulatora
-			ZUS.
+			Miesięczna luka między prywatnym portfelem a szacunkową emeryturą ZUS — używa założeń
+			kalkulatora ZUS.
 		</p>
 	</header>
 
@@ -140,6 +165,13 @@
 			<span class="text-xs font-semibold">Mies. emerytura ZUS (PLN)</span>
 			<input type="number" min="0" class="input w-full" bind:value={monthlyPensionNetPLN} />
 		</label>
+		<label class="space-y-1">
+			<span class="text-xs font-semibold">Denominacja emerytury</span>
+			<select bind:value={pensionBasis} class="input w-full">
+				<option value="today">Dzisiejsze PLN</option>
+				<option value="retirement">PLN w roku emerytury (kalkulator ZUS)</option>
+			</select>
+		</label>
 	</div>
 
 	{#if summary}
@@ -156,7 +188,7 @@
 			</div>
 			<div class="card preset-tonal-surface p-3">
 				<div class="text-xs text-surface-600-400">
-					Średnia roczna luka po przejściu na emeryturę
+					Średnia miesięczna luka po przejściu na emeryturę
 				</div>
 				<div
 					class="text-2xl font-bold {summary.avgGap >= 0

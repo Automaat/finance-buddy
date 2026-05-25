@@ -1,3 +1,10 @@
+// PensionPriceBasis declares the year the supplied pension figure is
+// expressed in. Callers that paste the ZUS calculator's
+// MonthlyPensionNet (already in retirement-year PLN) want 'retirement';
+// callers that key in a number "in today's PLN" want 'today'. The
+// projector indexes accordingly so inflation isn't double-counted.
+export type PensionPriceBasis = 'today' | 'retirement';
+
 export interface FireGapInputs {
 	currentAge: number;
 	retirementAge: number;
@@ -7,7 +14,10 @@ export interface FireGapInputs {
 	expectedReturnPct: number;
 	inflationPct: number;
 	withdrawalRatePct: number;
+	// Net monthly ZUS pension. See pensionBasis for the year this number
+	// is denominated in. Defaults to 'today' for backwards compatibility.
 	monthlyPensionNetPLN: number;
+	pensionBasis?: PensionPriceBasis;
 }
 
 export interface FireGapYear {
@@ -40,8 +50,12 @@ export function projectFireGap(
 			portfolio = Math.max(0, portfolio - annualWithdrawal);
 			portfolio *= 1 + r;
 		}
-		const yearsSinceNow = age - input.currentAge;
-		const inflationFactor = Math.pow(1 + inflation, yearsSinceNow);
+		// "Today's PLN" inputs need to be inflated from now → age. Values
+		// already in retirement-year PLN (e.g. straight out of the ZUS
+		// calculator) only need indexing from retirement → age.
+		const basis = input.pensionBasis ?? 'today';
+		const inflateFromAge = basis === 'today' ? input.currentAge : input.retirementAge;
+		const inflationFactor = Math.pow(1 + inflation, Math.max(0, age - inflateFromAge));
 		const zusMonthly = afterRetirement
 			? Math.max(0, input.monthlyPensionNetPLN) * inflationFactor
 			: 0;

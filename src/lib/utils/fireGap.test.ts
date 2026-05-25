@@ -77,6 +77,19 @@ describe('projectFireGap', () => {
 		expect(atRetire.portfolioPLN).toBeCloseTo(200000 - 200000 * 0.04, 0);
 	});
 
+	it('skips current→retirement inflation when basis is retirement-year PLN', () => {
+		const rows = projectFireGap(inputs({ inflationPct: 3, pensionBasis: 'retirement' }));
+		const atRetire = rows.find((r) => r.age === 65)!;
+		// Pension was already in retirement-year PLN — first retirement
+		// row keeps the input verbatim.
+		expect(atRetire.zusMonthlyIncomePLN).toBeCloseTo(3500, 1);
+		const later = rows.find((r) => r.age === 75)!;
+		expect(later.zusMonthlyIncomePLN / atRetire.zusMonthlyIncomePLN).toBeCloseTo(
+			Math.pow(1.03, 10),
+			3
+		);
+	});
+
 	it('uses the calendar-year mapper to label rows', () => {
 		const rows = projectFireGap(inputs(), (age) => 2026 + (age - 35));
 		expect(rows[0].year).toBe(2026);
