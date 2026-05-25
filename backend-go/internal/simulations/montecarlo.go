@@ -302,11 +302,12 @@ func simulatePaths(rng *rand.Rand, p MonteCarloInputs, paths, years int, expecte
 		balance := p.CurrentPortfolio
 		nomRow := make([]float64, years)
 		realRow := make([]float64, years)
-		var netRow, netRealRow []float64
-		if hasTax {
-			netRow = make([]float64, years)
-			netRealRow = make([]float64, years)
-		}
+		// Always allocate the row slices to keep nilaway happy; the per-year
+		// math below is still gated on hasTax so the no-tax common case
+		// avoids the EffectiveTaxRate call. Real savings come from the
+		// buildBands gate that skips the extra sorts.
+		netRow := make([]float64, years)
+		netRealRow := make([]float64, years)
 		spendRow := make([]float64, years)
 		spendRealRow := make([]float64, years)
 		cumInflation := 1.0
@@ -386,11 +387,8 @@ func buildBands(m pathMatrix, paths, years, currentAge int) []MonteCarloPercenti
 	bands := make([]MonteCarloPercentileBand, years)
 	col := make([]float64, paths)
 	colReal := make([]float64, paths)
-	var colNet, colNetReal []float64
-	if hasTax {
-		colNet = make([]float64, paths)
-		colNetReal = make([]float64, paths)
-	}
+	colNet := make([]float64, paths)
+	colNetReal := make([]float64, paths)
 	for y := range years {
 		for i := range paths {
 			col[i] = m.nominal[i][y]
