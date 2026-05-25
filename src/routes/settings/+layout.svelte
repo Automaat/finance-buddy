@@ -8,7 +8,6 @@
 		{ href: '/settings/config', label: 'Konfiguracja' },
 		{ href: '/settings/allocation', label: 'Cele alokacji' },
 		{ href: '/settings/navigation', label: 'Nawigacja' },
-		{ href: '/settings', label: 'Ustawienia' },
 		...(data.user?.isAdmin ? [{ href: '/settings/users', label: 'Użytkownicy' }] : [])
 	]);
 </script>
