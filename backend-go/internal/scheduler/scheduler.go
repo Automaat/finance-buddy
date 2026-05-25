@@ -24,10 +24,22 @@ const (
 	refreshHour   = 4
 )
 
+// CPIStore is the slice of *cpi.Store the scheduler uses. Declared as an
+// interface so tests can substitute a fake without touching production code.
+type CPIStore interface {
+	NeedsRefresh(ctx context.Context, staleAfter time.Duration) (bool, error)
+	Upsert(ctx context.Context, source string, rows []cpi.YearRate) (int, error)
+}
+
+// CPIFetcher is the slice of *cpi.GUSFetcher the scheduler uses.
+type CPIFetcher interface {
+	Fetch(ctx context.Context) ([]cpi.YearRate, error)
+}
+
 // CPIScheduler owns the monthly CPI refresh loop.
 type CPIScheduler struct {
-	store   *cpi.Store
-	fetcher *cpi.GUSFetcher
+	store   CPIStore
+	fetcher CPIFetcher
 	logger  *slog.Logger
 	now     func() time.Time
 	loc     *time.Location
@@ -35,7 +47,7 @@ type CPIScheduler struct {
 
 // NewCPIScheduler wires the scheduler. Falls back to UTC if the
 // Europe/Warsaw zone can't be loaded (missing tzdata).
-func NewCPIScheduler(store *cpi.Store, fetcher *cpi.GUSFetcher, logger *slog.Logger) *CPIScheduler {
+func NewCPIScheduler(store CPIStore, fetcher CPIFetcher, logger *slog.Logger) *CPIScheduler {
 	if logger == nil {
 		logger = slog.Default()
 	}
