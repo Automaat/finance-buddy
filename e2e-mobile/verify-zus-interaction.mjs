@@ -1,4 +1,5 @@
 import { chromium, devices } from '@playwright/test';
+import { expect } from '@playwright/test';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:5174';
 
@@ -28,69 +29,58 @@ async function testViewport(browser, vp) {
 
 		console.log(`\n[${vp.label}] visiting /simulations/zus`);
 		await page.goto(`${BASE_URL}/simulations/zus`, { waitUntil: 'networkidle' });
-		await page.waitForTimeout(500);
 
-		const formVisible = await page.locator('.form-section').isVisible();
-		const runButton = page.locator('button.primary-button');
-		const runButtonVisible = await runButton.isVisible();
-
-		console.log(`  [${vp.label}] form visible: ${formVisible}`);
-		console.log(`  [${vp.label}] run button visible: ${runButtonVisible}`);
+		// Wait for the form heading instead of a fixed sleep — proves the page
+		// rendered before we touch fields.
+		const formHeading = page.getByRole('heading', { name: 'Parametry' });
+		await expect(formHeading).toBeVisible();
+		const runButton = page.getByRole('button', { name: /Oblicz emeryturę/i });
+		await expect(runButton).toBeVisible();
+		console.log(`  [${vp.label}] form + run button: visible`);
 
 		let result;
-
-		if (!runButtonVisible) {
-			result = {
-				viewport: vp.label,
-				success: false,
-				error: 'run button not visible — page did not render correctly'
-			};
-		} else {
+		try {
 			console.log(`  [${vp.label}] filling form fields...`);
-			await page.locator('input[type="date"]').first().fill('1990-06-15');
-			const retirementAgeInput = page.locator('input[type="number"]').nth(0);
-			// Set a valid retirement age (first numeric input is retirement age in this form)
-			await retirementAgeInput.fill('65');
-			await page.waitForTimeout(200);
+			await page.getByLabel('Data urodzenia').fill('1990-06-15');
+			await page.getByLabel('Wiek emerytalny').fill('65');
 			console.log(`  [${vp.label}] clicking run button...`);
 			await runButton.click();
 
-			try {
-				await page.waitForSelector('.summary-cards', { timeout: 15000 });
-				console.log(`  [${vp.label}] results rendered: OK`);
+			// Results render under the "Wyniki" heading — wait for it instead
+			// of a CSS class that didn't survive the Skeleton-Tailwind redesign.
+			const resultsHeading = page.getByRole('heading', { name: 'Wyniki' });
+			await expect(resultsHeading).toBeVisible({ timeout: 15000 });
+			console.log(`  [${vp.label}] results rendered: OK`);
 
-				const summaryCards = await page.locator('.summary-card').count();
-				console.log(`  [${vp.label}] summary cards: ${summaryCards}`);
+			const pensionBruttoLabel = page.getByText('Emerytura brutto').first();
+			await expect(pensionBruttoLabel).toBeVisible();
 
-				const chartHeight = await page
-					.locator('.chart-container')
-					.evaluate((el) => el.offsetHeight);
-				console.log(`  [${vp.label}] chart height: ${chartHeight}px`);
-
-				// Check if table still scrolls nicely on mobile
-				const tableWrapper = page.locator('.projection-table').first();
-				const hasTable = (await tableWrapper.count()) > 0;
-				if (hasTable) {
-					const tableScroll = await tableWrapper.evaluate((el) => ({
-						scrollWidth: el.scrollWidth,
-						clientWidth: el.clientWidth,
-						overflow: getComputedStyle(el).overflowX
-					}));
-					console.log(
-						`  [${vp.label}] projection table: scrollW=${tableScroll.scrollWidth} clientW=${tableScroll.clientWidth} overflow=${tableScroll.overflow}`
-					);
-				}
-
-				const pageOverflow = await page.evaluate(
-					() => document.documentElement.scrollWidth - document.documentElement.clientWidth
+			// Yearly projection table lives inside a <details> element behind
+			// "Projekcja roczna" — open it before measuring scroll.
+			const projectionToggle = page.getByText('Projekcja roczna').first();
+			if (await projectionToggle.isVisible()) {
+				await projectionToggle.click();
+				const projectionTable = page.locator('details table').first();
+				await expect(projectionTable).toBeVisible();
+				const tableScroll = await projectionTable.evaluate((el) => ({
+					scrollWidth: el.scrollWidth,
+					clientWidth: el.clientWidth,
+					overflow: getComputedStyle(el).overflowX
+				}));
+				console.log(
+					`  [${vp.label}] projection table: scrollW=${tableScroll.scrollWidth} clientW=${tableScroll.clientWidth} overflow=${tableScroll.overflow}`
 				);
-				console.log(`  [${vp.label}] page overflow x: ${pageOverflow}px`);
-
-				result = { viewport: vp.label, success: true };
-			} catch (err) {
-				console.log(`  [${vp.label}] ERROR waiting for results: ${err.message}`);
-				result = { viewport: vp.label, success: false, error: err.message };
 			}
+
+			const pageOverflow = await page.evaluate(
+				() => document.documentElement.scrollWidth - document.documentElement.clientWidth
+			);
+			console.log(`  [${vp.label}] page overflow x: ${pageOverflow}px`);
+
+			result = { viewport: vp.label, success: true };
+		} catch (err) {
+			console.log(`  [${vp.label}] ERROR: ${err.message.slice(0, 200)}`);
+			result = { viewport: vp.label, success: false, error: err.message };
 		}
 
 		if (consoleErrors.length > 0) {

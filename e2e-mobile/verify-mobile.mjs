@@ -32,8 +32,9 @@ const MIN_TAP = 44;
 
 async function audit(page, url) {
 	await page.goto(url, { waitUntil: 'networkidle', timeout: 20000 }).catch(() => {});
-	// Allow any delayed paint (charts)
-	await page.waitForTimeout(600);
+	// `networkidle` covers fetch waterfalls; `load` handles late-paint passes
+	// (echarts hooks into requestAnimationFrame) without a fixed sleep.
+	await page.waitForLoadState('load').catch(() => {});
 
 	return await page.evaluate((minTap) => {
 		const doc = document.documentElement;
