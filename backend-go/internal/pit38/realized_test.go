@@ -2,6 +2,7 @@ package pit38
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -122,8 +123,8 @@ func TestComputeReport_SkipsSalesOutsideYear(t *testing.T) {
 	if got := len(rep.Rows); got != 1 {
 		t.Fatalf("rows = %d, want 1 (only the 2026 sale)", got)
 	}
-	if !rep.Rows[0].Date.Equal(dateAt(t, "2026-02-01")) {
-		t.Errorf("date = %s, want 2026-02-01", rep.Rows[0].Date)
+	if !time.Time(rep.Rows[0].Date).Equal(dateAt(t, "2026-02-01")) {
+		t.Errorf("date = %v, want 2026-02-01", time.Time(rep.Rows[0].Date))
 	}
 }
 
@@ -137,8 +138,8 @@ func TestComputeReport_MissingRateErrors(t *testing.T) {
 			{Side: holdings.SideSell, Quantity: d("1"), Price: d("250"), Date: dateAt(t, "2026-03-15")},
 		},
 	}})
-	if err == nil {
-		t.Fatal("ComputeReport: want error, got nil")
+	if !errors.Is(err, ErrUnknownCurrency) {
+		t.Fatalf("ComputeReport err = %v, want ErrUnknownCurrency", err)
 	}
 }
 

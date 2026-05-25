@@ -34,6 +34,9 @@
 		totals: Totals;
 	}
 
+	// Polish PIT-38 filings are due by April 30 for the previous year, so
+	// default to last year before May 1 and to this year afterwards. Months
+	// are 0-indexed: April = 3, May = 4.
 	const now = new Date();
 	let year = $state(now.getMonth() < 4 ? now.getFullYear() - 1 : now.getFullYear());
 	let report = $state<Report | null>(null);

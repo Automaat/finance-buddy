@@ -69,9 +69,24 @@ func (s *Store) LoadAllLots(ctx context.Context) ([]SecurityLots, error) {
 	}
 	out := make([]SecurityLots, 0, len(order))
 	for _, id := range order {
-		out = append(out, *groups[id])
+		g := groups[id]
+		if g == nil {
+			continue
+		}
+		out = append(out, *g)
 	}
 	return out, nil
+}
+
+// defaultReportYear picks the calendar year the report should cover when
+// the caller doesn't supply one. Polish PIT filings are due by April 30
+// for the previous year, so before that date the previous year is the
+// most useful default; afterwards the current year is.
+func defaultReportYear(now time.Time) int {
+	if now.Month() < time.May {
+		return now.Year() - 1
+	}
+	return now.Year()
 }
 
 // Handler is the HTTP boundary for /api/pit38.
@@ -92,8 +107,13 @@ func NewHandler(store *Store, fxSvc *fx.Service, logger *slog.Logger) *Handler {
 
 // Realized serves GET /api/pit38/realized?year=YYYY[&format=csv].
 // JSON is the default; format=csv switches to a downloadable spreadsheet.
+//
+// Default year follows the PIT filing window: before April 30, last
+// calendar year; after, the current year. Mirrors the UI default so
+// directly hitting the API yields the same report.
 func (h *Handler) Realized(w http.ResponseWriter, r *http.Request) {
-	year := h.now().UTC().Year() - 1
+	now := h.now().UTC()
+	year := defaultReportYear(now)
 	if v := r.URL.Query().Get("year"); v != "" {
 		n, err := strconv.Atoi(v)
 		if err != nil {
@@ -145,7 +165,7 @@ func writeCSV(w http.ResponseWriter, rep Report) {
 	for i := range rep.Rows {
 		row := &rep.Rows[i]
 		_ = cw.Write([]string{
-			row.Date.Format("2006-01-02"),
+			time.Time(row.Date).Format("2006-01-02"),
 			row.Symbol,
 			row.Currency,
 			row.Quantity.String(),

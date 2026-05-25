@@ -16,6 +16,15 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/holdings"
 )
 
+// isoDate marshals as a date-only YYYY-MM-DD string, matching the wire
+// format every other endpoint uses for transaction dates.
+type isoDate time.Time
+
+// MarshalJSON renders the underlying time as YYYY-MM-DD.
+func (d isoDate) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + time.Time(d).Format("2006-01-02") + `"`), nil
+}
+
 // SaleRow is one realized-sale row in the report. All `_PLN` fields are
 // after NBP conversion at the per-row tax date (sale date for proceeds,
 // running PLN-weighted cost basis for cost). Currency-side fields are
@@ -24,7 +33,7 @@ type SaleRow struct {
 	SecurityID   int             `json:"security_id"`
 	Symbol       string          `json:"symbol"`
 	Currency     string          `json:"currency"`
-	Date         time.Time       `json:"date"`
+	Date         isoDate         `json:"date"`
 	Quantity     decimal.Decimal `json:"quantity"`
 	Proceeds     decimal.Decimal `json:"proceeds"`
 	CostBasis    decimal.Decimal `json:"cost_basis"`
@@ -90,8 +99,10 @@ func ComputeReport(ctx context.Context, year int, rates RateProvider, byses []Se
 		rep.Rows = append(rep.Rows, rows...)
 	}
 	sort.SliceStable(rep.Rows, func(i, j int) bool {
-		if !rep.Rows[i].Date.Equal(rep.Rows[j].Date) {
-			return rep.Rows[i].Date.Before(rep.Rows[j].Date)
+		di := time.Time(rep.Rows[i].Date)
+		dj := time.Time(rep.Rows[j].Date)
+		if !di.Equal(dj) {
+			return di.Before(dj)
 		}
 		return rep.Rows[i].Symbol < rep.Rows[j].Symbol
 	})
@@ -174,7 +185,7 @@ func realizedSalesFor(
 					SecurityID:   sec.SecurityID,
 					Symbol:       sec.Symbol,
 					Currency:     sec.Currency,
-					Date:         l.Date,
+					Date:         isoDate(l.Date),
 					Quantity:     l.Quantity,
 					Proceeds:     proceedsCcy,
 					CostBasis:    costBasisCcy,
