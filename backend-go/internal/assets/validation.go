@@ -1,16 +1,16 @@
 package assets
 
 import (
-	"bytes"
 	"encoding/json"
 	"strings"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
+	"github.com/Automaat/finance-buddy/backend-go/internal/validation"
 )
 
 func requireName(raw map[string]json.RawMessage) (string, *httputil.ValidationError) {
 	v, ok := raw["name"]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return "", &httputil.ValidationError{Field: "name", Msg: "Field required"}
 	}
 	var s string
@@ -27,7 +27,7 @@ func requireName(raw map[string]json.RawMessage) (string, *httputil.ValidationEr
 // optionalName: absent / explicit null -> no change. Empty string -> 422.
 func optionalName(raw map[string]json.RawMessage) (*string, *httputil.ValidationError) {
 	v, ok := raw["name"]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return nil, nil
 	}
 	var s string
@@ -39,8 +39,4 @@ func optionalName(raw map[string]json.RawMessage) (*string, *httputil.Validation
 		return nil, &httputil.ValidationError{Field: "name", Msg: "Name cannot be empty"}
 	}
 	return &s, nil
-}
-
-func isNull(v json.RawMessage) bool {
-	return bytes.Equal(bytes.TrimSpace(v), []byte("null"))
 }

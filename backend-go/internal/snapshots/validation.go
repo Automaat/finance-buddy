@@ -1,14 +1,12 @@
 package snapshots
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"time"
 
-	"github.com/shopspring/decimal"
-
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
+	"github.com/Automaat/finance-buddy/backend-go/internal/validation"
 )
 
 type createRequest struct {
@@ -25,7 +23,7 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 	}
 	r.Date = t
 
-	if v, ok := raw["notes"]; ok && !isNull(v) {
+	if v, ok := raw["notes"]; ok && !validation.IsNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
 			return r, &httputil.ValidationError{Field: "notes", Msg: "must be a string"}
@@ -34,7 +32,7 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 	}
 
 	vRaw, ok := raw["values"]
-	if !ok || isNull(vRaw) {
+	if !ok || validation.IsNull(vRaw) {
 		return r, &httputil.ValidationError{Field: "values", Msg: "Field required"}
 	}
 	values, vErr := parseValues(vRaw)
@@ -50,7 +48,7 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 
 func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.ValidationError) {
 	var p UpdatePatch
-	if v, ok := raw["date"]; ok && !isNull(v) {
+	if v, ok := raw["date"]; ok && !validation.IsNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
 			return p, &httputil.ValidationError{Field: "date", Msg: "must be a string"}
@@ -63,7 +61,7 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 	}
 	if v, ok := raw["notes"]; ok {
 		p.NotesSet = true
-		if isNull(v) {
+		if validation.IsNull(v) {
 			p.Notes = nil
 		} else {
 			var s string
@@ -73,7 +71,7 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 			p.Notes = &s
 		}
 	}
-	if v, ok := raw["values"]; ok && !isNull(v) {
+	if v, ok := raw["values"]; ok && !validation.IsNull(v) {
 		values, vErr := parseValues(v)
 		if vErr != nil {
 			return p, vErr
@@ -126,10 +124,10 @@ func parseValueEntry(e map[string]json.RawMessage) (ValueInput, *httputil.Valida
 	}
 
 	valRaw, ok := e["value"]
-	if !ok || isNull(valRaw) {
+	if !ok || validation.IsNull(valRaw) {
 		return v, &httputil.ValidationError{Field: "value", Msg: "Field required"}
 	}
-	d, err := decimal.NewFromString(string(bytes.TrimSpace(valRaw)))
+	d, err := validation.RawDecimal(valRaw)
 	if err != nil {
 		return v, &httputil.ValidationError{Field: "value", Msg: "must be a number"}
 	}
@@ -139,7 +137,7 @@ func parseValueEntry(e map[string]json.RawMessage) (ValueInput, *httputil.Valida
 
 func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var s string
@@ -155,7 +153,7 @@ func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httput
 
 func optionalInt(raw map[string]json.RawMessage, key string) (*int, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return nil, nil
 	}
 	var n int
@@ -163,8 +161,4 @@ func optionalInt(raw map[string]json.RawMessage, key string) (*int, *httputil.Va
 		return nil, &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("%s must be an integer", key)}
 	}
 	return &n, nil
-}
-
-func isNull(v json.RawMessage) bool {
-	return bytes.Equal(bytes.TrimSpace(v), []byte("null"))
 }

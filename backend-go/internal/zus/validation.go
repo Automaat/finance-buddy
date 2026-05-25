@@ -1,12 +1,12 @@
 package zus
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
+	"github.com/Automaat/finance-buddy/backend-go/internal/validation"
 )
 
 type calculateInputs struct {
@@ -105,7 +105,7 @@ func readSalaryHistory(raw map[string]json.RawMessage, in *Inputs) *httputil.Val
 	if !ok {
 		return nil
 	}
-	if isNull(v) {
+	if validation.IsNull(v) {
 		return &httputil.ValidationError{Field: "salary_history", Msg: "must be an array"}
 	}
 	var entries []map[string]any
@@ -156,7 +156,7 @@ func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httput
 	if !ok {
 		return nil, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
-	if isNull(v) {
+	if validation.IsNull(v) {
 		return nil, nil
 	}
 	var n int
@@ -168,7 +168,7 @@ func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httput
 
 func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var s string
@@ -184,7 +184,7 @@ func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httput
 
 func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var s string
@@ -199,7 +199,7 @@ func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[s
 
 func requireNonNegativeFloat(raw map[string]json.RawMessage, key, msg string) (float64, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return 0, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var f float64
@@ -219,7 +219,7 @@ func optionalNonNegativeFloat(raw map[string]json.RawMessage, key string, fallba
 	if !ok {
 		return fallback, nil
 	}
-	if isNull(v) {
+	if validation.IsNull(v) {
 		return 0, &httputil.ValidationError{Field: key, Msg: "must be a number"}
 	}
 	var f float64
@@ -237,7 +237,7 @@ func optionalFloatRange(raw map[string]json.RawMessage, key string, fallback, lo
 	if !ok {
 		return fallback, nil
 	}
-	if isNull(v) {
+	if validation.IsNull(v) {
 		return 0, &httputil.ValidationError{Field: key, Msg: "must be a number"}
 	}
 	var f float64
@@ -255,7 +255,7 @@ func optionalIntRange(raw map[string]json.RawMessage, key string, fallback, lo, 
 	if !ok {
 		return fallback, nil
 	}
-	if isNull(v) {
+	if validation.IsNull(v) {
 		return 0, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
 	}
 	var n int
@@ -270,7 +270,7 @@ func optionalIntRange(raw map[string]json.RawMessage, key string, fallback, lo, 
 
 func requireIntRange(raw map[string]json.RawMessage, key string, lo, hi int, msg string) (int, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return 0, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var n int
@@ -288,7 +288,7 @@ func optionalBool(raw map[string]json.RawMessage, key string, fallback bool) (bo
 	if !ok {
 		return fallback, nil
 	}
-	if isNull(v) {
+	if validation.IsNull(v) {
 		return false, &httputil.ValidationError{Field: key, Msg: "must be a boolean"}
 	}
 	var b bool
@@ -296,8 +296,4 @@ func optionalBool(raw map[string]json.RawMessage, key string, fallback bool) (bo
 		return false, &httputil.ValidationError{Field: key, Msg: "must be a boolean"}
 	}
 	return b, nil
-}
-
-func isNull(v json.RawMessage) bool {
-	return bytes.Equal(bytes.TrimSpace(v), []byte("null"))
 }

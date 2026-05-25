@@ -1,7 +1,6 @@
 package salaries
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -10,6 +9,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
+	"github.com/Automaat/finance-buddy/backend-go/internal/validation"
 )
 
 // createRequest is the validated POST body. OwnerUserID is required as a
@@ -65,7 +65,7 @@ func buildCreateRequest(raw map[string]json.RawMessage, now func() time.Time) (c
 // buildUpdatePatch reads the PATCH body. Null = no-op (Pydantic semantics).
 func buildUpdatePatch(raw map[string]json.RawMessage, now func() time.Time) (UpdatePatch, *httputil.ValidationError) {
 	var p UpdatePatch
-	if v, ok := raw["date"]; ok && !isNull(v) {
+	if v, ok := raw["date"]; ok && !validation.IsNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
 			return p, &httputil.ValidationError{Field: "date", Msg: "must be a string"}
@@ -79,8 +79,8 @@ func buildUpdatePatch(raw map[string]json.RawMessage, now func() time.Time) (Upd
 		}
 		p.Date = &t
 	}
-	if v, ok := raw["gross_amount"]; ok && !isNull(v) {
-		d, err := decimal.NewFromString(string(bytes.TrimSpace(v)))
+	if v, ok := raw["gross_amount"]; ok && !validation.IsNull(v) {
+		d, err := validation.RawDecimal(v)
 		if err != nil {
 			return p, &httputil.ValidationError{Field: "gross_amount", Msg: "must be a number"}
 		}
@@ -89,7 +89,7 @@ func buildUpdatePatch(raw map[string]json.RawMessage, now func() time.Time) (Upd
 		}
 		p.GrossAmount = &d
 	}
-	if v, ok := raw["contract_type"]; ok && !isNull(v) {
+	if v, ok := raw["contract_type"]; ok && !validation.IsNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
 			return p, &httputil.ValidationError{Field: "contract_type", Msg: "must be a string"}
@@ -99,7 +99,7 @@ func buildUpdatePatch(raw map[string]json.RawMessage, now func() time.Time) (Upd
 		}
 		p.ContractType = &s
 	}
-	if v, ok := raw["company"]; ok && !isNull(v) {
+	if v, ok := raw["company"]; ok && !validation.IsNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
 			return p, &httputil.ValidationError{Field: "company", Msg: "must be a string"}
@@ -112,7 +112,7 @@ func buildUpdatePatch(raw map[string]json.RawMessage, now func() time.Time) (Upd
 	}
 	if v, ok := raw["owner_user_id"]; ok {
 		p.OwnerUserIDSet = true
-		if isNull(v) {
+		if validation.IsNull(v) {
 			p.OwnerUserID = nil
 		} else {
 			var n int
@@ -132,7 +132,7 @@ func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httput
 	if !ok {
 		return nil, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
-	if isNull(v) {
+	if validation.IsNull(v) {
 		return nil, nil
 	}
 	var n int
@@ -144,7 +144,7 @@ func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httput
 
 func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var s string
@@ -160,7 +160,7 @@ func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string
 
 func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var s string
@@ -176,10 +176,10 @@ func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httput
 
 func requirePositiveDecimal(raw map[string]json.RawMessage, key, msg string) (decimal.Decimal, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
-	d, err := decimal.NewFromString(string(bytes.TrimSpace(v)))
+	d, err := validation.RawDecimal(v)
 	if err != nil {
 		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "must be a number"}
 	}
@@ -191,7 +191,7 @@ func requirePositiveDecimal(raw map[string]json.RawMessage, key, msg string) (de
 
 func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var s string
@@ -202,8 +202,4 @@ func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[s
 		return "", &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
 	}
 	return s, nil
-}
-
-func isNull(v json.RawMessage) bool {
-	return bytes.Equal(bytes.TrimSpace(v), []byte("null"))
 }

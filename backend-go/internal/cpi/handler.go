@@ -1,7 +1,6 @@
 package cpi
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
+	"github.com/Automaat/finance-buddy/backend-go/internal/validation"
 	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
@@ -183,7 +183,7 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 
 func requireFloat(raw map[string]json.RawMessage, key string) (float64, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return 0, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var f float64
@@ -195,7 +195,7 @@ func requireFloat(raw map[string]json.RawMessage, key string) (float64, *httputi
 
 func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var s string
@@ -207,8 +207,4 @@ func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httput
 		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be YYYY-MM-DD"}
 	}
 	return t, nil
-}
-
-func isNull(v json.RawMessage) bool {
-	return bytes.Equal(bytes.TrimSpace(v), []byte("null"))
 }

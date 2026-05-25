@@ -8,6 +8,7 @@ import (
 
 	"github.com/shopspring/decimal"
 
+	"github.com/Automaat/finance-buddy/backend-go/internal/validation"
 	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
@@ -27,8 +28,8 @@ func TestIsNull(t *testing.T) {
 		{`""`, false},
 	}
 	for _, c := range cases {
-		if got := isNull(rawJSON(c.in)); got != c.want {
-			t.Errorf("isNull(%q): want %v, got %v", c.in, c.want, got)
+		if got := validation.IsNull(rawJSON(c.in)); got != c.want {
+			t.Errorf("validation.IsNull(%q): want %v, got %v", c.in, c.want, got)
 		}
 	}
 }

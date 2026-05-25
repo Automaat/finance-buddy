@@ -1,7 +1,6 @@
 package debtpayments
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,6 +14,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
+	"github.com/Automaat/finance-buddy/backend-go/internal/validation"
 	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
@@ -290,7 +290,7 @@ func requireOwnerUserID(raw map[string]json.RawMessage) (*int, *httputil.Validat
 	if !ok {
 		return nil, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
-	if isNull(v) {
+	if validation.IsNull(v) {
 		return nil, nil
 	}
 	var n int
@@ -303,7 +303,7 @@ func requireOwnerUserID(raw map[string]json.RawMessage) (*int, *httputil.Validat
 func requireDateNotFuture(raw map[string]json.RawMessage) (time.Time, *httputil.ValidationError) {
 	const key = "date"
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var s string
@@ -328,10 +328,10 @@ func requireAmount(raw map[string]json.RawMessage) (decimal.Decimal, *httputil.V
 		msg = "Amount must be greater than 0"
 	)
 	v, ok := raw[key]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
-	d, err := decimal.NewFromString(string(bytes.TrimSpace(v)))
+	d, err := validation.RawDecimal(v)
 	if err != nil {
 		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "must be a number"}
 	}
@@ -339,8 +339,4 @@ func requireAmount(raw map[string]json.RawMessage) (decimal.Decimal, *httputil.V
 		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: msg}
 	}
 	return d, nil
-}
-
-func isNull(v json.RawMessage) bool {
-	return bytes.Equal(bytes.TrimSpace(v), []byte("null"))
 }

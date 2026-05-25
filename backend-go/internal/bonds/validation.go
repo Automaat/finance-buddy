@@ -1,7 +1,6 @@
 package bonds
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -10,6 +9,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
+	"github.com/Automaat/finance-buddy/backend-go/internal/validation"
 )
 
 // validateCreate normalizes and rejects bad inputs on the create path.
@@ -46,7 +46,7 @@ func validateCreate(req *createRequest) *httputil.ValidationError {
 // package's Pydantic-shaped sparse-update behavior.
 func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.ValidationError) {
 	var p UpdatePatch
-	if v, ok := raw["type"]; ok && !isNull(v) {
+	if v, ok := raw["type"]; ok && !validation.IsNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
 			return p, &httputil.ValidationError{Field: "type", Msg: "must be a string"}
@@ -57,7 +57,7 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 		}
 		p.Type = &t
 	}
-	if v, ok := raw["series"]; ok && !isNull(v) {
+	if v, ok := raw["series"]; ok && !validation.IsNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
 			return p, &httputil.ValidationError{Field: "series", Msg: "must be a string"}
@@ -71,7 +71,7 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 	if vErr := patchPositiveAmount(raw, "face_value", &p.FaceValue, "Face value must be greater than 0"); vErr != nil {
 		return p, vErr
 	}
-	if v, ok := raw["purchase_date"]; ok && !isNull(v) {
+	if v, ok := raw["purchase_date"]; ok && !validation.IsNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
 			return p, &httputil.ValidationError{Field: "purchase_date", Msg: "must be a string"}
@@ -84,7 +84,7 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 	}
 	if v, ok := raw["owner_user_id"]; ok {
 		p.OwnerUserIDSet = true
-		if !isNull(v) {
+		if !validation.IsNull(v) {
 			var id int
 			if err := json.Unmarshal(v, &id); err != nil {
 				return p, &httputil.ValidationError{Field: "owner_user_id", Msg: "must be an integer"}
@@ -98,7 +98,7 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 	if vErr := patchRatePercent(raw, "margin", &p.Margin); vErr != nil {
 		return p, vErr
 	}
-	if v, ok := raw["capitalize"]; ok && !isNull(v) {
+	if v, ok := raw["capitalize"]; ok && !validation.IsNull(v) {
 		var b bool
 		if err := json.Unmarshal(v, &b); err != nil {
 			return p, &httputil.ValidationError{Field: "capitalize", Msg: "must be a boolean"}
@@ -110,7 +110,7 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 
 func patchPositiveAmount(raw map[string]json.RawMessage, field string, dest **decimal.Decimal, msg string) *httputil.ValidationError {
 	v, ok := raw[field]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return nil
 	}
 	var f float64
@@ -127,7 +127,7 @@ func patchPositiveAmount(raw map[string]json.RawMessage, field string, dest **de
 
 func patchRatePercent(raw map[string]json.RawMessage, field string, dest **decimal.Decimal) *httputil.ValidationError {
 	v, ok := raw[field]
-	if !ok || isNull(v) {
+	if !ok || validation.IsNull(v) {
 		return nil
 	}
 	var f float64
@@ -140,8 +140,4 @@ func patchRatePercent(raw map[string]json.RawMessage, field string, dest **decim
 	d := decimal.NewFromFloat(f)
 	*dest = &d
 	return nil
-}
-
-func isNull(v json.RawMessage) bool {
-	return bytes.Equal(bytes.TrimSpace(v), []byte("null"))
 }
