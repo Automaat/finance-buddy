@@ -1,7 +1,8 @@
 // Small pure helpers used by the salaries route. Extracted from
 // src/routes/salaries/+page.svelte as step 1 of the broader refactor in
-// #614 — the file is still 1957 lines and a full split is a multi-day job.
-// These five primitives are the cleanest first slice because they are
+// #614 — the page was ~1957 lines before this extraction and a full split
+// (chart component, summary cards, grouping utilities) is a multi-day job.
+// These four primitives are the cleanest first slice because they are
 // stateless and were already pure functions inside the .svelte file.
 
 import { formatPLN } from './format';
