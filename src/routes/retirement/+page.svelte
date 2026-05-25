@@ -27,6 +27,15 @@
 	let inflationVolatility = $state(0);
 	let showReal = $state(true);
 
+	let useAccountMix = $state(false);
+	let mixTaxable = $state(50);
+	let mixIke = $state(20);
+	let mixIkze = $state(20);
+	let mixZus = $state(10);
+	let mixTaxableGain = $state(60);
+	const mixSum = $derived(mixTaxable + mixIke + mixIkze + mixZus);
+	let showNet = $state(false);
+
 	let loading = $state(false);
 	let error = $state('');
 	let result: MonteCarloResult | null = $state(null);
@@ -68,6 +77,16 @@
 				loading = false;
 				return;
 			}
+			if (useAccountMix && Math.abs(mixSum - 100) > 0.01) {
+				error = `Konta muszą sumować się do 100% (obecnie ${mixSum.toFixed(1)}%)`;
+				loading = false;
+				return;
+			}
+			if (useAccountMix && (mixTaxableGain < 0 || mixTaxableGain > 100)) {
+				error = 'Udział zysku w koncie maklerskim musi mieścić się w 0–100%';
+				loading = false;
+				return;
+			}
 
 			const apiUrl = resolveApiUrl();
 			const body: Record<string, unknown> = {
@@ -87,6 +106,15 @@
 					stocks_pct: allocStocks,
 					bonds_pct: allocBonds,
 					cash_pct: allocCash
+				};
+			}
+			if (useAccountMix) {
+				body.account_mix = {
+					taxable_pct: mixTaxable,
+					ike_pct: mixIke,
+					ikze_pct: mixIkze,
+					zus_pct: mixZus,
+					taxable_gain_pct: mixTaxableGain
 				};
 			}
 			const response = await fetch(`${apiUrl}/api/simulations/monte-carlo`, {
@@ -118,7 +146,7 @@
 			chartHandle = createChart(chartContainer);
 			chart = chartHandle.chart;
 		}
-		chart?.setOption(buildMonteCarloFanOption(result, { real: showReal }), true);
+		chart?.setOption(buildMonteCarloFanOption(result, { real: showReal, net: showNet }), true);
 	});
 
 	const successPercent = $derived.by(() => {
@@ -236,6 +264,85 @@
 			<p class="text-xs text-surface-600-400">
 				Roczna wypłata jest interpretowana jako kwota w dzisiejszych PLN i rośnie razem z inflacją.
 			</p>
+		</div>
+
+		<div class="space-y-3 pt-2 border-t border-surface-300-700">
+			<label class="flex items-center gap-2 text-sm font-semibold">
+				<input type="checkbox" class="checkbox" bind:checked={useAccountMix} />
+				Uwzględnij podatek (Belka / IKZE 10%) wg miksu kont
+			</label>
+			{#if useAccountMix}
+				<div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+					<label class="space-y-1">
+						<span class="text-xs font-semibold">Konto maklerskie (%)</span>
+						<input
+							type="number"
+							min="0"
+							max="100"
+							step="1"
+							class="input w-full"
+							bind:value={mixTaxable}
+						/>
+					</label>
+					<label class="space-y-1">
+						<span class="text-xs font-semibold">IKE (%)</span>
+						<input
+							type="number"
+							min="0"
+							max="100"
+							step="1"
+							class="input w-full"
+							bind:value={mixIke}
+						/>
+					</label>
+					<label class="space-y-1">
+						<span class="text-xs font-semibold">IKZE (%)</span>
+						<input
+							type="number"
+							min="0"
+							max="100"
+							step="1"
+							class="input w-full"
+							bind:value={mixIkze}
+						/>
+					</label>
+					<label class="space-y-1">
+						<span class="text-xs font-semibold">ZUS (%)</span>
+						<input
+							type="number"
+							min="0"
+							max="100"
+							step="1"
+							class="input w-full"
+							bind:value={mixZus}
+						/>
+					</label>
+				</div>
+				<div
+					class="text-xs {Math.abs(mixSum - 100) < 0.01
+						? 'text-success-600-400'
+						: 'text-error-600-400'}"
+				>
+					Suma kont: {mixSum.toFixed(1)}% (musi być 100%)
+				</div>
+				<label class="space-y-1 block">
+					<span class="text-xs font-semibold">
+						Udział zysku w koncie maklerskim (%) — pozostała część to wkład własny
+					</span>
+					<input
+						type="number"
+						min="0"
+						max="100"
+						step="1"
+						class="input w-full sm:max-w-xs"
+						bind:value={mixTaxableGain}
+					/>
+				</label>
+				<p class="text-xs text-surface-600-400">
+					Roczna wypłata to kwota po podatku. Portfel jest pomniejszany o brutto, aby pokryć daniny.
+					IKE jest wolne od podatku po 60. r.ż., IKZE płaci 10% po 65.
+				</p>
+			{/if}
 		</div>
 
 		<div class="space-y-3 pt-2 border-t border-surface-300-700">
@@ -361,20 +468,61 @@
 				{/if}
 			</div>
 
-			<label class="flex items-center gap-2 text-sm">
-				<input type="checkbox" class="checkbox" bind:checked={showReal} />
-				Pokaż wartości realne (w dzisiejszych PLN)
-			</label>
+			<div class="flex flex-wrap gap-4">
+				<label class="flex items-center gap-2 text-sm">
+					<input type="checkbox" class="checkbox" bind:checked={showReal} />
+					Pokaż wartości realne (w dzisiejszych PLN)
+				</label>
+				{#if result.tax}
+					<label class="flex items-center gap-2 text-sm">
+						<input type="checkbox" class="checkbox" bind:checked={showNet} />
+						Pokaż portfel netto (po likwidacji + Belka/IKZE)
+					</label>
+				{/if}
+			</div>
+
+			{#if result.tax}
+				<div class="card preset-tonal-surface p-3 text-sm space-y-1">
+					<div class="font-semibold text-xs uppercase text-surface-600-400">
+						Podatek (efektywny wymiar życiowy)
+					</div>
+					<div>
+						Stopa efektywna:
+						<strong>{(result.tax.effective_lifetime_rate * 100).toFixed(2)}%</strong>
+						(wzięte z portfela: {formatPLN(result.tax.gross_withdrawals_total)} PLN, podatek: {formatPLN(
+							result.tax.tax_total
+						)} PLN)
+					</div>
+				</div>
+			{/if}
 
 			<div bind:this={chartContainer} class="w-full h-[320px] sm:h-[420px]"></div>
 
 			{#if result.bands.length > 0}
 				{@const last = result.bands[result.bands.length - 1]}
-				{@const lastP5 = showReal ? last.p5_real : last.p5}
-				{@const lastP50 = showReal ? last.p50_real : last.p50}
-				{@const lastP95 = showReal ? last.p95_real : last.p95}
+				{@const lastP5 = showNet
+					? showReal
+						? last.p5_net_real
+						: last.p5_net
+					: showReal
+						? last.p5_real
+						: last.p5}
+				{@const lastP50 = showNet
+					? showReal
+						? last.p50_net_real
+						: last.p50_net
+					: showReal
+						? last.p50_real
+						: last.p50}
+				{@const lastP95 = showNet
+					? showReal
+						? last.p95_net_real
+						: last.p95_net
+					: showReal
+						? last.p95_real
+						: last.p95}
 				{@const spendingBand = result.bands.find((b) => b.spending > 0)}
-				{@const valueLabel = showReal ? 'realne' : 'nominalne'}
+				{@const valueLabel = `${showReal ? 'realne' : 'nominalne'}${showNet ? ', netto' : ''}`}
 				<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
 					<div class="card preset-tonal-surface p-4">
 						<div class="text-xs text-surface-600-400">

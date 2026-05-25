@@ -13,6 +13,12 @@ function makeResult(bands: Array<[number, number, number, number]>): MonteCarloR
 			p5_real: p5,
 			p50_real: p50,
 			p95_real: p95,
+			p5_net: p5,
+			p50_net: p50,
+			p95_net: p95,
+			p5_net_real: p5,
+			p50_net_real: p50,
+			p95_net_real: p95,
 			spending: 0,
 			spending_real: 0
 		})),

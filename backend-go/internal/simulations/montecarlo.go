@@ -18,6 +18,14 @@ const (
 	AssetVolCashPct      = 1.0
 )
 
+// Polish withdrawal-phase tax rates (as fractions, not percent).
+const (
+	BelkaRate       = 0.19 // 19% on realized capital gains (taxable brokerage)
+	IkzePostAgeRate = 0.10 // 10% PIT on IKZE withdrawals post-65
+	IkeFreeAge      = 60   // IKE withdrawals tax-free from this age
+	IkzeFreeAge     = 65   // IKZE switches from Belka-like penalty to 10% PIT
+)
+
 // MonteCarloAllocation captures the stocks/bonds/cash split (percent,
 // must sum to 100). When set on MonteCarloInputs, the simulation derives
 // ExpectedReturn and Volatility from the per-asset constants above.
@@ -25,6 +33,43 @@ type MonteCarloAllocation struct {
 	StocksPct float64
 	BondsPct  float64
 	CashPct   float64
+}
+
+// MonteCarloAccountMix expresses what share of each PLN withdrawn comes
+// from which Polish wrapper, plus the gain fraction of the taxable
+// brokerage balance (used to apply 19% Belka only on appreciation, not
+// cost basis). Pcts must sum to 100. When set, the simulation grosses up
+// withdrawals to cover tax and reports both gross and net-of-tax bands.
+type MonteCarloAccountMix struct {
+	TaxablePct     float64
+	IkePct         float64
+	IkzePct        float64
+	ZusPct         float64
+	TaxableGainPct float64 // fraction of taxable balance that's gains
+}
+
+// EffectiveTaxRate returns the share of each gross PLN withdrawn that
+// goes to tax at the given age. Branches:
+//   - Taxable brokerage: 19% Belka on the gain portion only.
+//   - IKE: tax-free post-60, taxed like brokerage if withdrawn earlier.
+//   - IKZE: 10% PIT post-65, taxed like brokerage if withdrawn earlier.
+//   - ZUS: already taxed at source (treated as 0% here for the portfolio).
+func (m MonteCarloAccountMix) EffectiveTaxRate(age int) float64 {
+	gain := m.TaxableGainPct / 100
+	taxable := m.TaxablePct / 100
+	ike := m.IkePct / 100
+	ikze := m.IkzePct / 100
+	rate := taxable * gain * BelkaRate
+	if age < IkeFreeAge {
+		// IKE pre-60: early withdrawal taxed like brokerage gains.
+		rate += ike * gain * BelkaRate
+	}
+	if age >= IkzeFreeAge {
+		rate += ikze * IkzePostAgeRate
+	} else {
+		rate += ikze * gain * BelkaRate
+	}
+	return rate
 }
 
 // MonteCarloInputs is the validated user payload for a retirement Monte
@@ -48,6 +93,11 @@ type MonteCarloInputs struct {
 	Allocation          *MonteCarloAllocation
 	InflationMean       float64 // percent, annual
 	InflationVolatility float64 // percent, std-dev of annual inflation
+	// AccountMix, when non-nil, makes AnnualWithdrawal a net (after-tax)
+	// target and grosses up the portfolio debit by the per-age effective
+	// tax rate. Also enables the net-of-tax balance bands and the
+	// effective-lifetime-tax-rate metric.
+	AccountMix *MonteCarloAccountMix
 }
 
 // MonteCarloPercentileBand is one age slice of the fan chart: p5/p50/p95
@@ -62,12 +112,30 @@ type MonteCarloPercentileBand struct {
 	P5Real  float64 `json:"p5_real"`
 	P50Real float64 `json:"p50_real"`
 	P95Real float64 `json:"p95_real"`
-	// Spending is the average realized nominal withdrawal at this age
-	// (zero in the accumulation phase), and SpendingReal is that same
-	// value deflated by the path's cumulative inflation factor — both
-	// averaged across paths so the chart can show one curve per series.
+	// Net* are the balance bands after subtracting the estimated tax
+	// owed on a full liquidation at this age (per the AccountMix). When
+	// AccountMix is nil they mirror the gross bands.
+	P5Net      float64 `json:"p5_net"`
+	P50Net     float64 `json:"p50_net"`
+	P95Net     float64 `json:"p95_net"`
+	P5NetReal  float64 `json:"p5_net_real"`
+	P50NetReal float64 `json:"p50_net_real"`
+	P95NetReal float64 `json:"p95_net_real"`
+	// Spending is the average realized nominal withdrawal (net to the
+	// retiree) at this age (zero in the accumulation phase). SpendingReal
+	// is that same value deflated by the path's cumulative inflation
+	// factor. Both averaged across paths so the chart can show one curve.
 	Spending     float64 `json:"spending"`
 	SpendingReal float64 `json:"spending_real"`
+}
+
+// MonteCarloTaxSummary aggregates Belka / IKZE PIT across all paths and
+// all retirement years. EffectiveLifetimeRate = TaxTotal / GrossTotal,
+// i.e. the average tax wedge per gross PLN drawn from the portfolio.
+type MonteCarloTaxSummary struct {
+	GrossWithdrawalsTotal float64 `json:"gross_withdrawals_total"`
+	TaxTotal              float64 `json:"tax_total"`
+	EffectiveLifetimeRate float64 `json:"effective_lifetime_rate"`
 }
 
 // MonteCarloAssumptions echoes the return/volatility pair actually used
@@ -82,6 +150,16 @@ type MonteCarloAssumptions struct {
 	Allocation          *MonteCarloAllocationOut `json:"allocation,omitempty"`
 	InflationMean       float64                  `json:"inflation_mean"`
 	InflationVolatility float64                  `json:"inflation_volatility"`
+	AccountMix          *MonteCarloAccountMixOut `json:"account_mix,omitempty"`
+}
+
+// MonteCarloAccountMixOut echoes the account mix supplied in the request.
+type MonteCarloAccountMixOut struct {
+	TaxablePct     float64 `json:"taxable_pct"`
+	IkePct         float64 `json:"ike_pct"`
+	IkzePct        float64 `json:"ikze_pct"`
+	ZusPct         float64 `json:"zus_pct"`
+	TaxableGainPct float64 `json:"taxable_gain_pct"`
 }
 
 // MonteCarloAllocationOut is the wire echo of the allocation split.
@@ -93,11 +171,13 @@ type MonteCarloAllocationOut struct {
 
 // MonteCarloResult is what the handler ships back. SuccessRate is the
 // share of paths with non-negative ending balance at life_expectancy.
+// Tax is present only when AccountMix was supplied.
 type MonteCarloResult struct {
 	SuccessRate float64                    `json:"success_rate"`
 	Bands       []MonteCarloPercentileBand `json:"bands"`
 	Paths       int                        `json:"paths"`
 	Assumptions MonteCarloAssumptions      `json:"assumptions"`
+	Tax         *MonteCarloTaxSummary      `json:"tax,omitempty"`
 }
 
 // DeriveAssumptions returns the expected return and volatility implied by
@@ -147,6 +227,23 @@ func RunMonteCarlo(rng *rand.Rand, p MonteCarloInputs) MonteCarloResult {
 	sim := simulatePaths(rng, p, paths, years, expectedReturn, volatility)
 	bands := buildBands(sim, paths, years, p.CurrentAge)
 
+	var taxSummary *MonteCarloTaxSummary
+	var mixOut *MonteCarloAccountMixOut
+	if p.AccountMix != nil {
+		mixOut = &MonteCarloAccountMixOut{
+			TaxablePct:     p.AccountMix.TaxablePct,
+			IkePct:         p.AccountMix.IkePct,
+			IkzePct:        p.AccountMix.IkzePct,
+			ZusPct:         p.AccountMix.ZusPct,
+			TaxableGainPct: p.AccountMix.TaxableGainPct,
+		}
+		taxSummary = &MonteCarloTaxSummary{
+			GrossWithdrawalsTotal: sim.grossTotal,
+			TaxTotal:              sim.taxTotal,
+			EffectiveLifetimeRate: safeDiv(sim.taxTotal, sim.grossTotal),
+		}
+	}
+
 	return MonteCarloResult{
 		SuccessRate: float64(sim.survived) / float64(paths),
 		Bands:       bands,
@@ -158,7 +255,9 @@ func RunMonteCarlo(rng *rand.Rand, p MonteCarloInputs) MonteCarloResult {
 			Allocation:          allocOut,
 			InflationMean:       p.InflationMean,
 			InflationVolatility: p.InflationVolatility,
+			AccountMix:          mixOut,
 		},
+		Tax: taxSummary,
 	}
 }
 
@@ -167,9 +266,13 @@ func RunMonteCarlo(rng *rand.Rand, p MonteCarloInputs) MonteCarloResult {
 type pathMatrix struct {
 	nominal      [][]float64
 	realBalance  [][]float64
+	netNominal   [][]float64
+	netReal      [][]float64
 	spending     [][]float64
 	spendingReal [][]float64
 	survived     int
+	grossTotal   float64
+	taxTotal     float64
 }
 
 func simulatePaths(rng *rand.Rand, p MonteCarloInputs, paths, years int, expectedReturn, volatility float64) pathMatrix {
@@ -180,6 +283,8 @@ func simulatePaths(rng *rand.Rand, p MonteCarloInputs, paths, years int, expecte
 	m := pathMatrix{
 		nominal:      make([][]float64, paths),
 		realBalance:  make([][]float64, paths),
+		netNominal:   make([][]float64, paths),
+		netReal:      make([][]float64, paths),
 		spending:     make([][]float64, paths),
 		spendingReal: make([][]float64, paths),
 	}
@@ -187,6 +292,8 @@ func simulatePaths(rng *rand.Rand, p MonteCarloInputs, paths, years int, expecte
 		balance := p.CurrentPortfolio
 		nomRow := make([]float64, years)
 		realRow := make([]float64, years)
+		netRow := make([]float64, years)
+		netRealRow := make([]float64, years)
 		spendRow := make([]float64, years)
 		spendRealRow := make([]float64, years)
 		cumInflation := 1.0
@@ -210,24 +317,48 @@ func simulatePaths(rng *rand.Rand, p MonteCarloInputs, paths, years int, expecte
 			if age <= p.RetirementAge {
 				balance += p.AnnualContribution
 			} else {
-				desired := p.AnnualWithdrawal * cumInflation
-				if desired > balance {
+				desiredNet := p.AnnualWithdrawal * cumInflation
+				// Gross up the portfolio debit to cover the tax that this
+				// year's withdrawal mix incurs. With no AccountMix, taxRate
+				// is 0 and gross == desiredNet (back-compat).
+				taxRate := 0.0
+				if p.AccountMix != nil {
+					taxRate = p.AccountMix.EffectiveTaxRate(age)
+				}
+				gross := desiredNet
+				if taxRate > 0 && taxRate < 1 {
+					gross = desiredNet / (1 - taxRate)
+				}
+				if gross > balance {
 					// Path busts this year: retiree withdraws whatever the
-					// portfolio still holds, not the desired nominal amount.
-					withdrawal = balance
+					// portfolio still holds, pays the tax on that gross, and
+					// consumes the remainder net.
+					gross = balance
+					withdrawal = gross * (1 - taxRate)
 					balance = 0
 				} else {
-					withdrawal = desired
-					balance -= desired
+					withdrawal = desiredNet
+					balance -= gross
 				}
+				m.grossTotal += gross
+				m.taxTotal += gross - withdrawal
 			}
 			nomRow[y] = balance
 			realRow[y] = safeDiv(balance, cumInflation)
+			liquidationRate := 0.0
+			if p.AccountMix != nil {
+				liquidationRate = p.AccountMix.EffectiveTaxRate(age)
+			}
+			netBalance := balance * (1 - liquidationRate)
+			netRow[y] = netBalance
+			netRealRow[y] = safeDiv(netBalance, cumInflation)
 			spendRow[y] = withdrawal
 			spendRealRow[y] = safeDiv(withdrawal, cumInflation)
 		}
 		m.nominal[i] = nomRow
 		m.realBalance[i] = realRow
+		m.netNominal[i] = netRow
+		m.netReal[i] = netRealRow
 		m.spending[i] = spendRow
 		m.spendingReal[i] = spendRealRow
 		if balance > 0 {
@@ -241,13 +372,19 @@ func buildBands(m pathMatrix, paths, years, currentAge int) []MonteCarloPercenti
 	bands := make([]MonteCarloPercentileBand, years)
 	col := make([]float64, paths)
 	colReal := make([]float64, paths)
+	colNet := make([]float64, paths)
+	colNetReal := make([]float64, paths)
 	for y := range years {
 		for i := range paths {
 			col[i] = m.nominal[i][y]
 			colReal[i] = m.realBalance[i][y]
+			colNet[i] = m.netNominal[i][y]
+			colNetReal[i] = m.netReal[i][y]
 		}
 		sort.Float64s(col)
 		sort.Float64s(colReal)
+		sort.Float64s(colNet)
+		sort.Float64s(colNetReal)
 		bands[y] = MonteCarloPercentileBand{
 			Age:          currentAge + y + 1,
 			P5:           percentile(col, 5),
@@ -256,6 +393,12 @@ func buildBands(m pathMatrix, paths, years, currentAge int) []MonteCarloPercenti
 			P5Real:       percentile(colReal, 5),
 			P50Real:      percentile(colReal, 50),
 			P95Real:      percentile(colReal, 95),
+			P5Net:        percentile(colNet, 5),
+			P50Net:       percentile(colNet, 50),
+			P95Net:       percentile(colNet, 95),
+			P5NetReal:    percentile(colNetReal, 5),
+			P50NetReal:   percentile(colNetReal, 50),
+			P95NetReal:   percentile(colNetReal, 95),
 			Spending:     meanColumn(m.spending, y),
 			SpendingReal: meanColumn(m.spendingReal, y),
 		}
@@ -300,6 +443,15 @@ func emptyAssumptions(p MonteCarloInputs) MonteCarloAssumptions {
 			StocksPct: p.Allocation.StocksPct,
 			BondsPct:  p.Allocation.BondsPct,
 			CashPct:   p.Allocation.CashPct,
+		}
+	}
+	if p.AccountMix != nil {
+		a.AccountMix = &MonteCarloAccountMixOut{
+			TaxablePct:     p.AccountMix.TaxablePct,
+			IkePct:         p.AccountMix.IkePct,
+			IkzePct:        p.AccountMix.IkzePct,
+			ZusPct:         p.AccountMix.ZusPct,
+			TaxableGainPct: p.AccountMix.TaxableGainPct,
 		}
 	}
 	return a

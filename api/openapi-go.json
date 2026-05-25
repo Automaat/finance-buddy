@@ -7005,6 +7005,32 @@
                   "properties": {
                     "assumptions": {
                       "properties": {
+                        "account_mix": {
+                          "nullable": true,
+                          "properties": {
+                            "ike_pct": {
+                              "format": "double",
+                              "type": "number"
+                            },
+                            "ikze_pct": {
+                              "format": "double",
+                              "type": "number"
+                            },
+                            "taxable_gain_pct": {
+                              "format": "double",
+                              "type": "number"
+                            },
+                            "taxable_pct": {
+                              "format": "double",
+                              "type": "number"
+                            },
+                            "zus_pct": {
+                              "format": "double",
+                              "type": "number"
+                            }
+                          },
+                          "type": "object"
+                        },
                         "allocation": {
                           "nullable": true,
                           "properties": {
@@ -7059,7 +7085,23 @@
                             "format": "double",
                             "type": "number"
                           },
+                          "p50_net": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "p50_net_real": {
+                            "format": "double",
+                            "type": "number"
+                          },
                           "p50_real": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "p5_net": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "p5_net_real": {
                             "format": "double",
                             "type": "number"
                           },
@@ -7068,6 +7110,14 @@
                             "type": "number"
                           },
                           "p95": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "p95_net": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "p95_net_real": {
                             "format": "double",
                             "type": "number"
                           },
@@ -7094,6 +7144,24 @@
                     "success_rate": {
                       "format": "double",
                       "type": "number"
+                    },
+                    "tax": {
+                      "nullable": true,
+                      "properties": {
+                        "effective_lifetime_rate": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "gross_withdrawals_total": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "tax_total": {
+                          "format": "double",
+                          "type": "number"
+                        }
+                      },
+                      "type": "object"
                     }
                   },
                   "type": "object"
