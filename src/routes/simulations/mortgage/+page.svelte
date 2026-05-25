@@ -58,7 +58,15 @@
 	let remainingPrincipal = $state(300000);
 	let annualInterestRate = $state(6.5);
 	let remainingMonths = $state(240);
-	let totalMonthlyBudget = $state(untrack(() => data?.defaults?.monthlyMortgagePLN ?? 0) || 3500);
+	let totalMonthlyBudget = $state(
+		untrack(() => {
+			// monthly_mortgage_payment === 0 is a legitimate "no mortgage" signal,
+			// but it makes the simulator output meaningless — keep the 3500
+			// placeholder until the user types something.
+			const m = data?.defaults?.monthlyMortgagePLN;
+			return m != null && m > 0 ? m : 3500;
+		})
+	);
 	let expectedAnnualReturn = $state(untrack(() => data?.defaults?.annualReturnPct ?? 7.0));
 	let inflationRate = $state(3.0);
 	let enableVariableRate = $state(false);

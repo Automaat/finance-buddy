@@ -70,8 +70,8 @@
 			if (!r.ok) return;
 			const cfg = await r.json();
 			const monthly = Number(cfg.monthly_expenses ?? 0);
-			const wrPct = Number(cfg.withdrawal_rate ?? 0.04);
-			requiredCapital = wrPct > 0 ? (monthly * 12) / wrPct : 0;
+			const withdrawalRate = Number(cfg.withdrawal_rate ?? 0.04);
+			requiredCapital = withdrawalRate > 0 ? (monthly * 12) / withdrawalRate : 0;
 		} catch {
 			requiredCapital = 0;
 		}

@@ -61,11 +61,6 @@
 	const defaultOwnerId = $derived<number | null>(owners.length > 0 ? owners[0].id : null);
 	const cpiSeries = $derived(data.cpiSeries as CpiSeries);
 	const inflationContext = $derived(data.salaries.inflation_context ?? {});
-	const inflationEntries = $derived(
-		Object.values(inflationContext).filter(
-			(ctx) => activeOwnerId === null || ctx.owner_user_id === activeOwnerId
-		)
-	);
 
 	let showNominal = $state(true);
 	let showReal = $state(false);
@@ -90,9 +85,6 @@
 	let chart: echarts.ECharts | undefined;
 	let chartHandle: ChartHandle | undefined;
 
-	let filterOwnerUserId = $state<number | null>(
-		untrack(() => (data.filters.owner_user_id ? Number(data.filters.owner_user_id) : null))
-	);
 	let filterDateFrom = $state(untrack(() => data.filters.date_from || ''));
 	let filterDateTo = $state(untrack(() => data.filters.date_to || ''));
 	let filterCompany = $state(untrack(() => data.filters.company || ''));
@@ -113,7 +105,8 @@
 
 	// activeOwnerId drives the whole page: total compensation, filter card, and
 	// client-side filtering of bonuses/equity. Initialize from URL filter if
-	// present so deep-links keep working.
+	// present so deep-links keep working. filterOwnerUserId is derived from
+	// activeOwnerId so the URL filter and the visible-data filter cannot drift.
 	let activeOwnerId = $state<number | null>(
 		untrack(() => {
 			const urlOwner = data.filters.owner_user_id;
@@ -121,10 +114,16 @@
 			return defaultOwnerId;
 		})
 	);
+	const filterOwnerUserId = $derived(activeOwnerId);
+
+	const inflationEntries = $derived(
+		Object.values(inflationContext).filter(
+			(ctx) => activeOwnerId === null || ctx.owner_user_id === activeOwnerId
+		)
+	);
 
 	function setActiveOwner(id: number) {
 		activeOwnerId = id;
-		filterOwnerUserId = id;
 		applyFilters();
 	}
 
