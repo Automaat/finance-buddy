@@ -129,8 +129,9 @@ func TestRequireDateNotFuture(t *testing.T) {
 		}
 	})
 	t.Run("future rejected", func(t *testing.T) {
-		future := time.Now().UTC().AddDate(0, 0, 1).Format("2006-01-02")
-		_, vErr := requireDateNotFuture(map[string]json.RawMessage{"date": rawJSON(`"` + future + `"`)})
+		// Far-future date avoids the UTC-midnight race a "today+1" would have
+		// when the test straddles the day boundary.
+		_, vErr := requireDateNotFuture(map[string]json.RawMessage{"date": rawJSON(`"3000-01-01"`)})
 		if vErr == nil || vErr.Msg != "Date cannot be in the future" {
 			t.Errorf("want future-rejection error, got %+v", vErr)
 		}
@@ -235,7 +236,9 @@ func TestIsoDateMarshal(t *testing.T) {
 }
 
 func TestIsoNaiveMarshalStripsTimezone(t *testing.T) {
-	loc, _ := time.LoadLocation("Europe/Warsaw")
+	// FixedZone instead of LoadLocation: keeps the test independent of the
+	// container's zoneinfo/tzdata availability.
+	loc := time.FixedZone("CET", 3600)
 	tz := time.Date(2025, 1, 5, 14, 30, 0, 0, loc)
 	got, err := json.Marshal(isoNaive(tz))
 	if err != nil {
