@@ -8,6 +8,12 @@
 	import SalaryFormModal from '$lib/components/salaries/SalaryFormModal.svelte';
 	import ValuationFormModal from '$lib/components/salaries/ValuationFormModal.svelte';
 	import { formatPLN } from '$lib/utils/format';
+	import {
+		formatPctSigned,
+		formatPlnSigned,
+		isNonNegative,
+		isoDateLocal
+	} from '$lib/utils/salaries';
 	import { buildCpiLookup, inflationAdjust, parseIsoDate } from '$lib/utils/inflation';
 	import { grossToNet, type PlContractType } from '$lib/utils/pl_tax';
 	import { PL_RULES } from '$lib/utils/pl_rules.generated';
@@ -76,22 +82,6 @@
 		'listopad',
 		'grudzień'
 	];
-
-	function isNonNegative(value: number | null): boolean {
-		return (value ?? 0) >= 0;
-	}
-
-	function formatPctSigned(value: number | null): string {
-		if (value == null || Number.isNaN(value)) return '—';
-		const sign = value >= 0 ? '+' : '';
-		return `${sign}${value.toFixed(1)}%`;
-	}
-
-	function formatPlnSigned(value: number | null): string {
-		if (value == null || Number.isNaN(value)) return '—';
-		const sign = value >= 0 ? '+' : '−';
-		return `${sign}${formatPLN(Math.abs(value))}`;
-	}
 
 	let chartContainer: HTMLDivElement;
 	let chart: echarts.ECharts | undefined;
@@ -182,18 +172,6 @@
 	// "net" estimate only; real net depends on actual sale and tax_treatment.
 	// Sourced from the centralized rules table (#545).
 	const EQUITY_CAPITAL_GAINS_RATE = PL_RULES['capital_gains_tax_2026'].value;
-
-	function pad2(n: number): string {
-		return n.toString().padStart(2, '0');
-	}
-
-	function isoDateLocal(d: Date): string {
-		// toISOString() converts to UTC and shifts the day for TZ > UTC (e.g. PL
-		// in winter: 2026-12-31 00:00 local → 2026-12-30T23:00Z). Build YYYY-MM-DD
-		// from the local components to keep comparisons consistent with date-only
-		// values returned by the API.
-		return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-	}
 
 	const compSummary = $derived.by<OwnerCompSummary | null>(() => {
 		if (totalCompOwner === null) return null;
