@@ -122,3 +122,65 @@ export function perShareIntrinsicValue(
 	}
 	return { base: fmv, low, high, currency: v.currency };
 }
+
+export interface YearlyEquityComp {
+	vestedPln: number;
+	vestedLowPln: number;
+	vestedHighPln: number;
+	lockedPln: number;
+	hasEquityWithoutFx: boolean;
+}
+
+// FX is borrowed across grants of the same currency, since the backend only
+// attaches fx_rate when vested_shares_today > 0 — locked RSUs need their
+// sibling option grant's rate to convert to PLN.
+function buildFxByCurrency(grants: EquityGrant[]): Map<string, number> {
+	const fx = new Map<string, number>([['PLN', 1]]);
+	for (const g of grants) {
+		if (g.fx_rate !== null && g.paper_value_currency) fx.set(g.paper_value_currency, g.fx_rate);
+	}
+	return fx;
+}
+
+// Compute the year's equity comp for one owner: realisable value + locked
+// (LE-pending) sub-total. Pure function so it can be unit-tested directly,
+// independent of the salary page wiring.
+export function computeYearlyEquityComp(
+	grants: EquityGrant[],
+	valuations: CompanyValuation[],
+	ownerUserId: number,
+	year: number
+): YearlyEquityComp {
+	const fxByCurrency = buildFxByCurrency(grants);
+	let vestedPln = 0;
+	let vestedLowPln = 0;
+	let vestedHighPln = 0;
+	let lockedPln = 0;
+	let hasEquityWithoutFx = false;
+
+	for (const g of grants) {
+		if (g.owner_user_id !== ownerUserId) continue;
+		const shares = vestedInYear(g, year);
+		if (shares <= 0) continue;
+		const valuation = latestValuationFor(valuations, g.company);
+		const perShare = perShareIntrinsicValue(g, valuation);
+		if (!perShare) continue;
+		const fx = fxByCurrency.get(perShare.currency);
+		if (fx === undefined) {
+			hasEquityWithoutFx = true;
+			continue;
+		}
+		const base = shares * perShare.base * fx;
+		const low = shares * perShare.low * fx;
+		const high = shares * perShare.high * fx;
+		if (isEffectivelyVested(g, year)) {
+			vestedPln += base;
+			vestedLowPln += low;
+			vestedHighPln += high;
+		} else {
+			lockedPln += base;
+		}
+	}
+
+	return { vestedPln, vestedLowPln, vestedHighPln, lockedPln, hasEquityWithoutFx };
+}

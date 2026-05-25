@@ -3,7 +3,8 @@ import {
 	vestedInYear,
 	isEffectivelyVested,
 	latestValuationFor,
-	perShareIntrinsicValue
+	perShareIntrinsicValue,
+	computeYearlyEquityComp
 } from './equity_vesting';
 import type { CompanyValuation, EquityGrant } from '$lib/types/salaries';
 
@@ -189,5 +190,114 @@ describe('perShareIntrinsicValue', () => {
 
 	it('returns null when no valuation', () => {
 		expect(perShareIntrinsicValue(makeGrant(), null)).toBeNull();
+	});
+});
+
+describe('computeYearlyEquityComp', () => {
+	const valuation: CompanyValuation = {
+		id: 1,
+		company: 'Kong Inc.',
+		date: '2026-05-25',
+		currency: 'USD',
+		fmv_per_share: 4.94,
+		fmv_low: null,
+		fmv_high: null,
+		source: '409a',
+		common_stock_discount_pct: null,
+		notes: null,
+		is_active: true,
+		created_at: '2026-05-25T00:00:00Z'
+	};
+	const optionGrant = makeGrant({
+		id: 1,
+		owner_user_id: 1,
+		paper_value_currency: 'USD',
+		fx_rate: 3.6374
+	});
+	const rsuLocked = makeGrant({
+		id: 2,
+		type: 'rsu',
+		owner_user_id: 1,
+		strike_price: null,
+		total_shares: 985,
+		vest_start_date: '2025-09-15',
+		vest_cliff_months: 0,
+		vest_total_months: 48,
+		vest_frequency: 'quarterly',
+		vest_custom_schedule: Array.from({ length: 16 }, (_, i) => ({
+			month: (i + 1) * 3,
+			pct: 6.25
+		})),
+		requires_liquidity_event: true,
+		liquidity_event_date: null,
+		paper_value_currency: null,
+		fx_rate: null
+	});
+
+	it('sums options vested in year × intrinsic spread × FX', () => {
+		const r = computeYearlyEquityComp([optionGrant], [valuation], 1, 2026);
+		// vestedInYear(option, 2026) = 1875 → × $2.27 × 3.6374 ≈ 15482.
+		expect(r.vestedPln).toBeCloseTo(1875 * 2.27 * 3.6374, 0);
+		expect(r.lockedPln).toBe(0);
+		expect(r.hasEquityWithoutFx).toBe(false);
+	});
+
+	it('routes locked RSU to lockedPln, not vestedPln', () => {
+		// RSU has no fx_rate of its own — borrows from sibling option grant.
+		const r = computeYearlyEquityComp([optionGrant, rsuLocked], [valuation], 1, 2026);
+		expect(r.vestedPln).toBeCloseTo(1875 * 2.27 * 3.6374, 0);
+		// vestedInYear(rsu, 2026) ≈ 246 (some rounding); × $4.94 × 3.6374.
+		expect(r.lockedPln).toBeGreaterThan(3000);
+		expect(r.lockedPln).toBeLessThan(5000);
+	});
+
+	it('unlocks RSU once liquidity event has fired in the year', () => {
+		const rsuUnlocked = { ...rsuLocked, liquidity_event_date: '2026-06-15' };
+		const r = computeYearlyEquityComp([optionGrant, rsuUnlocked], [valuation], 1, 2026);
+		expect(r.vestedPln).toBeGreaterThan(15000 + 3000);
+		expect(r.lockedPln).toBe(0);
+	});
+
+	it('flags hasEquityWithoutFx when no sibling supplies the rate', () => {
+		const usdGrantNoFx = {
+			...optionGrant,
+			fx_rate: null,
+			paper_value_currency: null
+		};
+		const r = computeYearlyEquityComp([usdGrantNoFx], [valuation], 1, 2026);
+		expect(r.vestedPln).toBe(0);
+		expect(r.hasEquityWithoutFx).toBe(true);
+	});
+
+	it('skips grants owned by other users', () => {
+		const otherOwner = { ...optionGrant, owner_user_id: 2 };
+		const r = computeYearlyEquityComp([otherOwner], [valuation], 1, 2026);
+		expect(r.vestedPln).toBe(0);
+	});
+
+	it('skips grants with no valuation for their company', () => {
+		const orphan = { ...optionGrant, company: 'Unknown Co' };
+		const r = computeYearlyEquityComp([orphan], [valuation], 1, 2026);
+		expect(r.vestedPln).toBe(0);
+	});
+
+	it('skips grants with zero shares vesting in the year', () => {
+		// Year 2027 = post-vesting for the default option grant (ended Sep 2026).
+		const r = computeYearlyEquityComp([optionGrant], [valuation], 1, 2027);
+		expect(r.vestedPln).toBe(0);
+		expect(r.lockedPln).toBe(0);
+	});
+
+	it('passes PLN-denominated grants through with rate=1', () => {
+		const plnValuation: CompanyValuation = { ...valuation, currency: 'PLN' };
+		const plnGrant = {
+			...optionGrant,
+			currency: 'PLN',
+			paper_value_currency: 'PLN',
+			fx_rate: 1,
+			strike_price: 2.67
+		};
+		const r = computeYearlyEquityComp([plnGrant], [plnValuation], 1, 2026);
+		expect(r.vestedPln).toBeCloseTo(1875 * 2.27, 0);
 	});
 });

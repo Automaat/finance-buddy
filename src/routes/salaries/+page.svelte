@@ -14,12 +14,7 @@
 		isNonNegative,
 		isoDateLocal
 	} from '$lib/utils/salaries';
-	import {
-		vestedInYear,
-		isEffectivelyVested,
-		latestValuationFor,
-		perShareIntrinsicValue
-	} from '$lib/utils/equity_vesting';
+	import { computeYearlyEquityComp } from '$lib/utils/equity_vesting';
 	import { buildCpiLookup, inflationAdjust, parseIsoDate } from '$lib/utils/inflation';
 	import { grossToNet, type PlContractType } from '$lib/utils/pl_tax';
 	import { PL_RULES } from '$lib/utils/pl_rules.generated';
@@ -204,52 +199,15 @@
 					.netAnnual - baseAnnualNet
 			: 0;
 
-		// Equity vesting in the selected year, valued at the latest FMV per share.
-		// Effective = realisable (no liquidity-event gate or LE has fired).
-		// Locked = time-vested but waiting on liquidity event (double-trigger RSUs).
-		// FX rates are looked up from any grant that exposes one for the same
-		// currency — the backend only attaches fx_rate when vested>0, so locked
-		// RSUs borrow the rate from sibling grants.
-		const grants = data.equity?.equity_grants ?? [];
-		const valuations = data.valuations?.company_valuations ?? [];
-		const fxByCurrency = new Map<string, number>([['PLN', 1]]);
-		for (const g of grants) {
-			if (g.fx_rate !== null && g.paper_value_currency) {
-				fxByCurrency.set(g.paper_value_currency, g.fx_rate);
-			}
-		}
-
-		let equityVestedYearPln = 0;
-		let equityVestedYearLowPln = 0;
-		let equityVestedYearHighPln = 0;
-		let equityLockedYearPln = 0;
-		let hasEquityWithoutFx = false;
-		for (const g of grants) {
-			if (g.owner_user_id !== ownerUserId) continue;
-			const shares = vestedInYear(g, totalCompYear);
-			if (shares <= 0) continue;
-			const valuation = latestValuationFor(valuations, g.company);
-			const perShare = perShareIntrinsicValue(g, valuation);
-			if (!perShare) continue;
-			const fx = fxByCurrency.get(perShare.currency);
-			if (fx === undefined) {
-				hasEquityWithoutFx = true;
-				continue;
-			}
-			const base = shares * perShare.base * fx;
-			const low = shares * perShare.low * fx;
-			const high = shares * perShare.high * fx;
-			if (isEffectivelyVested(g, totalCompYear)) {
-				equityVestedYearPln += base;
-				equityVestedYearLowPln += low;
-				equityVestedYearHighPln += high;
-			} else {
-				equityLockedYearPln += base;
-			}
-		}
+		const equity = computeYearlyEquityComp(
+			data.equity?.equity_grants ?? [],
+			data.valuations?.company_valuations ?? [],
+			ownerUserId,
+			totalCompYear
+		);
 		// Equity "net" assumes capital-gains treatment on realization; grants on
 		// employment_income would be ~12/32% + ZUS instead. Rough estimate only.
-		const equityNetPln = equityVestedYearPln * (1 - EQUITY_CAPITAL_GAINS_RATE);
+		const equityNetPln = equity.vestedPln * (1 - EQUITY_CAPITAL_GAINS_RATE);
 
 		return {
 			ownerUserId,
@@ -257,12 +215,12 @@
 			baseAnnualNet,
 			bonusesPln,
 			bonusesNetPln,
-			equityVestedYearPln,
-			equityVestedYearLowPln,
-			equityVestedYearHighPln,
-			equityLockedYearPln,
+			equityVestedYearPln: equity.vestedPln,
+			equityVestedYearLowPln: equity.vestedLowPln,
+			equityVestedYearHighPln: equity.vestedHighPln,
+			equityLockedYearPln: equity.lockedPln,
 			equityNetPln,
-			hasEquityWithoutFx
+			hasEquityWithoutFx: equity.hasEquityWithoutFx
 		};
 	});
 
