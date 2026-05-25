@@ -4,7 +4,6 @@
 	import Skeleton from '$lib/components/Skeleton.svelte';
 	import DashboardCharts from '$lib/components/DashboardCharts.svelte';
 	import AllocationDriftWidget from '$lib/components/AllocationDriftWidget.svelte';
-	import CurrencyExposureWidget from '$lib/components/CurrencyExposureWidget.svelte';
 	import DateRangePicker from '$lib/components/DateRangePicker.svelte';
 	import DeltaBadge from '$lib/components/DeltaBadge.svelte';
 	import { formatPLN } from '$lib/utils/format';
@@ -568,8 +567,6 @@
 		{#if dashboard.allocationDrift?.scopes?.length > 0}
 			<AllocationDriftWidget drift={dashboard.allocationDrift} {owners} />
 		{/if}
-
-		<CurrencyExposureWidget />
 
 		<DashboardCharts
 			netWorthHistory={dashboard.net_worth_history}

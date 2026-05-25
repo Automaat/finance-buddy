@@ -13,6 +13,7 @@
 	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
 	import { ownerName, type OwnerOption } from '$lib/types/owners';
 	import ContributionAdjustedReturns from '$lib/components/ContributionAdjustedReturns.svelte';
+	import CurrencyExposureWidget from '$lib/components/CurrencyExposureWidget.svelte';
 
 	import type { PageData } from './$types';
 
@@ -401,6 +402,8 @@
 			<div bind:this={wrapperChart} class="w-full h-[280px] sm:h-[400px]"></div>
 		</div>
 	</div>
+
+	<CurrencyExposureWidget />
 
 	<h2 class="h2">Wzrost inwestycji w czasie</h2>
 
