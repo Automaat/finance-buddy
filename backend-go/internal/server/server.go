@@ -30,6 +30,7 @@ import (
 	debtpayments "github.com/Automaat/finance-buddy/backend-go/internal/debt_payments"
 	"github.com/Automaat/finance-buddy/backend-go/internal/debts"
 	equitygrants "github.com/Automaat/finance-buddy/backend-go/internal/equity_grants"
+	"github.com/Automaat/finance-buddy/backend-go/internal/exposure"
 	"github.com/Automaat/finance-buddy/backend-go/internal/fx"
 	"github.com/Automaat/finance-buddy/backend-go/internal/goals"
 	"github.com/Automaat/finance-buddy/backend-go/internal/holdings"
@@ -215,6 +216,9 @@ func registerLedgerRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger)
 func registerDashboardRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
 	dashHandler := dashboard.NewHandler(dashboard.NewStore(pool), logger)
 	r.Get("/api/dashboard", dashHandler.Get)
+
+	expHandler := exposure.NewHandler(exposure.NewStore(pool), logger)
+	r.Get("/api/exposure/currency", expHandler.Currency)
 }
 
 func registerPIT38Routes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {

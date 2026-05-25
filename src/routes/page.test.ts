@@ -235,16 +235,23 @@ describe('Dashboard retirement limits save flow', () => {
 
 		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
 
-		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-		const urls = fetchMock.mock.calls.map((c) => c[0] as string);
+		await waitFor(() => {
+			const putCalls = fetchMock.mock.calls.filter((c) => c[1]?.method === 'PUT');
+			expect(putCalls).toHaveLength(2);
+		});
+		const putCalls = fetchMock.mock.calls.filter((c) => c[1]?.method === 'PUT');
+		const urls = putCalls.map((c) => c[0] as string);
 		expect(urls).toEqual(
 			expect.arrayContaining([
 				'http://localhost:8000/api/retirement/limits/2024/IKE/1',
 				'http://localhost:8000/api/retirement/limits/2024/IKZE/1'
 			])
 		);
+		// Guard against accidental non-GET/PUT side-effects (e.g. a stray
+		// POST/DELETE) sneaking past the relaxed PUT-only filter.
 		for (const call of fetchMock.mock.calls) {
-			expect(call[1].method).toBe('PUT');
+			const method = call[1]?.method ?? 'GET';
+			expect(['GET', 'PUT']).toContain(method);
 		}
 		await waitFor(() => expect(invalidateAll).toHaveBeenCalled());
 	});
