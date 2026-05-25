@@ -14,6 +14,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/aggregates"
+	"github.com/Automaat/finance-buddy/backend-go/internal/dbutil"
 )
 
 // Asset mirrors backend/app/models/asset.Asset.
@@ -249,10 +250,7 @@ func lockAsset(ctx context.Context, tx pgx.Tx, id int) (*Asset, error) {
 	)
 	a, err := scanAsset(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("lock asset: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "lock asset")
 	}
 	return a, nil
 }

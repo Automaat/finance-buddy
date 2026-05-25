@@ -15,6 +15,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/dbutil"
 )
 
 // Goal mirrors backend/app/models/goal.Goal.
@@ -101,10 +103,7 @@ func (s *Store) Get(ctx context.Context, id int) (*Goal, string, error) {
 	)
 	g, err := scanGoal(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, "", ErrNotFound
-		}
-		return nil, "", fmt.Errorf("select goal: %w", err)
+		return nil, "", dbutil.MapErr(err, ErrNotFound, "select goal")
 	}
 	name, err := s.accountName(ctx, g.AccountID)
 	if err != nil {
@@ -206,10 +205,7 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*Goal, strin
 		// pgx.ErrNoRows here means the row was concurrently deleted between
 		// the Get above and this UPDATE; surface as a 404 instead of 200ing
 		// with stale in-memory state.
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, "", ErrNotFound
-		}
-		return nil, "", fmt.Errorf("update goal: %w", err)
+		return nil, "", dbutil.MapErr(err, ErrNotFound, "update goal")
 	}
 	name, err := s.accountName(ctx, updated.AccountID)
 	if err != nil {

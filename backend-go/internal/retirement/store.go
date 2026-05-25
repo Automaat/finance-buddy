@@ -14,6 +14,8 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/dbutil"
 )
 
 // Sentinel errors.
@@ -278,10 +280,7 @@ func (s *Store) CurrentSalaryFor(ctx context.Context, ownerUserID *int, asOfDate
 	)
 	var v decimal.Decimal
 	if err := row.Scan(&v); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return decimal.Zero, ErrNoSalary
-		}
-		return decimal.Zero, fmt.Errorf("current salary: %w", err)
+		return decimal.Zero, dbutil.MapErr(err, ErrNoSalary, "current salary")
 	}
 	return v, nil
 }
@@ -300,10 +299,7 @@ func (s *Store) UserPPKRates(ctx context.Context, ownerUserID *int) (decimal.Dec
 	)
 	var employee, employer decimal.Decimal
 	if err := row.Scan(&employee, &employer); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return decimal.Zero, decimal.Zero, ErrUserNotFound
-		}
-		return decimal.Zero, decimal.Zero, fmt.Errorf("ppk rates: %w", err)
+		return decimal.Zero, decimal.Zero, dbutil.MapErr(err, ErrUserNotFound, "ppk rates")
 	}
 	return employee, employer, nil
 }
@@ -319,10 +315,7 @@ func (s *Store) ActivePPKAccountForOwner(ctx context.Context, ownerUserID *int) 
 	)
 	var id int
 	if err := row.Scan(&id); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return 0, ErrNoPPKAccount
-		}
-		return 0, fmt.Errorf("ppk account: %w", err)
+		return 0, dbutil.MapErr(err, ErrNoPPKAccount, "ppk account")
 	}
 	return id, nil
 }

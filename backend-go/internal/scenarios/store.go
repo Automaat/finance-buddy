@@ -15,6 +15,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/dbutil"
 )
 
 // Scenario is the persisted form of one saved simulation input bundle.
@@ -86,10 +88,7 @@ func (s *Store) Get(ctx context.Context, id int) (*Scenario, error) {
 	)
 	sc, err := scanScenario(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("select scenario: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "select scenario")
 	}
 	return sc, nil
 }
@@ -121,10 +120,7 @@ func (s *Store) Update(ctx context.Context, id int, name string, inputs json.Raw
 	)
 	updated, err := scanScenario(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("update scenario: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "update scenario")
 	}
 	return updated, nil
 }
@@ -142,10 +138,7 @@ func (s *Store) Clone(ctx context.Context, id int, name string) (*Scenario, erro
 	)
 	created, err := scanScenario(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("clone scenario: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "clone scenario")
 	}
 	return created, nil
 }
@@ -165,10 +158,7 @@ func (s *Store) CloneWithSuffix(ctx context.Context, id int) (*Scenario, error) 
 	)
 	created, err := scanScenario(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("clone scenario: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "clone scenario")
 	}
 	return created, nil
 }

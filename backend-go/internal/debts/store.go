@@ -13,6 +13,8 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/dbutil"
 )
 
 // Debt mirrors backend/app/models/debt.Debt.
@@ -84,10 +86,7 @@ func (s *Store) LoadAccount(ctx context.Context, id int) (*AccountInfo, error) {
 	)
 	var a AccountInfo
 	if err := row.Scan(&a.ID, &a.Name, &a.OwnerUserID, &a.Type, &a.IsActive); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrAccountNotFound
-		}
-		return nil, fmt.Errorf("load account: %w", err)
+		return nil, dbutil.MapErr(err, ErrAccountNotFound, "load account")
 	}
 	if !a.IsActive {
 		return &a, ErrAccountInactive
@@ -251,10 +250,7 @@ func (s *Store) Get(ctx context.Context, debtID int) (*DebtWithAccount, error) {
 		&d.InitialAmount, &d.InterestRate, &d.Currency, &d.Notes,
 		&d.IsActive, &d.CreatedAt, &a.Name, &a.OwnerUserID,
 	); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("get debt: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "get debt")
 	}
 	a.ID = d.AccountID
 	return &DebtWithAccount{Debt: d, Account: a}, nil
@@ -392,10 +388,7 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*DebtWithAcc
 	)
 	current, err := scanDebt(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("lock debt: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "lock debt")
 	}
 	applyPatch(current, p)
 	if _, err := tx.Exec(ctx, `

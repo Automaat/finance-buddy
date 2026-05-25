@@ -11,6 +11,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/dbutil"
 )
 
 // EquityGrant mirrors backend/app/models/equity_grant.EquityGrant.
@@ -120,10 +122,7 @@ func (s *Store) Get(ctx context.Context, id int) (*EquityGrant, error) {
 	)
 	g, err := scanGrant(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("select equity grant: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "select equity grant")
 	}
 	if !g.IsActive {
 		return nil, ErrNotFound
@@ -227,10 +226,7 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*EquityGrant
 	)
 	updated, err := scanGrant(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("update equity grant: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "update equity grant")
 	}
 	return updated, nil
 }

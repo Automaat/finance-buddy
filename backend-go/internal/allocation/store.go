@@ -19,6 +19,8 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/dbutil"
 )
 
 // Target is one allocation_targets row.
@@ -121,10 +123,7 @@ func (s *Store) Get(ctx context.Context, id int) (*Target, error) {
 	)
 	t, err := scanTarget(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("get allocation target: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "get allocation target")
 	}
 	return t, nil
 }
@@ -176,10 +175,7 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*Target, err
 	)
 	updated, err := scanTarget(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("update allocation target: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "update allocation target")
 	}
 	return updated, nil
 }

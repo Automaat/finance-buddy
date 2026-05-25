@@ -14,6 +14,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/dbutil"
 )
 
 // Valuation mirrors backend/app/models/company_valuation.CompanyValuation.
@@ -103,10 +105,7 @@ func (s *Store) Get(ctx context.Context, id int) (*Valuation, error) {
 	)
 	v, err := scanValuation(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("select valuation: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "select valuation")
 	}
 	if !v.IsActive {
 		return nil, ErrNotFound
@@ -198,10 +197,7 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*Valuation, 
 	)
 	updated, err := scanValuation(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("update valuation: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "update valuation")
 	}
 	return updated, nil
 }
@@ -222,10 +218,7 @@ func (s *Store) GetLatestForCompany(ctx context.Context, company string, onDate 
 	row := s.pool.QueryRow(ctx, query, args...)
 	v, err := scanValuation(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNoValuation
-		}
-		return nil, fmt.Errorf("select latest valuation: %w", err)
+		return nil, dbutil.MapErr(err, ErrNoValuation, "select latest valuation")
 	}
 	return v, nil
 }
