@@ -4738,6 +4738,18 @@ export interface paths {
                     content: {
                         "application/json": {
                             assumptions?: {
+                                account_mix?: {
+                                    /** Format: double */
+                                    ike_pct?: number;
+                                    /** Format: double */
+                                    ikze_pct?: number;
+                                    /** Format: double */
+                                    taxable_gain_pct?: number;
+                                    /** Format: double */
+                                    taxable_pct?: number;
+                                    /** Format: double */
+                                    zus_pct?: number;
+                                } | null;
                                 allocation?: {
                                     /** Format: double */
                                     bonds_pct?: number;
@@ -4763,11 +4775,23 @@ export interface paths {
                                 /** Format: double */
                                 p50?: number;
                                 /** Format: double */
+                                p50_net?: number;
+                                /** Format: double */
+                                p50_net_real?: number;
+                                /** Format: double */
                                 p50_real?: number;
+                                /** Format: double */
+                                p5_net?: number;
+                                /** Format: double */
+                                p5_net_real?: number;
                                 /** Format: double */
                                 p5_real?: number;
                                 /** Format: double */
                                 p95?: number;
+                                /** Format: double */
+                                p95_net?: number;
+                                /** Format: double */
+                                p95_net_real?: number;
                                 /** Format: double */
                                 p95_real?: number;
                                 /** Format: double */
@@ -4778,6 +4802,14 @@ export interface paths {
                             paths?: number;
                             /** Format: double */
                             success_rate?: number;
+                            tax?: {
+                                /** Format: double */
+                                effective_lifetime_rate?: number;
+                                /** Format: double */
+                                gross_withdrawals_total?: number;
+                                /** Format: double */
+                                tax_total?: number;
+                            } | null;
                         };
                     };
                 };

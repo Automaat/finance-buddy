@@ -300,12 +300,21 @@ type monteCarloInputsWire struct {
 	Allocation          *monteCarloAllocationWire `json:"allocation,omitempty"`
 	InflationMean       pyFloat                   `json:"inflation_mean"`
 	InflationVolatility pyFloat                   `json:"inflation_volatility"`
+	AccountMix          *monteCarloAccountMixWire `json:"account_mix,omitempty"`
 }
 
 type monteCarloAllocationWire struct {
 	StocksPct pyFloat `json:"stocks_pct"`
 	BondsPct  pyFloat `json:"bonds_pct"`
 	CashPct   pyFloat `json:"cash_pct"`
+}
+
+type monteCarloAccountMixWire struct {
+	TaxablePct     pyFloat `json:"taxable_pct"`
+	IkePct         pyFloat `json:"ike_pct"`
+	IkzePct        pyFloat `json:"ikze_pct"`
+	ZusPct         pyFloat `json:"zus_pct"`
+	TaxableGainPct pyFloat `json:"taxable_gain_pct"`
 }
 
 // MonteCarlo serves POST /api/simulations/monte-carlo. It runs `paths`
@@ -363,6 +372,34 @@ func (h *Handler) MonteCarlo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var accountMix *MonteCarloAccountMix
+	if in.AccountMix != nil {
+		taxable := float64(in.AccountMix.TaxablePct)
+		ike := float64(in.AccountMix.IkePct)
+		ikze := float64(in.AccountMix.IkzePct)
+		zus := float64(in.AccountMix.ZusPct)
+		gain := float64(in.AccountMix.TaxableGainPct)
+		if taxable < 0 || ike < 0 || ikze < 0 || zus < 0 {
+			writeValidationError(w, "account_mix", "account_mix percentages must be non-negative", "")
+			return
+		}
+		if gain < 0 || gain > 100 {
+			writeValidationError(w, "account_mix",
+				"taxable_gain_pct must be within [0, 100]", "")
+			return
+		}
+		sum := taxable + ike + ikze + zus
+		if math.Abs(sum-100) > 0.01 {
+			writeValidationError(w, "account_mix",
+				fmt.Sprintf("account_mix must sum to 100 (got %.2f)", sum), "")
+			return
+		}
+		accountMix = &MonteCarloAccountMix{
+			TaxablePct: taxable, IkePct: ike, IkzePct: ikze, ZusPct: zus,
+			TaxableGainPct: gain,
+		}
+	}
+
 	rng := rand.New(rand.NewPCG(uint64(h.now().UnixNano()), 0xdeadbeef))
 	result := RunMonteCarlo(rng, MonteCarloInputs{
 		CurrentPortfolio:    float64(in.CurrentPortfolio),
@@ -377,6 +414,7 @@ func (h *Handler) MonteCarlo(w http.ResponseWriter, r *http.Request) {
 		Allocation:          allocation,
 		InflationMean:       float64(in.InflationMean),
 		InflationVolatility: float64(in.InflationVolatility),
+		AccountMix:          accountMix,
 	})
 	writeJSON(w, http.StatusOK, result)
 }

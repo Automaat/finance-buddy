@@ -366,6 +366,138 @@ func TestRunMonteCarlo_AssumptionsEchoesInflation(t *testing.T) {
 	}
 }
 
+func TestEffectiveTaxRate_TaxableOnlyFullGain(t *testing.T) {
+	mix := MonteCarloAccountMix{TaxablePct: 100, TaxableGainPct: 100}
+	got := mix.EffectiveTaxRate(70)
+	if math.Abs(got-BelkaRate) > 1e-9 {
+		t.Errorf("100%% taxable, 100%% gain at age 70: got %v, want %v", got, BelkaRate)
+	}
+}
+
+func TestEffectiveTaxRate_TaxableHalfGainHalfBasis(t *testing.T) {
+	mix := MonteCarloAccountMix{TaxablePct: 100, TaxableGainPct: 50}
+	got := mix.EffectiveTaxRate(70)
+	want := 0.5 * BelkaRate
+	if math.Abs(got-want) > 1e-9 {
+		t.Errorf("100%% taxable, 50%% gain: got %v, want %v", got, want)
+	}
+}
+
+func TestEffectiveTaxRate_IkePost60IsFree(t *testing.T) {
+	mix := MonteCarloAccountMix{IkePct: 100, TaxableGainPct: 100}
+	if r := mix.EffectiveTaxRate(60); r != 0 {
+		t.Errorf("IKE at 60: got %v, want 0", r)
+	}
+	if r := mix.EffectiveTaxRate(59); r != BelkaRate {
+		t.Errorf("IKE pre-60 should fall back to Belka: got %v, want %v", r, BelkaRate)
+	}
+}
+
+func TestEffectiveTaxRate_IkzePost65Is10Pct(t *testing.T) {
+	mix := MonteCarloAccountMix{IkzePct: 100, TaxableGainPct: 100}
+	if r := mix.EffectiveTaxRate(65); math.Abs(r-IkzePostAgeRate) > 1e-9 {
+		t.Errorf("IKZE at 65: got %v, want %v", r, IkzePostAgeRate)
+	}
+	if r := mix.EffectiveTaxRate(64); math.Abs(r-BelkaRate) > 1e-9 {
+		t.Errorf("IKZE pre-65 falls back to Belka: got %v, want %v", r, BelkaRate)
+	}
+}
+
+func TestEffectiveTaxRate_ZusIsAlwaysFree(t *testing.T) {
+	mix := MonteCarloAccountMix{ZusPct: 100, TaxableGainPct: 100}
+	if r := mix.EffectiveTaxRate(70); r != 0 {
+		t.Errorf("ZUS at 70: got %v, want 0", r)
+	}
+}
+
+func TestEffectiveTaxRate_BlendedMix(t *testing.T) {
+	// 60% taxable (100% gain), 20% IKE, 20% IKZE at age 70.
+	mix := MonteCarloAccountMix{
+		TaxablePct: 60, IkePct: 20, IkzePct: 20, TaxableGainPct: 100,
+	}
+	got := mix.EffectiveTaxRate(70)
+	want := 0.60*BelkaRate + 0.20*IkzePostAgeRate
+	if math.Abs(got-want) > 1e-9 {
+		t.Errorf("blended mix: got %v, want %v", got, want)
+	}
+}
+
+func TestRunMonteCarlo_NoAccountMix_NoTaxSummary(t *testing.T) {
+	got := RunMonteCarlo(newSeededRng(), MonteCarloInputs{
+		CurrentPortfolio: 100000, CurrentAge: 30, RetirementAge: 65, LifeExpectancy: 90,
+		ExpectedReturn: 6, Volatility: 15, AnnualWithdrawal: 30000, Paths: 50,
+	})
+	if got.Tax != nil {
+		t.Errorf("tax summary should be nil without AccountMix, got %+v", got.Tax)
+	}
+	for _, b := range got.Bands {
+		if b.P50Net != b.P50 || b.P50NetReal != b.P50Real {
+			t.Errorf("age %d: net bands should mirror gross without AccountMix", b.Age)
+		}
+	}
+}
+
+func TestRunMonteCarlo_AccountMix_TaxSummaryHasExpectedLifetimeRate(t *testing.T) {
+	// Deterministic path: zero vol on returns and inflation. 100% taxable
+	// with 100% gain means every withdrawn PLN pays the full Belka rate.
+	got := RunMonteCarlo(newSeededRng(), MonteCarloInputs{
+		CurrentPortfolio:    1_000_000,
+		AnnualContribution:  0,
+		ExpectedReturn:      0,
+		Volatility:          0,
+		CurrentAge:          65,
+		RetirementAge:       65,
+		LifeExpectancy:      70,
+		AnnualWithdrawal:    40000,
+		Paths:               5,
+		InflationMean:       0,
+		InflationVolatility: 0,
+		AccountMix:          &MonteCarloAccountMix{TaxablePct: 100, TaxableGainPct: 100},
+	})
+	if got.Tax == nil {
+		t.Fatalf("expected tax summary, got nil")
+	}
+	if math.Abs(got.Tax.EffectiveLifetimeRate-BelkaRate) > 1e-9 {
+		t.Errorf("effective lifetime rate = %v, want Belka %v",
+			got.Tax.EffectiveLifetimeRate, BelkaRate)
+	}
+	wantGrossPerPath := 5 * (40000.0 / (1 - BelkaRate))
+	wantGrossTotal := wantGrossPerPath * 5
+	if math.Abs(got.Tax.GrossWithdrawalsTotal-wantGrossTotal) > 1e-6 {
+		t.Errorf("gross total = %v, want %v", got.Tax.GrossWithdrawalsTotal, wantGrossTotal)
+	}
+}
+
+func TestRunMonteCarlo_AccountMix_NetBandsDeflateGrossByTaxRate(t *testing.T) {
+	// All ZUS = 0% tax → net == gross. All taxable 100% gain → net = gross * 0.81.
+	zusGot := RunMonteCarlo(newSeededRng(), MonteCarloInputs{
+		CurrentPortfolio: 100000, AnnualContribution: 0,
+		ExpectedReturn: 0, Volatility: 0,
+		CurrentAge: 65, RetirementAge: 65, LifeExpectancy: 70,
+		AnnualWithdrawal: 0, Paths: 3,
+		AccountMix: &MonteCarloAccountMix{ZusPct: 100},
+	})
+	for _, b := range zusGot.Bands {
+		if math.Abs(b.P50Net-b.P50) > 1e-6 {
+			t.Errorf("ZUS-only: net %v should equal gross %v at age %d", b.P50Net, b.P50, b.Age)
+		}
+	}
+	taxGot := RunMonteCarlo(newSeededRng(), MonteCarloInputs{
+		CurrentPortfolio: 100000, AnnualContribution: 0,
+		ExpectedReturn: 0, Volatility: 0,
+		CurrentAge: 65, RetirementAge: 65, LifeExpectancy: 70,
+		AnnualWithdrawal: 0, Paths: 3,
+		AccountMix: &MonteCarloAccountMix{TaxablePct: 100, TaxableGainPct: 100},
+	})
+	for _, b := range taxGot.Bands {
+		want := b.P50 * (1 - BelkaRate)
+		if math.Abs(b.P50Net-want) > 1e-6 {
+			t.Errorf("age %d: net %v != gross %v × (1 - %v) = %v",
+				b.Age, b.P50Net, b.P50, BelkaRate, want)
+		}
+	}
+}
+
 func TestRunMonteCarlo_PercentilesAreSorted(t *testing.T) {
 	// Across reasonable inputs p5 <= p50 <= p95 at every age.
 	got := RunMonteCarlo(newSeededRng(), MonteCarloInputs{
