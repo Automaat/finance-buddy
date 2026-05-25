@@ -82,19 +82,7 @@ func (s *Store) ListForAccount(ctx context.Context, accountID int) ([]DebtPaymen
 	if err != nil {
 		return nil, fmt.Errorf("query payments: %w", err)
 	}
-	defer rows.Close()
-	out := []DebtPayment{}
-	for rows.Next() {
-		p, err := scanPayment(rows)
-		if err != nil {
-			return nil, fmt.Errorf("scan payment: %w", err)
-		}
-		out = append(out, *p)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate payments: %w", err)
-	}
-	return out, nil
+	return dbutil.CollectRows(rows, scanPaymentValue, "scan payment", "iterate payments")
 }
 
 // ListFilter narrows the all-payments view.
@@ -140,20 +128,7 @@ func (s *Store) ListAll(ctx context.Context, f ListFilter) ([]PaymentWithAccount
 	if err != nil {
 		return nil, fmt.Errorf("list payments: %w", err)
 	}
-	defer rows.Close()
-	out := []PaymentWithAccount{}
-	for rows.Next() {
-		var p DebtPayment
-		var name string
-		if err := rows.Scan(&p.ID, &p.AccountID, &p.Amount, &p.Date, &p.OwnerUserID, &p.IsActive, &p.CreatedAt, &name); err != nil {
-			return nil, fmt.Errorf("scan payment join: %w", err)
-		}
-		out = append(out, PaymentWithAccount{Payment: p, AccountName: name})
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate payments: %w", err)
-	}
-	return out, nil
+	return dbutil.CollectRows(rows, scanPaymentWithAccount, "scan payment join", "iterate payments")
 }
 
 // Create inserts a payment. ErrDuplicate on same (account_id, date) for an
@@ -235,9 +210,26 @@ func (s *Store) CountsByAccount(ctx context.Context) (map[int]int, error) {
 }
 
 func scanPayment(row pgx.Row) (*DebtPayment, error) {
-	var p DebtPayment
-	if err := row.Scan(&p.ID, &p.AccountID, &p.Amount, &p.Date, &p.OwnerUserID, &p.IsActive, &p.CreatedAt); err != nil {
+	p, err := scanPaymentValue(row)
+	if err != nil {
 		return nil, err
 	}
 	return &p, nil
+}
+
+func scanPaymentValue(row pgx.Row) (DebtPayment, error) {
+	var p DebtPayment
+	if err := row.Scan(&p.ID, &p.AccountID, &p.Amount, &p.Date, &p.OwnerUserID, &p.IsActive, &p.CreatedAt); err != nil {
+		return DebtPayment{}, err
+	}
+	return p, nil
+}
+
+func scanPaymentWithAccount(row pgx.Row) (PaymentWithAccount, error) {
+	var p DebtPayment
+	var name string
+	if err := row.Scan(&p.ID, &p.AccountID, &p.Amount, &p.Date, &p.OwnerUserID, &p.IsActive, &p.CreatedAt, &name); err != nil {
+		return PaymentWithAccount{}, err
+	}
+	return PaymentWithAccount{Payment: p, AccountName: name}, nil
 }

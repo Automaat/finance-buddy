@@ -23,3 +23,21 @@ func MapErr(err, notFound error, wrapPrefix string) error {
 	}
 	return fmt.Errorf("%s: %w", wrapPrefix, err)
 }
+
+// CollectRows scans every row and preserves the store-specific scan/iterate
+// error prefixes used by existing handlers.
+func CollectRows[T any](rows pgx.Rows, scan func(pgx.Row) (T, error), scanPrefix, iterPrefix string) ([]T, error) {
+	defer rows.Close()
+	out := []T{}
+	for rows.Next() {
+		item, err := scan(rows)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", scanPrefix, err)
+		}
+		out = append(out, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: %w", iterPrefix, err)
+	}
+	return out, nil
+}

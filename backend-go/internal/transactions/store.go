@@ -104,19 +104,7 @@ func (s *Store) ListForAccount(ctx context.Context, accountID int) ([]Transactio
 	if err != nil {
 		return nil, fmt.Errorf("list transactions: %w", err)
 	}
-	defer rows.Close()
-	out := []Transaction{}
-	for rows.Next() {
-		t, err := scanTransaction(rows)
-		if err != nil {
-			return nil, fmt.Errorf("scan transaction: %w", err)
-		}
-		out = append(out, *t)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate transactions: %w", err)
-	}
-	return out, nil
+	return dbutil.CollectRows(rows, scanTransactionValue, "scan transaction", "iterate transactions")
 }
 
 // ListFilter narrows the all-transactions view.
@@ -163,23 +151,7 @@ func (s *Store) ListAll(ctx context.Context, f ListFilter) ([]TxnWithAccount, er
 	if err != nil {
 		return nil, fmt.Errorf("list transactions: %w", err)
 	}
-	defer rows.Close()
-	out := []TxnWithAccount{}
-	for rows.Next() {
-		var t Transaction
-		var name string
-		if err := rows.Scan(
-			&t.ID, &t.AccountID, &t.Amount, &t.Date, &t.OwnerUserID,
-			&t.TransactionType, &t.IsActive, &t.CreatedAt, &name,
-		); err != nil {
-			return nil, fmt.Errorf("scan transaction join: %w", err)
-		}
-		out = append(out, TxnWithAccount{Transaction: t, AccountName: name})
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate transactions: %w", err)
-	}
-	return out, nil
+	return dbutil.CollectRows(rows, scanTxnWithAccount, "scan transaction join", "iterate transactions")
 }
 
 // Create inserts a transaction. Multiple active transactions may share
@@ -247,14 +219,34 @@ func (s *Store) CountsByAccount(ctx context.Context) (map[int]int, error) {
 }
 
 func scanTransaction(row pgx.Row) (*Transaction, error) {
+	t, err := scanTransactionValue(row)
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+func scanTransactionValue(row pgx.Row) (Transaction, error) {
 	var t Transaction
 	if err := row.Scan(
 		&t.ID, &t.AccountID, &t.Amount, &t.Date, &t.OwnerUserID,
 		&t.TransactionType, &t.IsActive, &t.CreatedAt,
 	); err != nil {
-		return nil, err
+		return Transaction{}, err
 	}
-	return &t, nil
+	return t, nil
+}
+
+func scanTxnWithAccount(row pgx.Row) (TxnWithAccount, error) {
+	var t Transaction
+	var name string
+	if err := row.Scan(
+		&t.ID, &t.AccountID, &t.Amount, &t.Date, &t.OwnerUserID,
+		&t.TransactionType, &t.IsActive, &t.CreatedAt, &name,
+	); err != nil {
+		return TxnWithAccount{}, err
+	}
+	return TxnWithAccount{Transaction: t, AccountName: name}, nil
 }
 
 func scanAccount(row pgx.Row) (*AccountInfo, error) {
