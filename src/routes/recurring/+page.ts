@@ -40,9 +40,15 @@ export const load: PageLoad = async ({ fetch }) => {
 		throw error(accountsRes.status, 'Failed to load accounts');
 	}
 	const recurringData = (await recurringRes.json()) as { recurring: RecurringRow[] };
-	const accountsData = (await accountsRes.json()) as { accounts: AccountOption[] };
+	const accountsData = (await accountsRes.json()) as {
+		assets?: AccountOption[];
+		liabilities?: AccountOption[];
+	};
+	const accounts = [...(accountsData.assets ?? []), ...(accountsData.liabilities ?? [])].map(
+		(a) => ({ id: a.id, name: a.name })
+	);
 	return {
 		recurring: recurringData.recurring,
-		accounts: accountsData.accounts.map((a) => ({ id: a.id, name: a.name }))
+		accounts
 	};
 };
