@@ -101,13 +101,16 @@ interface PerShareValue {
 }
 
 // Per-share intrinsic value in valuation currency: max(FMV - strike, 0) for
-// options, FMV for RSUs. Returns null when no valuation exists for the
-// company.
+// options, FMV for RSUs. Returns null when no valuation exists, or when the
+// valuation currency differs from the grant currency — mixing currencies in
+// (FMV − strike) would produce a meaningless number. Mirrors
+// backend-go/internal/equity_grants/paper_value.go.
 export function perShareIntrinsicValue(
 	g: EquityGrant,
 	v: CompanyValuation | null
 ): PerShareValue | null {
 	if (!v) return null;
+	if (v.currency !== g.currency) return null;
 	const fmv = v.fmv_per_share;
 	const low = v.fmv_low ?? fmv;
 	const high = v.fmv_high ?? fmv;

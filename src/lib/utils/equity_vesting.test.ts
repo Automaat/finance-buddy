@@ -191,6 +191,13 @@ describe('perShareIntrinsicValue', () => {
 	it('returns null when no valuation', () => {
 		expect(perShareIntrinsicValue(makeGrant(), null)).toBeNull();
 	});
+
+	it('returns null when valuation currency differs from grant currency', () => {
+		// USD grant, EUR valuation: subtracting USD strike from EUR FMV is
+		// meaningless. Mirror backend behaviour and refuse to value it.
+		const eurValuation: CompanyValuation = { ...valuation, currency: 'EUR' };
+		expect(perShareIntrinsicValue(makeGrant({ currency: 'USD' }), eurValuation)).toBeNull();
+	});
 });
 
 describe('computeYearlyEquityComp', () => {
