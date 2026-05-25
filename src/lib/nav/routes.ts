@@ -13,13 +13,15 @@ import {
 	Settings,
 	Target,
 	Repeat,
-	Briefcase
+	Briefcase,
+	Compass
 } from 'lucide-svelte';
 
 export const NAV_ROUTES = [
 	{ href: '/', label: 'Dashboard', icon: LayoutDashboard },
 	{ href: '/metryki', label: 'Metryki', icon: TrendingUp },
 	{ href: '/simulations', label: 'Symulacje', icon: Sparkles },
+	{ href: '/optimizer', label: 'Optymalizator', icon: Compass },
 	{ href: '/retirement', label: 'Emerytura', icon: Dices },
 	{ href: '/accounts', label: 'Konta', icon: Wallet },
 	{ href: '/transactions', label: 'Transakcje', icon: ArrowRightLeft },
