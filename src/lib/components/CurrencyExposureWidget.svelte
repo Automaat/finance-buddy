@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import * as echarts from 'echarts';
 	import { resolveApiUrl } from '$lib/api';
 	import { formatPLN } from '$lib/utils/format';
 	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';

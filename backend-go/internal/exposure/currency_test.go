@@ -9,25 +9,29 @@ import (
 
 func d(s string) decimal.Decimal { return decimal.RequireFromString(s) }
 
+const epsilon = 1e-9
+
+func eq(got, want float64) bool { return math.Abs(got-want) < epsilon }
+
 func TestBuildReport_EmptyPortfolio(t *testing.T) {
 	rep := BuildReport(nil, "", nil, 5)
-	if rep.TotalPLN != 0 {
+	if !eq(rep.TotalPLN, 0) {
 		t.Errorf("total = %v, want 0", rep.TotalPLN)
 	}
-	if rep.PLNPercent != 0 {
+	if !eq(rep.PLNPercent, 0) {
 		t.Errorf("pln_pct = %v, want 0", rep.PLNPercent)
 	}
-	if rep.ForeignPct != 0 {
+	if !eq(rep.ForeignPct, 0) {
 		t.Errorf("foreign_pct = %v, want 0", rep.ForeignPct)
 	}
 }
 
 func TestBuildReport_PLNOnly(t *testing.T) {
 	rep := BuildReport([]row{{currency: "PLN", valuePLN: d("100000")}}, "2026-05-01", nil, 5)
-	if rep.PLNPercent != 100 {
+	if !eq(rep.PLNPercent, 100) {
 		t.Errorf("pln_pct = %v, want 100", rep.PLNPercent)
 	}
-	if rep.ForeignPct != 0 {
+	if !eq(rep.ForeignPct, 0) {
 		t.Errorf("foreign_pct = %v, want 0", rep.ForeignPct)
 	}
 }
@@ -38,10 +42,10 @@ func TestBuildReport_MixedCurrencies(t *testing.T) {
 		{currency: "USD", valuePLN: d("30000")},
 		{currency: "EUR", valuePLN: d("10000")},
 	}, "2026-05-01", nil, 5)
-	if rep.PLNPercent != 60 {
+	if !eq(rep.PLNPercent, 60) {
 		t.Errorf("pln_pct = %v, want 60", rep.PLNPercent)
 	}
-	if rep.ForeignPct != 40 {
+	if !eq(rep.ForeignPct, 40) {
 		t.Errorf("foreign_pct = %v, want 40", rep.ForeignPct)
 	}
 	if got := rep.Currencies[0].Currency; got != "PLN" {

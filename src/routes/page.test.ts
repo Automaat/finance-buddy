@@ -247,6 +247,12 @@ describe('Dashboard retirement limits save flow', () => {
 				'http://localhost:8000/api/retirement/limits/2024/IKZE/1'
 			])
 		);
+		// Guard against accidental non-GET/PUT side-effects (e.g. a stray
+		// POST/DELETE) sneaking past the relaxed PUT-only filter.
+		for (const call of fetchMock.mock.calls) {
+			const method = call[1]?.method ?? 'GET';
+			expect(['GET', 'PUT']).toContain(method);
+		}
 		await waitFor(() => expect(invalidateAll).toHaveBeenCalled());
 	});
 
