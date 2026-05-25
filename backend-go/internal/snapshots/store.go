@@ -17,6 +17,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/aggregates"
+	"github.com/Automaat/finance-buddy/backend-go/internal/dbutil"
 )
 
 // Snapshot mirrors backend/app/models/snapshot.Snapshot.
@@ -134,10 +135,7 @@ func (s *Store) Get(ctx context.Context, id int) (*Snapshot, []Value, error) {
 	)
 	var snap Snapshot
 	if err := row.Scan(&snap.ID, &snap.Date, &snap.Notes, &snap.CreatedAt); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil, ErrNotFound
-		}
-		return nil, nil, fmt.Errorf("get snapshot: %w", err)
+		return nil, nil, dbutil.MapErr(err, ErrNotFound, "get snapshot")
 	}
 	values, err := s.loadValues(ctx, id)
 	if err != nil {
@@ -460,10 +458,7 @@ func lockSnapshot(ctx context.Context, tx pgx.Tx, id int) (*Snapshot, error) {
 	)
 	var s Snapshot
 	if err := row.Scan(&s.ID, &s.Date, &s.Notes, &s.CreatedAt); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("lock snapshot: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "lock snapshot")
 	}
 	return &s, nil
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/aggregates"
+	"github.com/Automaat/finance-buddy/backend-go/internal/dbutil"
 )
 
 // Account mirrors backend/app/models/account.Account. OwnerUserID is the
@@ -88,10 +89,7 @@ func (s *Store) Get(ctx context.Context, id int) (*Account, error) {
 	)
 	a, err := scanAccount(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("get account: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "get account")
 	}
 	return a, nil
 }
@@ -344,10 +342,7 @@ func lockAccount(ctx context.Context, tx pgx.Tx, id int) (*Account, error) {
 	)
 	a, err := scanAccount(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("lock account: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "lock account")
 	}
 	return a, nil
 }
@@ -358,10 +353,7 @@ func loadAccount(ctx context.Context, tx pgx.Tx, id int) (*Account, error) {
 	)
 	a, err := scanAccount(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("load account: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "load account")
 	}
 	return a, nil
 }

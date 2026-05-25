@@ -11,6 +11,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/dbutil"
 )
 
 // DebtPayment mirrors backend/app/models/debt_payment.DebtPayment.
@@ -58,10 +60,7 @@ func (s *Store) LoadAccount(ctx context.Context, id int) (*AccountInfo, error) {
 	)
 	var a AccountInfo
 	if err := row.Scan(&a.ID, &a.Name, &a.Type, &a.IsActive); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrAccountNotFound
-		}
-		return nil, fmt.Errorf("load account: %w", err)
+		return nil, dbutil.MapErr(err, ErrAccountNotFound, "load account")
 	}
 	if !a.IsActive {
 		return nil, ErrAccountNotFound

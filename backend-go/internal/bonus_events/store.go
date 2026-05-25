@@ -16,6 +16,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/dbutil"
 )
 
 // BonusEvent mirrors backend/app/models/bonus_event.BonusEvent.
@@ -115,10 +117,7 @@ func (s *Store) Get(ctx context.Context, id int) (*BonusEvent, error) {
 	)
 	b, err := scanBonus(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("select bonus: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "select bonus")
 	}
 	if !b.IsActive {
 		return nil, ErrNotFound
@@ -196,10 +195,7 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*BonusEvent,
 	)
 	updated, err := scanBonus(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("update bonus: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "update bonus")
 	}
 	return updated, nil
 }

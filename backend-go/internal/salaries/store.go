@@ -16,6 +16,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/dbutil"
 )
 
 // SalaryRecord mirrors backend/app/models/salary_record.SalaryRecord.
@@ -113,10 +115,7 @@ func (s *Store) Get(ctx context.Context, id int) (*SalaryRecord, error) {
 	)
 	r, err := scanRecord(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("select salary record: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "select salary record")
 	}
 	if !r.IsActive {
 		return nil, ErrNotFound
@@ -210,10 +209,7 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*SalaryRecor
 	)
 	updated, err := scanRecord(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("update salary record: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "update salary record")
 	}
 	return updated, nil
 }

@@ -13,6 +13,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/dbutil"
 )
 
 // Config mirrors backend/app/models/app_config.AppConfig — DB column names
@@ -67,10 +69,7 @@ func (s *Store) Get(ctx context.Context) (*Config, error) {
 	row := s.pool.QueryRow(ctx, `SELECT `+selectColumns+` FROM app_config WHERE id = 1`)
 	c, err := scanConfig(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("select app_config: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "select app_config")
 	}
 	return c, nil
 }

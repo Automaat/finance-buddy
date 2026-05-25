@@ -11,6 +11,8 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/dbutil"
 )
 
 // User is an application login account and household member. Name/Surname and
@@ -209,10 +211,7 @@ func scanUser(row pgx.Row) (*User, error) {
 	var u User
 	if err := row.Scan(&u.ID, &u.Username, &u.PasswordHash, &u.IsAdmin,
 		&u.Name, &u.Surname, &u.PPKEmployeeRate, &u.PPKEmployerRate, &u.CreatedAt); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("scan user: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "scan user")
 	}
 	return &u, nil
 }

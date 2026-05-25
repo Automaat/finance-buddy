@@ -2,13 +2,14 @@ package bonds
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/dbutil"
 )
 
 // Store is the persistence boundary for treasury_bonds + the bond-side CPI
@@ -81,10 +82,7 @@ func (s *Store) Get(ctx context.Context, id int) (*TreasuryBond, error) {
 	)
 	b, err := scanBond(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("get treasury bond: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "get treasury bond")
 	}
 	return b, nil
 }
@@ -139,10 +137,7 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*TreasuryBon
 	)
 	b, err := scanBond(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("lock treasury bond: %w", err)
+		return nil, dbutil.MapErr(err, ErrNotFound, "lock treasury bond")
 	}
 	if p.Type != nil {
 		b.Type = *p.Type
