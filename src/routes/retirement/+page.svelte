@@ -77,6 +77,11 @@
 				loading = false;
 				return;
 			}
+			if (useAccountMix && (mixTaxable < 0 || mixIke < 0 || mixIkze < 0 || mixZus < 0)) {
+				error = 'Udziały kont muszą być nieujemne';
+				loading = false;
+				return;
+			}
 			if (useAccountMix && Math.abs(mixSum - 100) > 0.01) {
 				error = `Konta muszą sumować się do 100% (obecnie ${mixSum.toFixed(1)}%)`;
 				loading = false;
@@ -146,7 +151,8 @@
 			chartHandle = createChart(chartContainer);
 			chart = chartHandle.chart;
 		}
-		chart?.setOption(buildMonteCarloFanOption(result, { real: showReal, net: showNet }), true);
+		const net = showNet && !!result.tax;
+		chart?.setOption(buildMonteCarloFanOption(result, { real: showReal, net }), true);
 	});
 
 	const successPercent = $derived.by(() => {
@@ -500,21 +506,22 @@
 
 			{#if result.bands.length > 0}
 				{@const last = result.bands[result.bands.length - 1]}
-				{@const lastP5 = showNet
+				{@const netActive = showNet && !!result.tax}
+				{@const lastP5 = netActive
 					? showReal
 						? last.p5_net_real
 						: last.p5_net
 					: showReal
 						? last.p5_real
 						: last.p5}
-				{@const lastP50 = showNet
+				{@const lastP50 = netActive
 					? showReal
 						? last.p50_net_real
 						: last.p50_net
 					: showReal
 						? last.p50_real
 						: last.p50}
-				{@const lastP95 = showNet
+				{@const lastP95 = netActive
 					? showReal
 						? last.p95_net_real
 						: last.p95_net
@@ -522,7 +529,7 @@
 						? last.p95_real
 						: last.p95}
 				{@const spendingBand = result.bands.find((b) => b.spending > 0)}
-				{@const valueLabel = `${showReal ? 'realne' : 'nominalne'}${showNet ? ', netto' : ''}`}
+				{@const valueLabel = `${showReal ? 'realne' : 'nominalne'}${netActive ? ', netto' : ''}`}
 				<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
 					<div class="card preset-tonal-surface p-4">
 						<div class="text-xs text-surface-600-400">

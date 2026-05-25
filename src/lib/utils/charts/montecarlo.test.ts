@@ -73,6 +73,40 @@ describe('buildMonteCarloFanOption', () => {
 		expect(series[2].data).toEqual([]);
 	});
 
+	it('uses the *_net fields when net=true', () => {
+		const result = makeResult([
+			[60, 100, 200, 300],
+			[61, 150, 280, 410]
+		]);
+		// Distinguish net from gross by mutating only the net fields.
+		result.bands[0].p5_net = 10;
+		result.bands[0].p50_net = 20;
+		result.bands[0].p95_net = 30;
+		result.bands[1].p5_net = 15;
+		result.bands[1].p50_net = 25;
+		result.bands[1].p95_net = 35;
+		const opt = buildMonteCarloFanOption(result, { net: true });
+		const series = opt.series as Array<{ data: number[] }>;
+		expect(series[0].data).toEqual([10, 15]); // P5 base = p5_net
+		expect(series[2].data).toEqual([20, 25]); // median = p50_net
+		const title = opt.title as { text: string };
+		expect(title.text).toContain('po podatku');
+	});
+
+	it('uses the *_net_real fields when both real and net are true', () => {
+		const result = makeResult([[60, 100, 200, 300]]);
+		result.bands[0].p5_net_real = 11;
+		result.bands[0].p50_net_real = 22;
+		result.bands[0].p95_net_real = 33;
+		const opt = buildMonteCarloFanOption(result, { net: true, real: true });
+		const series = opt.series as Array<{ data: number[] }>;
+		expect(series[0].data).toEqual([11]);
+		expect(series[2].data).toEqual([22]);
+		const title = opt.title as { text: string };
+		expect(title.text).toContain('realne');
+		expect(title.text).toContain('po podatku');
+	});
+
 	it('tooltip formatter renders the three percentiles', () => {
 		const opt = buildMonteCarloFanOption(
 			makeResult([

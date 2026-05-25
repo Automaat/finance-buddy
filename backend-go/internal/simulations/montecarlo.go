@@ -36,16 +36,21 @@ type MonteCarloAllocation struct {
 }
 
 // MonteCarloAccountMix expresses what share of each PLN withdrawn comes
-// from which Polish wrapper, plus the gain fraction of the taxable
-// brokerage balance (used to apply 19% Belka only on appreciation, not
-// cost basis). Pcts must sum to 100. When set, the simulation grosses up
-// withdrawals to cover tax and reports both gross and net-of-tax bands.
+// from which Polish wrapper, plus the gain fraction used for Belka. Pcts
+// must sum to 100. When set, the simulation grosses up withdrawals to
+// cover tax and reports both gross and net-of-tax bands.
+//
+// TaxableGainPct is the gain fraction (vs cost basis) of the taxable
+// brokerage balance. The same fraction is used as a proxy for IKE
+// withdrawals before age 60 and IKZE withdrawals before age 65 — early
+// withdrawals from those wrappers are taxed like brokerage gains in our
+// model, so they need a gain-fraction assumption too.
 type MonteCarloAccountMix struct {
 	TaxablePct     float64
 	IkePct         float64
 	IkzePct        float64
 	ZusPct         float64
-	TaxableGainPct float64 // fraction of taxable balance that's gains
+	TaxableGainPct float64
 }
 
 // EffectiveTaxRate returns the share of each gross PLN withdrawn that
@@ -262,7 +267,9 @@ func RunMonteCarlo(rng *rand.Rand, p MonteCarloInputs) MonteCarloResult {
 }
 
 // pathMatrix bundles per-path per-year trajectories so RunMonteCarlo can
-// stay short and the loop body stays linear.
+// stay short and the loop body stays linear. netNominal/netReal are nil
+// when no AccountMix was supplied; consumers must mirror gross in that
+// case (saves an allocation + per-band sort on the common no-tax path).
 type pathMatrix struct {
 	nominal      [][]float64
 	realBalance  [][]float64
@@ -280,20 +287,26 @@ func simulatePaths(rng *rand.Rand, p MonteCarloInputs, paths, years int, expecte
 	sd := volatility / 100.0
 	infMean := p.InflationMean / 100.0
 	infSd := p.InflationVolatility / 100.0
+	hasTax := p.AccountMix != nil
 	m := pathMatrix{
 		nominal:      make([][]float64, paths),
 		realBalance:  make([][]float64, paths),
-		netNominal:   make([][]float64, paths),
-		netReal:      make([][]float64, paths),
 		spending:     make([][]float64, paths),
 		spendingReal: make([][]float64, paths),
+	}
+	if hasTax {
+		m.netNominal = make([][]float64, paths)
+		m.netReal = make([][]float64, paths)
 	}
 	for i := range paths {
 		balance := p.CurrentPortfolio
 		nomRow := make([]float64, years)
 		realRow := make([]float64, years)
-		netRow := make([]float64, years)
-		netRealRow := make([]float64, years)
+		var netRow, netRealRow []float64
+		if hasTax {
+			netRow = make([]float64, years)
+			netRealRow = make([]float64, years)
+		}
 		spendRow := make([]float64, years)
 		spendRealRow := make([]float64, years)
 		cumInflation := 1.0
@@ -345,20 +358,20 @@ func simulatePaths(rng *rand.Rand, p MonteCarloInputs, paths, years int, expecte
 			}
 			nomRow[y] = balance
 			realRow[y] = safeDiv(balance, cumInflation)
-			liquidationRate := 0.0
-			if p.AccountMix != nil {
-				liquidationRate = p.AccountMix.EffectiveTaxRate(age)
+			if hasTax {
+				netBalance := balance * (1 - p.AccountMix.EffectiveTaxRate(age))
+				netRow[y] = netBalance
+				netRealRow[y] = safeDiv(netBalance, cumInflation)
 			}
-			netBalance := balance * (1 - liquidationRate)
-			netRow[y] = netBalance
-			netRealRow[y] = safeDiv(netBalance, cumInflation)
 			spendRow[y] = withdrawal
 			spendRealRow[y] = safeDiv(withdrawal, cumInflation)
 		}
 		m.nominal[i] = nomRow
 		m.realBalance[i] = realRow
-		m.netNominal[i] = netRow
-		m.netReal[i] = netRealRow
+		if hasTax {
+			m.netNominal[i] = netRow
+			m.netReal[i] = netRealRow
+		}
 		m.spending[i] = spendRow
 		m.spendingReal[i] = spendRealRow
 		if balance > 0 {
@@ -369,23 +382,27 @@ func simulatePaths(rng *rand.Rand, p MonteCarloInputs, paths, years int, expecte
 }
 
 func buildBands(m pathMatrix, paths, years, currentAge int) []MonteCarloPercentileBand {
+	hasTax := m.netNominal != nil
 	bands := make([]MonteCarloPercentileBand, years)
 	col := make([]float64, paths)
 	colReal := make([]float64, paths)
-	colNet := make([]float64, paths)
-	colNetReal := make([]float64, paths)
+	var colNet, colNetReal []float64
+	if hasTax {
+		colNet = make([]float64, paths)
+		colNetReal = make([]float64, paths)
+	}
 	for y := range years {
 		for i := range paths {
 			col[i] = m.nominal[i][y]
 			colReal[i] = m.realBalance[i][y]
-			colNet[i] = m.netNominal[i][y]
-			colNetReal[i] = m.netReal[i][y]
+			if hasTax {
+				colNet[i] = m.netNominal[i][y]
+				colNetReal[i] = m.netReal[i][y]
+			}
 		}
 		sort.Float64s(col)
 		sort.Float64s(colReal)
-		sort.Float64s(colNet)
-		sort.Float64s(colNetReal)
-		bands[y] = MonteCarloPercentileBand{
+		b := MonteCarloPercentileBand{
 			Age:          currentAge + y + 1,
 			P5:           percentile(col, 5),
 			P50:          percentile(col, 50),
@@ -393,15 +410,27 @@ func buildBands(m pathMatrix, paths, years, currentAge int) []MonteCarloPercenti
 			P5Real:       percentile(colReal, 5),
 			P50Real:      percentile(colReal, 50),
 			P95Real:      percentile(colReal, 95),
-			P5Net:        percentile(colNet, 5),
-			P50Net:       percentile(colNet, 50),
-			P95Net:       percentile(colNet, 95),
-			P5NetReal:    percentile(colNetReal, 5),
-			P50NetReal:   percentile(colNetReal, 50),
-			P95NetReal:   percentile(colNetReal, 95),
 			Spending:     meanColumn(m.spending, y),
 			SpendingReal: meanColumn(m.spendingReal, y),
 		}
+		if hasTax {
+			sort.Float64s(colNet)
+			sort.Float64s(colNetReal)
+			b.P5Net = percentile(colNet, 5)
+			b.P50Net = percentile(colNet, 50)
+			b.P95Net = percentile(colNet, 95)
+			b.P5NetReal = percentile(colNetReal, 5)
+			b.P50NetReal = percentile(colNetReal, 50)
+			b.P95NetReal = percentile(colNetReal, 95)
+		} else {
+			b.P5Net = b.P5
+			b.P50Net = b.P50
+			b.P95Net = b.P95
+			b.P5NetReal = b.P5Real
+			b.P50NetReal = b.P50Real
+			b.P95NetReal = b.P95Real
+		}
+		bands[y] = b
 	}
 	return bands
 }
