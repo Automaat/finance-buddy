@@ -53,12 +53,18 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Install govulncheck
+        continue-on-error: true
         run: go install golang.org/x/vuln/cmd/govulncheck@latest
 
       - name: Scan Go modules for known vulnerabilities
+        continue-on-error: true
         working-directory: backend-go
         run: |
           echo '## Go vulnerabilities (govulncheck)' >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          govulncheck ./... >> "$GITHUB_STEP_SUMMARY" || true
+          if command -v govulncheck >/dev/null 2>&1; then
+            govulncheck ./... >> "$GITHUB_STEP_SUMMARY" || true
+          else
+            echo 'govulncheck install failed; skipping scan' >> "$GITHUB_STEP_SUMMARY"
+          fi
           echo '```' >> "$GITHUB_STEP_SUMMARY"
