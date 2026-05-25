@@ -11,7 +11,6 @@ const routes: { path: string; heading: RegExp }[] = [
 	{ path: '/goals', heading: /Cele finansowe/i },
 	{ path: '/snapshots', heading: /Snapshots/i },
 	{ path: '/salaries', heading: /Historia wynagrodzeń/i },
-	{ path: '/settings', heading: /Ustawienia/i },
 	{ path: '/settings/config', heading: /Konfiguracja/i },
 	{ path: '/settings/users', heading: /Użytkownicy/i }
 ];
