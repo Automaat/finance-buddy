@@ -33,7 +33,9 @@ func TestSchemaSQLContainsCoreTables(t *testing.T) {
 }
 
 // integrationPool returns a real pool when TEST_DATABASE_URL is set,
-// otherwise the calling test is skipped. The bb-tests-go CI job is the
+// otherwise the calling test is skipped. Each call wipes the `public`
+// schema, so callers MUST NOT run in parallel with each other or with
+// any other test that shares the DSN. The bb-tests-go CI job is the
 // authoritative integration oracle for schema bootstrap; this hook lets
 // developers exercise the same code path with `go test` against a local
 // throwaway Postgres.
@@ -43,7 +45,7 @@ func integrationPool(t *testing.T) *pgxpool.Pool {
 	if dsn == "" {
 		t.Skip("TEST_DATABASE_URL not set — skipping integration test")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
 	pool, err := New(ctx, dsn)
 	if err != nil {
@@ -58,7 +60,7 @@ func integrationPool(t *testing.T) *pgxpool.Pool {
 
 func TestApplySchemaCreatesAccountsTable(t *testing.T) {
 	pool := integrationPool(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	if err := ApplySchema(ctx, pool); err != nil {
 		t.Fatalf("ApplySchema on empty db: %v", err)
 	}
@@ -72,13 +74,29 @@ func TestApplySchemaCreatesAccountsTable(t *testing.T) {
 	}
 }
 
+// TestApplySchemaIsIdempotent proves the presence-check short-circuit by
+// seeding a sentinel row after the first apply: if the second apply re-ran
+// schema.sql (which begins with DROP TABLE statements via pg_dump), the
+// sentinel would be wiped. Surviving = the no-op branch fired.
 func TestApplySchemaIsIdempotent(t *testing.T) {
 	pool := integrationPool(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	if err := ApplySchema(ctx, pool); err != nil {
 		t.Fatalf("first apply: %v", err)
 	}
+	if _, err := pool.Exec(ctx,
+		`INSERT INTO users (username, password_hash) VALUES ('sentinel', 'x')`); err != nil {
+		t.Fatalf("seed sentinel: %v", err)
+	}
 	if err := ApplySchema(ctx, pool); err != nil {
 		t.Fatalf("second apply (should no-op): %v", err)
+	}
+	var count int
+	if err := pool.QueryRow(ctx,
+		`SELECT count(*) FROM users WHERE username = 'sentinel'`).Scan(&count); err != nil {
+		t.Fatalf("sentinel lookup: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("sentinel row wiped — second ApplySchema did not no-op (count=%d)", count)
 	}
 }

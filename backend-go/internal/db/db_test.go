@@ -1,15 +1,12 @@
 package db
 
 import (
-	"context"
 	"strings"
 	"testing"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func TestNewRejectsMalformedDSN(t *testing.T) {
-	_, err := New(context.Background(), "postgres://bad host:5432/db")
+	_, err := New(t.Context(), "postgres://bad host:5432/db")
 	if err == nil {
 		t.Fatal("expected parse error for malformed DSN")
 	}
@@ -31,7 +28,3 @@ func TestNewAppliesPoolDefaults(t *testing.T) {
 		t.Errorf("HealthCheckPeriod: want 1m, got %s", cfg.HealthCheckPeriod)
 	}
 }
-
-// compile-time assertion that pgxpool.Pool stays the return type — guards
-// against accidental refactors that would break callers expecting a real pool.
-var _ func(context.Context, string) (*pgxpool.Pool, error) = New

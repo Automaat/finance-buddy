@@ -1,7 +1,6 @@
 package db
 
 import (
-	"context"
 	"slices"
 	"testing"
 )
@@ -30,7 +29,7 @@ func TestOwnerTablesHaveForeignKeyNames(t *testing.T) {
 
 func TestMigrateIsIdempotent(t *testing.T) {
 	pool := integrationPool(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	if err := ApplySchema(ctx, pool); err != nil {
 		t.Fatalf("apply schema: %v", err)
 	}
