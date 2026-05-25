@@ -34,6 +34,7 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/goals"
 	"github.com/Automaat/finance-buddy/backend-go/internal/holdings"
 	"github.com/Automaat/finance-buddy/backend-go/internal/investment"
+	"github.com/Automaat/finance-buddy/backend-go/internal/pit38"
 	"github.com/Automaat/finance-buddy/backend-go/internal/recurring"
 	"github.com/Automaat/finance-buddy/backend-go/internal/retirement"
 	"github.com/Automaat/finance-buddy/backend-go/internal/rules"
@@ -190,6 +191,8 @@ func registerLedgerRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger)
 	r.Post("/api/holdings/lots", hHandler.CreateLot)
 	r.Delete("/api/holdings/lots/{id}", hHandler.DeleteLot)
 
+	registerPIT38Routes(r, pool, logger)
+
 	simHandler := simulations.NewHandler(simulations.NewStore(pool), logger)
 	r.Post("/api/simulations/mortgage-vs-invest", simHandler.MortgageVsInvest)
 	r.Post("/api/simulations/wibor", simHandler.WiborScenarios)
@@ -212,6 +215,11 @@ func registerLedgerRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger)
 func registerDashboardRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
 	dashHandler := dashboard.NewHandler(dashboard.NewStore(pool), logger)
 	r.Get("/api/dashboard", dashHandler.Get)
+}
+
+func registerPIT38Routes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
+	pitHandler := pit38.NewHandler(pit38.NewStore(pool), fx.NewService(pool, logger), logger)
+	r.Get("/api/pit38/realized", pitHandler.Realized)
 }
 
 func registerCoreRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
