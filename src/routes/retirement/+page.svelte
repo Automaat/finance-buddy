@@ -6,6 +6,7 @@
 	import * as echarts from 'echarts';
 	import IKZEPITTracker from '$lib/components/IKZEPITTracker.svelte';
 	import IKZEOptimizer from '$lib/components/IKZEOptimizer.svelte';
+	import FireGapChart from '$lib/components/FireGapChart.svelte';
 
 	let currentPortfolio = $state(100000);
 	let annualContribution = $state(20000);
@@ -123,6 +124,15 @@
 	<IKZEPITTracker />
 
 	<IKZEOptimizer />
+
+	<FireGapChart
+		bind:currentAge
+		bind:retirementAge
+		bind:lifeExpectancy
+		bind:currentPortfolioPLN={currentPortfolio}
+		bind:annualContributionPLN={annualContribution}
+		bind:expectedReturnPct={expectedReturn}
+	/>
 
 	<section class="card preset-filled-surface-100-900 p-5 space-y-4">
 		<h2 class="h4">Parametry</h2>
