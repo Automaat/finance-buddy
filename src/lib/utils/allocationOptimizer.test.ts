@@ -11,6 +11,7 @@ function baseInputs(overrides: Partial<OptionInputs> = {}): OptionInputs {
 		brokerage: 0
 	};
 	return {
+		amountPLN: 1000,
 		marginalPitRate: 0.32,
 		ikzeRemainingPLN: 5000,
 		ikeRemainingPLN: 10000,
@@ -91,6 +92,28 @@ describe('rankOptions', () => {
 			expect(option.factors.length).toBeGreaterThan(0);
 			expect(option.name).toBeTruthy();
 		}
+	});
+
+	it('scales IKZE benefit when the planned amount exceeds the remaining limit', () => {
+		// Identical inputs; only amount changes. With remaining = 1000 and
+		// amount = 1000 → full coverage; amount = 5000 → 20% coverage.
+		const full = rankOptions(
+			baseInputs({ ikzeRemainingPLN: 1000, amountPLN: 1000, liquidityNeedScore: 0 })
+		).find((r) => r.option === 'ikze')!;
+		const partial = rankOptions(
+			baseInputs({ ikzeRemainingPLN: 1000, amountPLN: 5000, liquidityNeedScore: 0 })
+		).find((r) => r.option === 'ikze')!;
+		// liquidity + drift factors don't depend on coverage, so the
+		// difference is exactly the cap-bound factors × (1 − coverage).
+		expect(partial.total).toBeLessThan(full.total);
+		expect(partial.factors[0].label).toMatch(/część 20%/);
+	});
+
+	it('renames the mortgage factor without the gwarantowanie typo', () => {
+		const ranked = rankOptions(baseInputs({ mortgageRemainingPLN: 100000, amountPLN: 1000 }));
+		const m = ranked.find((r) => r.option === 'mortgage')!;
+		expect(m.factors.some((f) => /gwarantowane/.test(f.label))).toBe(true);
+		expect(m.factors.some((f) => /gwarantowanie/.test(f.label))).toBe(false);
 	});
 
 	it('applies capital gains tax to brokerage expected return', () => {

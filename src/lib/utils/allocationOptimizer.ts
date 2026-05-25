@@ -3,6 +3,11 @@ import { PL_RULES } from './pl_rules.generated';
 export type OptionKey = 'ikze' | 'ike' | 'ppk' | 'mortgage' | 'bonds' | 'brokerage';
 
 export interface OptionInputs {
+	// Amount the user plans to contribute. Used to scale benefit factors
+	// for options whose tax/APR upside applies only up to their remaining
+	// limit — e.g. paying 5000 PLN into IKZE with 1000 PLN of remaining
+	// limit converts only 20% of the deposit into a deductible amount.
+	amountPLN: number;
 	marginalPitRate: number;
 	ikzeRemainingPLN: number;
 	ikeRemainingPLN: number;
@@ -64,10 +69,32 @@ function pp(rate: number): number {
 	return rate * 100;
 }
 
+// limitCoverage is the share of the user's planned deposit that fits
+// inside a per-option contribution cap. Anything above the cap delivers
+// none of the tax-side benefit and is silently re-routed to a taxable
+// account, so the scorer multiplies cap-bound factors by this ratio
+// instead of overstating the value.
+function limitCoverage(amount: number, remaining: number): number {
+	if (amount <= 0) return 0;
+	return Math.max(0, Math.min(1, remaining / amount));
+}
+
+function partialLabel(coverage: number, base: string): string {
+	if (coverage >= 1) return base;
+	return `${base} (część ${Math.round(coverage * 100)}%)`;
+}
+
 function scoreIKZE(input: OptionInputs): OptionScore {
+	const coverage = limitCoverage(input.amountPLN, input.ikzeRemainingPLN);
 	const factors: ScoreFactor[] = [
-		{ label: 'Ulga PIT (zwrot)', pp: pp(input.marginalPitRate) },
-		{ label: 'Belka nie pobierana', pp: pp(capitalGainsTax * 0.3) },
+		{
+			label: partialLabel(coverage, 'Ulga PIT (zwrot)'),
+			pp: pp(input.marginalPitRate) * coverage
+		},
+		{
+			label: partialLabel(coverage, 'Belka nie pobierana'),
+			pp: pp(capitalGainsTax * 0.3) * coverage
+		},
 		driftFactor('ikze', input.allocationDrift),
 		liquidityFactor('ikze', input.liquidityNeedScore)
 	];
@@ -82,8 +109,12 @@ function scoreIKZE(input: OptionInputs): OptionScore {
 }
 
 function scoreIKE(input: OptionInputs): OptionScore {
+	const coverage = limitCoverage(input.amountPLN, input.ikeRemainingPLN);
 	const factors: ScoreFactor[] = [
-		{ label: 'Belka uniknięta', pp: pp(capitalGainsTax * 0.5) },
+		{
+			label: partialLabel(coverage, 'Belka uniknięta'),
+			pp: pp(capitalGainsTax * 0.5) * coverage
+		},
 		driftFactor('ike', input.allocationDrift),
 		liquidityFactor('ike', input.liquidityNeedScore)
 	];
@@ -116,8 +147,12 @@ function scorePPK(input: OptionInputs): OptionScore {
 }
 
 function scoreMortgage(input: OptionInputs): OptionScore {
+	const coverage = limitCoverage(input.amountPLN, input.mortgageRemainingPLN);
 	const factors: ScoreFactor[] = [
-		{ label: 'Odsetki gwarantowanie oszczędzone', pp: input.mortgageAPRPct },
+		{
+			label: partialLabel(coverage, 'Odsetki gwarantowane oszczędzone'),
+			pp: input.mortgageAPRPct * coverage
+		},
 		driftFactor('mortgage', input.allocationDrift),
 		liquidityFactor('mortgage', input.liquidityNeedScore)
 	];

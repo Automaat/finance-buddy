@@ -26,6 +26,7 @@
 	]);
 
 	const inputs = $derived<OptionInputs>({
+		amountPLN: amount,
 		marginalPitRate,
 		ikzeRemainingPLN,
 		ikeRemainingPLN,
