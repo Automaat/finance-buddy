@@ -16,6 +16,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/fx"
+	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
@@ -124,13 +125,13 @@ func (h *Handler) toResponse(ctx context.Context, b *BonusEvent) (response, erro
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	filter, vErr := parseListFilter(r.URL.Query())
 	if vErr != nil {
-		writePydanticError(w, vErr)
+		httputil.WritePydanticError(w, vErr)
 		return
 	}
 	rows, companies, err := h.store.List(r.Context(), filter)
 	if err != nil {
 		h.logger.Error("list bonuses", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	out := listResponse{
@@ -142,12 +143,12 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		resp, err := h.toResponse(r.Context(), &rows[i])
 		if err != nil {
 			h.logger.Error("fx lookup", "err", err)
-			writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+			httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 			return
 		}
 		out.BonusEvents = append(out.BonusEvents, resp)
 	}
-	writeJSON(w, http.StatusOK, out)
+	httputil.WriteJSON(w, http.StatusOK, out)
 }
 
 // Get serves GET /api/bonuses/{id}.
@@ -168,12 +169,12 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	raw := map[string]json.RawMessage{}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
-		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
 		return
 	}
 	req, vErr := buildCreateRequest(raw)
 	if vErr != nil {
-		writePydanticError(w, vErr)
+		httputil.WritePydanticError(w, vErr)
 		return
 	}
 	b := &BonusEvent{
@@ -189,7 +190,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	created, err := h.store.Create(r.Context(), b)
 	if err != nil {
 		h.logger.Error("create bonus", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	h.writeBonusResponse(w, r, http.StatusCreated, created)
@@ -203,12 +204,12 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	raw := map[string]json.RawMessage{}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
-		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
 		return
 	}
 	patch, vErr := buildUpdatePatch(raw)
 	if vErr != nil {
-		writePydanticError(w, vErr)
+		httputil.WritePydanticError(w, vErr)
 		return
 	}
 	updated, err := h.store.Update(r.Context(), id, patch)
@@ -225,10 +226,10 @@ func (h *Handler) writeBonusResponse(w http.ResponseWriter, r *http.Request, sta
 	resp, err := h.toResponse(r.Context(), b)
 	if err != nil {
 		h.logger.Error("fx lookup", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	writeJSON(w, status, resp)
+	httputil.WriteJSON(w, status, resp)
 }
 
 // Delete serves DELETE /api/bonuses/{id}.
@@ -246,20 +247,20 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) writeStoreError(w http.ResponseWriter, err error, id int) {
 	if errors.Is(err, ErrNotFound) {
-		writeDetailError(w, http.StatusNotFound,
+		httputil.WriteDetailError(w, http.StatusNotFound,
 			fmt.Sprintf("Bonus event with id %d not found", id))
 		return
 	}
 	h.logger.Error("bonus store", "err", err)
-	writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+	httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 }
 
-func parseListFilter(q map[string][]string) (ListFilter, *validationError) {
+func parseListFilter(q map[string][]string) (ListFilter, *httputil.ValidationError) {
 	f := ListFilter{}
 	if v := first(q["owner_user_id"]); v != "" {
 		n, err := strconv.Atoi(v)
 		if err != nil {
-			return f, &validationError{Field: "owner_user_id", Msg: "must be an integer"}
+			return f, &httputil.ValidationError{Field: "owner_user_id", Msg: "must be an integer"}
 		}
 		f.OwnerUserID = &n
 	}
@@ -270,14 +271,14 @@ func parseListFilter(q map[string][]string) (ListFilter, *validationError) {
 	if v := first(q["date_from"]); v != "" {
 		t, err := time.Parse("2006-01-02", v)
 		if err != nil {
-			return f, &validationError{Field: "date_from", Msg: "must be YYYY-MM-DD"}
+			return f, &httputil.ValidationError{Field: "date_from", Msg: "must be YYYY-MM-DD"}
 		}
 		f.DateFrom = &t
 	}
 	if v := first(q["date_to"]); v != "" {
 		t, err := time.Parse("2006-01-02", v)
 		if err != nil {
-			return f, &validationError{Field: "date_to", Msg: "must be YYYY-MM-DD"}
+			return f, &httputil.ValidationError{Field: "date_to", Msg: "must be YYYY-MM-DD"}
 		}
 		f.DateTo = &t
 	}
@@ -295,7 +296,7 @@ func parseIDParam(w http.ResponseWriter, r *http.Request) (int, bool) {
 	raw := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(raw)
 	if err != nil {
-		writeValidationError(w, "bonus_id", "must be an integer", raw)
+		httputil.WriteBodyValidationError(w, "bonus_id", "must be an integer", raw)
 		return 0, false
 	}
 	return id, true

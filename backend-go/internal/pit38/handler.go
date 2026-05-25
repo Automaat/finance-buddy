@@ -3,7 +3,6 @@ package pit38
 import (
 	"context"
 	"encoding/csv"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/fx"
 	"github.com/Automaat/finance-buddy/backend-go/internal/holdings"
+	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 )
 
 // Store loads the raw lot history grouped per security so the report can
@@ -117,7 +117,7 @@ func (h *Handler) Realized(w http.ResponseWriter, r *http.Request) {
 	if v := r.URL.Query().Get("year"); v != "" {
 		n, err := strconv.Atoi(v)
 		if err != nil {
-			writeValidation(w, "year", "must be an integer")
+			httputil.WriteQueryValidationError(w, "year", "must be an integer")
 			return
 		}
 		year = n
@@ -125,30 +125,30 @@ func (h *Handler) Realized(w http.ResponseWriter, r *http.Request) {
 	lots, err := h.store.LoadAllLots(r.Context())
 	if err != nil {
 		h.logger.Error("pit38 load", "err", err)
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	rep, err := ComputeReport(r.Context(), year, h.fx, lots)
 	if err != nil {
 		if errors.Is(err, ErrUnknownCurrency) {
-			writeError(w, http.StatusUnprocessableEntity,
+			httputil.WriteDetailError(w, http.StatusUnprocessableEntity,
 				"NBP rate not available for one of the traded currencies")
 			return
 		}
 		if errors.Is(err, holdings.ErrOversell) {
-			writeError(w, http.StatusUnprocessableEntity,
+			httputil.WriteDetailError(w, http.StatusUnprocessableEntity,
 				"Lot history oversells a security — clean up the lot log first")
 			return
 		}
 		h.logger.Error("pit38 compute", "err", err)
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	if r.URL.Query().Get("format") == "csv" {
 		writeCSV(w, rep)
 		return
 	}
-	writeJSON(w, http.StatusOK, rep)
+	httputil.WriteJSON(w, http.StatusOK, rep)
 }
 
 func writeCSV(w http.ResponseWriter, rep Report) {
@@ -186,25 +186,5 @@ func writeCSV(w http.ResponseWriter, rep Report) {
 		rep.Totals.CostBasisPLN.StringFixed(2),
 		rep.Totals.FeesPLN.StringFixed(2),
 		rep.Totals.RealizedPLN.StringFixed(2),
-	})
-}
-
-func writeJSON(w http.ResponseWriter, status int, payload any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(payload); err != nil {
-		slog.Default().Error("pit38 encode", "err", err)
-	}
-}
-
-func writeError(w http.ResponseWriter, status int, detail string) {
-	writeJSON(w, status, map[string]string{"detail": detail})
-}
-
-func writeValidation(w http.ResponseWriter, field, msg string) {
-	writeJSON(w, http.StatusUnprocessableEntity, map[string]any{
-		"detail": []map[string]any{
-			{"type": "value_error", "loc": []string{"query", field}, "msg": msg},
-		},
 	})
 }

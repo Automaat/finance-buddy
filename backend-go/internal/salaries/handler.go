@@ -16,6 +16,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/cpi"
+	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
@@ -94,32 +95,32 @@ func toResponse(r *SalaryRecord) response {
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	filter, vErr := parseListFilter(r.URL.Query())
 	if vErr != nil {
-		writePydanticError(w, vErr)
+		httputil.WritePydanticError(w, vErr)
 		return
 	}
 	rows, companies, err := h.store.List(r.Context(), filter)
 	if err != nil {
 		h.logger.Error("list salaries", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	today := truncateDay(h.now().UTC())
 	userIDs, err := h.store.ActiveOwnerUserIDs(r.Context())
 	if err != nil {
 		h.logger.Error("owner user ids", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	currentSalaries, err := h.store.CurrentSalaryByUser(r.Context(), userIDs, today)
 	if err != nil {
 		h.logger.Error("current salaries", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	inflationCtx, err := h.buildInflationContext(r.Context(), userIDs, today)
 	if err != nil {
 		h.logger.Error("inflation context", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	out := listResponse{
@@ -132,7 +133,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	for i := range rows {
 		out.SalaryRecords = append(out.SalaryRecords, toResponse(&rows[i]))
 	}
-	writeJSON(w, http.StatusOK, out)
+	httputil.WriteJSON(w, http.StatusOK, out)
 }
 
 // Get serves GET /api/salaries/{id}.
@@ -146,19 +147,19 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		h.writeStoreError(w, err, id)
 		return
 	}
-	writeJSON(w, http.StatusOK, toResponse(rec))
+	httputil.WriteJSON(w, http.StatusOK, toResponse(rec))
 }
 
 // Create serves POST /api/salaries.
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	raw := map[string]json.RawMessage{}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
-		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
 		return
 	}
 	req, vErr := buildCreateRequest(raw, h.now)
 	if vErr != nil {
-		writePydanticError(w, vErr)
+		httputil.WritePydanticError(w, vErr)
 		return
 	}
 	created, err := h.store.Create(r.Context(), &SalaryRecord{
@@ -170,16 +171,16 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		if errors.Is(err, ErrDuplicate) {
-			writeDetailError(w, http.StatusConflict,
+			httputil.WriteDetailError(w, http.StatusConflict,
 				fmt.Sprintf("A salary record on %s already exists for this owner",
 					req.Date.Format("2006-01-02")))
 			return
 		}
 		h.logger.Error("create salary", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	writeJSON(w, http.StatusCreated, toResponse(created))
+	httputil.WriteJSON(w, http.StatusCreated, toResponse(created))
 }
 
 // Update serves PATCH /api/salaries/{id}.
@@ -190,12 +191,12 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	raw := map[string]json.RawMessage{}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
-		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
 		return
 	}
 	patch, vErr := buildUpdatePatch(raw, h.now)
 	if vErr != nil {
-		writePydanticError(w, vErr)
+		httputil.WritePydanticError(w, vErr)
 		return
 	}
 	updated, err := h.store.Update(r.Context(), id, patch)
@@ -211,7 +212,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 					date = current.Date.Format("2006-01-02")
 				}
 			}
-			writeDetailError(w, http.StatusConflict,
+			httputil.WriteDetailError(w, http.StatusConflict,
 				fmt.Sprintf("A salary record on %s conflicts with an existing record",
 					date))
 			return
@@ -219,7 +220,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		h.writeStoreError(w, err, id)
 		return
 	}
-	writeJSON(w, http.StatusOK, toResponse(updated))
+	httputil.WriteJSON(w, http.StatusOK, toResponse(updated))
 }
 
 // Delete serves DELETE /api/salaries/{id}.
@@ -237,12 +238,12 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) writeStoreError(w http.ResponseWriter, err error, id int) {
 	if errors.Is(err, ErrNotFound) {
-		writeDetailError(w, http.StatusNotFound,
+		httputil.WriteDetailError(w, http.StatusNotFound,
 			fmt.Sprintf("Salary record with id %d not found", id))
 		return
 	}
 	h.logger.Error("salary store", "err", err)
-	writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+	httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 }
 
 // buildInflationContext mirrors Python's _build_inflation_context: for each
@@ -325,12 +326,12 @@ func salariesToFloatMap(
 	return out
 }
 
-func parseListFilter(q map[string][]string) (ListFilter, *validationError) {
+func parseListFilter(q map[string][]string) (ListFilter, *httputil.ValidationError) {
 	f := ListFilter{}
 	if v := first(q["owner_user_id"]); v != "" {
 		n, err := strconv.Atoi(v)
 		if err != nil {
-			return f, &validationError{Field: "owner_user_id", Msg: "must be an integer"}
+			return f, &httputil.ValidationError{Field: "owner_user_id", Msg: "must be an integer"}
 		}
 		f.OwnerUserID = &n
 	}
@@ -341,14 +342,14 @@ func parseListFilter(q map[string][]string) (ListFilter, *validationError) {
 	if v := first(q["date_from"]); v != "" {
 		t, err := time.Parse("2006-01-02", v)
 		if err != nil {
-			return f, &validationError{Field: "date_from", Msg: "must be YYYY-MM-DD"}
+			return f, &httputil.ValidationError{Field: "date_from", Msg: "must be YYYY-MM-DD"}
 		}
 		f.DateFrom = &t
 	}
 	if v := first(q["date_to"]); v != "" {
 		t, err := time.Parse("2006-01-02", v)
 		if err != nil {
-			return f, &validationError{Field: "date_to", Msg: "must be YYYY-MM-DD"}
+			return f, &httputil.ValidationError{Field: "date_to", Msg: "must be YYYY-MM-DD"}
 		}
 		f.DateTo = &t
 	}
@@ -366,7 +367,7 @@ func parseIDParam(w http.ResponseWriter, r *http.Request) (int, bool) {
 	raw := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(raw)
 	if err != nil {
-		writeValidationError(w, "salary_id", "must be an integer", raw)
+		httputil.WriteBodyValidationError(w, "salary_id", "must be an integer", raw)
 		return 0, false
 	}
 	return id, true

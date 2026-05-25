@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 )
 
 type limitRequest struct {
@@ -21,7 +23,7 @@ var validWrappers = map[string]struct{}{
 	"IKE": {}, "IKZE": {}, "PPK": {},
 }
 
-func buildLimitRequest(raw map[string]json.RawMessage, now func() time.Time) (limitRequest, *validationError) {
+func buildLimitRequest(raw map[string]json.RawMessage, now func() time.Time) (limitRequest, *httputil.ValidationError) {
 	var r limitRequest
 	currentYear := now().UTC().Year()
 	year, vErr := requireIntRange(raw, "year", 2000, currentYear+10,
@@ -52,7 +54,7 @@ func buildLimitRequest(raw map[string]json.RawMessage, now func() time.Time) (li
 	if v, ok := raw["notes"]; ok && !isNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
-			return r, &validationError{Field: "notes", Msg: "must be a string"}
+			return r, &httputil.ValidationError{Field: "notes", Msg: "must be a string"}
 		}
 		r.Notes = &s
 	}
@@ -67,7 +69,7 @@ type generateRequest struct {
 	IncludeAnnual  bool
 }
 
-func buildGenerateRequest(raw map[string]json.RawMessage, now func() time.Time) (generateRequest, *validationError) {
+func buildGenerateRequest(raw map[string]json.RawMessage, now func() time.Time) (generateRequest, *httputil.ValidationError) {
 	var r generateRequest
 	// PPK contributions are always generated for a specific person — a null
 	// (jointly owned) owner is rejected up front rather than failing later
@@ -108,89 +110,89 @@ func buildGenerateRequest(raw map[string]json.RawMessage, now func() time.Time) 
 // optionalBool reads a boolean key. Missing/null returns false; a present
 // non-bool value (e.g. "true" sent as a string) is rejected so the client
 // gets a 422 instead of silently degrading to false.
-func optionalBool(raw map[string]json.RawMessage, key string) (bool, *validationError) {
+func optionalBool(raw map[string]json.RawMessage, key string) (bool, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok || isNull(v) {
 		return false, nil
 	}
 	var b bool
 	if err := json.Unmarshal(v, &b); err != nil {
-		return false, &validationError{Field: key, Msg: "must be a boolean"}
+		return false, &httputil.ValidationError{Field: key, Msg: "must be a boolean"}
 	}
 	return b, nil
 }
 
 // requireInt reads an integer key that must be present and non-null.
-func requireInt(raw map[string]json.RawMessage, key string) (int, *validationError) {
+func requireInt(raw map[string]json.RawMessage, key string) (int, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok || isNull(v) {
-		return 0, &validationError{Field: key, Msg: "Field required"}
+		return 0, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var n int
 	if err := json.Unmarshal(v, &n); err != nil {
-		return 0, &validationError{Field: key, Msg: "must be an integer"}
+		return 0, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
 	}
 	return n, nil
 }
 
 // requireIntOrNull reads an integer key that must be present; an explicit
 // null is allowed and yields nil (jointly owned).
-func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *validationError) {
+func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok {
-		return nil, &validationError{Field: key, Msg: "Field required"}
+		return nil, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	if isNull(v) {
 		return nil, nil
 	}
 	var n int
 	if err := json.Unmarshal(v, &n); err != nil {
-		return nil, &validationError{Field: key, Msg: "must be an integer"}
+		return nil, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
 	}
 	return &n, nil
 }
 
-func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *validationError) {
+func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok || isNull(v) {
-		return "", &validationError{Field: key, Msg: "Field required"}
+		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var s string
 	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &validationError{Field: key, Msg: "must be a string"}
+		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
 	}
 	if _, ok := allowed[s]; !ok {
-		return "", &validationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
+		return "", &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
 	}
 	return s, nil
 }
 
-func requireIntRange(raw map[string]json.RawMessage, key string, lo, hi int, msg string) (int, *validationError) {
+func requireIntRange(raw map[string]json.RawMessage, key string, lo, hi int, msg string) (int, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok || isNull(v) {
-		return 0, &validationError{Field: key, Msg: "Field required"}
+		return 0, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var n int
 	if err := json.Unmarshal(v, &n); err != nil {
-		return 0, &validationError{Field: key, Msg: "must be an integer"}
+		return 0, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
 	}
 	if n < lo || n > hi {
-		return 0, &validationError{Field: key, Msg: msg}
+		return 0, &httputil.ValidationError{Field: key, Msg: msg}
 	}
 	return n, nil
 }
 
-func requirePositiveDecimal(raw map[string]json.RawMessage, key, msg string) (decimal.Decimal, *validationError) {
+func requirePositiveDecimal(raw map[string]json.RawMessage, key, msg string) (decimal.Decimal, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok || isNull(v) {
-		return decimal.Decimal{}, &validationError{Field: key, Msg: "Field required"}
+		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	d, err := decimal.NewFromString(string(bytes.TrimSpace(v)))
 	if err != nil {
-		return decimal.Decimal{}, &validationError{Field: key, Msg: "must be a number"}
+		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "must be a number"}
 	}
 	if !d.IsPositive() {
-		return decimal.Decimal{}, &validationError{Field: key, Msg: msg}
+		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: msg}
 	}
 	return d, nil
 }

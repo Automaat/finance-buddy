@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 )
 
 type createRequest struct {
@@ -23,7 +25,7 @@ type createRequest struct {
 }
 
 // buildCreateRequest validates the POST body.
-func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *validationError) {
+func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputil.ValidationError) {
 	var r createRequest
 	name, vErr := requireString(raw, "name", "Name cannot be empty")
 	if vErr != nil {
@@ -94,16 +96,16 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *validat
 //     (Python's service uses `if data.X is not None` and skips Nones)
 //   - explicit null on account_wrapper or square_meters -> set to NULL
 //     (Pydantic's `Wrapper | None` lets None through and the service writes it)
-func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *validationError) {
+func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.ValidationError) {
 	var p UpdatePatch
 	if v, ok := raw["name"]; ok && !isNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
-			return p, &validationError{Field: "name", Msg: "must be a string"}
+			return p, &httputil.ValidationError{Field: "name", Msg: "must be a string"}
 		}
 		s = strings.TrimSpace(s)
 		if s == "" {
-			return p, &validationError{Field: "name", Msg: "Name cannot be empty"}
+			return p, &httputil.ValidationError{Field: "name", Msg: "Name cannot be empty"}
 		}
 		p.Name = &s
 	}
@@ -117,7 +119,7 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *validationE
 		} else {
 			var n int
 			if err := json.Unmarshal(v, &n); err != nil {
-				return p, &validationError{Field: "owner_user_id", Msg: "must be an integer"}
+				return p, &httputil.ValidationError{Field: "owner_user_id", Msg: "must be an integer"}
 			}
 			p.OwnerUserID = &n
 		}
@@ -135,10 +137,10 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *validationE
 		} else {
 			var s string
 			if err := json.Unmarshal(v, &s); err != nil {
-				return p, &validationError{Field: "account_wrapper", Msg: "must be a string"}
+				return p, &httputil.ValidationError{Field: "account_wrapper", Msg: "must be a string"}
 			}
 			if _, ok := validWrappers[s]; !ok {
-				return p, &validationError{Field: "account_wrapper", Msg: fmt.Sprintf("invalid wrapper %q", s)}
+				return p, &httputil.ValidationError{Field: "account_wrapper", Msg: fmt.Sprintf("invalid wrapper %q", s)}
 			}
 			p.AccountWrapper = &s
 		}
@@ -150,7 +152,7 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *validationE
 		} else {
 			d, err := decimal.NewFromString(string(bytes.TrimSpace(v)))
 			if err != nil {
-				return p, &validationError{Field: "square_meters", Msg: "must be a number"}
+				return p, &httputil.ValidationError{Field: "square_meters", Msg: "must be a number"}
 			}
 			p.SquareMeters = &d
 		}
@@ -158,14 +160,14 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *validationE
 	if v, ok := raw["receives_contributions"]; ok && !isNull(v) {
 		var b bool
 		if err := json.Unmarshal(v, &b); err != nil {
-			return p, &validationError{Field: "receives_contributions", Msg: "must be a boolean"}
+			return p, &httputil.ValidationError{Field: "receives_contributions", Msg: "must be a boolean"}
 		}
 		p.ReceivesContributions = &b
 	}
 	if v, ok := raw["excluded_from_fire"]; ok && !isNull(v) {
 		var b bool
 		if err := json.Unmarshal(v, &b); err != nil {
-			return p, &validationError{Field: "excluded_from_fire", Msg: "must be a boolean"}
+			return p, &httputil.ValidationError{Field: "excluded_from_fire", Msg: "must be a boolean"}
 		}
 		p.ExcludedFromFire = &b
 	}
@@ -174,147 +176,147 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *validationE
 
 // --- helpers ---
 
-func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string, *validationError) {
+func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok || isNull(v) {
-		return "", &validationError{Field: key, Msg: "Field required"}
+		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var s string
 	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &validationError{Field: key, Msg: "must be a string"}
+		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
 	}
 	s = strings.TrimSpace(s)
 	if s == "" {
-		return "", &validationError{Field: key, Msg: emptyMsg}
+		return "", &httputil.ValidationError{Field: key, Msg: emptyMsg}
 	}
 	return s, nil
 }
 
 // requireIntOrNull reads an integer key that must be present; an explicit
 // null is allowed and yields nil (the "Shared" owner).
-func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *validationError) {
+func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok {
-		return nil, &validationError{Field: key, Msg: "Field required"}
+		return nil, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	if isNull(v) {
 		return nil, nil
 	}
 	var n int
 	if err := json.Unmarshal(v, &n); err != nil {
-		return nil, &validationError{Field: key, Msg: "must be an integer"}
+		return nil, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
 	}
 	return &n, nil
 }
 
-func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *validationError) {
+func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok || isNull(v) {
-		return "", &validationError{Field: key, Msg: "Field required"}
+		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var s string
 	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &validationError{Field: key, Msg: "must be a string"}
+		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
 	}
 	if _, ok := allowed[s]; !ok {
-		return "", &validationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
+		return "", &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
 	}
 	return s, nil
 }
 
-func optionalString(raw map[string]json.RawMessage, key, fallback string) (string, *validationError) {
+func optionalString(raw map[string]json.RawMessage, key, fallback string) (string, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok {
 		return fallback, nil
 	}
 	if isNull(v) {
-		return "", &validationError{Field: key, Msg: "must be a string"}
+		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
 	}
 	var s string
 	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &validationError{Field: key, Msg: "must be a string"}
+		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
 	}
 	return s, nil
 }
 
-func optionalEnumOrNull(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (*string, *validationError) {
+func optionalEnumOrNull(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (*string, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok || isNull(v) {
 		return nil, nil
 	}
 	var s string
 	if err := json.Unmarshal(v, &s); err != nil {
-		return nil, &validationError{Field: key, Msg: "must be a string"}
+		return nil, &httputil.ValidationError{Field: key, Msg: "must be a string"}
 	}
 	if _, ok := allowed[s]; !ok {
-		return nil, &validationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
+		return nil, &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
 	}
 	return &s, nil
 }
 
-func optionalDecimal(raw map[string]json.RawMessage, key string) (*decimal.Decimal, *validationError) {
+func optionalDecimal(raw map[string]json.RawMessage, key string) (*decimal.Decimal, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok || isNull(v) {
 		return nil, nil
 	}
 	d, err := decimal.NewFromString(string(bytes.TrimSpace(v)))
 	if err != nil {
-		return nil, &validationError{Field: key, Msg: "must be a number"}
+		return nil, &httputil.ValidationError{Field: key, Msg: "must be a number"}
 	}
 	return &d, nil
 }
 
-func optionalBoolDefaultTrue(raw map[string]json.RawMessage, key string) (bool, *validationError) {
+func optionalBoolDefaultTrue(raw map[string]json.RawMessage, key string) (bool, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok {
 		return true, nil
 	}
 	if isNull(v) {
-		return false, &validationError{Field: key, Msg: "must be a boolean"}
+		return false, &httputil.ValidationError{Field: key, Msg: "must be a boolean"}
 	}
 	var b bool
 	if err := json.Unmarshal(v, &b); err != nil {
-		return false, &validationError{Field: key, Msg: "must be a boolean"}
+		return false, &httputil.ValidationError{Field: key, Msg: "must be a boolean"}
 	}
 	return b, nil
 }
 
-func optionalBoolDefaultFalse(raw map[string]json.RawMessage, key string) (bool, *validationError) {
+func optionalBoolDefaultFalse(raw map[string]json.RawMessage, key string) (bool, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok || isNull(v) {
 		return false, nil
 	}
 	var b bool
 	if err := json.Unmarshal(v, &b); err != nil {
-		return false, &validationError{Field: key, Msg: "must be a boolean"}
+		return false, &httputil.ValidationError{Field: key, Msg: "must be a boolean"}
 	}
 	return b, nil
 }
 
-func patchEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}, dest **string) *validationError {
+func patchEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}, dest **string) *httputil.ValidationError {
 	v, ok := raw[key]
 	if !ok || isNull(v) {
 		return nil
 	}
 	var s string
 	if err := json.Unmarshal(v, &s); err != nil {
-		return &validationError{Field: key, Msg: "must be a string"}
+		return &httputil.ValidationError{Field: key, Msg: "must be a string"}
 	}
 	if _, ok := allowed[s]; !ok {
-		return &validationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
+		return &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
 	}
 	*dest = &s
 	return nil
 }
 
-func patchPlainString(raw map[string]json.RawMessage, key string, dest **string) *validationError {
+func patchPlainString(raw map[string]json.RawMessage, key string, dest **string) *httputil.ValidationError {
 	v, ok := raw[key]
 	if !ok || isNull(v) {
 		return nil
 	}
 	var s string
 	if err := json.Unmarshal(v, &s); err != nil {
-		return &validationError{Field: key, Msg: "must be a string"}
+		return &httputil.ValidationError{Field: key, Msg: "must be a string"}
 	}
 	*dest = &s
 	return nil

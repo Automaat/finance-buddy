@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
 
+	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
@@ -113,25 +114,25 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.store.List(r.Context())
 	if err != nil {
 		h.logger.Error("list allocation targets", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	out := listResponse{Targets: make([]response, 0, len(rows))}
 	for i := range rows {
 		out.Targets = append(out.Targets, toResponse(&rows[i]))
 	}
-	writeJSON(w, http.StatusOK, out)
+	httputil.WriteJSON(w, http.StatusOK, out)
 }
 
 // Create serves POST /api/allocation/targets.
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createRequest
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&req); err != nil {
-		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
 		return
 	}
 	if vErr := validateCreate(&req); vErr != nil {
-		writePydanticError(w, vErr)
+		httputil.WritePydanticError(w, vErr)
 		return
 	}
 	t := &Target{
@@ -144,7 +145,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		h.writeStoreError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, toResponse(created))
+	httputil.WriteJSON(w, http.StatusCreated, toResponse(created))
 }
 
 // Update serves PUT /api/allocation/targets/{id}. Only target_pct is
@@ -156,12 +157,12 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	raw := map[string]json.RawMessage{}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
-		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
 		return
 	}
 	patch, vErr := buildUpdatePatch(raw)
 	if vErr != nil {
-		writePydanticError(w, vErr)
+		httputil.WritePydanticError(w, vErr)
 		return
 	}
 	t, err := h.store.Update(r.Context(), id, patch)
@@ -169,7 +170,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		h.writeStoreError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, toResponse(t))
+	httputil.WriteJSON(w, http.StatusOK, toResponse(t))
 }
 
 // Delete serves DELETE /api/allocation/targets/{id}.
@@ -190,11 +191,11 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Replace(w http.ResponseWriter, r *http.Request) {
 	var req replaceRequest
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&req); err != nil {
-		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
 		return
 	}
 	if vErr := validateReplaceBatch(req.Targets); vErr != nil {
-		writePydanticError(w, vErr)
+		httputil.WritePydanticError(w, vErr)
 		return
 	}
 	toInsert := make([]Target, 0, len(req.Targets))
@@ -213,7 +214,7 @@ func (h *Handler) Replace(w http.ResponseWriter, r *http.Request) {
 	for i := range inserted {
 		out.Targets = append(out.Targets, toResponse(&inserted[i]))
 	}
-	writeJSON(w, http.StatusOK, out)
+	httputil.WriteJSON(w, http.StatusOK, out)
 }
 
 // Drift serves GET /api/allocation/drift — the dashboard widget payload.
@@ -221,13 +222,13 @@ func (h *Handler) Drift(w http.ResponseWriter, r *http.Request) {
 	targets, err := h.store.List(r.Context())
 	if err != nil {
 		h.logger.Error("drift: list targets", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	holdings, err := h.holdings.LatestHoldings(r.Context())
 	if err != nil {
 		h.logger.Error("drift: load holdings", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	analysis := ComputeDrift(holdings, targets)
@@ -254,7 +255,7 @@ func (h *Handler) Drift(w http.ResponseWriter, r *http.Request) {
 		}
 		out.Scopes = append(out.Scopes, s)
 	}
-	writeJSON(w, http.StatusOK, out)
+	httputil.WriteJSON(w, http.StatusOK, out)
 }
 
 func (h *Handler) writeStoreError(w http.ResponseWriter, err error) {
@@ -262,15 +263,15 @@ func (h *Handler) writeStoreError(w http.ResponseWriter, err error) {
 	var dupScope *DuplicateScopeError
 	switch {
 	case errors.Is(err, ErrNotFound):
-		writeDetailError(w, http.StatusNotFound, "Allocation target not found")
+		httputil.WriteDetailError(w, http.StatusNotFound, "Allocation target not found")
 	case errors.As(err, &ownerMissing):
-		writeDetailError(w, http.StatusNotFound,
+		httputil.WriteDetailError(w, http.StatusNotFound,
 			fmt.Sprintf("User with id %d not found", ownerMissing.OwnerUserID))
 	case errors.As(err, &dupScope):
-		writeDetailError(w, http.StatusConflict, dupScope.Error())
+		httputil.WriteDetailError(w, http.StatusConflict, dupScope.Error())
 	default:
 		h.logger.Error("allocation store", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 	}
 }
 
@@ -278,7 +279,7 @@ func parseIDParam(w http.ResponseWriter, r *http.Request) (int, bool) {
 	raw := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(raw)
 	if err != nil {
-		writeValidationError(w, "target_id", "must be an integer", raw)
+		httputil.WriteBodyValidationError(w, "target_id", "must be an integer", raw)
 		return 0, false
 	}
 	return id, true

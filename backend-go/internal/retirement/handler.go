@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
@@ -89,7 +90,7 @@ func (h *Handler) Stats(w http.ResponseWriter, r *http.Request) {
 	if v := r.URL.Query().Get("year"); v != "" {
 		n, err := strconv.Atoi(v)
 		if err != nil {
-			writeValidationError(w, "year", "must be an integer", v)
+			httputil.WriteBodyValidationError(w, "year", "must be an integer", v)
 			return
 		}
 		year = n
@@ -97,12 +98,12 @@ func (h *Handler) Stats(w http.ResponseWriter, r *http.Request) {
 	owners, err := h.resolveOwners(r.Context(), r.URL.Query().Get("owner_user_id"))
 	if err != nil {
 		if errors.Is(err, errBadOwnerParam) {
-			writeValidationError(w, "owner_user_id", "must be an integer",
+			httputil.WriteBodyValidationError(w, "owner_user_id", "must be an integer",
 				r.URL.Query().Get("owner_user_id"))
 			return
 		}
 		h.logger.Error("resolve owners", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	out := []yearlyStat{}
@@ -111,7 +112,7 @@ func (h *Handler) Stats(w http.ResponseWriter, r *http.Request) {
 			stat, included, err := h.buildYearlyStat(r.Context(), year, wrapper, owner)
 			if err != nil {
 				h.logger.Error("yearly stat", "err", err)
-				writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+				httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 				return
 			}
 			if included {
@@ -119,7 +120,7 @@ func (h *Handler) Stats(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	writeJSON(w, http.StatusOK, out)
+	httputil.WriteJSON(w, http.StatusOK, out)
 }
 
 func (h *Handler) buildYearlyStat(ctx context.Context, year int, wrapper string, ownerUserID *int) (yearlyStat, bool, error) {
@@ -182,12 +183,12 @@ func (h *Handler) PPKStats(w http.ResponseWriter, r *http.Request) {
 	owners, err := h.resolveOwners(r.Context(), r.URL.Query().Get("owner_user_id"))
 	if err != nil {
 		if errors.Is(err, errBadOwnerParam) {
-			writeValidationError(w, "owner_user_id", "must be an integer",
+			httputil.WriteBodyValidationError(w, "owner_user_id", "must be an integer",
 				r.URL.Query().Get("owner_user_id"))
 			return
 		}
 		h.logger.Error("resolve owners", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	out := []ppkStat{}
@@ -195,14 +196,14 @@ func (h *Handler) PPKStats(w http.ResponseWriter, r *http.Request) {
 		stat, included, err := h.buildPPKStat(r.Context(), owner)
 		if err != nil {
 			h.logger.Error("ppk stat", "err", err)
-			writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+			httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 			return
 		}
 		if included {
 			out = append(out, stat)
 		}
 	}
-	writeJSON(w, http.StatusOK, out)
+	httputil.WriteJSON(w, http.StatusOK, out)
 }
 
 func (h *Handler) buildPPKStat(ctx context.Context, ownerUserID *int) (ppkStat, bool, error) {
@@ -228,13 +229,13 @@ func (h *Handler) buildPPKStat(ctx context.Context, ownerUserID *int) (ppkStat, 
 func (h *Handler) LimitsForYear(w http.ResponseWriter, r *http.Request) {
 	year, err := strconv.Atoi(chi.URLParam(r, "year"))
 	if err != nil {
-		writeValidationError(w, "year", "must be an integer", chi.URLParam(r, "year"))
+		httputil.WriteBodyValidationError(w, "year", "must be an integer", chi.URLParam(r, "year"))
 		return
 	}
 	limits, err := h.store.LimitsForYear(r.Context(), year)
 	if err != nil {
 		h.logger.Error("limits", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	out := make([]limitResponse, 0, len(limits))
@@ -245,14 +246,14 @@ func (h *Handler) LimitsForYear(w http.ResponseWriter, r *http.Request) {
 			OwnerUserID: l.OwnerUserID, LimitAmount: wire.PyFloat(amt), Notes: l.Notes,
 		})
 	}
-	writeJSON(w, http.StatusOK, out)
+	httputil.WriteJSON(w, http.StatusOK, out)
 }
 
 // UpsertLimit serves PUT /api/retirement/limits/{year}/{wrapper}/{owner_user_id}.
 func (h *Handler) UpsertLimit(w http.ResponseWriter, r *http.Request) {
 	year, err := strconv.Atoi(chi.URLParam(r, "year"))
 	if err != nil {
-		writeValidationError(w, "year", "must be an integer", chi.URLParam(r, "year"))
+		httputil.WriteBodyValidationError(w, "year", "must be an integer", chi.URLParam(r, "year"))
 		return
 	}
 	wrapper := chi.URLParam(r, "wrapper")
@@ -262,29 +263,29 @@ func (h *Handler) UpsertLimit(w http.ResponseWriter, r *http.Request) {
 	if ownerParam != "null" {
 		n, err := strconv.Atoi(ownerParam)
 		if err != nil {
-			writeValidationError(w, "owner_user_id", "must be an integer", ownerParam)
+			httputil.WriteBodyValidationError(w, "owner_user_id", "must be an integer", ownerParam)
 			return
 		}
 		ownerUserID = &n
 	}
 	raw := map[string]json.RawMessage{}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
-		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
 		return
 	}
 	req, vErr := buildLimitRequest(raw, h.now)
 	if vErr != nil {
-		writePydanticError(w, vErr)
+		httputil.WritePydanticError(w, vErr)
 		return
 	}
 	l, err := h.store.UpsertLimit(r.Context(), year, wrapper, ownerUserID, req.LimitAmount, req.Notes)
 	if err != nil {
 		h.logger.Error("upsert limit", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	amt, _ := l.LimitAmount.Float64()
-	writeJSON(w, http.StatusOK, limitResponse{
+	httputil.WriteJSON(w, http.StatusOK, limitResponse{
 		ID: l.ID, Year: l.Year, AccountWrapper: l.AccountWrapper,
 		OwnerUserID: l.OwnerUserID, LimitAmount: wire.PyFloat(amt), Notes: l.Notes,
 	})
@@ -294,50 +295,50 @@ func (h *Handler) UpsertLimit(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GeneratePPKContributions(w http.ResponseWriter, r *http.Request) {
 	raw := map[string]json.RawMessage{}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
-		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
 		return
 	}
 	req, vErr := buildGenerateRequest(raw, h.now)
 	if vErr != nil {
-		writePydanticError(w, vErr)
+		httputil.WritePydanticError(w, vErr)
 		return
 	}
 	firstDay := time.Date(req.Year, time.Month(req.Month), 1, 0, 0, 0, 0, time.UTC)
 	gross, err := h.store.CurrentSalaryFor(r.Context(), req.OwnerUserID, firstDay)
 	if err != nil {
 		if errors.Is(err, ErrNoSalary) {
-			writeDetailError(w, http.StatusBadRequest,
+			httputil.WriteDetailError(w, http.StatusBadRequest,
 				fmt.Sprintf("No salary record found for user %s in %d/%d",
 					ownerLabel(req.OwnerUserID), req.Month, req.Year))
 			return
 		}
 		h.logger.Error("ppk salary", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	employeeRate, employerRate, err := h.store.UserPPKRates(r.Context(), req.OwnerUserID)
 	if err != nil {
 		if errors.Is(err, ErrUserNotFound) {
-			writeDetailError(w, http.StatusNotFound,
+			httputil.WriteDetailError(w, http.StatusNotFound,
 				fmt.Sprintf("User %s not found", ownerLabel(req.OwnerUserID)))
 			return
 		}
 		h.logger.Error("ppk rates", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	employeeAmt, employerAmt := computePPKContributionAmounts(gross, employeeRate, employerRate)
 	accountID, err := h.store.ActivePPKAccountForOwner(r.Context(), req.OwnerUserID)
 	if err != nil {
 		if errors.Is(err, ErrNoPPKAccount) {
-			writeDetailError(w, http.StatusNotFound,
+			httputil.WriteDetailError(w, http.StatusNotFound,
 				fmt.Sprintf("No active PPK account found for user %s. "+
 					"Mark one PPK account as receiving contributions.",
 					ownerLabel(req.OwnerUserID)))
 			return
 		}
 		h.logger.Error("ppk account", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	lastDay := time.Date(req.Year, time.Month(req.Month)+1, 0, 0, 0, 0, 0, time.UTC)
@@ -355,15 +356,15 @@ func (h *Handler) GeneratePPKContributions(w http.ResponseWriter, r *http.Reques
 	result, err := h.store.InsertPPKContributions(r.Context(), contrib)
 	if err != nil {
 		if errors.Is(err, ErrContributionsExist) {
-			writeDetailError(w, http.StatusConflict,
+			httputil.WriteDetailError(w, http.StatusConflict,
 				fmt.Sprintf("Contributions already exist for %d/%d", req.Month, req.Year))
 			return
 		}
 		h.logger.Error("insert ppk contributions", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	writeJSON(w, http.StatusOK, computePPKGenerateResponse(req, gross, employeeAmt, employerAmt, subsidy, result))
+	httputil.WriteJSON(w, http.StatusOK, computePPKGenerateResponse(req, gross, employeeAmt, employerAmt, subsidy, result))
 }
 
 // errBadOwnerParam marks a non-integer owner_user_id query value.

@@ -10,6 +10,7 @@ import (
 
 	"github.com/shopspring/decimal"
 
+	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
@@ -116,34 +117,34 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	c, err := h.store.Get(r.Context())
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
-			writeDetailError(w, http.StatusNotFound, "Configuration not initialized")
+			httputil.WriteDetailError(w, http.StatusNotFound, "Configuration not initialized")
 			return
 		}
 		h.logger.Error("config get", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	writeJSON(w, http.StatusOK, toResponse(c))
+	httputil.WriteJSON(w, http.StatusOK, toResponse(c))
 }
 
 // Put serves PUT /api/config.
 func (h *Handler) Put(w http.ResponseWriter, r *http.Request) {
 	var req request
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&req); err != nil {
-		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
 		return
 	}
 	if vErr := req.validate(); vErr != nil {
-		writePydanticError(w, vErr)
+		httputil.WritePydanticError(w, vErr)
 		return
 	}
 	c, err := h.store.Upsert(r.Context(), req.toConfig())
 	if err != nil {
 		h.logger.Error("config upsert", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	writeJSON(w, http.StatusOK, toResponse(c))
+	httputil.WriteJSON(w, http.StatusOK, toResponse(c))
 }
 
 func (r *request) toConfig() *Config {

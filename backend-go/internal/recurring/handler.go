@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 )
 
 // Handler is the HTTP boundary for /api/recurring.
@@ -106,45 +108,45 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.store.List(r.Context())
 	if err != nil {
 		h.logger.Error("list recurring", "err", err)
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	out := make([]response, 0, len(rows))
 	for i := range rows {
 		out = append(out, h.toResponse(rows[i]))
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"recurring": out})
+	httputil.WriteJSON(w, http.StatusOK, map[string]any{"recurring": out})
 }
 
 // Create serves POST /api/recurring.
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	raw, err := readBody(r)
 	if err != nil {
-		writeValidation(w, "body", "Invalid JSON body")
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", "")
 		return
 	}
 	in, vErr := buildInput(raw)
 	if vErr != nil {
-		writeValidation(w, vErr.Field, vErr.Msg)
+		httputil.WriteBodyValidationError(w, vErr.Field, vErr.Msg, "")
 		return
 	}
 	exists, err := h.store.AccountExists(r.Context(), in.AccountID)
 	if err != nil {
 		h.logger.Error("account check", "err", err)
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	if !exists {
-		writeError(w, http.StatusBadRequest, "Account not found or inactive")
+		httputil.WriteDetailError(w, http.StatusBadRequest, "Account not found or inactive")
 		return
 	}
 	created, err := h.store.Create(r.Context(), in)
 	if err != nil {
 		h.logger.Error("create recurring", "err", err)
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	writeJSON(w, http.StatusCreated, h.toResponse(created))
+	httputil.WriteJSON(w, http.StatusCreated, h.toResponse(created))
 }
 
 // Get serves GET /api/recurring/{id}.
@@ -158,7 +160,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		h.writeStoreError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, h.toResponse(row))
+	httputil.WriteJSON(w, http.StatusOK, h.toResponse(row))
 }
 
 // Update serves PUT /api/recurring/{id}.
@@ -169,22 +171,22 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	raw, err := readBody(r)
 	if err != nil {
-		writeValidation(w, "body", "Invalid JSON body")
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", "")
 		return
 	}
 	in, vErr := buildInput(raw)
 	if vErr != nil {
-		writeValidation(w, vErr.Field, vErr.Msg)
+		httputil.WriteBodyValidationError(w, vErr.Field, vErr.Msg, "")
 		return
 	}
 	exists, err := h.store.AccountExists(r.Context(), in.AccountID)
 	if err != nil {
 		h.logger.Error("account check", "err", err)
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	if !exists {
-		writeError(w, http.StatusBadRequest, "Account not found or inactive")
+		httputil.WriteDetailError(w, http.StatusBadRequest, "Account not found or inactive")
 		return
 	}
 	updated, err := h.store.Update(r.Context(), id, in)
@@ -192,7 +194,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		h.writeStoreError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, h.toResponse(updated))
+	httputil.WriteJSON(w, http.StatusOK, h.toResponse(updated))
 }
 
 // Delete serves DELETE /api/recurring/{id}.
@@ -224,7 +226,7 @@ func (h *Handler) RunNow(w http.ResponseWriter, r *http.Request) {
 	txID, err := h.store.MintOccurrence(r.Context(), row, today)
 	if err != nil && !IsAlreadyMinted(err) {
 		h.logger.Error("run-now mint", "err", err)
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	resp := runNowResponse{Date: formatDate(today), AlreadyMinted: IsAlreadyMinted(err)}
@@ -235,7 +237,7 @@ func (h *Handler) RunNow(w http.ResponseWriter, r *http.Request) {
 	if resp.AlreadyMinted {
 		status = http.StatusOK
 	}
-	writeJSON(w, status, resp)
+	httputil.WriteJSON(w, status, resp)
 }
 
 // Skip serves POST /api/recurring/{id}/skip — adds the supplied date (or
@@ -255,14 +257,14 @@ func (h *Handler) Skip(w http.ResponseWriter, r *http.Request) {
 	if date == "" {
 		next, found := NextOccurrence(row, h.now().UTC())
 		if !found {
-			writeError(w, http.StatusBadRequest, "No upcoming occurrence to skip")
+			httputil.WriteDetailError(w, http.StatusBadRequest, "No upcoming occurrence to skip")
 			return
 		}
 		target = next
 	} else {
 		t, err := time.Parse("2006-01-02", date)
 		if err != nil {
-			writeValidation(w, "date", "must be YYYY-MM-DD")
+			httputil.WriteBodyValidationError(w, "date", "must be YYYY-MM-DD", "")
 			return
 		}
 		target = t
@@ -276,7 +278,7 @@ func (h *Handler) Skip(w http.ResponseWriter, r *http.Request) {
 		h.writeStoreError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, h.toResponse(updated))
+	httputil.WriteJSON(w, http.StatusOK, h.toResponse(updated))
 }
 
 // Unskip serves POST /api/recurring/{id}/unskip?date=YYYY-MM-DD — removes
@@ -288,12 +290,12 @@ func (h *Handler) Unskip(w http.ResponseWriter, r *http.Request) {
 	}
 	date := r.URL.Query().Get("date")
 	if date == "" {
-		writeValidation(w, "date", "required")
+		httputil.WriteBodyValidationError(w, "date", "required", "")
 		return
 	}
 	target, err := time.Parse("2006-01-02", date)
 	if err != nil {
-		writeValidation(w, "date", "must be YYYY-MM-DD")
+		httputil.WriteBodyValidationError(w, "date", "must be YYYY-MM-DD", "")
 		return
 	}
 	if err := h.store.RemoveSkip(r.Context(), id, target); err != nil {
@@ -305,23 +307,23 @@ func (h *Handler) Unskip(w http.ResponseWriter, r *http.Request) {
 		h.writeStoreError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, h.toResponse(updated))
+	httputil.WriteJSON(w, http.StatusOK, h.toResponse(updated))
 }
 
 func (h *Handler) writeStoreError(w http.ResponseWriter, err error) {
 	if errors.Is(err, ErrNotFound) {
-		writeError(w, http.StatusNotFound, "Recurring transaction not found")
+		httputil.WriteDetailError(w, http.StatusNotFound, "Recurring transaction not found")
 		return
 	}
 	h.logger.Error("recurring store", "err", err)
-	writeError(w, http.StatusInternalServerError, "Internal Server Error")
+	httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 }
 
 func parseID(w http.ResponseWriter, r *http.Request) (int, bool) {
 	raw := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(raw)
 	if err != nil || id <= 0 {
-		writeValidation(w, "id", "must be a positive integer")
+		httputil.WriteBodyValidationError(w, "id", "must be a positive integer", "")
 		return 0, false
 	}
 	return id, true
@@ -333,24 +335,4 @@ func readBody(r *http.Request) (map[string]json.RawMessage, error) {
 		return nil, err
 	}
 	return raw, nil
-}
-
-func writeJSON(w http.ResponseWriter, status int, payload any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(payload); err != nil {
-		slog.Default().Error("encode response", "err", err, "status", status)
-	}
-}
-
-func writeError(w http.ResponseWriter, status int, detail string) {
-	writeJSON(w, status, map[string]string{"detail": detail})
-}
-
-func writeValidation(w http.ResponseWriter, field, msg string) {
-	writeJSON(w, http.StatusUnprocessableEntity, map[string]any{
-		"detail": []map[string]any{
-			{"type": "value_error", "loc": []string{"body", field}, "msg": msg},
-		},
-	})
 }

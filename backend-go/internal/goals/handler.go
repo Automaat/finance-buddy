@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/shopspring/decimal"
 
+	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
@@ -125,7 +126,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	rows, names, err := h.store.List(r.Context())
 	if err != nil {
 		h.logger.Error("list goals", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	out := listResponse{Goals: make([]response, 0, len(rows))}
@@ -143,7 +144,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	out.TotalCount = len(rows)
 	out.CompletedCount = completed
-	writeJSON(w, http.StatusOK, out)
+	httputil.WriteJSON(w, http.StatusOK, out)
 }
 
 // Get serves GET /api/goals/{id}.
@@ -155,25 +156,25 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	g, name, err := h.store.Get(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
-			writeDetailError(w, http.StatusNotFound, "Goal not found")
+			httputil.WriteDetailError(w, http.StatusNotFound, "Goal not found")
 			return
 		}
 		h.logger.Error("get goal", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	writeJSON(w, http.StatusOK, h.toResponse(g, name))
+	httputil.WriteJSON(w, http.StatusOK, h.toResponse(g, name))
 }
 
 // Create serves POST /api/goals.
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createRequest
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&req); err != nil {
-		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
 		return
 	}
 	if vErr := validateCreate(&req); vErr != nil {
-		writePydanticError(w, vErr)
+		httputil.WritePydanticError(w, vErr)
 		return
 	}
 	g := &Goal{
@@ -191,7 +192,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		h.writeStoreError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, h.toResponse(created, name))
+	httputil.WriteJSON(w, http.StatusCreated, h.toResponse(created, name))
 }
 
 // Update serves PUT /api/goals/{id}.
@@ -206,12 +207,12 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	raw := map[string]json.RawMessage{}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
-		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
 		return
 	}
 	patch, vErr := buildUpdatePatch(raw)
 	if vErr != nil {
-		writePydanticError(w, vErr)
+		httputil.WritePydanticError(w, vErr)
 		return
 	}
 	g, name, err := h.store.Update(r.Context(), id, patch)
@@ -219,7 +220,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		h.writeStoreError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, h.toResponse(g, name))
+	httputil.WriteJSON(w, http.StatusOK, h.toResponse(g, name))
 }
 
 // Delete serves DELETE /api/goals/{id}.
@@ -230,11 +231,11 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := h.store.Delete(r.Context(), id); err != nil {
 		if errors.Is(err, ErrNotFound) {
-			writeDetailError(w, http.StatusNotFound, "Goal not found")
+			httputil.WriteDetailError(w, http.StatusNotFound, "Goal not found")
 			return
 		}
 		h.logger.Error("delete goal", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -244,13 +245,13 @@ func (h *Handler) writeStoreError(w http.ResponseWriter, err error) {
 	var missing *AccountMissingError
 	switch {
 	case errors.Is(err, ErrNotFound):
-		writeDetailError(w, http.StatusNotFound, "Goal not found")
+		httputil.WriteDetailError(w, http.StatusNotFound, "Goal not found")
 	case errors.As(err, &missing):
-		writeDetailError(w, http.StatusNotFound,
+		httputil.WriteDetailError(w, http.StatusNotFound,
 			fmt.Sprintf("Account with id %d not found", missing.AccountID))
 	default:
 		h.logger.Error("goals store", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 	}
 }
 
@@ -258,7 +259,7 @@ func parseIDParam(w http.ResponseWriter, r *http.Request) (int, bool) {
 	raw := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(raw)
 	if err != nil {
-		writeValidationError(w, "goal_id", "must be an integer", raw)
+		httputil.WriteBodyValidationError(w, "goal_id", "must be an integer", raw)
 		return 0, false
 	}
 	return id, true

@@ -14,6 +14,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/cpi"
+	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
@@ -120,12 +121,12 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	bonds, err := h.store.List(r.Context())
 	if err != nil {
 		h.logger.Error("list bonds", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	yoy, err := h.loadYoY(r.Context())
 	if err != nil {
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	out := listResponse{Bonds: make([]response, 0, len(bonds))}
@@ -137,7 +138,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	t, _ := total.Float64()
 	out.TotalValue = t
 	out.TotalCount = len(bonds)
-	writeJSON(w, http.StatusOK, out)
+	httputil.WriteJSON(w, http.StatusOK, out)
 }
 
 // Get serves GET /api/bonds/{id}.
@@ -153,10 +154,10 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	yoy, err := h.loadYoY(r.Context())
 	if err != nil {
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	writeJSON(w, http.StatusOK, h.toResponse(b, yoy))
+	httputil.WriteJSON(w, http.StatusOK, h.toResponse(b, yoy))
 }
 
 // YTM serves GET /api/bonds/{id}/ytm — the yield-to-maturity projection.
@@ -172,7 +173,7 @@ func (h *Handler) YTM(w http.ResponseWriter, r *http.Request) {
 	}
 	yoy, err := h.loadYoY(r.Context())
 	if err != nil {
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	pts := YieldToMaturity(b, yoy)
@@ -187,18 +188,18 @@ func (h *Handler) YTM(w http.ResponseWriter, r *http.Request) {
 			YearRate: rate,
 		})
 	}
-	writeJSON(w, http.StatusOK, out)
+	httputil.WriteJSON(w, http.StatusOK, out)
 }
 
 // Create serves POST /api/bonds.
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createRequest
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&req); err != nil {
-		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
 		return
 	}
 	if vErr := validateCreate(&req); vErr != nil {
-		writePydanticError(w, vErr)
+		httputil.WritePydanticError(w, vErr)
 		return
 	}
 	b := &TreasuryBond{
@@ -214,15 +215,15 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	created, err := h.store.Create(r.Context(), b)
 	if err != nil {
 		h.logger.Error("create bond", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	yoy, err := h.loadYoY(r.Context())
 	if err != nil {
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	writeJSON(w, http.StatusCreated, h.toResponse(created, yoy))
+	httputil.WriteJSON(w, http.StatusCreated, h.toResponse(created, yoy))
 }
 
 // Update serves PUT /api/bonds/{id}.
@@ -233,12 +234,12 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	raw := map[string]json.RawMessage{}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
-		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
 		return
 	}
 	patch, vErr := buildUpdatePatch(raw)
 	if vErr != nil {
-		writePydanticError(w, vErr)
+		httputil.WritePydanticError(w, vErr)
 		return
 	}
 	b, err := h.store.Update(r.Context(), id, patch)
@@ -248,10 +249,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	yoy, err := h.loadYoY(r.Context())
 	if err != nil {
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	writeJSON(w, http.StatusOK, h.toResponse(b, yoy))
+	httputil.WriteJSON(w, http.StatusOK, h.toResponse(b, yoy))
 }
 
 // Delete serves DELETE /api/bonds/{id}.
@@ -270,10 +271,10 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) writeStoreError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, ErrNotFound):
-		writeDetailError(w, http.StatusNotFound, "Treasury bond not found")
+		httputil.WriteDetailError(w, http.StatusNotFound, "Treasury bond not found")
 	default:
 		h.logger.Error("bonds store", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 	}
 }
 
@@ -290,7 +291,7 @@ func parseIDParam(w http.ResponseWriter, r *http.Request) (int, bool) {
 	raw := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(raw)
 	if err != nil {
-		writeValidationError(w, "bond_id", "must be an integer", raw)
+		httputil.WriteBodyValidationError(w, "bond_id", "must be an integer", raw)
 		return 0, false
 	}
 	return id, true

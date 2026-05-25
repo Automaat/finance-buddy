@@ -6,44 +6,37 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
-)
 
-// validationError captures a single Pydantic-shaped field error.
-type validationError struct {
-	Field string
-	Msg   string
-}
+	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
+)
 
 // validate replicates the field + model validators on
 // backend/app/schemas/config.ConfigCreate.
 //
 // First-error-wins (matches FastAPI/Pydantic behavior for these handlers).
-func (r *request) validate() *validationError {
+func (r *request) validate() *httputil.ValidationError {
 	today := time.Now().UTC().Truncate(24 * time.Hour)
 
 	birth := time.Time(r.BirthDate).UTC().Truncate(24 * time.Hour)
 	if !birth.Before(today) {
-		return &validationError{"birth_date", "Birth date must be in the past"}
+		return &httputil.ValidationError{Field: "birth_date", Msg: "Birth date must be in the past"}
 	}
 	age := int(float64(today.Sub(birth)/(24*time.Hour)) / 365.25)
 	if age < 18 || age > 100 {
-		return &validationError{"birth_date", "Age must be between 18 and 100"}
+		return &httputil.ValidationError{Field: "birth_date", Msg: "Age must be between 18 and 100"}
 	}
 
 	if r.RetirementAge < 18 || r.RetirementAge > 100 {
-		return &validationError{"retirement_age", "Retirement age must be between 18 and 100"}
+		return &httputil.ValidationError{Field: "retirement_age", Msg: "Retirement age must be between 18 and 100"}
 	}
 	if !r.RetirementMonthlySalary.GreaterThan(decimal.Zero) {
-		return &validationError{
-			"retirement_monthly_salary",
-			"Retirement monthly salary must be greater than 0",
-		}
+		return &httputil.ValidationError{Field: "retirement_monthly_salary", Msg: "Retirement monthly salary must be greater than 0"}
 	}
 	if r.MonthlyExpenses.LessThan(decimal.Zero) {
-		return &validationError{"monthly_expenses", "Value must be non-negative"}
+		return &httputil.ValidationError{Field: "monthly_expenses", Msg: "Value must be non-negative"}
 	}
 	if r.MonthlyMortgagePayment.LessThan(decimal.Zero) {
-		return &validationError{"monthly_mortgage_payment", "Value must be non-negative"}
+		return &httputil.ValidationError{Field: "monthly_mortgage_payment", Msg: "Value must be non-negative"}
 	}
 
 	for _, a := range [...]struct {
@@ -57,45 +50,39 @@ func (r *request) validate() *validationError {
 		{"allocation_commodities", r.AllocationCommodities},
 	} {
 		if a.value < 0 || a.value > 100 {
-			return &validationError{a.name, "Allocation must be between 0 and 100"}
+			return &httputil.ValidationError{Field: a.name, Msg: "Allocation must be between 0 and 100"}
 		}
 	}
 
 	marketTotal := r.AllocationStocks + r.AllocationBonds + r.AllocationGold + r.AllocationCommodities
 	if marketTotal != 100 {
-		return &validationError{
-			"allocation_stocks",
-			fmt.Sprintf("Market allocations must sum to 100%%, got %d%%", marketTotal),
+		return &httputil.ValidationError{
+			Field: "allocation_stocks",
+			Msg:   fmt.Sprintf("Market allocations must sum to 100%%, got %d%%", marketTotal),
 		}
 	}
 
 	if r.RetirementAge <= age {
-		return &validationError{
-			"retirement_age",
-			fmt.Sprintf(
+		return &httputil.ValidationError{
+			Field: "retirement_age",
+			Msg: fmt.Sprintf(
 				"Retirement age (%d) must be greater than current age (%d)",
 				r.RetirementAge, age,
 			),
 		}
 	}
 	if r.WithdrawalRate != nil && !isAllowedWithdrawalRate(*r.WithdrawalRate) {
-		return &validationError{
-			"withdrawal_rate",
-			"Withdrawal rate must be 0.03, 0.035, or 0.04",
-		}
+		return &httputil.ValidationError{Field: "withdrawal_rate", Msg: "Withdrawal rate must be 0.03, 0.035, or 0.04"}
 	}
 	if r.CoastFIRETargetAge != nil {
 		ta := *r.CoastFIRETargetAge
 		if ta < 18 || ta > 100 {
-			return &validationError{
-				"coast_fire_target_age",
-				"Coast FIRE target age must be between 18 and 100",
-			}
+			return &httputil.ValidationError{Field: "coast_fire_target_age", Msg: "Coast FIRE target age must be between 18 and 100"}
 		}
 		if ta <= age {
-			return &validationError{
-				"coast_fire_target_age",
-				fmt.Sprintf(
+			return &httputil.ValidationError{
+				Field: "coast_fire_target_age",
+				Msg: fmt.Sprintf(
 					"Coast FIRE target age (%d) must be greater than current age (%d)",
 					ta, age,
 				),
@@ -105,10 +92,7 @@ func (r *request) validate() *validationError {
 	if r.ExpectedReturnRate != nil {
 		if r.ExpectedReturnRate.LessThan(minExpectedReturnRate) ||
 			r.ExpectedReturnRate.GreaterThan(maxExpectedReturnRate) {
-			return &validationError{
-				"expected_return_rate",
-				"Expected return rate must be between 0.01 and 0.20",
-			}
+			return &httputil.ValidationError{Field: "expected_return_rate", Msg: "Expected return rate must be between 0.01 and 0.20"}
 		}
 	}
 	if vErr := requireNonNegative(r); vErr != nil {
@@ -120,7 +104,7 @@ func (r *request) validate() *validationError {
 // requireNonNegative bundles the simple "field >= 0 when present" checks for
 // the FIRE-band + Barista inputs so they don't push the main validator past
 // the funlen threshold.
-func requireNonNegative(r *request) *validationError {
+func requireNonNegative(r *request) *httputil.ValidationError {
 	checks := []struct {
 		name string
 		val  *decimal.Decimal
@@ -132,7 +116,7 @@ func requireNonNegative(r *request) *validationError {
 	}
 	for _, c := range checks {
 		if c.val != nil && c.val.LessThan(decimal.Zero) {
-			return &validationError{c.name, "Value must be non-negative"}
+			return &httputil.ValidationError{Field: c.name, Msg: "Value must be non-negative"}
 		}
 	}
 	return nil
