@@ -52,8 +52,13 @@ func integrationPool(t *testing.T) *pgxpool.Pool {
 		t.Fatalf("connect to TEST_DATABASE_URL: %v", err)
 	}
 	t.Cleanup(pool.Close)
-	if _, err := pool.Exec(ctx, "DROP SCHEMA public CASCADE; CREATE SCHEMA public"); err != nil {
-		t.Fatalf("reset test schema: %v", err)
+	for _, stmt := range []string{
+		"DROP SCHEMA public CASCADE",
+		"CREATE SCHEMA public",
+	} {
+		if _, err := pool.Exec(ctx, stmt); err != nil {
+			t.Fatalf("reset test schema (%s): %v", stmt, err)
+		}
 	}
 	return pool
 }
@@ -75,9 +80,11 @@ func TestApplySchemaCreatesAccountsTable(t *testing.T) {
 }
 
 // TestApplySchemaIsIdempotent proves the presence-check short-circuit by
-// seeding a sentinel row after the first apply: if the second apply re-ran
-// schema.sql (which begins with DROP TABLE statements via pg_dump), the
-// sentinel would be wiped. Surviving = the no-op branch fired.
+// seeding a sentinel row after the first apply: schema.sql starts with
+// `CREATE TABLE`, so a non-short-circuited second apply would error out on
+// the already-present `accounts` table. Reaching the sentinel lookup proves
+// the no-op branch fired; the row check guards against future schema.sql
+// rewrites that prepend DROPs or otherwise survive a re-run.
 func TestApplySchemaIsIdempotent(t *testing.T) {
 	pool := integrationPool(t)
 	ctx := t.Context()
