@@ -28,6 +28,7 @@ function makeAccount(overrides: Partial<Account>): Account {
 		square_meters: null,
 		is_active: true,
 		receives_contributions: false,
+		excluded_from_fire: false,
 		created_at: '2024-01-01',
 		current_value: 0,
 		...overrides

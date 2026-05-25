@@ -20,6 +20,12 @@ func newAccountRow(category, accType string, value float64) mergedRow {
 	}
 }
 
+func newExcludedAccountRow(category string, value float64) mergedRow {
+	r := newAccountRow(category, "asset", value)
+	r.ExcludedFromFire = true
+	return r
+}
+
 func newWrapperRow(wrapper string, value float64) mergedRow {
 	w := wrapper
 	t := "asset"
@@ -143,6 +149,69 @@ func TestComputeFIRELiquidExcludesNonBank(t *testing.T) {
 	// Only the bank-asset row counts: 10000 / 2000 = 5.
 	if got.RunwayMonths == nil || *got.RunwayMonths != 5 {
 		t.Errorf("runway = %v, want 5", got.RunwayMonths)
+	}
+}
+
+func TestComputeFIREExcludesFlaggedAccountFromAllMetrics(t *testing.T) {
+	t.Parallel()
+	// Net worth = 1_000_000, of which 600_000 is a primary-residence flat
+	// flagged excluded_from_fire. FIRE math should run against 400_000.
+	rows := []mergedRow{
+		newAccountRow("bank", "asset", 100_000),
+		newAccountRow("stock", "asset", 300_000),
+		newExcludedAccountRow("real_estate", 600_000),
+	}
+	lean := decimal.NewFromInt(3_000)
+	fat := decimal.NewFromInt(8_000)
+	cfg := AppConfig{
+		MonthlyExpenses:     decimal.NewFromInt(5_000),
+		WithdrawalRate:      decimal.NewFromFloat(0.04),
+		LeanMonthlyExpenses: &lean,
+		FatMonthlyExpenses:  &fat,
+	}
+	got := computeFIRE(rows, cfg, 1_000_000)
+
+	if got.FireExcludedValue == nil || *got.FireExcludedValue != 600_000 {
+		t.Errorf("fire_excluded_value = %v, want 600000", got.FireExcludedValue)
+	}
+	if got.FireNetWorth == nil || *got.FireNetWorth != 400_000 {
+		t.Errorf("fire_net_worth = %v, want 400000", got.FireNetWorth)
+	}
+	// FIRE number stays 1_500_000 (60000 / 0.04); progress = 400000/1500000.
+	if got.FIRENumber == nil || *got.FIRENumber != 1_500_000 {
+		t.Errorf("fire_number = %v, want 1500000", got.FIRENumber)
+	}
+	if got.FIProgress == nil || !approxEqual(*got.FIProgress, 26.6666, 0.001) {
+		t.Errorf("fi_progress = %v, want ~26.67", got.FIProgress)
+	}
+	// Lean uses fire_net_worth too: 400000 / (36000/0.04=900000) ≈ 44.44%
+	if got.LeanFIProgress == nil || !approxEqual(*got.LeanFIProgress, 44.4444, 0.001) {
+		t.Errorf("lean_fi_progress = %v, want ~44.44", got.LeanFIProgress)
+	}
+	// Fat: 400000 / (96000/0.04=2400000) ≈ 16.67%
+	if got.FatFIProgress == nil || !approxEqual(*got.FatFIProgress, 16.6666, 0.001) {
+		t.Errorf("fat_fi_progress = %v, want ~16.67", got.FatFIProgress)
+	}
+	// Runway is unaffected (still counts only liquid bank/saving), so the
+	// excluded real-estate row doesn't appear in liquidCategories anyway.
+	if got.RunwayMonths == nil || *got.RunwayMonths != 20 {
+		t.Errorf("runway = %v, want 20 (100000/5000)", got.RunwayMonths)
+	}
+}
+
+func TestComputeFIREExcludedFieldsNilWhenNoExclusion(t *testing.T) {
+	t.Parallel()
+	rows := []mergedRow{newAccountRow("bank", "asset", 50_000)}
+	cfg := AppConfig{
+		MonthlyExpenses: decimal.NewFromInt(2_000),
+		WithdrawalRate:  decimal.NewFromFloat(0.04),
+	}
+	got := computeFIRE(rows, cfg, 50_000)
+	if got.FireExcludedValue != nil {
+		t.Errorf("fire_excluded_value should be nil when nothing excluded, got %v", *got.FireExcludedValue)
+	}
+	if got.FireNetWorth != nil {
+		t.Errorf("fire_net_worth should be nil when nothing excluded, got %v", *got.FireNetWorth)
 	}
 }
 

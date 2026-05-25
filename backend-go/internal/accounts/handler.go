@@ -42,6 +42,7 @@ type response struct {
 	SquareMeters          *pyFloat `json:"square_meters"`
 	IsActive              bool     `json:"is_active"`
 	ReceivesContributions bool     `json:"receives_contributions"`
+	ExcludedFromFire      bool     `json:"excluded_from_fire"`
 	CreatedAt             isoNaive `json:"created_at"`
 	CurrentValue          pyFloat  `json:"current_value"`
 }
@@ -78,6 +79,7 @@ func toResponse(a *Account, currentValue decimal.Decimal) response {
 		Purpose:               a.Purpose,
 		IsActive:              a.IsActive,
 		ReceivesContributions: a.ReceivesContributions,
+		ExcludedFromFire:      a.ExcludedFromFire,
 		CreatedAt:             isoNaive(a.CreatedAt.UTC()),
 		CurrentValue:          pyFloat(cv),
 	}
@@ -143,6 +145,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		Purpose:               req.Purpose,
 		SquareMeters:          req.SquareMeters,
 		ReceivesContributions: req.ReceivesContributions,
+		ExcludedFromFire:      req.ExcludedFromFire,
 	})
 	if err != nil {
 		if errors.Is(err, ErrDuplicateName) {

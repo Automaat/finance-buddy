@@ -92,6 +92,31 @@ func TestToResponseSquareMetersForwarded(t *testing.T) {
 	}
 }
 
+func TestToResponseExcludedFromFireForwarded(t *testing.T) {
+	a := &Account{
+		ID: 11, Name: "Mieszkanie", Type: "asset", Category: "real_estate",
+		Currency: "PLN", Purpose: "general", ExcludedFromFire: true,
+	}
+	r := toResponse(a, decimal.Zero)
+	if !r.ExcludedFromFire {
+		t.Fatalf("excluded_from_fire should be forwarded as true")
+	}
+}
+
+func TestApplyPatchExcludedFromFireToggles(t *testing.T) {
+	a := &Account{ExcludedFromFire: false}
+	on := true
+	applyPatch(a, UpdatePatch{ExcludedFromFire: &on})
+	if !a.ExcludedFromFire {
+		t.Fatalf("applyPatch should set excluded_from_fire=true")
+	}
+	off := false
+	applyPatch(a, UpdatePatch{ExcludedFromFire: &off})
+	if a.ExcludedFromFire {
+		t.Fatalf("applyPatch should reset excluded_from_fire=false")
+	}
+}
+
 func TestParseIDParamValid(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/accounts/42", http.NoBody)

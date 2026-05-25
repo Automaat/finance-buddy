@@ -340,6 +340,37 @@ describe('Dashboard — FIRE / runway / bonds cards', () => {
 		expect(screen.getByText('3 obligacji (auto-wycena wg CPI)')).toBeTruthy();
 	});
 
+	it('shows the FIRE-net-worth notice when an exclusion is configured', async () => {
+		render(Page, {
+			props: {
+				data: buildData({
+					dashboardData: {
+						net_worth_history: [{ date: '2024-01-01', value: 5000 }],
+						current_net_worth: 1_000_000,
+						change_vs_last_month: 0,
+						total_assets: 1_000_000,
+						total_liabilities: 0,
+						allocation: [],
+						retirementStats: [],
+						tile_deltas: baseTileDeltas,
+						metric_cards: {
+							fire_number: 1_500_000,
+							runway_months: 12,
+							fi_progress: 26.67,
+							annual_expenses: 60000,
+							withdrawal_rate: 0.04,
+							fire_net_worth: 400_000,
+							fire_excluded_value: 600_000
+						}
+					}
+				})
+			}
+		});
+		await waitFor(() => expect(screen.getByText(/FIRE i runway/)).toBeTruthy());
+		expect(screen.getByText(/FIRE liczone z/)).toBeTruthy();
+		expect(screen.getByText(/aktywów oznaczonych „poza FIRE”/)).toBeTruthy();
+	});
+
 	it('singularises bonds count to "obligacja" when count is 1', async () => {
 		render(Page, {
 			props: {

@@ -167,6 +167,75 @@ func TestBuildCreateRequestReceivesContributionsFalse(t *testing.T) {
 	}
 }
 
+func TestBuildCreateRequestExcludedFromFireDefaultFalse(t *testing.T) {
+	raw := rawJSON(t, map[string]any{
+		"name":          "Konto",
+		"type":          "asset",
+		"category":      "bank",
+		"owner_user_id": 1,
+		"purpose":       "general",
+	})
+	r, vErr := buildCreateRequest(raw)
+	if vErr != nil {
+		t.Fatalf("unexpected error: %+v", vErr)
+	}
+	if r.ExcludedFromFire {
+		t.Fatalf("excluded_from_fire default should be false")
+	}
+}
+
+func TestBuildCreateRequestExcludedFromFireTrue(t *testing.T) {
+	raw := rawJSON(t, map[string]any{
+		"name":               "Mieszkanie",
+		"type":               "asset",
+		"category":           "real_estate",
+		"owner_user_id":      1,
+		"purpose":            "general",
+		"excluded_from_fire": true,
+	})
+	r, vErr := buildCreateRequest(raw)
+	if vErr != nil {
+		t.Fatalf("unexpected error: %+v", vErr)
+	}
+	if !r.ExcludedFromFire {
+		t.Fatalf("expected excluded_from_fire=true")
+	}
+}
+
+func TestBuildCreateRequestExcludedFromFireNotABool(t *testing.T) {
+	raw := rawJSON(t, map[string]any{
+		"name":               "Konto",
+		"type":               "asset",
+		"category":           "bank",
+		"owner_user_id":      1,
+		"purpose":            "general",
+		"excluded_from_fire": "yes",
+	})
+	_, vErr := buildCreateRequest(raw)
+	if vErr == nil || vErr.Field != "excluded_from_fire" {
+		t.Fatalf("expected excluded_from_fire validation error, got %+v", vErr)
+	}
+}
+
+func TestBuildUpdatePatchExcludedFromFire(t *testing.T) {
+	raw := rawJSON(t, map[string]any{"excluded_from_fire": true})
+	p, vErr := buildUpdatePatch(raw)
+	if vErr != nil {
+		t.Fatalf("unexpected error: %+v", vErr)
+	}
+	if p.ExcludedFromFire == nil || !*p.ExcludedFromFire {
+		t.Fatalf("expected ExcludedFromFire pointer to true, got %+v", p.ExcludedFromFire)
+	}
+}
+
+func TestBuildUpdatePatchExcludedFromFireInvalid(t *testing.T) {
+	raw := rawJSON(t, map[string]any{"excluded_from_fire": "no"})
+	_, vErr := buildUpdatePatch(raw)
+	if vErr == nil || vErr.Field != "excluded_from_fire" {
+		t.Fatalf("expected validation error for excluded_from_fire, got %+v", vErr)
+	}
+}
+
 func TestBuildUpdatePatchEmpty(t *testing.T) {
 	p, vErr := buildUpdatePatch(map[string]json.RawMessage{})
 	if vErr != nil {
