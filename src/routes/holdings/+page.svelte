@@ -5,6 +5,7 @@
 	import { toast } from '$lib/stores/toast.svelte';
 	import { confirm } from '$lib/stores/confirm.svelte';
 	import Modal from '$lib/components/Modal.svelte';
+	import PIT38Report from '$lib/components/PIT38Report.svelte';
 	import { Plus, Trash2, BarChart } from 'lucide-svelte';
 	import type { PageData } from './$types';
 
@@ -290,6 +291,8 @@
 			</table>
 		</div>
 	{/if}
+
+	<PIT38Report />
 
 	<section class="card preset-filled-surface-100-900 p-4 space-y-3">
 		<header class="flex items-center justify-between">
