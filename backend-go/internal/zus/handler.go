@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
@@ -100,12 +101,12 @@ type prefillResponse struct {
 func (h *Handler) Calculate(w http.ResponseWriter, r *http.Request) {
 	raw := map[string]json.RawMessage{}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
-		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
 		return
 	}
 	req, vErr := buildInputs(raw, h.now)
 	if vErr != nil {
-		writePydanticError(w, vErr)
+		httputil.WritePydanticError(w, vErr)
 		return
 	}
 	currentYear := h.now().UTC().Year()
@@ -162,7 +163,7 @@ func (h *Handler) Calculate(w http.ResponseWriter, r *http.Request) {
 			ReplacementRate:      wire.PyFloat(s.ReplacementRate),
 		})
 	}
-	writeJSON(w, http.StatusOK, resp)
+	httputil.WriteJSON(w, http.StatusOK, resp)
 }
 
 // Prefill serves GET /api/zus/prefill.
@@ -173,7 +174,7 @@ func (h *Handler) Prefill(w http.ResponseWriter, r *http.Request) {
 	if v := r.URL.Query().Get("owner_user_id"); v != "" {
 		n, err := strconv.Atoi(v)
 		if err != nil {
-			writeValidationError(w, "owner_user_id", "must be an integer", v)
+			httputil.WriteBodyValidationError(w, "owner_user_id", "must be an integer", v)
 			return
 		}
 		ownerHint = &n
@@ -181,7 +182,7 @@ func (h *Handler) Prefill(w http.ResponseWriter, r *http.Request) {
 	data, err := h.store.LoadPrefill(r.Context(), ownerHint)
 	if err != nil {
 		h.logger.Error("zus prefill", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	resp := prefillResponse{
@@ -202,7 +203,7 @@ func (h *Handler) Prefill(w http.ResponseWriter, r *http.Request) {
 		resp.WorkStartYear = &w
 	}
 	resp.SalaryHistory = historyAsList(data.YearlySalaryHistory)
-	writeJSON(w, http.StatusOK, resp)
+	httputil.WriteJSON(w, http.StatusOK, resp)
 }
 
 func historyAsList(yearly map[int]float64) []salaryHistoryEntry {

@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 	"strings"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 )
 
 // CookieName is the session cookie carrying the JWT.
@@ -21,12 +23,12 @@ func Authenticate(tokens *TokenService) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			raw := tokenFromRequest(r)
 			if raw == "" {
-				writeDetailError(w, http.StatusUnauthorized, "Not authenticated")
+				httputil.WriteDetailError(w, http.StatusUnauthorized, "Not authenticated")
 				return
 			}
 			claims, err := tokens.Verify(raw)
 			if err != nil {
-				writeDetailError(w, http.StatusUnauthorized, "Invalid or expired token")
+				httputil.WriteDetailError(w, http.StatusUnauthorized, "Invalid or expired token")
 				return
 			}
 			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), claimsKey, claims)))
@@ -40,7 +42,7 @@ func RequireAdmin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		claims, ok := claimsFrom(r.Context())
 		if !ok || !claims.IsAdmin {
-			writeDetailError(w, http.StatusForbidden, "Admin privileges required")
+			httputil.WriteDetailError(w, http.StatusForbidden, "Admin privileges required")
 			return
 		}
 		next.ServeHTTP(w, r)

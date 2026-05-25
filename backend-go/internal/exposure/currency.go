@@ -19,6 +19,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 )
 
 // CurrencyBucket is one currency's slice of the portfolio.
@@ -180,17 +182,17 @@ func NewHandler(store *Store, logger *slog.Logger) *Handler {
 func (h *Handler) Currency(w http.ResponseWriter, r *http.Request) {
 	target, tolerance, vErr := parseDriftParams(r)
 	if vErr != nil {
-		writeValidation(w, vErr.field, vErr.msg)
+		httputil.WriteQueryValidationError(w, vErr.field, vErr.msg)
 		return
 	}
 	rows, snapshotDate, err := h.store.LatestByCurrency(r.Context())
 	if err != nil {
 		h.logger.Error("exposure currency", "err", err)
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	rep := BuildReport(rows, snapshotDate, target, tolerance)
-	writeJSON(w, http.StatusOK, rep)
+	httputil.WriteJSON(w, http.StatusOK, rep)
 }
 
 type validationErr struct {

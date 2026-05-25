@@ -12,6 +12,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 )
 
 // Session token lifetimes. "Remember me" extends a login from one day to five.
@@ -104,14 +106,14 @@ func derefName(s *string) string {
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req loginRequest
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&req); err != nil {
-		writeDetailError(w, http.StatusBadRequest, "Invalid JSON body")
+		httputil.WriteDetailError(w, http.StatusBadRequest, "Invalid JSON body")
 		return
 	}
 	user, err := h.store.GetByUsername(r.Context(), strings.TrimSpace(req.Username))
 	// The user == nil guard short-circuits before checkPassword on the error
 	// path; the uniform message avoids revealing whether the username exists.
 	if err != nil || user == nil || !checkPassword(user.PasswordHash, req.Password) {
-		writeDetailError(w, http.StatusUnauthorized, "Invalid username or password")
+		httputil.WriteDetailError(w, http.StatusUnauthorized, "Invalid username or password")
 		return
 	}
 	ttl := sessionTTL
@@ -121,11 +123,11 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	token, err := h.tokens.Sign(user.ID, user.Username, derefName(user.Name), user.IsAdmin, ttl)
 	if err != nil {
 		h.logger.Error("sign token", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	h.setSessionCookie(w, token, req.RememberMe, ttl)
-	writeJSON(w, http.StatusOK, map[string]any{"token": token, "user": toUserResponse(user)})
+	httputil.WriteJSON(w, http.StatusOK, map[string]any{"token": token, "user": toUserResponse(user)})
 }
 
 // Logout serves POST /api/auth/logout (public). It clears the session cookie;
@@ -147,20 +149,20 @@ func (h *Handler) Logout(w http.ResponseWriter, _ *http.Request) {
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	claims, ok := claimsFrom(r.Context())
 	if !ok {
-		writeDetailError(w, http.StatusUnauthorized, "Not authenticated")
+		httputil.WriteDetailError(w, http.StatusUnauthorized, "Not authenticated")
 		return
 	}
 	user, err := h.store.GetByUsername(r.Context(), claims.Username)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
-			writeDetailError(w, http.StatusUnauthorized, "Not authenticated")
+			httputil.WriteDetailError(w, http.StatusUnauthorized, "Not authenticated")
 			return
 		}
 		h.logger.Error("get user", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	writeJSON(w, http.StatusOK, toUserResponse(user))
+	httputil.WriteJSON(w, http.StatusOK, toUserResponse(user))
 }
 
 // ownerOption is a household member offered as an owner-picker choice.
@@ -177,7 +179,7 @@ func (h *Handler) ListOwners(w http.ResponseWriter, r *http.Request) {
 	owners, err := h.store.ListOwners(r.Context())
 	if err != nil {
 		h.logger.Error("list owners", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	out := make([]ownerOption, 0, len(owners))
@@ -188,7 +190,7 @@ func (h *Handler) ListOwners(w http.ResponseWriter, r *http.Request) {
 		}
 		out = append(out, ownerOption{ID: owners[i].ID, Name: name})
 	}
-	writeJSON(w, http.StatusOK, out)
+	httputil.WriteJSON(w, http.StatusOK, out)
 }
 
 // ListUsers serves GET /api/auth/users (admin only).
@@ -196,14 +198,14 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := h.store.List(r.Context())
 	if err != nil {
 		h.logger.Error("list users", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	out := make([]userResponse, 0, len(users))
 	for i := range users {
 		out = append(out, toUserResponse(&users[i]))
 	}
-	writeJSON(w, http.StatusOK, out)
+	httputil.WriteJSON(w, http.StatusOK, out)
 }
 
 // CreateUser serves POST /api/auth/users (admin only). The admin sets the
@@ -211,31 +213,31 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	var req createUserRequest
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&req); err != nil {
-		writeDetailError(w, http.StatusBadRequest, "Invalid JSON body")
+		httputil.WriteDetailError(w, http.StatusBadRequest, "Invalid JSON body")
 		return
 	}
 	username, vErr := validateUsername(req.Username)
 	if vErr != "" {
-		writeDetailError(w, http.StatusUnprocessableEntity, vErr)
+		httputil.WriteDetailError(w, http.StatusUnprocessableEntity, vErr)
 		return
 	}
 	if vErr := validatePassword(req.Password); vErr != "" {
-		writeDetailError(w, http.StatusUnprocessableEntity, vErr)
+		httputil.WriteDetailError(w, http.StatusUnprocessableEntity, vErr)
 		return
 	}
 	name, surname, vErr := validateNames(req.Name, req.Surname)
 	if vErr != "" {
-		writeDetailError(w, http.StatusUnprocessableEntity, vErr)
+		httputil.WriteDetailError(w, http.StatusUnprocessableEntity, vErr)
 		return
 	}
 	if vErr := validatePPKPair(req.PPKEmployeeRate, req.PPKEmployerRate); vErr != "" {
-		writeDetailError(w, http.StatusUnprocessableEntity, vErr)
+		httputil.WriteDetailError(w, http.StatusUnprocessableEntity, vErr)
 		return
 	}
 	hash, err := HashPassword(req.Password)
 	if err != nil {
 		h.logger.Error("hash password", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	user, err := h.store.Create(r.Context(), CreateParams{
@@ -248,14 +250,14 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		if errors.Is(err, ErrNameConflict) {
-			writeDetailError(w, http.StatusConflict, "Username '"+username+"' already exists")
+			httputil.WriteDetailError(w, http.StatusConflict, "Username '"+username+"' already exists")
 			return
 		}
 		h.logger.Error("create user", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	writeJSON(w, http.StatusCreated, toUserResponse(user))
+	httputil.WriteJSON(w, http.StatusCreated, toUserResponse(user))
 }
 
 // UpdateUser serves PUT /api/auth/users/{id} (admin only). It replaces the
@@ -265,21 +267,21 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		writeDetailError(w, http.StatusBadRequest, "Invalid user id")
+		httputil.WriteDetailError(w, http.StatusBadRequest, "Invalid user id")
 		return
 	}
 	var req updateUserRequest
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&req); err != nil {
-		writeDetailError(w, http.StatusBadRequest, "Invalid JSON body")
+		httputil.WriteDetailError(w, http.StatusBadRequest, "Invalid JSON body")
 		return
 	}
 	name, surname, vErr := validateNames(req.Name, req.Surname)
 	if vErr != "" {
-		writeDetailError(w, http.StatusUnprocessableEntity, vErr)
+		httputil.WriteDetailError(w, http.StatusUnprocessableEntity, vErr)
 		return
 	}
 	if vErr := validatePPKPair(req.PPKEmployeeRate, req.PPKEmployerRate); vErr != "" {
-		writeDetailError(w, http.StatusUnprocessableEntity, vErr)
+		httputil.WriteDetailError(w, http.StatusUnprocessableEntity, vErr)
 		return
 	}
 	user, err := h.store.Update(r.Context(), id, UpdateParams{
@@ -290,14 +292,14 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
-			writeDetailError(w, http.StatusNotFound, "User not found")
+			httputil.WriteDetailError(w, http.StatusNotFound, "User not found")
 			return
 		}
 		h.logger.Error("update user", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	writeJSON(w, http.StatusOK, toUserResponse(user))
+	httputil.WriteJSON(w, http.StatusOK, toUserResponse(user))
 }
 
 // validateNames trims name + surname; returns the first non-empty error.

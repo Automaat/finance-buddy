@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 )
 
 // pgErrorCode returns the SQLSTATE for a Postgres-driven error, or "" when
@@ -70,39 +72,39 @@ func (h *Handler) ListSecurities(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.store.ListSecurities(r.Context())
 	if err != nil {
 		h.logger.Error("list securities", "err", err)
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	out := make([]securityResponse, 0, len(rows))
 	for _, s := range rows {
 		out = append(out, toSecurity(s))
 	}
-	writeJSON(w, http.StatusOK, listSecuritiesResponse{Securities: out})
+	httputil.WriteJSON(w, http.StatusOK, listSecuritiesResponse{Securities: out})
 }
 
 // CreateSecurity serves POST /api/holdings/securities.
 func (h *Handler) CreateSecurity(w http.ResponseWriter, r *http.Request) {
 	raw, err := readBody(r)
 	if err != nil {
-		writeValidation(w, "body", "Invalid JSON body")
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", "")
 		return
 	}
 	sec, vErr := buildSecurityInput(raw)
 	if vErr != nil {
-		writeValidation(w, vErr.Field, vErr.Msg)
+		httputil.WriteBodyValidationError(w, vErr.Field, vErr.Msg, "")
 		return
 	}
 	created, err := h.store.CreateSecurity(r.Context(), sec)
 	if err != nil {
 		if pgErrorCode(err) == pgUniqueViolation {
-			writeError(w, http.StatusConflict, "A security with the same symbol or ISIN already exists")
+			httputil.WriteDetailError(w, http.StatusConflict, "A security with the same symbol or ISIN already exists")
 			return
 		}
 		h.logger.Error("create security", "err", err)
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	writeJSON(w, http.StatusCreated, toSecurity(created))
+	httputil.WriteJSON(w, http.StatusCreated, toSecurity(created))
 }
 
 // DeleteSecurity serves DELETE /api/holdings/securities/{id}.
@@ -113,15 +115,15 @@ func (h *Handler) DeleteSecurity(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := h.store.DeleteSecurity(r.Context(), id); err != nil {
 		if errors.Is(err, ErrSecurityNotFound) {
-			writeError(w, http.StatusNotFound, "Security not found")
+			httputil.WriteDetailError(w, http.StatusNotFound, "Security not found")
 			return
 		}
 		if pgErrorCode(err) == pgForeignKeyViolation {
-			writeError(w, http.StatusConflict, "Cannot delete security with lots; delete the lots first")
+			httputil.WriteDetailError(w, http.StatusConflict, "Cannot delete security with lots; delete the lots first")
 			return
 		}
 		h.logger.Error("delete security", "err", err)
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -163,7 +165,7 @@ func (h *Handler) ListLots(w http.ResponseWriter, r *http.Request) {
 	if v := r.URL.Query().Get("account_id"); v != "" {
 		n, err := strconv.Atoi(v)
 		if err != nil || n <= 0 {
-			writeValidation(w, "account_id", "must be a positive integer")
+			httputil.WriteBodyValidationError(w, "account_id", "must be a positive integer", "")
 			return
 		}
 		accountID = &n
@@ -171,7 +173,7 @@ func (h *Handler) ListLots(w http.ResponseWriter, r *http.Request) {
 	if v := r.URL.Query().Get("security_id"); v != "" {
 		n, err := strconv.Atoi(v)
 		if err != nil || n <= 0 {
-			writeValidation(w, "security_id", "must be a positive integer")
+			httputil.WriteBodyValidationError(w, "security_id", "must be a positive integer", "")
 			return
 		}
 		securityID = &n
@@ -179,39 +181,39 @@ func (h *Handler) ListLots(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.store.ListLots(r.Context(), accountID, securityID)
 	if err != nil {
 		h.logger.Error("list lots", "err", err)
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	out := make([]lotResponse, 0, len(rows))
 	for i := range rows {
 		out = append(out, toLot(rows[i]))
 	}
-	writeJSON(w, http.StatusOK, listLotsResponse{Lots: out})
+	httputil.WriteJSON(w, http.StatusOK, listLotsResponse{Lots: out})
 }
 
 // CreateLot serves POST /api/holdings/lots.
 func (h *Handler) CreateLot(w http.ResponseWriter, r *http.Request) {
 	raw, err := readBody(r)
 	if err != nil {
-		writeValidation(w, "body", "Invalid JSON body")
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", "")
 		return
 	}
 	lot, vErr := buildLotInput(raw)
 	if vErr != nil {
-		writeValidation(w, vErr.Field, vErr.Msg)
+		httputil.WriteBodyValidationError(w, vErr.Field, vErr.Msg, "")
 		return
 	}
 	created, err := h.store.CreateLot(r.Context(), lot)
 	if err != nil {
 		if pgErrorCode(err) == pgForeignKeyViolation {
-			writeError(w, http.StatusNotFound, "Referenced account or security not found")
+			httputil.WriteDetailError(w, http.StatusNotFound, "Referenced account or security not found")
 			return
 		}
 		h.logger.Error("create lot", "err", err)
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	writeJSON(w, http.StatusCreated, toLot(created))
+	httputil.WriteJSON(w, http.StatusCreated, toLot(created))
 }
 
 // DeleteLot serves DELETE /api/holdings/lots/{id}.
@@ -222,11 +224,11 @@ func (h *Handler) DeleteLot(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := h.store.DeleteLot(r.Context(), id); err != nil {
 		if errors.Is(err, ErrLotNotFound) {
-			writeError(w, http.StatusNotFound, "Lot not found")
+			httputil.WriteDetailError(w, http.StatusNotFound, "Lot not found")
 			return
 		}
 		h.logger.Error("delete lot", "err", err)
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -266,14 +268,14 @@ func (h *Handler) ListQuotes(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.store.ListQuotes(r.Context(), id)
 	if err != nil {
 		h.logger.Error("list quotes", "err", err)
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	out := make([]quoteResponse, 0, len(rows))
 	for _, q := range rows {
 		out = append(out, toQuote(q))
 	}
-	writeJSON(w, http.StatusOK, listQuotesResponse{Quotes: out})
+	httputil.WriteJSON(w, http.StatusOK, listQuotesResponse{Quotes: out})
 }
 
 // UpsertQuote serves POST /api/holdings/securities/{id}/quotes.
@@ -284,25 +286,25 @@ func (h *Handler) UpsertQuote(w http.ResponseWriter, r *http.Request) {
 	}
 	raw, err := readBody(r)
 	if err != nil {
-		writeValidation(w, "body", "Invalid JSON body")
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", "")
 		return
 	}
 	q, vErr := buildQuoteInput(raw, id)
 	if vErr != nil {
-		writeValidation(w, vErr.Field, vErr.Msg)
+		httputil.WriteBodyValidationError(w, vErr.Field, vErr.Msg, "")
 		return
 	}
 	saved, err := h.store.UpsertQuote(r.Context(), q)
 	if err != nil {
 		if pgErrorCode(err) == pgForeignKeyViolation {
-			writeError(w, http.StatusNotFound, "Security not found")
+			httputil.WriteDetailError(w, http.StatusNotFound, "Security not found")
 			return
 		}
 		h.logger.Error("upsert quote", "err", err)
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	writeJSON(w, http.StatusOK, toQuote(saved))
+	httputil.WriteJSON(w, http.StatusOK, toQuote(saved))
 }
 
 // --- holdings aggregate ---
@@ -328,7 +330,7 @@ func (h *Handler) Holdings(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.store.Holdings(r.Context())
 	if err != nil {
 		h.logger.Error("holdings", "err", err)
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	out := make([]holdingRowResponse, 0, len(rows))
@@ -353,7 +355,7 @@ func (h *Handler) Holdings(w http.ResponseWriter, r *http.Request) {
 		}
 		out = append(out, row)
 	}
-	writeJSON(w, http.StatusOK, holdingsResponse{Holdings: out})
+	httputil.WriteJSON(w, http.StatusOK, holdingsResponse{Holdings: out})
 }
 
 // --- shared helpers ---
@@ -362,7 +364,7 @@ func parseID(w http.ResponseWriter, r *http.Request) (int, bool) {
 	raw := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(raw)
 	if err != nil || id <= 0 {
-		writeValidation(w, "id", "must be a positive integer")
+		httputil.WriteBodyValidationError(w, "id", "must be a positive integer", "")
 		return 0, false
 	}
 	return id, true
@@ -374,24 +376,4 @@ func readBody(r *http.Request) (map[string]json.RawMessage, error) {
 		return nil, err
 	}
 	return raw, nil
-}
-
-func writeJSON(w http.ResponseWriter, status int, payload any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(payload); err != nil {
-		slog.Default().Error("encode response", "err", err, "status", status)
-	}
-}
-
-func writeError(w http.ResponseWriter, status int, detail string) {
-	writeJSON(w, status, map[string]string{"detail": detail})
-}
-
-func writeValidation(w http.ResponseWriter, field, msg string) {
-	writeJSON(w, http.StatusUnprocessableEntity, map[string]any{
-		"detail": []map[string]any{
-			{"type": "value_error", "loc": []string{"body", field}, "msg": msg},
-		},
-	})
 }

@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
@@ -89,26 +90,26 @@ type mortgageResponse struct {
 func (h *Handler) MortgageVsInvest(w http.ResponseWriter, r *http.Request) {
 	raw := map[string]json.RawMessage{}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
-		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
 		return
 	}
 	in, vErr := buildMortgageInputs(raw)
 	if vErr != nil {
-		writePydanticError(w, vErr)
+		httputil.WritePydanticError(w, vErr)
 		return
 	}
 	result, err := SimulateMortgageVsInvest(in)
 	if err != nil {
 		var budgetErr *BudgetTooLowError
 		if errors.As(err, &budgetErr) {
-			writeDetailError(w, http.StatusBadRequest,
+			httputil.WriteDetailError(w, http.StatusBadRequest,
 				fmt.Sprintf("Total monthly budget (%.2f PLN) is less than "+
 					"the required mortgage payment (%.2f PLN)",
 					budgetErr.Budget, budgetErr.Payment))
 			return
 		}
 		h.logger.Error("mortgage sim", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	resp := mortgageResponse{
@@ -156,7 +157,7 @@ func (h *Handler) MortgageVsInvest(w http.ResponseWriter, r *http.Request) {
 			NetAdvantageInvest:           wire.PyFloat(y.NetAdvantageInvest),
 		})
 	}
-	writeJSON(w, http.StatusOK, resp)
+	httputil.WriteJSON(w, http.StatusOK, resp)
 }
 
 // --- WIBOR scenarios wire types ---
@@ -187,12 +188,12 @@ type wiborResponse struct {
 func (h *Handler) WiborScenarios(w http.ResponseWriter, r *http.Request) {
 	raw := map[string]json.RawMessage{}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
-		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
 		return
 	}
 	in, vErr := buildWiborInputs(raw)
 	if vErr != nil {
-		writePydanticError(w, vErr)
+		httputil.WritePydanticError(w, vErr)
 		return
 	}
 	result := SimulateWiborScenarios(in, DefaultWiborDeltas)
@@ -220,7 +221,7 @@ func (h *Handler) WiborScenarios(w http.ResponseWriter, r *http.Request) {
 			YearlyBalances: balances,
 		})
 	}
-	writeJSON(w, http.StatusOK, resp)
+	httputil.WriteJSON(w, http.StatusOK, resp)
 }
 
 // Prefill serves GET /api/simulations/prefill.
@@ -228,7 +229,7 @@ func (h *Handler) Prefill(w http.ResponseWriter, r *http.Request) {
 	data, err := h.store.LoadPrefill(r.Context())
 	if err != nil {
 		h.logger.Error("simulations prefill", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	balances := map[string]wire.PyFloat{}
@@ -255,7 +256,7 @@ func (h *Handler) Prefill(w http.ResponseWriter, r *http.Request) {
 		pf := wire.PyFloat(*v)
 		salaries[k] = &pf
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
+	httputil.WriteJSON(w, http.StatusOK, map[string]any{
 		"current_age":      data.CurrentAge,
 		"retirement_age":   data.RetirementAge,
 		"balances":         balances,
@@ -269,21 +270,21 @@ func (h *Handler) Prefill(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Retirement(w http.ResponseWriter, r *http.Request) {
 	raw := map[string]json.RawMessage{}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<18)).Decode(&raw); err != nil {
-		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
 		return
 	}
 	in, vErr := buildSimulationInputs(raw)
 	if vErr != nil {
-		writePydanticError(w, vErr)
+		httputil.WritePydanticError(w, vErr)
 		return
 	}
 	sims, err := h.runSimulation(r.Context(), in)
 	if err != nil {
 		h.logger.Error("retirement sim", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	writeJSON(w, http.StatusOK, buildSimulationResponse(in, sims))
+	httputil.WriteJSON(w, http.StatusOK, buildSimulationResponse(in, sims))
 }
 
 // monteCarloInputsWire mirrors MonteCarloInputs over JSON.
@@ -323,23 +324,23 @@ type monteCarloAccountMixWire struct {
 func (h *Handler) MonteCarlo(w http.ResponseWriter, r *http.Request) {
 	var in monteCarloInputsWire
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<18)).Decode(&in); err != nil {
-		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
 		return
 	}
 	if in.CurrentAge <= 0 || in.LifeExpectancy <= in.CurrentAge {
-		writeValidationError(w, "life_expectancy", "life_expectancy must exceed current_age", "")
+		httputil.WriteBodyValidationError(w, "life_expectancy", "life_expectancy must exceed current_age", "")
 		return
 	}
 	if in.RetirementAge < in.CurrentAge || in.RetirementAge > in.LifeExpectancy {
-		writeValidationError(w, "retirement_age", "retirement_age must be between current_age and life_expectancy", "")
+		httputil.WriteBodyValidationError(w, "retirement_age", "retirement_age must be between current_age and life_expectancy", "")
 		return
 	}
 	if in.CurrentPortfolio < 0 || in.AnnualContribution < 0 || in.AnnualWithdrawal < 0 {
-		writeValidationError(w, "amount", "monetary inputs must be non-negative", "")
+		httputil.WriteBodyValidationError(w, "amount", "monetary inputs must be non-negative", "")
 		return
 	}
 	if in.Paths < 0 || in.Paths > 10000 {
-		writeValidationError(w, "paths", "paths must be in [0, 10000]", "")
+		httputil.WriteBodyValidationError(w, "paths", "paths must be in [0, 10000]", "")
 		return
 	}
 
@@ -349,26 +350,26 @@ func (h *Handler) MonteCarlo(w http.ResponseWriter, r *http.Request) {
 		bonds := float64(in.Allocation.BondsPct)
 		cash := float64(in.Allocation.CashPct)
 		if stocks < 0 || bonds < 0 || cash < 0 {
-			writeValidationError(w, "allocation", "allocation percentages must be non-negative", "")
+			httputil.WriteBodyValidationError(w, "allocation", "allocation percentages must be non-negative", "")
 			return
 		}
 		sum := stocks + bonds + cash
 		if math.Abs(sum-100) > 0.01 {
-			writeValidationError(w, "allocation",
+			httputil.WriteBodyValidationError(w, "allocation",
 				fmt.Sprintf("allocation must sum to 100 (got %.2f)", sum), "")
 			return
 		}
 		allocation = &MonteCarloAllocation{StocksPct: stocks, BondsPct: bonds, CashPct: cash}
 	} else if in.Volatility < 0 {
-		writeValidationError(w, "volatility", "volatility must be non-negative", "")
+		httputil.WriteBodyValidationError(w, "volatility", "volatility must be non-negative", "")
 		return
 	}
 	if in.InflationVolatility < 0 {
-		writeValidationError(w, "inflation_volatility", "inflation_volatility must be non-negative", "")
+		httputil.WriteBodyValidationError(w, "inflation_volatility", "inflation_volatility must be non-negative", "")
 		return
 	}
 	if in.InflationMean < -50 || in.InflationMean > 50 {
-		writeValidationError(w, "inflation_mean", "inflation_mean must be within [-50, 50]", "")
+		httputil.WriteBodyValidationError(w, "inflation_mean", "inflation_mean must be within [-50, 50]", "")
 		return
 	}
 
@@ -380,17 +381,17 @@ func (h *Handler) MonteCarlo(w http.ResponseWriter, r *http.Request) {
 		zus := float64(in.AccountMix.ZusPct)
 		gain := float64(in.AccountMix.TaxableGainPct)
 		if taxable < 0 || ike < 0 || ikze < 0 || zus < 0 {
-			writeValidationError(w, "account_mix", "account_mix percentages must be non-negative", "")
+			httputil.WriteBodyValidationError(w, "account_mix", "account_mix percentages must be non-negative", "")
 			return
 		}
 		if gain < 0 || gain > 100 {
-			writeValidationError(w, "account_mix",
+			httputil.WriteBodyValidationError(w, "account_mix",
 				"taxable_gain_pct must be within [0, 100]", "")
 			return
 		}
 		sum := taxable + ike + ikze + zus
 		if math.Abs(sum-100) > 0.01 {
-			writeValidationError(w, "account_mix",
+			httputil.WriteBodyValidationError(w, "account_mix",
 				fmt.Sprintf("account_mix must sum to 100 (got %.2f)", sum), "")
 			return
 		}
@@ -416,7 +417,7 @@ func (h *Handler) MonteCarlo(w http.ResponseWriter, r *http.Request) {
 		InflationVolatility: float64(in.InflationVolatility),
 		AccountMix:          accountMix,
 	})
-	writeJSON(w, http.StatusOK, result)
+	httputil.WriteJSON(w, http.StatusOK, result)
 }
 
 func (h *Handler) runSimulation(ctx context.Context, in simulationInputs) ([]AccountSimulation, error) {
@@ -472,30 +473,4 @@ func (h *Handler) runSimulation(ctx context.Context, in simulationInputs) ([]Acc
 		}, in.CurrentAge, in.RetirementAge, currentYear, in.AnnualReturnRate))
 	}
 	return sims, nil
-}
-
-// --- shared response helpers ---
-
-func writeJSON(w http.ResponseWriter, status int, payload any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(payload); err != nil {
-		slog.Default().Error("encode response", "err", err, "status", status)
-	}
-}
-
-func writeDetailError(w http.ResponseWriter, status int, detail string) {
-	writeJSON(w, status, map[string]string{"detail": detail})
-}
-
-func writeValidationError(w http.ResponseWriter, field, msg, input string) {
-	writeJSON(w, http.StatusUnprocessableEntity, map[string]any{
-		"detail": []map[string]any{
-			{"type": "value_error", "loc": []string{"body", field}, "msg": msg, "input": input},
-		},
-	})
-}
-
-func writePydanticError(w http.ResponseWriter, vErr *validationError) {
-	writeValidationError(w, vErr.Field, vErr.Msg, "")
 }

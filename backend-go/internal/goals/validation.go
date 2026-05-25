@@ -8,32 +8,34 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 )
 
-func validateCreate(req *createRequest) *validationError {
+func validateCreate(req *createRequest) *httputil.ValidationError {
 	name := strings.TrimSpace(req.Name)
 	if name == "" {
-		return &validationError{Field: "name", Msg: "Name cannot be empty"}
+		return &httputil.ValidationError{Field: "name", Msg: "Name cannot be empty"}
 	}
 	req.Name = name
 	if time.Time(req.TargetDate).IsZero() {
-		return &validationError{Field: "target_date", Msg: "Field required"}
+		return &httputil.ValidationError{Field: "target_date", Msg: "Field required"}
 	}
 	if req.TargetAmount <= 0 {
-		return &validationError{Field: "target_amount", Msg: "Target amount must be greater than 0"}
+		return &httputil.ValidationError{Field: "target_amount", Msg: "Target amount must be greater than 0"}
 	}
 	if req.CurrentAmount < 0 {
-		return &validationError{Field: "current_amount", Msg: "Current amount must be non-negative"}
+		return &httputil.ValidationError{Field: "current_amount", Msg: "Current amount must be non-negative"}
 	}
 	if req.MonthlyContribution < 0 {
-		return &validationError{
+		return &httputil.ValidationError{
 			Field: "monthly_contribution",
 			Msg:   "Monthly contribution must be non-negative",
 		}
 	}
 	if req.Category != nil {
 		if _, ok := validCategories[*req.Category]; !ok {
-			return &validationError{
+			return &httputil.ValidationError{
 				Field: "category",
 				Msg:   fmt.Sprintf("invalid category %q", *req.Category),
 			}
@@ -45,7 +47,7 @@ func validateCreate(req *createRequest) *validationError {
 // buildUpdatePatch reads a raw JSON object and decides, per field, whether
 // it was omitted, explicitly null, or set to a value. This is the Go analog
 // of Pydantic's model_fields_set used in update_goal.
-func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *validationError) {
+func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.ValidationError) {
 	var p UpdatePatch
 	if vErr := patchScalarFields(raw, &p); vErr != nil {
 		return p, vErr
@@ -59,15 +61,15 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *validationE
 // patchScalarFields handles non-nullable-but-omittable update fields.
 // Matches Python's GoalUpdate validators: explicit null is treated as
 // "no-op" (the validator returns None and the service skips that field).
-func patchScalarFields(raw map[string]json.RawMessage, p *UpdatePatch) *validationError {
+func patchScalarFields(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.ValidationError {
 	if v, ok := raw["name"]; ok && !isNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
-			return &validationError{Field: "name", Msg: "must be a string"}
+			return &httputil.ValidationError{Field: "name", Msg: "must be a string"}
 		}
 		s = strings.TrimSpace(s)
 		if s == "" {
-			return &validationError{Field: "name", Msg: "Name cannot be empty"}
+			return &httputil.ValidationError{Field: "name", Msg: "Name cannot be empty"}
 		}
 		p.Name = &s
 	}
@@ -77,11 +79,11 @@ func patchScalarFields(raw map[string]json.RawMessage, p *UpdatePatch) *validati
 	if v, ok := raw["target_date"]; ok && !isNull(v) {
 		var s string
 		if err := json.Unmarshal(v, &s); err != nil {
-			return &validationError{Field: "target_date", Msg: "must be a string"}
+			return &httputil.ValidationError{Field: "target_date", Msg: "must be a string"}
 		}
 		t, err := time.Parse("2006-01-02", s)
 		if err != nil {
-			return &validationError{Field: "target_date", Msg: "must be YYYY-MM-DD"}
+			return &httputil.ValidationError{Field: "target_date", Msg: "must be YYYY-MM-DD"}
 		}
 		p.TargetDate = &t
 	}
@@ -94,7 +96,7 @@ func patchScalarFields(raw map[string]json.RawMessage, p *UpdatePatch) *validati
 	if v, ok := raw["is_completed"]; ok && !isNull(v) {
 		var b bool
 		if err := json.Unmarshal(v, &b); err != nil {
-			return &validationError{Field: "is_completed", Msg: "must be a boolean"}
+			return &httputil.ValidationError{Field: "is_completed", Msg: "must be a boolean"}
 		}
 		p.IsCompleted = &b
 	}
@@ -103,13 +105,13 @@ func patchScalarFields(raw map[string]json.RawMessage, p *UpdatePatch) *validati
 
 // patchNullableRefs handles the two fields where the caller can explicitly
 // send null to clear the link (account_id, category).
-func patchNullableRefs(raw map[string]json.RawMessage, p *UpdatePatch) *validationError {
+func patchNullableRefs(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.ValidationError {
 	if v, ok := raw["account_id"]; ok {
 		p.AccountIDSet = true
 		if !isNull(v) {
 			var id int
 			if err := json.Unmarshal(v, &id); err != nil {
-				return &validationError{Field: "account_id", Msg: "must be an integer"}
+				return &httputil.ValidationError{Field: "account_id", Msg: "must be an integer"}
 			}
 			p.AccountID = &id
 		}
@@ -119,10 +121,10 @@ func patchNullableRefs(raw map[string]json.RawMessage, p *UpdatePatch) *validati
 		if !isNull(v) {
 			var s string
 			if err := json.Unmarshal(v, &s); err != nil {
-				return &validationError{Field: "category", Msg: "must be a string"}
+				return &httputil.ValidationError{Field: "category", Msg: "must be a string"}
 			}
 			if _, valid := validCategories[s]; !valid {
-				return &validationError{
+				return &httputil.ValidationError{
 					Field: "category",
 					Msg:   fmt.Sprintf("invalid category %q", s),
 				}
@@ -133,34 +135,34 @@ func patchNullableRefs(raw map[string]json.RawMessage, p *UpdatePatch) *validati
 	return nil
 }
 
-func patchPositiveAmount(raw map[string]json.RawMessage, field string, dest **decimal.Decimal, msg string) *validationError {
+func patchPositiveAmount(raw map[string]json.RawMessage, field string, dest **decimal.Decimal, msg string) *httputil.ValidationError {
 	v, ok := raw[field]
 	if !ok || isNull(v) {
 		return nil
 	}
 	var f float64
 	if err := json.Unmarshal(v, &f); err != nil {
-		return &validationError{Field: field, Msg: "must be a number"}
+		return &httputil.ValidationError{Field: field, Msg: "must be a number"}
 	}
 	if f <= 0 {
-		return &validationError{Field: field, Msg: msg}
+		return &httputil.ValidationError{Field: field, Msg: msg}
 	}
 	d := decimal.NewFromFloat(f)
 	*dest = &d
 	return nil
 }
 
-func patchNonNegativeAmount(raw map[string]json.RawMessage, field string, dest **decimal.Decimal, msg string) *validationError {
+func patchNonNegativeAmount(raw map[string]json.RawMessage, field string, dest **decimal.Decimal, msg string) *httputil.ValidationError {
 	v, ok := raw[field]
 	if !ok || isNull(v) {
 		return nil
 	}
 	var f float64
 	if err := json.Unmarshal(v, &f); err != nil {
-		return &validationError{Field: field, Msg: "must be a number"}
+		return &httputil.ValidationError{Field: field, Msg: "must be a number"}
 	}
 	if f < 0 {
-		return &validationError{Field: field, Msg: msg}
+		return &httputil.ValidationError{Field: field, Msg: msg}
 	}
 	d := decimal.NewFromFloat(f)
 	*dest = &d

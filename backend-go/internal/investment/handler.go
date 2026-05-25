@@ -1,13 +1,13 @@
 package investment
 
 import (
-	"encoding/json"
 	"log/slog"
 	"math"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
@@ -70,7 +70,7 @@ type scopeWire struct {
 func (h *Handler) Returns(w http.ResponseWriter, r *http.Request) {
 	scope, scopeWire, vErr := parseScope(r)
 	if vErr != "" {
-		writeDetailError(w, http.StatusBadRequest, vErr)
+		httputil.WriteDetailError(w, http.StatusBadRequest, vErr)
 		return
 	}
 	period := r.URL.Query().Get("period")
@@ -78,7 +78,7 @@ func (h *Handler) Returns(w http.ResponseWriter, r *http.Request) {
 		period = "all"
 	}
 	if !validPeriod(period) {
-		writeDetailError(w, http.StatusBadRequest, "period must be one of 1m|3m|ytd|1y|all")
+		httputil.WriteDetailError(w, http.StatusBadRequest, "period must be one of 1m|3m|ytd|1y|all")
 		return
 	}
 	now := time.Now().UTC()
@@ -87,7 +87,7 @@ func (h *Handler) Returns(w http.ResponseWriter, r *http.Request) {
 	value, snapDate, hasSnap, err := h.store.LatestValueInScope(r.Context(), scope, now)
 	if err != nil {
 		h.logger.Error("returns: snapshot lookup", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	// Cash flows must align with the valuation date. When a snapshot exists,
@@ -100,7 +100,7 @@ func (h *Handler) Returns(w http.ResponseWriter, r *http.Request) {
 	flows, err := h.store.ScopedFlows(r.Context(), scope, PeriodWindow{Since: window.Since, AsOf: flowEnd})
 	if err != nil {
 		h.logger.Error("returns: flows", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 
@@ -114,7 +114,7 @@ func (h *Handler) Returns(w http.ResponseWriter, r *http.Request) {
 		openValDec, _, hasOpen, err := h.store.LatestValueInScope(r.Context(), scope, *window.Since)
 		if err != nil {
 			h.logger.Error("returns: opening snapshot", "err", err)
-			writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+			httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 			return
 		}
 		if hasOpen {
@@ -170,7 +170,7 @@ func (h *Handler) Returns(w http.ResponseWriter, r *http.Request) {
 			resp.MoneyWeightedPct = &pct
 		}
 	}
-	writeJSON(w, http.StatusOK, resp)
+	httputil.WriteJSON(w, http.StatusOK, resp)
 }
 
 func validPeriod(p string) bool {
@@ -245,11 +245,11 @@ func (h *Handler) categoryStats(w http.ResponseWriter, r *http.Request, category
 	stats, err := h.store.StatsForCategory(r.Context(), category)
 	if err != nil {
 		h.logger.Error("category stats", "category", category, "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	if !stats.HasAccounts {
-		writeJSON(w, http.StatusOK, response{Category: category})
+		httputil.WriteJSON(w, http.StatusOK, response{Category: category})
 		return
 	}
 	value, _ := stats.TotalValue.Float64()
@@ -259,23 +259,11 @@ func (h *Handler) categoryStats(w http.ResponseWriter, r *http.Request, category
 	if contributed > 0 {
 		roi = returns / contributed * 100
 	}
-	writeJSON(w, http.StatusOK, response{
+	httputil.WriteJSON(w, http.StatusOK, response{
 		Category:         category,
 		TotalValue:       wire.PyFloat(value),
 		TotalContributed: wire.PyFloat(contributed),
 		Returns:          wire.PyFloat(returns),
 		ROIPercentage:    wire.PyFloat(math.Round(roi*100) / 100),
 	})
-}
-
-func writeJSON(w http.ResponseWriter, status int, payload any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(payload); err != nil {
-		slog.Default().Error("encode response", "err", err, "status", status)
-	}
-}
-
-func writeDetailError(w http.ResponseWriter, status int, detail string) {
-	writeJSON(w, status, map[string]string{"detail": detail})
 }

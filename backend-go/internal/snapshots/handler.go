@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
@@ -76,7 +77,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.store.List(r.Context())
 	if err != nil {
 		h.logger.Error("list snapshots", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	out := make([]listItem, 0, len(rows))
@@ -86,7 +87,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 			TotalNetWorth: wire.PyFloat(row.TotalNetWorth),
 		})
 	}
-	writeJSON(w, http.StatusOK, out)
+	httputil.WriteJSON(w, http.StatusOK, out)
 }
 
 // Get serves GET /api/snapshots/{id}.
@@ -100,19 +101,19 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		h.writeStoreError(w, err, id, nil)
 		return
 	}
-	writeJSON(w, http.StatusOK, buildResponse(snap, values))
+	httputil.WriteJSON(w, http.StatusOK, buildResponse(snap, values))
 }
 
 // Create serves POST /api/snapshots.
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	raw := map[string]json.RawMessage{}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(&raw); err != nil {
-		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
 		return
 	}
 	req, vErr := buildCreateRequest(raw)
 	if vErr != nil {
-		writePydanticError(w, vErr)
+		httputil.WritePydanticError(w, vErr)
 		return
 	}
 	snap, values, err := h.store.Create(r.Context(), req.Date, req.Notes, req.Values)
@@ -120,7 +121,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		h.writeStoreError(w, err, 0, &req.Date)
 		return
 	}
-	writeJSON(w, http.StatusCreated, buildResponse(snap, values))
+	httputil.WriteJSON(w, http.StatusCreated, buildResponse(snap, values))
 }
 
 // Update serves PUT /api/snapshots/{id}.
@@ -131,12 +132,12 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	raw := map[string]json.RawMessage{}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(&raw); err != nil {
-		writeValidationError(w, "body", "Invalid JSON body", err.Error())
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
 		return
 	}
 	patch, vErr := buildUpdatePatch(raw)
 	if vErr != nil {
-		writePydanticError(w, vErr)
+		httputil.WritePydanticError(w, vErr)
 		return
 	}
 	snap, values, err := h.store.Update(r.Context(), id, patch)
@@ -144,41 +145,41 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		h.writeStoreError(w, err, id, patch.Date)
 		return
 	}
-	writeJSON(w, http.StatusOK, buildResponse(snap, values))
+	httputil.WriteJSON(w, http.StatusOK, buildResponse(snap, values))
 }
 
 func (h *Handler) writeStoreError(w http.ResponseWriter, err error, id int, date *time.Time) {
 	switch {
 	case errors.Is(err, ErrNotFound):
-		writeDetailError(w, http.StatusNotFound,
+		httputil.WriteDetailError(w, http.StatusNotFound,
 			fmt.Sprintf("Snapshot %d not found", id))
 	case errors.Is(err, ErrDuplicateDate):
 		d := ""
 		if date != nil {
 			d = date.Format("2006-01-02")
 		}
-		writeDetailError(w, http.StatusBadRequest,
+		httputil.WriteDetailError(w, http.StatusBadRequest,
 			fmt.Sprintf("Snapshot for date %s already exists", d))
 	case errors.Is(err, ErrDuplicateAssetIDs):
-		writeDetailError(w, http.StatusBadRequest,
+		httputil.WriteDetailError(w, http.StatusBadRequest,
 			"Duplicate asset IDs in snapshot values")
 	case errors.Is(err, ErrDuplicateAccountIDs):
-		writeDetailError(w, http.StatusBadRequest,
+		httputil.WriteDetailError(w, http.StatusBadRequest,
 			"Duplicate account IDs in snapshot values")
 	default:
 		var mre *MissingReferencesError
 		if errors.As(err, &mre) {
 			if len(mre.MissingAssets) > 0 {
-				writeDetailError(w, http.StatusNotFound,
+				httputil.WriteDetailError(w, http.StatusNotFound,
 					fmt.Sprintf("Assets not found: %s", setLiteral(mre.MissingAssets)))
 				return
 			}
-			writeDetailError(w, http.StatusNotFound,
+			httputil.WriteDetailError(w, http.StatusNotFound,
 				fmt.Sprintf("Accounts not found: %s", setLiteral(mre.MissingAccounts)))
 			return
 		}
 		h.logger.Error("snapshot store", "err", err)
-		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 	}
 }
 
@@ -199,7 +200,7 @@ func parseIDParam(w http.ResponseWriter, r *http.Request) (int, bool) {
 	raw := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(raw)
 	if err != nil {
-		writeValidationError(w, "snapshot_id", "must be an integer", raw)
+		httputil.WriteBodyValidationError(w, "snapshot_id", "must be an integer", raw)
 		return 0, false
 	}
 	return id, true

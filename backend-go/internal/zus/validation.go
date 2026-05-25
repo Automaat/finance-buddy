@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 )
 
 type calculateInputs struct {
@@ -16,9 +18,9 @@ type calculateInputs struct {
 // validators on ZusCalculatorInputs (gender M/F, retirement_age 55..70,
 // non-negative salaries, rates 0..20, work_start_year 1970..2030,
 // retirement_age strictly greater than current age).
-func buildInputs(raw map[string]json.RawMessage, now func() time.Time) (calculateInputs, *validationError) {
+func buildInputs(raw map[string]json.RawMessage, now func() time.Time) (calculateInputs, *httputil.ValidationError) {
 	var c calculateInputs
-	var err *validationError
+	var err *httputil.ValidationError
 	c.Inputs.OwnerUserID, err = requireIntOrNull(raw, "owner_user_id")
 	if err != nil {
 		return c, err
@@ -57,7 +59,7 @@ func buildInputs(raw map[string]json.RawMessage, now func() time.Time) (calculat
 	return c, nil
 }
 
-func readRates(raw map[string]json.RawMessage, in *Inputs) *validationError {
+func readRates(raw map[string]json.RawMessage, in *Inputs) *httputil.ValidationError {
 	rates := []struct {
 		key      string
 		dest     *float64
@@ -78,7 +80,7 @@ func readRates(raw map[string]json.RawMessage, in *Inputs) *validationError {
 	return nil
 }
 
-func readMisc(raw map[string]json.RawMessage, in *Inputs) *validationError {
+func readMisc(raw map[string]json.RawMessage, in *Inputs) *httputil.ValidationError {
 	hasOFE, err := optionalBool(raw, "has_ofe", false)
 	if err != nil {
 		return err
@@ -97,39 +99,39 @@ func readMisc(raw map[string]json.RawMessage, in *Inputs) *validationError {
 	return nil
 }
 
-func readSalaryHistory(raw map[string]json.RawMessage, in *Inputs) *validationError {
+func readSalaryHistory(raw map[string]json.RawMessage, in *Inputs) *httputil.ValidationError {
 	in.SalaryHistory = map[int]float64{}
 	v, ok := raw["salary_history"]
 	if !ok {
 		return nil
 	}
 	if isNull(v) {
-		return &validationError{Field: "salary_history", Msg: "must be an array"}
+		return &httputil.ValidationError{Field: "salary_history", Msg: "must be an array"}
 	}
 	var entries []map[string]any
 	if err := json.Unmarshal(v, &entries); err != nil {
-		return &validationError{Field: "salary_history", Msg: "must be an array"}
+		return &httputil.ValidationError{Field: "salary_history", Msg: "must be an array"}
 	}
 	for _, e := range entries {
 		yVal, hasYear := e["year"]
 		gVal, hasGross := e["annual_gross"]
 		if !hasYear || !hasGross {
-			return &validationError{Field: "salary_history", Msg: "entries require 'year' and 'annual_gross'"}
+			return &httputil.ValidationError{Field: "salary_history", Msg: "entries require 'year' and 'annual_gross'"}
 		}
 		yf, ok := yVal.(float64)
 		if !ok {
-			return &validationError{Field: "salary_history", Msg: "year must be a number"}
+			return &httputil.ValidationError{Field: "salary_history", Msg: "year must be a number"}
 		}
 		gf, ok := gVal.(float64)
 		if !ok {
-			return &validationError{Field: "salary_history", Msg: "annual_gross must be a number"}
+			return &httputil.ValidationError{Field: "salary_history", Msg: "annual_gross must be a number"}
 		}
 		in.SalaryHistory[int(yf)] = gf
 	}
 	return nil
 }
 
-func validateAgeRelationship(birth time.Time, retirementAge int, now func() time.Time) *validationError {
+func validateAgeRelationship(birth time.Time, retirementAge int, now func() time.Time) *httputil.ValidationError {
 	today := now().UTC()
 	currentAge := today.Year() - birth.Year()
 	if today.Month() < birth.Month() ||
@@ -137,7 +139,7 @@ func validateAgeRelationship(birth time.Time, retirementAge int, now func() time
 		currentAge--
 	}
 	if retirementAge <= currentAge {
-		return &validationError{
+		return &httputil.ValidationError{
 			Field: "retirement_age",
 			Msg:   "Retirement age must be greater than current age",
 		}
@@ -149,149 +151,149 @@ func validateAgeRelationship(birth time.Time, retirementAge int, now func() time
 
 // requireIntOrNull reads an integer key that must be present; an explicit
 // null is allowed and yields nil (jointly owned).
-func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *validationError) {
+func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok {
-		return nil, &validationError{Field: key, Msg: "Field required"}
+		return nil, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	if isNull(v) {
 		return nil, nil
 	}
 	var n int
 	if err := json.Unmarshal(v, &n); err != nil {
-		return nil, &validationError{Field: key, Msg: "must be an integer"}
+		return nil, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
 	}
 	return &n, nil
 }
 
-func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *validationError) {
+func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok || isNull(v) {
-		return time.Time{}, &validationError{Field: key, Msg: "Field required"}
+		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var s string
 	if err := json.Unmarshal(v, &s); err != nil {
-		return time.Time{}, &validationError{Field: key, Msg: "must be a string"}
+		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be a string"}
 	}
 	t, err := time.Parse("2006-01-02", s)
 	if err != nil {
-		return time.Time{}, &validationError{Field: key, Msg: "must be YYYY-MM-DD"}
+		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be YYYY-MM-DD"}
 	}
 	return t, nil
 }
 
-func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *validationError) {
+func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok || isNull(v) {
-		return "", &validationError{Field: key, Msg: "Field required"}
+		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var s string
 	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &validationError{Field: key, Msg: "must be a string"}
+		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
 	}
 	if _, ok := allowed[s]; !ok {
-		return "", &validationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
+		return "", &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
 	}
 	return s, nil
 }
 
-func requireNonNegativeFloat(raw map[string]json.RawMessage, key, msg string) (float64, *validationError) {
+func requireNonNegativeFloat(raw map[string]json.RawMessage, key, msg string) (float64, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok || isNull(v) {
-		return 0, &validationError{Field: key, Msg: "Field required"}
+		return 0, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var f float64
 	if err := json.Unmarshal(v, &f); err != nil {
-		return 0, &validationError{Field: key, Msg: "must be a number"}
+		return 0, &httputil.ValidationError{Field: key, Msg: "must be a number"}
 	}
 	if f < 0 {
-		return 0, &validationError{Field: key, Msg: msg}
+		return 0, &httputil.ValidationError{Field: key, Msg: msg}
 	}
 	return f, nil
 }
 
 // optionalNonNegativeFloat: omitted -> fallback. Present-as-null -> 422
 // (Pydantic rejects null on non-Optional typed defaults).
-func optionalNonNegativeFloat(raw map[string]json.RawMessage, key string, fallback float64, msg string) (float64, *validationError) {
+func optionalNonNegativeFloat(raw map[string]json.RawMessage, key string, fallback float64, msg string) (float64, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok {
 		return fallback, nil
 	}
 	if isNull(v) {
-		return 0, &validationError{Field: key, Msg: "must be a number"}
+		return 0, &httputil.ValidationError{Field: key, Msg: "must be a number"}
 	}
 	var f float64
 	if err := json.Unmarshal(v, &f); err != nil {
-		return 0, &validationError{Field: key, Msg: "must be a number"}
+		return 0, &httputil.ValidationError{Field: key, Msg: "must be a number"}
 	}
 	if f < 0 {
-		return 0, &validationError{Field: key, Msg: msg}
+		return 0, &httputil.ValidationError{Field: key, Msg: msg}
 	}
 	return f, nil
 }
 
-func optionalFloatRange(raw map[string]json.RawMessage, key string, fallback, lo, hi float64, msg string) (float64, *validationError) {
+func optionalFloatRange(raw map[string]json.RawMessage, key string, fallback, lo, hi float64, msg string) (float64, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok {
 		return fallback, nil
 	}
 	if isNull(v) {
-		return 0, &validationError{Field: key, Msg: "must be a number"}
+		return 0, &httputil.ValidationError{Field: key, Msg: "must be a number"}
 	}
 	var f float64
 	if err := json.Unmarshal(v, &f); err != nil {
-		return 0, &validationError{Field: key, Msg: "must be a number"}
+		return 0, &httputil.ValidationError{Field: key, Msg: "must be a number"}
 	}
 	if f < lo || f > hi {
-		return 0, &validationError{Field: key, Msg: msg}
+		return 0, &httputil.ValidationError{Field: key, Msg: msg}
 	}
 	return f, nil
 }
 
-func optionalIntRange(raw map[string]json.RawMessage, key string, fallback, lo, hi int, msg string) (int, *validationError) {
+func optionalIntRange(raw map[string]json.RawMessage, key string, fallback, lo, hi int, msg string) (int, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok {
 		return fallback, nil
 	}
 	if isNull(v) {
-		return 0, &validationError{Field: key, Msg: "must be an integer"}
+		return 0, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
 	}
 	var n int
 	if err := json.Unmarshal(v, &n); err != nil {
-		return 0, &validationError{Field: key, Msg: "must be an integer"}
+		return 0, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
 	}
 	if n < lo || n > hi {
-		return 0, &validationError{Field: key, Msg: msg}
+		return 0, &httputil.ValidationError{Field: key, Msg: msg}
 	}
 	return n, nil
 }
 
-func requireIntRange(raw map[string]json.RawMessage, key string, lo, hi int, msg string) (int, *validationError) {
+func requireIntRange(raw map[string]json.RawMessage, key string, lo, hi int, msg string) (int, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok || isNull(v) {
-		return 0, &validationError{Field: key, Msg: "Field required"}
+		return 0, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var n int
 	if err := json.Unmarshal(v, &n); err != nil {
-		return 0, &validationError{Field: key, Msg: "must be an integer"}
+		return 0, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
 	}
 	if n < lo || n > hi {
-		return 0, &validationError{Field: key, Msg: msg}
+		return 0, &httputil.ValidationError{Field: key, Msg: msg}
 	}
 	return n, nil
 }
 
-func optionalBool(raw map[string]json.RawMessage, key string, fallback bool) (bool, *validationError) {
+func optionalBool(raw map[string]json.RawMessage, key string, fallback bool) (bool, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok {
 		return fallback, nil
 	}
 	if isNull(v) {
-		return false, &validationError{Field: key, Msg: "must be a boolean"}
+		return false, &httputil.ValidationError{Field: key, Msg: "must be a boolean"}
 	}
 	var b bool
 	if err := json.Unmarshal(v, &b); err != nil {
-		return false, &validationError{Field: key, Msg: "must be a boolean"}
+		return false, &httputil.ValidationError{Field: key, Msg: "must be a boolean"}
 	}
 	return b, nil
 }
