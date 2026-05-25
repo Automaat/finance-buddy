@@ -74,6 +74,19 @@
 			limitOverride
 		});
 	}
+
+	function refundLabel(rate: number | null | undefined): string {
+		if (rate == null) return 'Szac. zwrot PIT (—)';
+		return `Szac. zwrot PIT (${formatPercent(rate * 100)})`;
+	}
+
+	function refundValue(
+		rate: number | null | undefined,
+		amount: number
+	): { text: string; hasRate: boolean } {
+		if (rate == null) return { text: '—', hasRate: false };
+		return { text: formatPLN(amount), hasRate: true };
+	}
 </script>
 
 <section class="card preset-filled-surface-100-900 p-5 space-y-4">
@@ -102,6 +115,7 @@
 				{@const key = String(row.owner_user_id ?? 'shared')}
 				{@const kind = limitKindByOwner[key] ?? 'employee'}
 				{@const rec = recommendationFor(row)}
+				{@const refund = refundValue(row.marginal_tax_rate, rec.refundEstimate)}
 				<article class="card preset-tonal-surface p-4 space-y-3">
 					<div class="flex items-center justify-between gap-2">
 						<div class="font-semibold flex items-center gap-2">
@@ -114,6 +128,7 @@
 								class="btn btn-sm {kind === 'employee'
 									? 'preset-filled-primary-500'
 									: 'preset-tonal-surface'}"
+								aria-pressed={kind === 'employee'}
 								onclick={() => setKind(key, 'employee')}
 							>
 								Pracownik
@@ -123,6 +138,7 @@
 								class="btn btn-sm {kind === 'b2b'
 									? 'preset-filled-primary-500'
 									: 'preset-tonal-surface'}"
+								aria-pressed={kind === 'b2b'}
 								onclick={() => setKind(key, 'b2b')}
 							>
 								B2B
@@ -144,10 +160,10 @@
 							<dd class="font-bold">{formatPLN(rec.monthlyTarget)}</dd>
 						</div>
 						<div>
-							<dt class="text-xs text-surface-600-400">
-								Szac. zwrot PIT ({formatPercent((row.marginal_tax_rate ?? 0) * 100)})
-							</dt>
-							<dd class="font-bold text-success-600-400">{formatPLN(rec.refundEstimate)}</dd>
+							<dt class="text-xs text-surface-600-400">{refundLabel(row.marginal_tax_rate)}</dt>
+							<dd class="font-bold {refund.hasRate ? 'text-success-600-400' : ''}">
+								{refund.text}
+							</dd>
 						</div>
 					</dl>
 

@@ -16,7 +16,14 @@ export interface IKZEOptimizerResult {
 	remaining: number;
 	monthlyTarget: number;
 	monthsLeft: number;
+	// PIT refund the user can still get this year by contributing up to
+	// the limit: `remaining × marginalTaxRate`. Already-paid contributions
+	// have already triggered their share of the refund and are excluded.
 	refundEstimate: number;
+	// PIT refund the user gets when the full annual limit is contributed —
+	// independent of YTD payments. Useful as the "if I max this out from
+	// scratch" headline.
+	annualRefund: number;
 	limitSource: 'rule' | 'override';
 }
 
@@ -41,13 +48,16 @@ export function optimizeIKZE(input: IKZEOptimizerInput): IKZEOptimizerResult {
 	const remaining = Math.max(0, annualTarget - contributed);
 	const monthsLeft = monthsLeftIn(input.year, now);
 	const monthlyTarget = monthsLeft > 0 ? remaining / monthsLeft : 0;
-	const refundEstimate = annualTarget * Math.max(0, input.marginalTaxRate);
+	const rate = Math.max(0, input.marginalTaxRate);
+	const refundEstimate = remaining * rate;
+	const annualRefund = annualTarget * rate;
 	return {
 		annualTarget,
 		remaining,
 		monthlyTarget,
 		monthsLeft,
 		refundEstimate,
+		annualRefund,
 		limitSource: input.limitOverride != null ? 'override' : 'rule'
 	};
 }

@@ -46,6 +46,7 @@ describe('optimizeIKZE', () => {
 		expect(result.monthsLeft).toBe(12);
 		expect(result.monthlyTarget).toBeCloseTo(942, 0);
 		expect(result.refundEstimate).toBeCloseTo(11304 * 0.32, 2);
+		expect(result.annualRefund).toBeCloseTo(11304 * 0.32, 2);
 	});
 
 	it('subtracts already contributed amounts from the monthly target', () => {
@@ -59,7 +60,9 @@ describe('optimizeIKZE', () => {
 		expect(result.remaining).toBe(6000);
 		expect(result.monthsLeft).toBe(7);
 		expect(result.monthlyTarget).toBeCloseTo(6000 / 7, 2);
-		expect(result.refundEstimate).toBeCloseTo(11304 * 0.12, 2);
+		// refundEstimate is the *remaining* upside, not the full-year refund.
+		expect(result.refundEstimate).toBeCloseTo(6000 * 0.12, 2);
+		expect(result.annualRefund).toBeCloseTo(11304 * 0.12, 2);
 	});
 
 	it('uses the B2B limit when requested', () => {
@@ -72,6 +75,20 @@ describe('optimizeIKZE', () => {
 		});
 		expect(result.annualTarget).toBe(16956);
 		expect(result.refundEstimate).toBeCloseTo(16956 * 0.19, 2);
+		expect(result.annualRefund).toBeCloseTo(16956 * 0.19, 2);
+	});
+
+	it('reports zero refundEstimate once the limit is fully used', () => {
+		const result = optimizeIKZE({
+			year: 2026,
+			limitKind: 'employee',
+			alreadyContributed: 11304,
+			marginalTaxRate: 0.32,
+			now: new Date(2026, 0, 1)
+		});
+		expect(result.remaining).toBe(0);
+		expect(result.refundEstimate).toBe(0);
+		expect(result.annualRefund).toBeCloseTo(11304 * 0.32, 2);
 	});
 
 	it('clamps already contributed at the limit (remaining never negative)', () => {
