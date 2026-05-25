@@ -31,6 +31,8 @@ const (
 	lookbackDays      = 10
 	cacheToleranceDay = 7
 	httpTimeout       = 5 * time.Second
+	// NBP's CDN returns 403 for the default Go-http-client UA.
+	nbpUserAgent = "finance-buddy/1.0 (+https://finance.mskalski.dev)"
 )
 
 // Rate represents a cached NBP rate row.
@@ -190,6 +192,7 @@ func (s *Service) fetchRange(ctx context.Context, code string, start, end time.T
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
 	}
+	req.Header.Set("User-Agent", nbpUserAgent)
 	resp, err := s.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("nbp request: %w", err)
