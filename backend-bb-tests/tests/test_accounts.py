@@ -150,17 +150,13 @@ def test_excluded_from_fire_round_trip(
     assert created["excluded_from_fire"] is True
 
     try:
-        toggled = client.put(
-            f"/api/accounts/{created_id}", json={"excluded_from_fire": False}
-        )
+        toggled = client.put(f"/api/accounts/{created_id}", json={"excluded_from_fire": False})
         assert toggled.status_code == 200, toggled.text
         assert toggled.json()["excluded_from_fire"] is False
 
         listing = client.get("/api/accounts")
         assert listing.status_code == 200, listing.text
-        match = next(
-            a for a in listing.json()["assets"] if a["id"] == created_id
-        )
+        match = next(a for a in listing.json()["assets"] if a["id"] == created_id)
         assert match["excluded_from_fire"] is False
     finally:
         client.delete(f"/api/accounts/{created_id}")
