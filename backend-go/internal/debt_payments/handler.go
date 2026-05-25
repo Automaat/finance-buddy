@@ -260,19 +260,19 @@ type createRequest struct {
 
 func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *validationError) {
 	var r createRequest
-	amount, vErr := requirePositiveDecimal(raw, "amount", "Amount must be greater than 0")
+	amount, vErr := requireAmount(raw)
 	if vErr != nil {
 		return r, vErr
 	}
 	r.Amount = amount
 
-	t, vErr := requireDateNotFuture(raw, "date")
+	t, vErr := requireDateNotFuture(raw)
 	if vErr != nil {
 		return r, vErr
 	}
 	r.Date = t
 
-	ownerID, vErr := requireIntOrNull(raw, "owner_user_id")
+	ownerID, vErr := requireOwnerUserID(raw)
 	if vErr != nil {
 		return r, vErr
 	}
@@ -280,9 +280,10 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *validat
 	return r, nil
 }
 
-// requireIntOrNull reads an integer key that must be present; an explicit
-// null is allowed and yields nil (the "Shared" owner).
-func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *validationError) {
+// requireOwnerUserID reads the owner_user_id key: present and integer, or
+// explicit null (the "Shared" owner).
+func requireOwnerUserID(raw map[string]json.RawMessage) (*int, *validationError) {
+	const key = "owner_user_id"
 	v, ok := raw[key]
 	if !ok {
 		return nil, &validationError{Field: key, Msg: "Field required"}
@@ -297,7 +298,8 @@ func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *valida
 	return &n, nil
 }
 
-func requireDateNotFuture(raw map[string]json.RawMessage, key string) (time.Time, *validationError) {
+func requireDateNotFuture(raw map[string]json.RawMessage) (time.Time, *validationError) {
+	const key = "date"
 	v, ok := raw[key]
 	if !ok || isNull(v) {
 		return time.Time{}, &validationError{Field: key, Msg: "Field required"}
@@ -318,7 +320,11 @@ func requireDateNotFuture(raw map[string]json.RawMessage, key string) (time.Time
 	return t, nil
 }
 
-func requirePositiveDecimal(raw map[string]json.RawMessage, key, msg string) (decimal.Decimal, *validationError) {
+func requireAmount(raw map[string]json.RawMessage) (decimal.Decimal, *validationError) {
+	const (
+		key = "amount"
+		msg = "Amount must be greater than 0"
+	)
 	v, ok := raw[key]
 	if !ok || isNull(v) {
 		return decimal.Decimal{}, &validationError{Field: key, Msg: "Field required"}
