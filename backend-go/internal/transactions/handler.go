@@ -4,13 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/shopspring/decimal"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
@@ -94,22 +92,16 @@ func (h *Handler) ListForAccount(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListAll(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	f := ListFilter{}
-	if v := q.Get("account_id"); v != "" {
-		n, err := strconv.Atoi(v)
-		if err != nil {
-			httputil.WriteBodyValidationError(w, "account_id", "must be an integer", v)
-			return
-		}
-		f.AccountID = &n
+	accountID, ok := httputil.OptionalQueryInt(w, q, "account_id")
+	if !ok {
+		return
 	}
-	if v := q.Get("owner_user_id"); v != "" {
-		n, err := strconv.Atoi(v)
-		if err != nil {
-			httputil.WriteBodyValidationError(w, "owner_user_id", "must be an integer", v)
-			return
-		}
-		f.OwnerUserID = &n
+	f.AccountID = accountID
+	ownerUserID, ok := httputil.OptionalQueryInt(w, q, "owner_user_id")
+	if !ok {
+		return
 	}
+	f.OwnerUserID = ownerUserID
 	for _, p := range []struct {
 		key  string
 		dest **time.Time
@@ -117,14 +109,11 @@ func (h *Handler) ListAll(w http.ResponseWriter, r *http.Request) {
 		{"date_from", &f.DateFrom},
 		{"date_to", &f.DateTo},
 	} {
-		if v := q.Get(p.key); v != "" {
-			t, err := time.Parse("2006-01-02", v)
-			if err != nil {
-				httputil.WriteBodyValidationError(w, p.key, "must be YYYY-MM-DD", v)
-				return
-			}
-			*p.dest = &t
+		t, ok := httputil.OptionalQueryDate(w, q, p.key)
+		if !ok {
+			return
 		}
+		*p.dest = t
 	}
 	rows, err := h.store.ListAll(r.Context(), f)
 	if err != nil {
@@ -165,8 +154,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	raw := map[string]json.RawMessage{}
-	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
-		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
+	if !httputil.DecodeJSON(w, r, 1<<16, &raw) {
 		return
 	}
 	req, vErr := buildCreateRequest(raw)
@@ -195,9 +183,8 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	transactionID, err := strconv.Atoi(chi.URLParam(r, "transaction_id"))
-	if err != nil {
-		httputil.WriteBodyValidationError(w, "transaction_id", "must be an integer", chi.URLParam(r, "transaction_id"))
+	transactionID, ok := httputil.PathInt(w, r, "transaction_id")
+	if !ok {
 		return
 	}
 	if err := h.store.SoftDelete(r.Context(), accountID, transactionID); err != nil {
@@ -278,13 +265,7 @@ func (h *Handler) writeAccountError(w http.ResponseWriter, err error, id int, na
 }
 
 func parseAccountID(w http.ResponseWriter, r *http.Request) (int, bool) {
-	raw := chi.URLParam(r, "account_id")
-	id, err := strconv.Atoi(raw)
-	if err != nil {
-		httputil.WriteBodyValidationError(w, "account_id", "must be an integer", raw)
-		return 0, false
-	}
-	return id, true
+	return httputil.PathInt(w, r, "account_id")
 }
 
 // --- request parsing ---
