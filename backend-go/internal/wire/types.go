@@ -6,6 +6,7 @@ package wire
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -26,11 +27,11 @@ func (d IsoDate) MarshalJSON() ([]byte, error) {
 func (d *IsoDate) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {
-		return err
+		return fmt.Errorf("expected YYYY-MM-DD string: %w", err)
 	}
 	t, err := time.Parse(isoDateLayout, s)
 	if err != nil {
-		return err
+		return fmt.Errorf("expected YYYY-MM-DD: %w", err)
 	}
 	*d = IsoDate(t)
 	return nil

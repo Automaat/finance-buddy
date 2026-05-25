@@ -224,7 +224,7 @@ func toResponse(sc *Scenario) response {
 		Name:       sc.Name,
 		Kind:       sc.Kind,
 		InputsJSON: sc.InputsJSON,
-		CreatedAt:  wire.IsoNaive(sc.CreatedAt),
-		UpdatedAt:  wire.IsoNaive(sc.UpdatedAt),
+		CreatedAt:  wire.IsoNaive(sc.CreatedAt.UTC()),
+		UpdatedAt:  wire.IsoNaive(sc.UpdatedAt.UTC()),
 	}
 }
