@@ -16,6 +16,8 @@ type Route struct {
 	// Path is the full route path with chi placeholders, e.g.
 	// "/api/accounts/{id}".
 	Path string
+	// Query lists query parameters accepted by the endpoint.
+	Query []QueryParam
 	// Tag groups the endpoint in the spec (usually the domain name).
 	Tag string
 	// Summary is a one-line human description.
@@ -28,4 +30,14 @@ type Route struct {
 	Response any
 	// Status is the success status code (defaults to 200 when zero).
 	Status int
+}
+
+// QueryParam describes one query parameter for OpenAPI generation.
+type QueryParam struct {
+	Name        string
+	Type        string
+	Format      string
+	Description string
+	Enum        []string
+	Required    bool
 }

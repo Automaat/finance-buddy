@@ -4336,6 +4336,105 @@
         ]
       }
     },
+    "/api/exposure/currency": {
+      "get": {
+        "parameters": [
+          {
+            "description": "Optional PLN target percentage; enables drift reporting when present.",
+            "in": "query",
+            "name": "target_pln_pct",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "description": "Optional non-negative drift tolerance percentage; defaults to 5.",
+            "in": "query",
+            "name": "tolerance",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "currencies": {
+                      "items": {
+                        "properties": {
+                          "currency": {
+                            "type": "string"
+                          },
+                          "percent": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "value_pln": {
+                            "format": "double",
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "drift": {
+                      "nullable": true,
+                      "properties": {
+                        "actual_pln_pct": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "drift_pln_pct": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "target_pln_pct": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "tolerance_pct": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "within_tolerance": {
+                          "type": "boolean"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "foreign_pct": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "pln_pct": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "snapshot_date": {
+                      "type": "string"
+                    },
+                    "total_pln": {
+                      "format": "double",
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Currency exposure for the latest snapshot",
+        "tags": [
+          "exposure"
+        ]
+      }
+    },
     "/api/goals": {
       "get": {
         "responses": {
@@ -5412,6 +5511,123 @@
         "summary": "Debt-payment counts per account",
         "tags": [
           "debt-payments"
+        ]
+      }
+    },
+    "/api/pit38/realized": {
+      "get": {
+        "parameters": [
+          {
+            "description": "Optional report year; defaults from PIT filing window.",
+            "in": "query",
+            "name": "year",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Optional csv value returns a downloadable text/csv report.",
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "enum": [
+                "csv"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "rows": {
+                      "items": {
+                        "properties": {
+                          "cost_basis": {
+                            "type": "string"
+                          },
+                          "cost_basis_pln": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "date": {
+                            "format": "date",
+                            "type": "string"
+                          },
+                          "fees": {
+                            "type": "string"
+                          },
+                          "fees_pln": {
+                            "type": "string"
+                          },
+                          "fx_rate": {
+                            "type": "string"
+                          },
+                          "has_fx": {
+                            "type": "boolean"
+                          },
+                          "proceeds": {
+                            "type": "string"
+                          },
+                          "proceeds_pln": {
+                            "type": "string"
+                          },
+                          "quantity": {
+                            "type": "string"
+                          },
+                          "realized_gain": {
+                            "type": "string"
+                          },
+                          "realized_pln": {
+                            "type": "string"
+                          },
+                          "security_id": {
+                            "type": "integer"
+                          },
+                          "symbol": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "totals": {
+                      "properties": {
+                        "cost_basis_pln": {
+                          "type": "string"
+                        },
+                        "fees_pln": {
+                          "type": "string"
+                        },
+                        "proceeds_pln": {
+                          "type": "string"
+                        },
+                        "realized_pln": {
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "year": {
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "PIT-38 realized gains worksheet",
+        "tags": [
+          "pit38"
         ]
       }
     },
