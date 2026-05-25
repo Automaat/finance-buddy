@@ -5,12 +5,14 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 func validRequest() *request {
 	birth := time.Date(1990, 1, 15, 0, 0, 0, 0, time.UTC)
 	return &request{
-		BirthDate:               isoDate(birth),
+		BirthDate:               wire.IsoDate(birth),
 		RetirementAge:           65,
 		RetirementMonthlySalary: decimal.NewFromInt(5000),
 		AllocationRealEstate:    20,
@@ -32,7 +34,7 @@ func TestValidateOK(t *testing.T) {
 
 func TestValidateFutureBirthDate(t *testing.T) {
 	r := validRequest()
-	r.BirthDate = isoDate(time.Now().UTC().AddDate(1, 0, 0))
+	r.BirthDate = wire.IsoDate(time.Now().UTC().AddDate(1, 0, 0))
 	if err := r.validate(); err == nil || err.Field != "birth_date" {
 		t.Fatalf("expected birth_date error, got %+v", err)
 	}
@@ -40,7 +42,7 @@ func TestValidateFutureBirthDate(t *testing.T) {
 
 func TestValidateAgeUnder18(t *testing.T) {
 	r := validRequest()
-	r.BirthDate = isoDate(time.Now().UTC().AddDate(-10, 0, 0))
+	r.BirthDate = wire.IsoDate(time.Now().UTC().AddDate(-10, 0, 0))
 	if err := r.validate(); err == nil || err.Field != "birth_date" {
 		t.Fatalf("expected birth_date error, got %+v", err)
 	}
@@ -48,7 +50,7 @@ func TestValidateAgeUnder18(t *testing.T) {
 
 func TestValidateAgeOver100(t *testing.T) {
 	r := validRequest()
-	r.BirthDate = isoDate(time.Now().UTC().AddDate(-110, 0, 0))
+	r.BirthDate = wire.IsoDate(time.Now().UTC().AddDate(-110, 0, 0))
 	if err := r.validate(); err == nil || err.Field != "birth_date" {
 		t.Fatalf("expected birth_date error, got %+v", err)
 	}
@@ -108,7 +110,7 @@ func TestValidateMarketAllocationDoesNotSumTo100(t *testing.T) {
 func TestValidateRetirementAgeBeforeCurrent(t *testing.T) {
 	r := validRequest()
 	now := time.Now().UTC()
-	r.BirthDate = isoDate(now.AddDate(-50, 0, 0))
+	r.BirthDate = wire.IsoDate(now.AddDate(-50, 0, 0))
 	r.RetirementAge = 30
 	if err := r.validate(); err == nil || err.Field != "retirement_age" {
 		t.Fatalf("expected retirement_age (vs current age) error, got %+v", err)
@@ -177,7 +179,7 @@ func TestValidateCoastFIRETargetAgeOutOfRange(t *testing.T) {
 func TestValidateCoastFIRETargetAgeBeforeCurrent(t *testing.T) {
 	r := validRequest()
 	now := time.Now().UTC()
-	r.BirthDate = isoDate(now.AddDate(-50, 0, 0))
+	r.BirthDate = wire.IsoDate(now.AddDate(-50, 0, 0))
 	r.RetirementAge = 65
 	bad := 30
 	r.CoastFIRETargetAge = &bad

@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/rules"
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 type validationError struct {
@@ -165,7 +166,7 @@ type simulationInputs struct {
 }
 
 // echo reproduces the inputs block of the response from the typed values —
-// money fields go out as pyFloat so a whole-number input like 46100 still
+// money fields go out as wire.PyFloat so a whole-number input like 46100 still
 // serializes as 46100.0 (Pydantic float semantics).
 func (s simulationInputs) echo() map[string]any {
 	ike := make([]map[string]any, 0, len(s.IkeIkzeAccounts))
@@ -174,10 +175,10 @@ func (s simulationInputs) echo() map[string]any {
 			"enabled":              a.Enabled,
 			"wrapper":              a.Wrapper,
 			"owner_user_id":        a.OwnerUserID,
-			"balance":              pyFloat(a.Balance),
+			"balance":              wire.PyFloat(a.Balance),
 			"auto_fill_limit":      a.AutoFillLimit,
-			"monthly_contribution": pyFloat(a.MonthlyContribution),
-			"tax_rate":             pyFloat(a.TaxRate),
+			"monthly_contribution": wire.PyFloat(a.MonthlyContribution),
+			"tax_rate":             wire.PyFloat(a.TaxRate),
 		})
 	}
 	ppk := make([]map[string]any, 0, len(s.PPKAccounts))
@@ -185,10 +186,10 @@ func (s simulationInputs) echo() map[string]any {
 		ppk = append(ppk, map[string]any{
 			"owner_user_id":          a.OwnerUserID,
 			"enabled":                a.Enabled,
-			"starting_balance":       pyFloat(a.StartingBalance),
-			"monthly_gross_salary":   pyFloat(a.MonthlyGrossSalary),
-			"employee_rate":          pyFloat(a.EmployeeRate),
-			"employer_rate":          pyFloat(a.EmployerRate),
+			"starting_balance":       wire.PyFloat(a.StartingBalance),
+			"monthly_gross_salary":   wire.PyFloat(a.MonthlyGrossSalary),
+			"employee_rate":          wire.PyFloat(a.EmployeeRate),
+			"employer_rate":          wire.PyFloat(a.EmployerRate),
 			"salary_below_threshold": a.SalaryBelowThreshold,
 			"include_welcome_bonus":  a.IncludeWelcomeBonus,
 			"include_annual_subsidy": a.IncludeAnnualSubsidy,
@@ -199,8 +200,8 @@ func (s simulationInputs) echo() map[string]any {
 		brk = append(brk, map[string]any{
 			"enabled":              a.Enabled,
 			"owner_user_id":        a.OwnerUserID,
-			"balance":              pyFloat(a.Balance),
-			"monthly_contribution": pyFloat(a.MonthlyContribution),
+			"balance":              wire.PyFloat(a.Balance),
+			"monthly_contribution": wire.PyFloat(a.MonthlyContribution),
 		})
 	}
 	return map[string]any{
@@ -209,10 +210,10 @@ func (s simulationInputs) echo() map[string]any {
 		"ike_ikze_accounts":      ike,
 		"ppk_accounts":           ppk,
 		"brokerage_accounts":     brk,
-		"annual_return_rate":     pyFloat(s.AnnualReturnRate),
-		"limit_growth_rate":      pyFloat(s.LimitGrowthRate),
-		"expected_salary_growth": pyFloat(s.ExpectedSalaryGrowth),
-		"inflation_rate":         pyFloat(s.InflationRate),
+		"annual_return_rate":     wire.PyFloat(s.AnnualReturnRate),
+		"limit_growth_rate":      wire.PyFloat(s.LimitGrowthRate),
+		"expected_salary_growth": wire.PyFloat(s.ExpectedSalaryGrowth),
+		"inflation_rate":         wire.PyFloat(s.InflationRate),
 	}
 }
 

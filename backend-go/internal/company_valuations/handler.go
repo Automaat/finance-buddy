@@ -8,11 +8,12 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 var (
@@ -26,21 +27,21 @@ var (
 
 // response mirrors backend/app/schemas/company_valuations.CompanyValuationResponse.
 //
-// Money fields use pyFloat so JSON output preserves Python's `float(x)`
+// Money fields use wire.PyFloat so JSON output preserves Python's `float(x)`
 // formatting — `14.0` not `14`, matching Pydantic's number serialization.
 type response struct {
-	ID                     int      `json:"id"`
-	Company                string   `json:"company"`
-	Date                   isoDate  `json:"date"`
-	Currency               string   `json:"currency"`
-	FMVPerShare            pyFloat  `json:"fmv_per_share"`
-	FMVLow                 *pyFloat `json:"fmv_low"`
-	FMVHigh                *pyFloat `json:"fmv_high"`
-	Source                 string   `json:"source"`
-	CommonStockDiscountPct *pyFloat `json:"common_stock_discount_pct"`
-	Notes                  *string  `json:"notes"`
-	IsActive               bool     `json:"is_active"`
-	CreatedAt              isoNaive `json:"created_at"`
+	ID                     int           `json:"id"`
+	Company                string        `json:"company"`
+	Date                   wire.IsoDate  `json:"date"`
+	Currency               string        `json:"currency"`
+	FMVPerShare            wire.PyFloat  `json:"fmv_per_share"`
+	FMVLow                 *wire.PyFloat `json:"fmv_low"`
+	FMVHigh                *wire.PyFloat `json:"fmv_high"`
+	Source                 string        `json:"source"`
+	CommonStockDiscountPct *wire.PyFloat `json:"common_stock_discount_pct"`
+	Notes                  *string       `json:"notes"`
+	IsActive               bool          `json:"is_active"`
+	CreatedAt              wire.IsoNaive `json:"created_at"`
 }
 
 type listResponse struct {
@@ -85,27 +86,27 @@ func toResponse(v *Valuation) response {
 	out := response{
 		ID:          v.ID,
 		Company:     v.Company,
-		Date:        isoDate(v.Date),
+		Date:        wire.IsoDate(v.Date),
 		Currency:    v.Currency,
-		FMVPerShare: pyFloat(fmv),
+		FMVPerShare: wire.PyFloat(fmv),
 		Source:      v.Source,
 		Notes:       v.Notes,
 		IsActive:    v.IsActive,
-		CreatedAt:   isoNaive(v.CreatedAt),
+		CreatedAt:   wire.IsoNaive(v.CreatedAt),
 	}
 	if v.FMVLow != nil {
 		f, _ := v.FMVLow.Float64()
-		pf := pyFloat(f)
+		pf := wire.PyFloat(f)
 		out.FMVLow = &pf
 	}
 	if v.FMVHigh != nil {
 		f, _ := v.FMVHigh.Float64()
-		pf := pyFloat(f)
+		pf := wire.PyFloat(f)
 		out.FMVHigh = &pf
 	}
 	if v.CommonStockDiscountPct != nil {
 		f, _ := v.CommonStockDiscountPct.Float64()
-		pf := pyFloat(f)
+		pf := wire.PyFloat(f)
 		out.CommonStockDiscountPct = &pf
 	}
 	return out
@@ -244,45 +245,4 @@ func parseIDParam(w http.ResponseWriter, r *http.Request) (int, bool) {
 		return 0, false
 	}
 	return id, true
-}
-
-// isoDate and isoNaive — identical formats to the other packages.
-type isoDate time.Time
-
-const isoDateLayout = "2006-01-02"
-
-func (d isoDate) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(d).Format(isoDateLayout) + `"`), nil
-}
-
-func (d *isoDate) UnmarshalJSON(data []byte) error {
-	var s string
-	if err := json.Unmarshal(data, &s); err != nil {
-		return fmt.Errorf("date must be a string: %w", err)
-	}
-	t, err := time.Parse(isoDateLayout, s)
-	if err != nil {
-		return fmt.Errorf("date must be YYYY-MM-DD: %w", err)
-	}
-	*d = isoDate(t)
-	return nil
-}
-
-type isoNaive time.Time
-
-func (t isoNaive) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(t).Format("2006-01-02T15:04:05.999999") + `"`), nil
-}
-
-// pyFloat marshals identically to Python's `float(x)` JSON encoding —
-// always includes at least one digit after the decimal point so 14.0
-// emits as "14.0", not "14". This matches Pydantic's number formatting.
-type pyFloat float64
-
-func (f pyFloat) MarshalJSON() ([]byte, error) {
-	s := strconv.FormatFloat(float64(f), 'f', -1, 64)
-	if !strings.ContainsRune(s, '.') {
-		s += ".0"
-	}
-	return []byte(s), nil
 }

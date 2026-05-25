@@ -3,13 +3,14 @@ package config
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 // response mirrors backend/app/schemas/config.ConfigResponse byte-for-byte.
@@ -17,30 +18,30 @@ import (
 // Date is serialized as "YYYY-MM-DD". Decimal money fields are quoted JSON
 // strings with two decimals (Python Pydantic v2's default for Decimal).
 type response struct {
-	ID                      int        `json:"id"`
-	BirthDate               isoDate    `json:"birth_date"`
-	RetirementAge           int        `json:"retirement_age"`
-	RetirementMonthlySalary moneyJSON  `json:"retirement_monthly_salary"`
-	AllocationRealEstate    int        `json:"allocation_real_estate"`
-	AllocationStocks        int        `json:"allocation_stocks"`
-	AllocationBonds         int        `json:"allocation_bonds"`
-	AllocationGold          int        `json:"allocation_gold"`
-	AllocationCommodities   int        `json:"allocation_commodities"`
-	MonthlyExpenses         moneyJSON  `json:"monthly_expenses"`
-	MonthlyMortgagePayment  moneyJSON  `json:"monthly_mortgage_payment"`
-	WithdrawalRate          rateJSON   `json:"withdrawal_rate"`
-	CoastFIRETargetAge      *int       `json:"coast_fire_target_age"`
-	ExpectedReturnRate      rateJSON   `json:"expected_return_rate"`
-	BaristaMonthlyIncome    *moneyJSON `json:"barista_monthly_income"`
-	LeanMonthlyExpenses     *moneyJSON `json:"lean_monthly_expenses"`
-	FatMonthlyExpenses      *moneyJSON `json:"fat_monthly_expenses"`
-	MonthlySavings          *moneyJSON `json:"monthly_savings"`
+	ID                      int          `json:"id"`
+	BirthDate               wire.IsoDate `json:"birth_date"`
+	RetirementAge           int          `json:"retirement_age"`
+	RetirementMonthlySalary moneyJSON    `json:"retirement_monthly_salary"`
+	AllocationRealEstate    int          `json:"allocation_real_estate"`
+	AllocationStocks        int          `json:"allocation_stocks"`
+	AllocationBonds         int          `json:"allocation_bonds"`
+	AllocationGold          int          `json:"allocation_gold"`
+	AllocationCommodities   int          `json:"allocation_commodities"`
+	MonthlyExpenses         moneyJSON    `json:"monthly_expenses"`
+	MonthlyMortgagePayment  moneyJSON    `json:"monthly_mortgage_payment"`
+	WithdrawalRate          rateJSON     `json:"withdrawal_rate"`
+	CoastFIRETargetAge      *int         `json:"coast_fire_target_age"`
+	ExpectedReturnRate      rateJSON     `json:"expected_return_rate"`
+	BaristaMonthlyIncome    *moneyJSON   `json:"barista_monthly_income"`
+	LeanMonthlyExpenses     *moneyJSON   `json:"lean_monthly_expenses"`
+	FatMonthlyExpenses      *moneyJSON   `json:"fat_monthly_expenses"`
+	MonthlySavings          *moneyJSON   `json:"monthly_savings"`
 }
 
 // request is the PUT body. Date arrives as "YYYY-MM-DD" and money as either
 // a JSON number or string — pydantic on the Python side accepts both.
 type request struct {
-	BirthDate               isoDate          `json:"birth_date"`
+	BirthDate               wire.IsoDate     `json:"birth_date"`
 	RetirementAge           int              `json:"retirement_age"`
 	RetirementMonthlySalary decimal.Decimal  `json:"retirement_monthly_salary"`
 	AllocationRealEstate    int              `json:"allocation_real_estate"`
@@ -62,7 +63,7 @@ type request struct {
 func toResponse(c *Config) response {
 	return response{
 		ID:                      c.ID,
-		BirthDate:               isoDate(c.BirthDate),
+		BirthDate:               wire.IsoDate(c.BirthDate),
 		RetirementAge:           c.RetirementAge,
 		RetirementMonthlySalary: moneyJSON(c.RetirementMonthlySalary),
 		AllocationRealEstate:    c.AllocationRealEstate,
@@ -185,30 +186,6 @@ var defaultWithdrawalRate = decimal.RequireFromString("0.04")
 // elsewhere in the app (retirement projection on the settings page). Used
 // when a PUT body omits expected_return_rate.
 var defaultExpectedReturnRate = decimal.RequireFromString("0.07")
-
-// isoDate is a time.Time alias that JSON-marshals as "YYYY-MM-DD" and
-// unmarshals from the same. Matches Python's `date` field on the wire.
-type isoDate time.Time
-
-const isoDateLayout = "2006-01-02"
-
-func (d isoDate) MarshalJSON() ([]byte, error) {
-	stamp := fmt.Sprintf("%q", time.Time(d).Format(isoDateLayout))
-	return []byte(stamp), nil
-}
-
-func (d *isoDate) UnmarshalJSON(data []byte) error {
-	var s string
-	if err := json.Unmarshal(data, &s); err != nil {
-		return fmt.Errorf("birth_date must be a YYYY-MM-DD string: %w", err)
-	}
-	t, err := time.Parse(isoDateLayout, s)
-	if err != nil {
-		return fmt.Errorf("birth_date must be YYYY-MM-DD: %w", err)
-	}
-	*d = isoDate(t)
-	return nil
-}
 
 // moneyJSON is a decimal.Decimal that marshals as a JSON string with two
 // decimals — matches Pydantic v2's default Decimal serialization for

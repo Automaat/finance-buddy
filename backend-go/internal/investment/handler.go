@@ -6,16 +6,17 @@ import (
 	"math"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 type response struct {
-	Category         string  `json:"category"`
-	TotalValue       pyFloat `json:"total_value"`
-	TotalContributed pyFloat `json:"total_contributed"`
-	Returns          pyFloat `json:"returns"`
-	ROIPercentage    pyFloat `json:"roi_percentage"`
+	Category         string       `json:"category"`
+	TotalValue       wire.PyFloat `json:"total_value"`
+	TotalContributed wire.PyFloat `json:"total_contributed"`
+	Returns          wire.PyFloat `json:"returns"`
+	ROIPercentage    wire.PyFloat `json:"roi_percentage"`
 }
 
 // Handler is the HTTP boundary for /api/investment.
@@ -35,19 +36,19 @@ func NewHandler(store *Store, logger *slog.Logger) *Handler {
 // --- Contribution-adjusted returns (#401) ---
 
 type returnsResponse struct {
-	Scope             scopeWire `json:"scope"`
-	Period            string    `json:"period"`
-	Since             *string   `json:"since"`
-	AsOf              string    `json:"as_of"`
-	Deposits          pyFloat   `json:"deposits"`
-	Withdrawals       pyFloat   `json:"withdrawals"`
-	NetContributed    pyFloat   `json:"net_contributed"`
-	CurrentValue      pyFloat   `json:"current_value"`
-	ValuationChange   pyFloat   `json:"valuation_change"`
-	SimpleROIPct      pyFloat   `json:"simple_roi_pct"`
-	MoneyWeightedPct  *pyFloat  `json:"money_weighted_pct"`
-	HasSnapshot       bool      `json:"has_snapshot"`
-	ConvergenceFailed bool      `json:"convergence_failed"`
+	Scope             scopeWire     `json:"scope"`
+	Period            string        `json:"period"`
+	Since             *string       `json:"since"`
+	AsOf              string        `json:"as_of"`
+	Deposits          wire.PyFloat  `json:"deposits"`
+	Withdrawals       wire.PyFloat  `json:"withdrawals"`
+	NetContributed    wire.PyFloat  `json:"net_contributed"`
+	CurrentValue      wire.PyFloat  `json:"current_value"`
+	ValuationChange   wire.PyFloat  `json:"valuation_change"`
+	SimpleROIPct      wire.PyFloat  `json:"simple_roi_pct"`
+	MoneyWeightedPct  *wire.PyFloat `json:"money_weighted_pct"`
+	HasSnapshot       bool          `json:"has_snapshot"`
+	ConvergenceFailed bool          `json:"convergence_failed"`
 }
 
 type scopeWire struct {
@@ -146,12 +147,12 @@ func (h *Handler) Returns(w http.ResponseWriter, r *http.Request) {
 		Scope:           scopeWire,
 		Period:          period,
 		AsOf:            asOf.Format("2006-01-02"),
-		Deposits:        pyFloat(deposits),
-		Withdrawals:     pyFloat(withdrawals),
-		NetContributed:  pyFloat(netContrib),
-		CurrentValue:    pyFloat(currentValue),
-		ValuationChange: pyFloat(valuationChange),
-		SimpleROIPct:    pyFloat(math.Round(SimpleROI(openingValue+netContrib, currentValue)*10000) / 100),
+		Deposits:        wire.PyFloat(deposits),
+		Withdrawals:     wire.PyFloat(withdrawals),
+		NetContributed:  wire.PyFloat(netContrib),
+		CurrentValue:    wire.PyFloat(currentValue),
+		ValuationChange: wire.PyFloat(valuationChange),
+		SimpleROIPct:    wire.PyFloat(math.Round(SimpleROI(openingValue+netContrib, currentValue)*10000) / 100),
 		HasSnapshot:     hasSnap,
 	}
 	if window.Since != nil {
@@ -165,7 +166,7 @@ func (h *Handler) Returns(w http.ResponseWriter, r *http.Request) {
 		if xerr != nil {
 			resp.ConvergenceFailed = true
 		} else {
-			pct := pyFloat(math.Round(mwr*10000) / 100)
+			pct := wire.PyFloat(math.Round(mwr*10000) / 100)
 			resp.MoneyWeightedPct = &pct
 		}
 	}
@@ -260,10 +261,10 @@ func (h *Handler) categoryStats(w http.ResponseWriter, r *http.Request, category
 	}
 	writeJSON(w, http.StatusOK, response{
 		Category:         category,
-		TotalValue:       pyFloat(value),
-		TotalContributed: pyFloat(contributed),
-		Returns:          pyFloat(returns),
-		ROIPercentage:    pyFloat(math.Round(roi*100) / 100),
+		TotalValue:       wire.PyFloat(value),
+		TotalContributed: wire.PyFloat(contributed),
+		Returns:          wire.PyFloat(returns),
+		ROIPercentage:    wire.PyFloat(math.Round(roi*100) / 100),
 	})
 }
 
@@ -277,14 +278,4 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 
 func writeDetailError(w http.ResponseWriter, status int, detail string) {
 	writeJSON(w, status, map[string]string{"detail": detail})
-}
-
-type pyFloat float64
-
-func (f pyFloat) MarshalJSON() ([]byte, error) {
-	s := strconv.FormatFloat(float64(f), 'f', -1, 64)
-	if !strings.ContainsRune(s, '.') {
-		s += ".0"
-	}
-	return []byte(s), nil
 }

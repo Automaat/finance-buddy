@@ -16,6 +16,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/cpi"
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 var validContractTypes = map[string]struct{}{
@@ -25,27 +26,27 @@ var validContractTypes = map[string]struct{}{
 // response mirrors backend/app/schemas/salary_records.SalaryRecordResponse.
 // OwnerUserID is the owning household member; nil means jointly owned.
 type response struct {
-	ID           int      `json:"id"`
-	Date         isoDate  `json:"date"`
-	GrossAmount  pyFloat  `json:"gross_amount"`
-	ContractType string   `json:"contract_type"`
-	Company      string   `json:"company"`
-	OwnerUserID  *int     `json:"owner_user_id"`
-	IsActive     bool     `json:"is_active"`
-	CreatedAt    isoNaive `json:"created_at"`
+	ID           int           `json:"id"`
+	Date         wire.IsoDate  `json:"date"`
+	GrossAmount  wire.PyFloat  `json:"gross_amount"`
+	ContractType string        `json:"contract_type"`
+	Company      string        `json:"company"`
+	OwnerUserID  *int          `json:"owner_user_id"`
+	IsActive     bool          `json:"is_active"`
+	CreatedAt    wire.IsoNaive `json:"created_at"`
 }
 
 // inflationContext mirrors backend/app/schemas/salary_records.InflationContext.
 type inflationContext struct {
-	OwnerUserID              int      `json:"owner_user_id"`
-	LastChangeDate           isoDate  `json:"last_change_date"`
-	PreviousChangeDate       *isoDate `json:"previous_change_date"`
-	PreviousSalary           *pyFloat `json:"previous_salary"`
-	PreviousSalaryInTodayPLN *pyFloat `json:"previous_salary_in_today_pln"`
-	CurrentSalary            pyFloat  `json:"current_salary"`
-	RealChangePLN            *pyFloat `json:"real_change_pln"`
-	RealChangePct            *pyFloat `json:"real_change_pct"`
-	CPIAsOfYear              int      `json:"cpi_as_of_year"`
+	OwnerUserID              int           `json:"owner_user_id"`
+	LastChangeDate           wire.IsoDate  `json:"last_change_date"`
+	PreviousChangeDate       *wire.IsoDate `json:"previous_change_date"`
+	PreviousSalary           *wire.PyFloat `json:"previous_salary"`
+	PreviousSalaryInTodayPLN *wire.PyFloat `json:"previous_salary_in_today_pln"`
+	CurrentSalary            wire.PyFloat  `json:"current_salary"`
+	RealChangePLN            *wire.PyFloat `json:"real_change_pln"`
+	RealChangePct            *wire.PyFloat `json:"real_change_pct"`
+	CPIAsOfYear              int           `json:"cpi_as_of_year"`
 }
 
 // listResponse keys current_salaries and inflation_context by owner_user_id
@@ -53,7 +54,7 @@ type inflationContext struct {
 type listResponse struct {
 	SalaryRecords      []response               `json:"salary_records"`
 	TotalCount         int                      `json:"total_count"`
-	CurrentSalaries    map[int]*pyFloat         `json:"current_salaries"`
+	CurrentSalaries    map[int]*wire.PyFloat    `json:"current_salaries"`
 	InflationContext   map[int]inflationContext `json:"inflation_context"`
 	AvailableCompanies []string                 `json:"available_companies"`
 }
@@ -79,13 +80,13 @@ func toResponse(r *SalaryRecord) response {
 	gross, _ := r.GrossAmount.Float64()
 	return response{
 		ID:           r.ID,
-		Date:         isoDate(r.Date),
-		GrossAmount:  pyFloat(gross),
+		Date:         wire.IsoDate(r.Date),
+		GrossAmount:  wire.PyFloat(gross),
 		ContractType: r.ContractType,
 		Company:      r.Company,
 		OwnerUserID:  r.OwnerUserID,
 		IsActive:     r.IsActive,
-		CreatedAt:    isoNaive(r.CreatedAt.UTC()),
+		CreatedAt:    wire.IsoNaive(r.CreatedAt.UTC()),
 	}
 }
 
@@ -283,22 +284,22 @@ func (h *Handler) buildInflationContext(
 		}
 		curAmount, _ := current.GrossAmount.Float64()
 		realChangePLN := curAmount - prevInToday
-		var realChangePct *pyFloat
+		var realChangePct *wire.PyFloat
 		if prevInToday != 0 {
-			pct := pyFloat(realChangePLN / prevInToday * 100)
+			pct := wire.PyFloat(realChangePLN / prevInToday * 100)
 			realChangePct = &pct
 		}
-		prevDate := isoDate(previous.Date)
-		prevSalary := pyFloat(prevAmount)
-		prevTodayPLN := pyFloat(prevInToday)
-		realChange := pyFloat(realChangePLN)
+		prevDate := wire.IsoDate(previous.Date)
+		prevSalary := wire.PyFloat(prevAmount)
+		prevTodayPLN := wire.PyFloat(prevInToday)
+		realChange := wire.PyFloat(realChangePLN)
 		out[ownerID] = inflationContext{
 			OwnerUserID:              ownerID,
-			LastChangeDate:           isoDate(current.Date),
+			LastChangeDate:           wire.IsoDate(current.Date),
 			PreviousChangeDate:       &prevDate,
 			PreviousSalary:           &prevSalary,
 			PreviousSalaryInTodayPLN: &prevTodayPLN,
-			CurrentSalary:            pyFloat(curAmount),
+			CurrentSalary:            wire.PyFloat(curAmount),
 			RealChangePLN:            &realChange,
 			RealChangePct:            realChangePct,
 			CPIAsOfYear:              asOfYear,
@@ -309,8 +310,8 @@ func (h *Handler) buildInflationContext(
 
 func salariesToFloatMap(
 	userIDs []int, values map[int]decimal.Decimal,
-) map[int]*pyFloat {
-	out := map[int]*pyFloat{}
+) map[int]*wire.PyFloat {
+	out := map[int]*wire.PyFloat{}
 	for _, id := range userIDs {
 		v, ok := values[id]
 		if !ok {
@@ -318,7 +319,7 @@ func salariesToFloatMap(
 			continue
 		}
 		f, _ := v.Float64()
-		pf := pyFloat(f)
+		pf := wire.PyFloat(f)
 		out[id] = &pf
 	}
 	return out
@@ -373,43 +374,4 @@ func parseIDParam(w http.ResponseWriter, r *http.Request) (int, bool) {
 
 func truncateDay(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
-}
-
-// --- shared wire types ---
-
-type isoDate time.Time
-
-const isoDateLayout = "2006-01-02"
-
-func (d isoDate) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(d).Format(isoDateLayout) + `"`), nil
-}
-
-func (d *isoDate) UnmarshalJSON(data []byte) error {
-	var s string
-	if err := json.Unmarshal(data, &s); err != nil {
-		return err
-	}
-	t, err := time.Parse(isoDateLayout, s)
-	if err != nil {
-		return err
-	}
-	*d = isoDate(t)
-	return nil
-}
-
-type isoNaive time.Time
-
-func (t isoNaive) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(t).Format("2006-01-02T15:04:05.999999") + `"`), nil
-}
-
-type pyFloat float64
-
-func (f pyFloat) MarshalJSON() ([]byte, error) {
-	s := strconv.FormatFloat(float64(f), 'f', -1, 64)
-	if !strings.ContainsRune(s, '.') {
-		s += ".0"
-	}
-	return []byte(s), nil
 }

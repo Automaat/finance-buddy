@@ -9,62 +9,63 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 type yearlyStat struct {
-	Year                int      `json:"year"`
-	AccountWrapper      string   `json:"account_wrapper"`
-	OwnerUserID         *int     `json:"owner_user_id"`
-	LimitAmount         *pyFloat `json:"limit_amount"`
-	TotalContributed    pyFloat  `json:"total_contributed"`
-	EmployeeContributed pyFloat  `json:"employee_contributed"`
-	EmployerContributed pyFloat  `json:"employer_contributed"`
-	Remaining           *pyFloat `json:"remaining"`
-	PercentageUsed      *pyFloat `json:"percentage_used"`
-	IsWarning           bool     `json:"is_warning"`
+	Year                int           `json:"year"`
+	AccountWrapper      string        `json:"account_wrapper"`
+	OwnerUserID         *int          `json:"owner_user_id"`
+	LimitAmount         *wire.PyFloat `json:"limit_amount"`
+	TotalContributed    wire.PyFloat  `json:"total_contributed"`
+	EmployeeContributed wire.PyFloat  `json:"employee_contributed"`
+	EmployerContributed wire.PyFloat  `json:"employer_contributed"`
+	Remaining           *wire.PyFloat `json:"remaining"`
+	PercentageUsed      *wire.PyFloat `json:"percentage_used"`
+	IsWarning           bool          `json:"is_warning"`
 	// IKZE-only: marginal PIT rate at the owner's annualized salary and
 	// the estimated PIT savings from this year's contributions. Nil when
 	// the wrapper is not IKZE or the owner has no salary record.
-	MarginalTaxRate *pyFloat `json:"marginal_tax_rate"`
-	PITSavings      *pyFloat `json:"pit_savings"`
+	MarginalTaxRate *wire.PyFloat `json:"marginal_tax_rate"`
+	PITSavings      *wire.PyFloat `json:"pit_savings"`
 }
 
 type ppkStat struct {
-	OwnerUserID           *int    `json:"owner_user_id"`
-	TotalValue            pyFloat `json:"total_value"`
-	EmployeeContributed   pyFloat `json:"employee_contributed"`
-	EmployerContributed   pyFloat `json:"employer_contributed"`
-	GovernmentContributed pyFloat `json:"government_contributed"`
-	TotalContributed      pyFloat `json:"total_contributed"`
-	Returns               pyFloat `json:"returns"`
-	ROIPercentage         pyFloat `json:"roi_percentage"`
+	OwnerUserID           *int         `json:"owner_user_id"`
+	TotalValue            wire.PyFloat `json:"total_value"`
+	EmployeeContributed   wire.PyFloat `json:"employee_contributed"`
+	EmployerContributed   wire.PyFloat `json:"employer_contributed"`
+	GovernmentContributed wire.PyFloat `json:"government_contributed"`
+	TotalContributed      wire.PyFloat `json:"total_contributed"`
+	Returns               wire.PyFloat `json:"returns"`
+	ROIPercentage         wire.PyFloat `json:"roi_percentage"`
 }
 
 type limitResponse struct {
-	ID             int     `json:"id"`
-	Year           int     `json:"year"`
-	AccountWrapper string  `json:"account_wrapper"`
-	OwnerUserID    *int    `json:"owner_user_id"`
-	LimitAmount    pyFloat `json:"limit_amount"`
-	Notes          *string `json:"notes"`
+	ID             int          `json:"id"`
+	Year           int          `json:"year"`
+	AccountWrapper string       `json:"account_wrapper"`
+	OwnerUserID    *int         `json:"owner_user_id"`
+	LimitAmount    wire.PyFloat `json:"limit_amount"`
+	Notes          *string      `json:"notes"`
 }
 
 type ppkGenerateResponse struct {
-	OwnerUserID         *int    `json:"owner_user_id"`
-	Month               int     `json:"month"`
-	Year                int     `json:"year"`
-	GrossSalary         pyFloat `json:"gross_salary"`
-	EmployeeAmount      pyFloat `json:"employee_amount"`
-	EmployerAmount      pyFloat `json:"employer_amount"`
-	GovernmentAmount    pyFloat `json:"government_amount"`
-	WelcomeApplied      bool    `json:"welcome_applied"`
-	AnnualApplied       bool    `json:"annual_applied"`
-	TotalAmount         pyFloat `json:"total_amount"`
-	TransactionsCreated []int   `json:"transactions_created"`
+	OwnerUserID         *int         `json:"owner_user_id"`
+	Month               int          `json:"month"`
+	Year                int          `json:"year"`
+	GrossSalary         wire.PyFloat `json:"gross_salary"`
+	EmployeeAmount      wire.PyFloat `json:"employee_amount"`
+	EmployerAmount      wire.PyFloat `json:"employer_amount"`
+	GovernmentAmount    wire.PyFloat `json:"government_amount"`
+	WelcomeApplied      bool         `json:"welcome_applied"`
+	AnnualApplied       bool         `json:"annual_applied"`
+	TotalAmount         wire.PyFloat `json:"total_amount"`
+	TransactionsCreated []int        `json:"transactions_created"`
 }
 
 // Handler is the HTTP boundary for /api/retirement.
@@ -144,8 +145,8 @@ func (h *Handler) buildYearlyStat(ctx context.Context, year int, wrapper string,
 	totalF, _ := totals.Total.Float64()
 	if wrapper == "IKZE" && totalF > 0 {
 		if rate, savings, ok := h.estimateIKZEPITSavings(ctx, ownerUserID, year, totalF); ok {
-			r := pyFloat(rate)
-			s := pyFloat(savings)
+			r := wire.PyFloat(rate)
+			s := wire.PyFloat(savings)
 			stat.MarginalTaxRate = &r
 			stat.PITSavings = &s
 		}
@@ -241,7 +242,7 @@ func (h *Handler) LimitsForYear(w http.ResponseWriter, r *http.Request) {
 		amt, _ := l.LimitAmount.Float64()
 		out = append(out, limitResponse{
 			ID: l.ID, Year: l.Year, AccountWrapper: l.AccountWrapper,
-			OwnerUserID: l.OwnerUserID, LimitAmount: pyFloat(amt), Notes: l.Notes,
+			OwnerUserID: l.OwnerUserID, LimitAmount: wire.PyFloat(amt), Notes: l.Notes,
 		})
 	}
 	writeJSON(w, http.StatusOK, out)
@@ -285,7 +286,7 @@ func (h *Handler) UpsertLimit(w http.ResponseWriter, r *http.Request) {
 	amt, _ := l.LimitAmount.Float64()
 	writeJSON(w, http.StatusOK, limitResponse{
 		ID: l.ID, Year: l.Year, AccountWrapper: l.AccountWrapper,
-		OwnerUserID: l.OwnerUserID, LimitAmount: pyFloat(amt), Notes: l.Notes,
+		OwnerUserID: l.OwnerUserID, LimitAmount: wire.PyFloat(amt), Notes: l.Notes,
 	})
 }
 
@@ -394,15 +395,4 @@ func ownerLabel(id *int) string {
 		return "Shared"
 	}
 	return strconv.Itoa(*id)
-}
-
-// wire type
-type pyFloat float64
-
-func (f pyFloat) MarshalJSON() ([]byte, error) {
-	s := strconv.FormatFloat(float64(f), 'f', -1, 64)
-	if !strings.ContainsRune(s, '.') {
-		s += ".0"
-	}
-	return []byte(s), nil
 }

@@ -9,31 +9,32 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 // The canonical set of transaction_type values lives in types.go.
 // IsValid + ValidTypes are the only authority.
 
 type response struct {
-	ID              int      `json:"id"`
-	AccountID       int      `json:"account_id"`
-	AccountName     string   `json:"account_name"`
-	Amount          pyFloat  `json:"amount"`
-	Date            isoDate  `json:"date"`
-	OwnerUserID     *int     `json:"owner_user_id"`
-	TransactionType *string  `json:"transaction_type"`
-	CreatedAt       isoNaive `json:"created_at"`
+	ID              int           `json:"id"`
+	AccountID       int           `json:"account_id"`
+	AccountName     string        `json:"account_name"`
+	Amount          wire.PyFloat  `json:"amount"`
+	Date            wire.IsoDate  `json:"date"`
+	OwnerUserID     *int          `json:"owner_user_id"`
+	TransactionType *string       `json:"transaction_type"`
+	CreatedAt       wire.IsoNaive `json:"created_at"`
 }
 
 type listResponse struct {
-	Transactions     []response `json:"transactions"`
-	TotalInvested    pyFloat    `json:"total_invested"`
-	TransactionCount int        `json:"transaction_count"`
+	Transactions     []response   `json:"transactions"`
+	TotalInvested    wire.PyFloat `json:"total_invested"`
+	TransactionCount int          `json:"transaction_count"`
 }
 
 // Handler is the HTTP boundary.
@@ -56,11 +57,11 @@ func toResponse(t Transaction, accountName string) response {
 		ID:              t.ID,
 		AccountID:       t.AccountID,
 		AccountName:     accountName,
-		Amount:          pyFloat(amt),
-		Date:            isoDate(t.Date),
+		Amount:          wire.PyFloat(amt),
+		Date:            wire.IsoDate(t.Date),
 		OwnerUserID:     t.OwnerUserID,
 		TransactionType: t.TransactionType,
-		CreatedAt:       isoNaive(t.CreatedAt.UTC()),
+		CreatedAt:       wire.IsoNaive(t.CreatedAt.UTC()),
 	}
 }
 
@@ -143,7 +144,7 @@ func (h *Handler) ListAll(w http.ResponseWriter, r *http.Request) {
 	}
 	out.TransactionCount = len(out.Transactions)
 	total, _ := totalCents.Float64()
-	out.TotalInvested = pyFloat(total)
+	out.TotalInvested = wire.PyFloat(total)
 	writeJSON(w, http.StatusOK, out)
 }
 
@@ -256,7 +257,7 @@ func (h *Handler) writeList(w http.ResponseWriter, rows []Transaction, name func
 	}
 	out.TransactionCount = len(out.Transactions)
 	f, _ := total.Float64()
-	out.TotalInvested = pyFloat(f)
+	out.TotalInvested = wire.PyFloat(f)
 	writeJSON(w, http.StatusOK, out)
 }
 
@@ -382,30 +383,4 @@ func requirePositiveDecimal(raw map[string]json.RawMessage, key, msg string) (de
 
 func isNull(v json.RawMessage) bool {
 	return bytes.Equal(bytes.TrimSpace(v), []byte("null"))
-}
-
-// --- wire types ---
-
-type isoDate time.Time
-
-const isoDateLayout = "2006-01-02"
-
-func (d isoDate) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(d).Format(isoDateLayout) + `"`), nil
-}
-
-type isoNaive time.Time
-
-func (t isoNaive) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(t).Format("2006-01-02T15:04:05.999999") + `"`), nil
-}
-
-type pyFloat float64
-
-func (f pyFloat) MarshalJSON() ([]byte, error) {
-	s := strconv.FormatFloat(float64(f), 'f', -1, 64)
-	if !strings.ContainsRune(s, '.') {
-		s += ".0"
-	}
-	return []byte(s), nil
 }

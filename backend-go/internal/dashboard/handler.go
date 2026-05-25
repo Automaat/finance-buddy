@@ -6,9 +6,10 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 // Handler is the HTTP boundary for /api/dashboard.
@@ -126,41 +127,23 @@ func filterTimeSeries(pts []timeSeriesPoint, rng dateRange) []timeSeriesPoint {
 	return out
 }
 
-// --- wire types ---
-
-type isoDate time.Time
-
-func (d isoDate) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(d).Format("2006-01-02") + `"`), nil
-}
-
-type pyFloat float64
-
-func (f pyFloat) MarshalJSON() ([]byte, error) {
-	s := strconv.FormatFloat(float64(f), 'f', -1, 64)
-	if !strings.ContainsRune(s, '.') {
-		s += ".0"
-	}
-	return []byte(s), nil
-}
-
 type netWorthPointWire struct {
-	Date        isoDate `json:"date"`
-	Value       pyFloat `json:"value"`
-	Assets      pyFloat `json:"assets"`
-	Liabilities pyFloat `json:"liabilities"`
-	SnapshotID  int     `json:"snapshot_id"`
+	Date        wire.IsoDate `json:"date"`
+	Value       wire.PyFloat `json:"value"`
+	Assets      wire.PyFloat `json:"assets"`
+	Liabilities wire.PyFloat `json:"liabilities"`
+	SnapshotID  int          `json:"snapshot_id"`
 }
 
 type allocationItemWire struct {
-	Category    string  `json:"category"`
-	OwnerUserID *int    `json:"owner_user_id"`
-	Value       pyFloat `json:"value"`
+	Category    string       `json:"category"`
+	OwnerUserID *int         `json:"owner_user_id"`
+	Value       wire.PyFloat `json:"value"`
 }
 
 type deltaValueWire struct {
-	Absolute   pyFloat  `json:"absolute"`
-	Percentage *pyFloat `json:"percentage"`
+	Absolute   wire.PyFloat  `json:"absolute"`
+	Percentage *wire.PyFloat `json:"percentage"`
 }
 
 type tileDeltaWire struct {
@@ -175,80 +158,80 @@ type tileDeltasWire struct {
 }
 
 type metricCardsWire struct {
-	PropertySQM             pyFloat  `json:"property_sqm"`
-	EmergencyFundMonths     pyFloat  `json:"emergency_fund_months"`
-	RetirementIncomeMonthly pyFloat  `json:"retirement_income_monthly"`
-	MortgageRemaining       pyFloat  `json:"mortgage_remaining"`
-	MortgageMonthsLeft      int      `json:"mortgage_months_left"`
-	MortgageYearsLeft       pyFloat  `json:"mortgage_years_left"`
-	RetirementTotal         pyFloat  `json:"retirement_total"`
-	InvestmentContributions pyFloat  `json:"investment_contributions"`
-	InvestmentReturns       pyFloat  `json:"investment_returns"`
-	SavingsRate             *pyFloat `json:"savings_rate"`
-	DebtToIncomeRatio       *pyFloat `json:"debt_to_income_ratio"`
-	HourOfWorkCost          *pyFloat `json:"hour_of_work_cost"`
-	HourOfLifeCost          *pyFloat `json:"hour_of_life_cost"`
-	FIRENumber              *pyFloat `json:"fire_number"`
-	FIProgress              *pyFloat `json:"fi_progress"`
-	RunwayMonths            *pyFloat `json:"runway_months"`
-	AnnualExpenses          *pyFloat `json:"annual_expenses"`
-	WithdrawalRate          *pyFloat `json:"withdrawal_rate"`
-	CoastFIRENumber         *pyFloat `json:"coast_fire_number"`
-	CoastFIREGap            *pyFloat `json:"coast_fire_gap"`
-	CoastFIRETargetAge      *int     `json:"coast_fire_target_age"`
-	ExpectedReturnRate      *pyFloat `json:"expected_return_rate"`
-	BaristaMonthlyIncome    *pyFloat `json:"barista_monthly_income"`
-	BaristaAnnualGap        *pyFloat `json:"barista_annual_gap"`
-	BaristaFIRENumber       *pyFloat `json:"barista_fire_number"`
-	BaristaFIProgress       *pyFloat `json:"barista_fi_progress"`
-	BaristaYearsToFI        *pyFloat `json:"barista_years_to_fi"`
-	BridgeYears             *int     `json:"bridge_years"`
-	BridgeCapitalNeeded     *pyFloat `json:"bridge_capital_needed"`
-	BridgeLiquidCapital     *pyFloat `json:"bridge_liquid_capital"`
-	BridgeCapitalGap        *pyFloat `json:"bridge_capital_gap"`
-	LeanFIRENumber          *pyFloat `json:"lean_fire_number"`
-	LeanFIProgress          *pyFloat `json:"lean_fi_progress"`
-	FatFIRENumber           *pyFloat `json:"fat_fire_number"`
-	FatFIProgress           *pyFloat `json:"fat_fi_progress"`
-	MonthlySavings          *pyFloat `json:"monthly_savings"`
-	FIYearsRemaining        *pyFloat `json:"fi_years_remaining"`
-	FIProjectedDate         *string  `json:"fi_projected_date"`
-	FireNetWorth            *pyFloat `json:"fire_net_worth"`
-	FireExcludedValue       *pyFloat `json:"fire_excluded_value"`
+	PropertySQM             wire.PyFloat  `json:"property_sqm"`
+	EmergencyFundMonths     wire.PyFloat  `json:"emergency_fund_months"`
+	RetirementIncomeMonthly wire.PyFloat  `json:"retirement_income_monthly"`
+	MortgageRemaining       wire.PyFloat  `json:"mortgage_remaining"`
+	MortgageMonthsLeft      int           `json:"mortgage_months_left"`
+	MortgageYearsLeft       wire.PyFloat  `json:"mortgage_years_left"`
+	RetirementTotal         wire.PyFloat  `json:"retirement_total"`
+	InvestmentContributions wire.PyFloat  `json:"investment_contributions"`
+	InvestmentReturns       wire.PyFloat  `json:"investment_returns"`
+	SavingsRate             *wire.PyFloat `json:"savings_rate"`
+	DebtToIncomeRatio       *wire.PyFloat `json:"debt_to_income_ratio"`
+	HourOfWorkCost          *wire.PyFloat `json:"hour_of_work_cost"`
+	HourOfLifeCost          *wire.PyFloat `json:"hour_of_life_cost"`
+	FIRENumber              *wire.PyFloat `json:"fire_number"`
+	FIProgress              *wire.PyFloat `json:"fi_progress"`
+	RunwayMonths            *wire.PyFloat `json:"runway_months"`
+	AnnualExpenses          *wire.PyFloat `json:"annual_expenses"`
+	WithdrawalRate          *wire.PyFloat `json:"withdrawal_rate"`
+	CoastFIRENumber         *wire.PyFloat `json:"coast_fire_number"`
+	CoastFIREGap            *wire.PyFloat `json:"coast_fire_gap"`
+	CoastFIRETargetAge      *int          `json:"coast_fire_target_age"`
+	ExpectedReturnRate      *wire.PyFloat `json:"expected_return_rate"`
+	BaristaMonthlyIncome    *wire.PyFloat `json:"barista_monthly_income"`
+	BaristaAnnualGap        *wire.PyFloat `json:"barista_annual_gap"`
+	BaristaFIRENumber       *wire.PyFloat `json:"barista_fire_number"`
+	BaristaFIProgress       *wire.PyFloat `json:"barista_fi_progress"`
+	BaristaYearsToFI        *wire.PyFloat `json:"barista_years_to_fi"`
+	BridgeYears             *int          `json:"bridge_years"`
+	BridgeCapitalNeeded     *wire.PyFloat `json:"bridge_capital_needed"`
+	BridgeLiquidCapital     *wire.PyFloat `json:"bridge_liquid_capital"`
+	BridgeCapitalGap        *wire.PyFloat `json:"bridge_capital_gap"`
+	LeanFIRENumber          *wire.PyFloat `json:"lean_fire_number"`
+	LeanFIProgress          *wire.PyFloat `json:"lean_fi_progress"`
+	FatFIRENumber           *wire.PyFloat `json:"fat_fire_number"`
+	FatFIProgress           *wire.PyFloat `json:"fat_fi_progress"`
+	MonthlySavings          *wire.PyFloat `json:"monthly_savings"`
+	FIYearsRemaining        *wire.PyFloat `json:"fi_years_remaining"`
+	FIProjectedDate         *string       `json:"fi_projected_date"`
+	FireNetWorth            *wire.PyFloat `json:"fire_net_worth"`
+	FireExcludedValue       *wire.PyFloat `json:"fire_excluded_value"`
 }
 
 type allocationBreakdownWire struct {
-	Category          string  `json:"category"`
-	CurrentValue      pyFloat `json:"current_value"`
-	CurrentPercentage pyFloat `json:"current_percentage"`
-	TargetPercentage  pyFloat `json:"target_percentage"`
-	Difference        pyFloat `json:"difference"`
+	Category          string       `json:"category"`
+	CurrentValue      wire.PyFloat `json:"current_value"`
+	CurrentPercentage wire.PyFloat `json:"current_percentage"`
+	TargetPercentage  wire.PyFloat `json:"target_percentage"`
+	Difference        wire.PyFloat `json:"difference"`
 }
 
 type wrapperBreakdownWire struct {
-	Wrapper    string  `json:"wrapper"`
-	Value      pyFloat `json:"value"`
-	Percentage pyFloat `json:"percentage"`
+	Wrapper    string       `json:"wrapper"`
+	Value      wire.PyFloat `json:"value"`
+	Percentage wire.PyFloat `json:"percentage"`
 }
 
 type rebalancingWire struct {
-	Category string  `json:"category"`
-	Action   string  `json:"action"`
-	Amount   pyFloat `json:"amount"`
+	Category string       `json:"category"`
+	Action   string       `json:"action"`
+	Amount   wire.PyFloat `json:"amount"`
 }
 
 type allocationAnalysisWire struct {
 	ByCategory           []allocationBreakdownWire `json:"by_category"`
 	ByWrapper            []wrapperBreakdownWire    `json:"by_wrapper"`
 	Rebalancing          []rebalancingWire         `json:"rebalancing"`
-	TotalInvestmentValue pyFloat                   `json:"total_investment_value"`
+	TotalInvestmentValue wire.PyFloat              `json:"total_investment_value"`
 }
 
 type timeSeriesPointWire struct {
-	Date          isoDate `json:"date"`
-	Value         pyFloat `json:"value"`
-	Contributions pyFloat `json:"contributions"`
-	Returns       pyFloat `json:"returns"`
+	Date          wire.IsoDate `json:"date"`
+	Value         wire.PyFloat `json:"value"`
+	Contributions wire.PyFloat `json:"contributions"`
+	Returns       wire.PyFloat `json:"returns"`
 }
 
 type wrapperTimeSeriesWire struct {
@@ -264,12 +247,12 @@ type categoryTimeSeriesWire struct {
 
 type dashboardWire struct {
 	NetWorthHistory        []netWorthPointWire    `json:"net_worth_history"`
-	CurrentNetWorth        pyFloat                `json:"current_net_worth"`
-	ChangeVsLastMonth      pyFloat                `json:"change_vs_last_month"`
-	TotalAssets            pyFloat                `json:"total_assets"`
-	TotalLiabilities       pyFloat                `json:"total_liabilities"`
+	CurrentNetWorth        wire.PyFloat           `json:"current_net_worth"`
+	ChangeVsLastMonth      wire.PyFloat           `json:"change_vs_last_month"`
+	TotalAssets            wire.PyFloat           `json:"total_assets"`
+	TotalLiabilities       wire.PyFloat           `json:"total_liabilities"`
 	Allocation             []allocationItemWire   `json:"allocation"`
-	RetirementAccountValue pyFloat                `json:"retirement_account_value"`
+	RetirementAccountValue wire.PyFloat           `json:"retirement_account_value"`
 	MetricCards            metricCardsWire        `json:"metric_cards"`
 	AllocationAnalysis     allocationAnalysisWire `json:"allocation_analysis"`
 	InvestmentTimeSeries   []timeSeriesPointWire  `json:"investment_time_series"`
@@ -280,11 +263,11 @@ type dashboardWire struct {
 
 func toWire(res result) dashboardWire {
 	w := dashboardWire{
-		CurrentNetWorth:        pyFloat(res.CurrentNetWorth),
-		ChangeVsLastMonth:      pyFloat(res.ChangeVsLastMonth),
-		TotalAssets:            pyFloat(res.TotalAssets),
-		TotalLiabilities:       pyFloat(res.TotalLiabilities),
-		RetirementAccountValue: pyFloat(res.RetirementAccountValue),
+		CurrentNetWorth:        wire.PyFloat(res.CurrentNetWorth),
+		ChangeVsLastMonth:      wire.PyFloat(res.ChangeVsLastMonth),
+		TotalAssets:            wire.PyFloat(res.TotalAssets),
+		TotalLiabilities:       wire.PyFloat(res.TotalLiabilities),
+		RetirementAccountValue: wire.PyFloat(res.RetirementAccountValue),
 		MetricCards:            metricCardsToWire(res.MetricCards),
 		AllocationAnalysis:     allocationAnalysisToWire(res.AllocationAnalysis),
 		TileDeltas:             tileDeltasToWire(res.TileDeltas),
@@ -292,17 +275,17 @@ func toWire(res result) dashboardWire {
 	w.NetWorthHistory = make([]netWorthPointWire, 0, len(res.NetWorthHistory))
 	for _, p := range res.NetWorthHistory {
 		w.NetWorthHistory = append(w.NetWorthHistory, netWorthPointWire{
-			Date:        isoDate(p.Date),
-			Value:       pyFloat(p.Value),
-			Assets:      pyFloat(p.Assets),
-			Liabilities: pyFloat(p.Liabilities),
+			Date:        wire.IsoDate(p.Date),
+			Value:       wire.PyFloat(p.Value),
+			Assets:      wire.PyFloat(p.Assets),
+			Liabilities: wire.PyFloat(p.Liabilities),
 			SnapshotID:  p.SnapshotID,
 		})
 	}
 	w.Allocation = make([]allocationItemWire, 0, len(res.Allocation))
 	for _, a := range res.Allocation {
 		w.Allocation = append(w.Allocation, allocationItemWire{
-			Category: a.Category, OwnerUserID: a.OwnerUserID, Value: pyFloat(a.Value),
+			Category: a.Category, OwnerUserID: a.OwnerUserID, Value: wire.PyFloat(a.Value),
 		})
 	}
 	w.InvestmentTimeSeries = seriesToWire(res.InvestmentTimeSeries)
@@ -322,10 +305,10 @@ func seriesToWire(pts []timeSeriesPoint) []timeSeriesPointWire {
 	out := make([]timeSeriesPointWire, 0, len(pts))
 	for _, p := range pts {
 		out = append(out, timeSeriesPointWire{
-			Date:          isoDate(p.Date),
-			Value:         pyFloat(p.Value),
-			Contributions: pyFloat(p.Contributions),
-			Returns:       pyFloat(p.Returns),
+			Date:          wire.IsoDate(p.Date),
+			Value:         wire.PyFloat(p.Value),
+			Contributions: wire.PyFloat(p.Contributions),
+			Returns:       wire.PyFloat(p.Returns),
 		})
 	}
 	return out
@@ -333,15 +316,15 @@ func seriesToWire(pts []timeSeriesPoint) []timeSeriesPointWire {
 
 func metricCardsToWire(m metricCards) metricCardsWire {
 	return metricCardsWire{
-		PropertySQM:             pyFloat(m.PropertySQM),
-		EmergencyFundMonths:     pyFloat(m.EmergencyFundMonths),
-		RetirementIncomeMonthly: pyFloat(m.RetirementIncomeMonthly),
-		MortgageRemaining:       pyFloat(m.MortgageRemaining),
+		PropertySQM:             wire.PyFloat(m.PropertySQM),
+		EmergencyFundMonths:     wire.PyFloat(m.EmergencyFundMonths),
+		RetirementIncomeMonthly: wire.PyFloat(m.RetirementIncomeMonthly),
+		MortgageRemaining:       wire.PyFloat(m.MortgageRemaining),
 		MortgageMonthsLeft:      m.MortgageMonthsLeft,
-		MortgageYearsLeft:       pyFloat(m.MortgageYearsLeft),
-		RetirementTotal:         pyFloat(m.RetirementTotal),
-		InvestmentContributions: pyFloat(m.InvestmentContributions),
-		InvestmentReturns:       pyFloat(m.InvestmentReturns),
+		MortgageYearsLeft:       wire.PyFloat(m.MortgageYearsLeft),
+		RetirementTotal:         wire.PyFloat(m.RetirementTotal),
+		InvestmentContributions: wire.PyFloat(m.InvestmentContributions),
+		InvestmentReturns:       wire.PyFloat(m.InvestmentReturns),
 		SavingsRate:             floatPtr(m.SavingsRate),
 		DebtToIncomeRatio:       floatPtr(m.DebtToIncomeRatio),
 		HourOfWorkCost:          floatPtr(m.HourOfWorkCost),
@@ -378,7 +361,7 @@ func metricCardsToWire(m metricCards) metricCardsWire {
 
 func allocationAnalysisToWire(a allocationAnalysis) allocationAnalysisWire {
 	w := allocationAnalysisWire{
-		TotalInvestmentValue: pyFloat(a.TotalInvestmentValue),
+		TotalInvestmentValue: wire.PyFloat(a.TotalInvestmentValue),
 		ByCategory:           make([]allocationBreakdownWire, 0, len(a.ByCategory)),
 		ByWrapper:            make([]wrapperBreakdownWire, 0, len(a.ByWrapper)),
 		Rebalancing:          make([]rebalancingWire, 0, len(a.Rebalancing)),
@@ -386,20 +369,20 @@ func allocationAnalysisToWire(a allocationAnalysis) allocationAnalysisWire {
 	for _, b := range a.ByCategory {
 		w.ByCategory = append(w.ByCategory, allocationBreakdownWire{
 			Category:          b.Category,
-			CurrentValue:      pyFloat(b.CurrentValue),
-			CurrentPercentage: pyFloat(b.CurrentPercentage),
-			TargetPercentage:  pyFloat(b.TargetPercentage),
-			Difference:        pyFloat(b.Difference),
+			CurrentValue:      wire.PyFloat(b.CurrentValue),
+			CurrentPercentage: wire.PyFloat(b.CurrentPercentage),
+			TargetPercentage:  wire.PyFloat(b.TargetPercentage),
+			Difference:        wire.PyFloat(b.Difference),
 		})
 	}
 	for _, b := range a.ByWrapper {
 		w.ByWrapper = append(w.ByWrapper, wrapperBreakdownWire{
-			Wrapper: b.Wrapper, Value: pyFloat(b.Value), Percentage: pyFloat(b.Percentage),
+			Wrapper: b.Wrapper, Value: wire.PyFloat(b.Value), Percentage: wire.PyFloat(b.Percentage),
 		})
 	}
 	for _, b := range a.Rebalancing {
 		w.Rebalancing = append(w.Rebalancing, rebalancingWire{
-			Category: b.Category, Action: b.Action, Amount: pyFloat(b.Amount),
+			Category: b.Category, Action: b.Action, Amount: wire.PyFloat(b.Amount),
 		})
 	}
 	return w
@@ -421,13 +404,13 @@ func deltaToWire(d *deltaValue) *deltaValueWire {
 	if d == nil {
 		return nil
 	}
-	return &deltaValueWire{Absolute: pyFloat(d.Absolute), Percentage: floatPtr(d.Percentage)}
+	return &deltaValueWire{Absolute: wire.PyFloat(d.Absolute), Percentage: floatPtr(d.Percentage)}
 }
 
-func floatPtr(f *float64) *pyFloat {
+func floatPtr(f *float64) *wire.PyFloat {
 	if f == nil {
 		return nil
 	}
-	pf := pyFloat(*f)
+	pf := wire.PyFloat(*f)
 	return &pf
 }

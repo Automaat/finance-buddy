@@ -3,6 +3,8 @@ package simulations
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 func TestOwnerLabel_NilIsWspolne(t *testing.T) {
@@ -28,7 +30,7 @@ func TestOwnerLabel_UnknownReturnsDash(t *testing.T) {
 
 func TestPyFloatMarshal(t *testing.T) {
 	cases := []struct {
-		in   pyFloat
+		in   wire.PyFloat
 		want string
 	}{
 		{0, "0.0"},

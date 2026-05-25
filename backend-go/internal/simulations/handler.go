@@ -11,6 +11,8 @@ import (
 	"math/rand/v2"
 	"net/http"
 	"time"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 const safeWithdrawalRate = 0.04
@@ -33,48 +35,48 @@ func NewHandler(store *Store, logger *slog.Logger) *Handler {
 // --- mortgage wire types ---
 
 type mortgageInputsWire struct {
-	RemainingPrincipal   pyFloat `json:"remaining_principal"`
-	AnnualInterestRate   pyFloat `json:"annual_interest_rate"`
-	RemainingMonths      int     `json:"remaining_months"`
-	TotalMonthlyBudget   pyFloat `json:"total_monthly_budget"`
-	ExpectedAnnualReturn pyFloat `json:"expected_annual_return"`
-	InflationRate        pyFloat `json:"inflation_rate"`
-	EnableVariableRate   bool    `json:"enable_variable_rate"`
+	RemainingPrincipal   wire.PyFloat `json:"remaining_principal"`
+	AnnualInterestRate   wire.PyFloat `json:"annual_interest_rate"`
+	RemainingMonths      int          `json:"remaining_months"`
+	TotalMonthlyBudget   wire.PyFloat `json:"total_monthly_budget"`
+	ExpectedAnnualReturn wire.PyFloat `json:"expected_annual_return"`
+	InflationRate        wire.PyFloat `json:"inflation_rate"`
+	EnableVariableRate   bool         `json:"enable_variable_rate"`
 }
 
 type mortgageYearlyWire struct {
-	Year                         int     `json:"year"`
-	AnnualRate                   pyFloat `json:"annual_rate"`
-	ScenarioAMortgageBalance     pyFloat `json:"scenario_a_mortgage_balance"`
-	ScenarioARealMortgageBalance pyFloat `json:"scenario_a_real_mortgage_balance"`
-	ScenarioACumulativeInterest  pyFloat `json:"scenario_a_cumulative_interest"`
-	ScenarioAInvestmentBalance   pyFloat `json:"scenario_a_investment_balance"`
-	ScenarioAAfterTaxPortfolio   pyFloat `json:"scenario_a_after_tax_portfolio"`
-	ScenarioARealPortfolio       pyFloat `json:"scenario_a_real_portfolio"`
-	ScenarioAPaidOff             bool    `json:"scenario_a_paid_off"`
-	ScenarioBMortgageBalance     pyFloat `json:"scenario_b_mortgage_balance"`
-	ScenarioBRealMortgageBalance pyFloat `json:"scenario_b_real_mortgage_balance"`
-	ScenarioBInvestmentBalance   pyFloat `json:"scenario_b_investment_balance"`
-	ScenarioBAfterTaxPortfolio   pyFloat `json:"scenario_b_after_tax_portfolio"`
-	ScenarioBRealPortfolio       pyFloat `json:"scenario_b_real_portfolio"`
-	ScenarioBCumulativeInterest  pyFloat `json:"scenario_b_cumulative_interest"`
-	NetAdvantageInvest           pyFloat `json:"net_advantage_invest"`
+	Year                         int          `json:"year"`
+	AnnualRate                   wire.PyFloat `json:"annual_rate"`
+	ScenarioAMortgageBalance     wire.PyFloat `json:"scenario_a_mortgage_balance"`
+	ScenarioARealMortgageBalance wire.PyFloat `json:"scenario_a_real_mortgage_balance"`
+	ScenarioACumulativeInterest  wire.PyFloat `json:"scenario_a_cumulative_interest"`
+	ScenarioAInvestmentBalance   wire.PyFloat `json:"scenario_a_investment_balance"`
+	ScenarioAAfterTaxPortfolio   wire.PyFloat `json:"scenario_a_after_tax_portfolio"`
+	ScenarioARealPortfolio       wire.PyFloat `json:"scenario_a_real_portfolio"`
+	ScenarioAPaidOff             bool         `json:"scenario_a_paid_off"`
+	ScenarioBMortgageBalance     wire.PyFloat `json:"scenario_b_mortgage_balance"`
+	ScenarioBRealMortgageBalance wire.PyFloat `json:"scenario_b_real_mortgage_balance"`
+	ScenarioBInvestmentBalance   wire.PyFloat `json:"scenario_b_investment_balance"`
+	ScenarioBAfterTaxPortfolio   wire.PyFloat `json:"scenario_b_after_tax_portfolio"`
+	ScenarioBRealPortfolio       wire.PyFloat `json:"scenario_b_real_portfolio"`
+	ScenarioBCumulativeInterest  wire.PyFloat `json:"scenario_b_cumulative_interest"`
+	NetAdvantageInvest           wire.PyFloat `json:"net_advantage_invest"`
 }
 
 type mortgageSummaryWire struct {
-	RegularMonthlyPayment    pyFloat `json:"regular_monthly_payment"`
-	TotalInterestA           pyFloat `json:"total_interest_a"`
-	TotalInterestB           pyFloat `json:"total_interest_b"`
-	InterestSaved            pyFloat `json:"interest_saved"`
-	FinalInvestmentPortfolio pyFloat `json:"final_investment_portfolio"`
-	BelkaTaxA                pyFloat `json:"belka_tax_a"`
-	BelkaTaxB                pyFloat `json:"belka_tax_b"`
-	FinalPortfolioAReal      pyFloat `json:"final_portfolio_a_real"`
-	FinalPortfolioBReal      pyFloat `json:"final_portfolio_b_real"`
-	MonthsSaved              int     `json:"months_saved"`
-	WinningStrategy          string  `json:"winning_strategy"`
-	NetAdvantage             pyFloat `json:"net_advantage"`
-	BreakEvenGrossReturn     pyFloat `json:"break_even_gross_return"`
+	RegularMonthlyPayment    wire.PyFloat `json:"regular_monthly_payment"`
+	TotalInterestA           wire.PyFloat `json:"total_interest_a"`
+	TotalInterestB           wire.PyFloat `json:"total_interest_b"`
+	InterestSaved            wire.PyFloat `json:"interest_saved"`
+	FinalInvestmentPortfolio wire.PyFloat `json:"final_investment_portfolio"`
+	BelkaTaxA                wire.PyFloat `json:"belka_tax_a"`
+	BelkaTaxB                wire.PyFloat `json:"belka_tax_b"`
+	FinalPortfolioAReal      wire.PyFloat `json:"final_portfolio_a_real"`
+	FinalPortfolioBReal      wire.PyFloat `json:"final_portfolio_b_real"`
+	MonthsSaved              int          `json:"months_saved"`
+	WinningStrategy          string       `json:"winning_strategy"`
+	NetAdvantage             wire.PyFloat `json:"net_advantage"`
+	BreakEvenGrossReturn     wire.PyFloat `json:"break_even_gross_return"`
 }
 
 type mortgageResponse struct {
@@ -111,47 +113,47 @@ func (h *Handler) MortgageVsInvest(w http.ResponseWriter, r *http.Request) {
 	}
 	resp := mortgageResponse{
 		Inputs: mortgageInputsWire{
-			RemainingPrincipal:   pyFloat(in.RemainingPrincipal),
-			AnnualInterestRate:   pyFloat(in.AnnualInterestRate),
+			RemainingPrincipal:   wire.PyFloat(in.RemainingPrincipal),
+			AnnualInterestRate:   wire.PyFloat(in.AnnualInterestRate),
 			RemainingMonths:      in.RemainingMonths,
-			TotalMonthlyBudget:   pyFloat(in.TotalMonthlyBudget),
-			ExpectedAnnualReturn: pyFloat(in.ExpectedAnnualReturn),
-			InflationRate:        pyFloat(in.InflationRate),
+			TotalMonthlyBudget:   wire.PyFloat(in.TotalMonthlyBudget),
+			ExpectedAnnualReturn: wire.PyFloat(in.ExpectedAnnualReturn),
+			InflationRate:        wire.PyFloat(in.InflationRate),
 			EnableVariableRate:   in.EnableVariableRate,
 		},
 		Summary: mortgageSummaryWire{
-			RegularMonthlyPayment:    pyFloat(result.Summary.RegularMonthlyPayment),
-			TotalInterestA:           pyFloat(result.Summary.TotalInterestA),
-			TotalInterestB:           pyFloat(result.Summary.TotalInterestB),
-			InterestSaved:            pyFloat(result.Summary.InterestSaved),
-			FinalInvestmentPortfolio: pyFloat(result.Summary.FinalInvestmentPortfolio),
-			FinalPortfolioAReal:      pyFloat(result.Summary.FinalPortfolioAReal),
-			FinalPortfolioBReal:      pyFloat(result.Summary.FinalPortfolioBReal),
+			RegularMonthlyPayment:    wire.PyFloat(result.Summary.RegularMonthlyPayment),
+			TotalInterestA:           wire.PyFloat(result.Summary.TotalInterestA),
+			TotalInterestB:           wire.PyFloat(result.Summary.TotalInterestB),
+			InterestSaved:            wire.PyFloat(result.Summary.InterestSaved),
+			FinalInvestmentPortfolio: wire.PyFloat(result.Summary.FinalInvestmentPortfolio),
+			FinalPortfolioAReal:      wire.PyFloat(result.Summary.FinalPortfolioAReal),
+			FinalPortfolioBReal:      wire.PyFloat(result.Summary.FinalPortfolioBReal),
 			MonthsSaved:              result.Summary.MonthsSaved,
 			WinningStrategy:          result.Summary.WinningStrategy,
-			NetAdvantage:             pyFloat(result.Summary.NetAdvantage),
-			BreakEvenGrossReturn:     pyFloat(result.Summary.BreakEvenGrossReturn),
+			NetAdvantage:             wire.PyFloat(result.Summary.NetAdvantage),
+			BreakEvenGrossReturn:     wire.PyFloat(result.Summary.BreakEvenGrossReturn),
 		},
 	}
 	resp.YearlyProjections = make([]mortgageYearlyWire, 0, len(result.Yearly))
 	for i := range result.Yearly {
 		y := &result.Yearly[i]
 		resp.YearlyProjections = append(resp.YearlyProjections, mortgageYearlyWire{
-			Year: y.Year, AnnualRate: pyFloat(y.AnnualRate),
-			ScenarioAMortgageBalance:     pyFloat(y.ScenarioAMortgageBalance),
-			ScenarioARealMortgageBalance: pyFloat(y.ScenarioARealMortgageBalance),
-			ScenarioACumulativeInterest:  pyFloat(y.ScenarioACumulativeInterest),
-			ScenarioAInvestmentBalance:   pyFloat(y.ScenarioAInvestmentBalance),
-			ScenarioAAfterTaxPortfolio:   pyFloat(y.ScenarioAAfterTaxPortfolio),
-			ScenarioARealPortfolio:       pyFloat(y.ScenarioARealPortfolio),
+			Year: y.Year, AnnualRate: wire.PyFloat(y.AnnualRate),
+			ScenarioAMortgageBalance:     wire.PyFloat(y.ScenarioAMortgageBalance),
+			ScenarioARealMortgageBalance: wire.PyFloat(y.ScenarioARealMortgageBalance),
+			ScenarioACumulativeInterest:  wire.PyFloat(y.ScenarioACumulativeInterest),
+			ScenarioAInvestmentBalance:   wire.PyFloat(y.ScenarioAInvestmentBalance),
+			ScenarioAAfterTaxPortfolio:   wire.PyFloat(y.ScenarioAAfterTaxPortfolio),
+			ScenarioARealPortfolio:       wire.PyFloat(y.ScenarioARealPortfolio),
 			ScenarioAPaidOff:             y.ScenarioAPaidOff,
-			ScenarioBMortgageBalance:     pyFloat(y.ScenarioBMortgageBalance),
-			ScenarioBRealMortgageBalance: pyFloat(y.ScenarioBRealMortgageBalance),
-			ScenarioBInvestmentBalance:   pyFloat(y.ScenarioBInvestmentBalance),
-			ScenarioBAfterTaxPortfolio:   pyFloat(y.ScenarioBAfterTaxPortfolio),
-			ScenarioBRealPortfolio:       pyFloat(y.ScenarioBRealPortfolio),
-			ScenarioBCumulativeInterest:  pyFloat(y.ScenarioBCumulativeInterest),
-			NetAdvantageInvest:           pyFloat(y.NetAdvantageInvest),
+			ScenarioBMortgageBalance:     wire.PyFloat(y.ScenarioBMortgageBalance),
+			ScenarioBRealMortgageBalance: wire.PyFloat(y.ScenarioBRealMortgageBalance),
+			ScenarioBInvestmentBalance:   wire.PyFloat(y.ScenarioBInvestmentBalance),
+			ScenarioBAfterTaxPortfolio:   wire.PyFloat(y.ScenarioBAfterTaxPortfolio),
+			ScenarioBRealPortfolio:       wire.PyFloat(y.ScenarioBRealPortfolio),
+			ScenarioBCumulativeInterest:  wire.PyFloat(y.ScenarioBCumulativeInterest),
+			NetAdvantageInvest:           wire.PyFloat(y.NetAdvantageInvest),
 		})
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -160,20 +162,20 @@ func (h *Handler) MortgageVsInvest(w http.ResponseWriter, r *http.Request) {
 // --- WIBOR scenarios wire types ---
 
 type wiborInputsWire struct {
-	RemainingPrincipal pyFloat `json:"remaining_principal"`
-	BaseAnnualRate     pyFloat `json:"base_annual_rate"`
-	RemainingMonths    int     `json:"remaining_months"`
-	BasePayment        pyFloat `json:"base_payment"`
+	RemainingPrincipal wire.PyFloat `json:"remaining_principal"`
+	BaseAnnualRate     wire.PyFloat `json:"base_annual_rate"`
+	RemainingMonths    int          `json:"remaining_months"`
+	BasePayment        wire.PyFloat `json:"base_payment"`
 }
 
 type wiborScenarioWire struct {
-	DeltaPP        pyFloat   `json:"delta_pp"`
-	AnnualRate     pyFloat   `json:"annual_rate"`
-	MonthlyPayment pyFloat   `json:"monthly_payment"`
-	TotalInterest  pyFloat   `json:"total_interest"`
-	TermMonths     int       `json:"term_months"`
-	RateFloored    bool      `json:"rate_floored"`
-	YearlyBalances []pyFloat `json:"yearly_balances"`
+	DeltaPP        wire.PyFloat   `json:"delta_pp"`
+	AnnualRate     wire.PyFloat   `json:"annual_rate"`
+	MonthlyPayment wire.PyFloat   `json:"monthly_payment"`
+	TotalInterest  wire.PyFloat   `json:"total_interest"`
+	TermMonths     int            `json:"term_months"`
+	RateFloored    bool           `json:"rate_floored"`
+	YearlyBalances []wire.PyFloat `json:"yearly_balances"`
 }
 
 type wiborResponse struct {
@@ -196,23 +198,23 @@ func (h *Handler) WiborScenarios(w http.ResponseWriter, r *http.Request) {
 	result := SimulateWiborScenarios(in, DefaultWiborDeltas)
 	resp := wiborResponse{
 		Inputs: wiborInputsWire{
-			RemainingPrincipal: pyFloat(in.RemainingPrincipal),
-			BaseAnnualRate:     pyFloat(in.BaseAnnualRate),
+			RemainingPrincipal: wire.PyFloat(in.RemainingPrincipal),
+			BaseAnnualRate:     wire.PyFloat(in.BaseAnnualRate),
 			RemainingMonths:    in.RemainingMonths,
-			BasePayment:        pyFloat(result.BasePayment),
+			BasePayment:        wire.PyFloat(result.BasePayment),
 		},
 	}
 	resp.Scenarios = make([]wiborScenarioWire, 0, len(result.Scenarios))
 	for _, s := range result.Scenarios {
-		balances := make([]pyFloat, 0, len(s.YearlyBalances))
+		balances := make([]wire.PyFloat, 0, len(s.YearlyBalances))
 		for _, b := range s.YearlyBalances {
-			balances = append(balances, pyFloat(b))
+			balances = append(balances, wire.PyFloat(b))
 		}
 		resp.Scenarios = append(resp.Scenarios, wiborScenarioWire{
-			DeltaPP:        pyFloat(s.DeltaPP),
-			AnnualRate:     pyFloat(s.AnnualRate),
-			MonthlyPayment: pyFloat(s.MonthlyPayment),
-			TotalInterest:  pyFloat(s.TotalInterest),
+			DeltaPP:        wire.PyFloat(s.DeltaPP),
+			AnnualRate:     wire.PyFloat(s.AnnualRate),
+			MonthlyPayment: wire.PyFloat(s.MonthlyPayment),
+			TotalInterest:  wire.PyFloat(s.TotalInterest),
 			TermMonths:     s.TermMonths,
 			RateFloored:    s.RateFloored,
 			YearlyBalances: balances,
@@ -229,28 +231,28 @@ func (h *Handler) Prefill(w http.ResponseWriter, r *http.Request) {
 		writeDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	balances := map[string]pyFloat{}
+	balances := map[string]wire.PyFloat{}
 	for k, v := range data.Balances {
-		balances[k] = pyFloat(v)
+		balances[k] = wire.PyFloat(v)
 	}
-	ppkBalances := map[string]pyFloat{}
+	ppkBalances := map[string]wire.PyFloat{}
 	for k, v := range data.PPKBalances {
-		ppkBalances[k] = pyFloat(v)
+		ppkBalances[k] = wire.PyFloat(v)
 	}
-	ppkRates := map[string]map[string]pyFloat{}
+	ppkRates := map[string]map[string]wire.PyFloat{}
 	for owner, rates := range data.PPKRates {
-		ppkRates[owner] = map[string]pyFloat{
-			"employee": pyFloat(rates["employee"]),
-			"employer": pyFloat(rates["employer"]),
+		ppkRates[owner] = map[string]wire.PyFloat{
+			"employee": wire.PyFloat(rates["employee"]),
+			"employer": wire.PyFloat(rates["employer"]),
 		}
 	}
-	salaries := map[string]*pyFloat{}
+	salaries := map[string]*wire.PyFloat{}
 	for k, v := range data.MonthlySalaries {
 		if v == nil {
 			salaries[k] = nil
 			continue
 		}
-		pf := pyFloat(*v)
+		pf := wire.PyFloat(*v)
 		salaries[k] = &pf
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -286,33 +288,33 @@ func (h *Handler) Retirement(w http.ResponseWriter, r *http.Request) {
 
 // monteCarloInputsWire mirrors MonteCarloInputs over JSON.
 type monteCarloInputsWire struct {
-	CurrentPortfolio    pyFloat                   `json:"current_portfolio"`
-	AnnualContribution  pyFloat                   `json:"annual_contribution"`
-	ExpectedReturn      pyFloat                   `json:"expected_return"`
-	Volatility          pyFloat                   `json:"volatility"`
+	CurrentPortfolio    wire.PyFloat              `json:"current_portfolio"`
+	AnnualContribution  wire.PyFloat              `json:"annual_contribution"`
+	ExpectedReturn      wire.PyFloat              `json:"expected_return"`
+	Volatility          wire.PyFloat              `json:"volatility"`
 	CurrentAge          int                       `json:"current_age"`
 	RetirementAge       int                       `json:"retirement_age"`
 	LifeExpectancy      int                       `json:"life_expectancy"`
-	AnnualWithdrawal    pyFloat                   `json:"annual_withdrawal"`
+	AnnualWithdrawal    wire.PyFloat              `json:"annual_withdrawal"`
 	Paths               int                       `json:"paths,omitempty"`
 	Allocation          *monteCarloAllocationWire `json:"allocation,omitempty"`
-	InflationMean       pyFloat                   `json:"inflation_mean"`
-	InflationVolatility pyFloat                   `json:"inflation_volatility"`
+	InflationMean       wire.PyFloat              `json:"inflation_mean"`
+	InflationVolatility wire.PyFloat              `json:"inflation_volatility"`
 	AccountMix          *monteCarloAccountMixWire `json:"account_mix,omitempty"`
 }
 
 type monteCarloAllocationWire struct {
-	StocksPct pyFloat `json:"stocks_pct"`
-	BondsPct  pyFloat `json:"bonds_pct"`
-	CashPct   pyFloat `json:"cash_pct"`
+	StocksPct wire.PyFloat `json:"stocks_pct"`
+	BondsPct  wire.PyFloat `json:"bonds_pct"`
+	CashPct   wire.PyFloat `json:"cash_pct"`
 }
 
 type monteCarloAccountMixWire struct {
-	TaxablePct     pyFloat `json:"taxable_pct"`
-	IkePct         pyFloat `json:"ike_pct"`
-	IkzePct        pyFloat `json:"ikze_pct"`
-	ZusPct         pyFloat `json:"zus_pct"`
-	TaxableGainPct pyFloat `json:"taxable_gain_pct"`
+	TaxablePct     wire.PyFloat `json:"taxable_pct"`
+	IkePct         wire.PyFloat `json:"ike_pct"`
+	IkzePct        wire.PyFloat `json:"ikze_pct"`
+	ZusPct         wire.PyFloat `json:"zus_pct"`
+	TaxableGainPct wire.PyFloat `json:"taxable_gain_pct"`
 }
 
 // MonteCarlo serves POST /api/simulations/monte-carlo. It runs `paths`

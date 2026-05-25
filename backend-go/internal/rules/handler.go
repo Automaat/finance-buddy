@@ -6,25 +6,26 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 // ruleWire mirrors a Rule on the JSON wire. Money/% values are quoted
 // strings (matches the rest of the codebase's decimal serialization
 // convention); dates are YYYY-MM-DD without timezone suffix.
 type ruleWire struct {
-	Key             string    `json:"key"`
-	Name            string    `json:"name"`
-	Category        string    `json:"category"`
-	Value           dimString `json:"value"`
-	Unit            string    `json:"unit"`
-	Year            int       `json:"year"`
-	EffectiveDate   isoDate   `json:"effective_date"`
-	SourceURL       string    `json:"source_url"`
-	LastCheckedDate isoDate   `json:"last_checked_date"`
-	Description     string    `json:"description"`
+	Key             string       `json:"key"`
+	Name            string       `json:"name"`
+	Category        string       `json:"category"`
+	Value           dimString    `json:"value"`
+	Unit            string       `json:"unit"`
+	Year            int          `json:"year"`
+	EffectiveDate   wire.IsoDate `json:"effective_date"`
+	SourceURL       string       `json:"source_url"`
+	LastCheckedDate wire.IsoDate `json:"last_checked_date"`
+	Description     string       `json:"description"`
 }
 
 type listResponse struct {
@@ -74,9 +75,9 @@ func toWire(r *Rule) ruleWire {
 		Value:           dimString(r.Value),
 		Unit:            r.Unit,
 		Year:            r.Year,
-		EffectiveDate:   isoDate(r.EffectiveDate),
+		EffectiveDate:   wire.IsoDate(r.EffectiveDate),
 		SourceURL:       r.SourceURL,
-		LastCheckedDate: isoDate(r.LastCheckedDate),
+		LastCheckedDate: wire.IsoDate(r.LastCheckedDate),
 		Description:     r.Description,
 	}
 }
@@ -90,12 +91,4 @@ type dimString decimal.Decimal
 func (d dimString) MarshalJSON() ([]byte, error) {
 	v := decimal.Decimal(d)
 	return fmt.Appendf(nil, "%q", v.String()), nil
-}
-
-// isoDate marshals a time.Time as "YYYY-MM-DD" — naïve, no zone suffix,
-// matches the wire convention used by /api/config etc.
-type isoDate time.Time
-
-func (d isoDate) MarshalJSON() ([]byte, error) {
-	return fmt.Appendf(nil, "%q", time.Time(d).Format("2006-01-02")), nil
 }

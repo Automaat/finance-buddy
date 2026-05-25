@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 func dec(s string) decimal.Decimal { return decimal.RequireFromString(s) }
@@ -130,14 +132,14 @@ func TestToResponse_PopulatesBalancePointersAndInterest(t *testing.T) {
 }
 
 func TestPyFloatMarshalsIntegerWithTrailingZero(t *testing.T) {
-	got, _ := json.Marshal(pyFloat(100))
+	got, _ := json.Marshal(wire.PyFloat(100))
 	if string(got) != "100.0" {
 		t.Errorf("want 100.0, got %s", got)
 	}
 }
 
 func TestIsoDateMarshal(t *testing.T) {
-	got, _ := json.Marshal(isoDate(time.Date(2025, 6, 1, 14, 0, 0, 0, time.UTC)))
+	got, _ := json.Marshal(wire.IsoDate(time.Date(2025, 6, 1, 14, 0, 0, 0, time.UTC)))
 	if string(got) != `"2025-06-01"` {
 		t.Errorf("want \"2025-06-01\", got %s", got)
 	}
@@ -145,7 +147,7 @@ func TestIsoDateMarshal(t *testing.T) {
 
 func TestIsoNaiveMarshalStripsTimezone(t *testing.T) {
 	loc := time.FixedZone("CET", 3600)
-	got, _ := json.Marshal(isoNaive(time.Date(2025, 1, 5, 14, 30, 0, 0, loc)))
+	got, _ := json.Marshal(wire.IsoNaive(time.Date(2025, 1, 5, 14, 30, 0, 0, loc)))
 	body := strings.TrimSuffix(strings.TrimPrefix(string(got), `"`), `"`)
 	timePart := body[strings.Index(body, "T")+1:]
 	if strings.ContainsAny(timePart, "Z+-") {

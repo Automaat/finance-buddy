@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 func dec(s string) decimal.Decimal { return decimal.RequireFromString(s) }
@@ -225,7 +227,7 @@ func TestToResponse(t *testing.T) {
 }
 
 func TestIsoDateMarshal(t *testing.T) {
-	d := isoDate(time.Date(2025, 1, 5, 14, 30, 0, 0, time.UTC))
+	d := wire.IsoDate(time.Date(2025, 1, 5, 14, 30, 0, 0, time.UTC))
 	got, err := json.Marshal(d)
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
@@ -240,7 +242,7 @@ func TestIsoNaiveMarshalStripsTimezone(t *testing.T) {
 	// container's zoneinfo/tzdata availability.
 	loc := time.FixedZone("CET", 3600)
 	tz := time.Date(2025, 1, 5, 14, 30, 0, 0, loc)
-	got, err := json.Marshal(isoNaive(tz))
+	got, err := json.Marshal(wire.IsoNaive(tz))
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
@@ -258,7 +260,7 @@ func TestIsoNaiveMarshalStripsTimezone(t *testing.T) {
 
 func TestPyFloatMarshal(t *testing.T) {
 	cases := []struct {
-		in   pyFloat
+		in   wire.PyFloat
 		want string
 	}{
 		{0, "0.0"},

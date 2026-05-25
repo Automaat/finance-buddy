@@ -8,11 +8,11 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
-	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 var (
@@ -31,20 +31,20 @@ var (
 )
 
 type response struct {
-	ID                    int      `json:"id"`
-	Name                  string   `json:"name"`
-	Type                  string   `json:"type"`
-	Category              string   `json:"category"`
-	OwnerUserID           *int     `json:"owner_user_id"`
-	Currency              string   `json:"currency"`
-	AccountWrapper        *string  `json:"account_wrapper"`
-	Purpose               string   `json:"purpose"`
-	SquareMeters          *pyFloat `json:"square_meters"`
-	IsActive              bool     `json:"is_active"`
-	ReceivesContributions bool     `json:"receives_contributions"`
-	ExcludedFromFire      bool     `json:"excluded_from_fire"`
-	CreatedAt             isoNaive `json:"created_at"`
-	CurrentValue          pyFloat  `json:"current_value"`
+	ID                    int           `json:"id"`
+	Name                  string        `json:"name"`
+	Type                  string        `json:"type"`
+	Category              string        `json:"category"`
+	OwnerUserID           *int          `json:"owner_user_id"`
+	Currency              string        `json:"currency"`
+	AccountWrapper        *string       `json:"account_wrapper"`
+	Purpose               string        `json:"purpose"`
+	SquareMeters          *wire.PyFloat `json:"square_meters"`
+	IsActive              bool          `json:"is_active"`
+	ReceivesContributions bool          `json:"receives_contributions"`
+	ExcludedFromFire      bool          `json:"excluded_from_fire"`
+	CreatedAt             wire.IsoNaive `json:"created_at"`
+	CurrentValue          wire.PyFloat  `json:"current_value"`
 }
 
 type listResponse struct {
@@ -80,12 +80,12 @@ func toResponse(a *Account, currentValue decimal.Decimal) response {
 		IsActive:              a.IsActive,
 		ReceivesContributions: a.ReceivesContributions,
 		ExcludedFromFire:      a.ExcludedFromFire,
-		CreatedAt:             isoNaive(a.CreatedAt.UTC()),
-		CurrentValue:          pyFloat(cv),
+		CreatedAt:             wire.IsoNaive(a.CreatedAt.UTC()),
+		CurrentValue:          wire.PyFloat(cv),
 	}
 	if a.SquareMeters != nil {
 		f, _ := a.SquareMeters.Float64()
-		pf := pyFloat(f)
+		pf := wire.PyFloat(f)
 		out.SquareMeters = &pf
 	}
 	return out
@@ -229,22 +229,4 @@ func parseIDParam(w http.ResponseWriter, r *http.Request) (int, bool) {
 		return 0, false
 	}
 	return id, true
-}
-
-// --- shared wire types ---
-
-type isoNaive time.Time
-
-func (t isoNaive) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(t).Format("2006-01-02T15:04:05.999999") + `"`), nil
-}
-
-type pyFloat float64
-
-func (f pyFloat) MarshalJSON() ([]byte, error) {
-	s := strconv.FormatFloat(float64(f), 'f', -1, 64)
-	if !strings.ContainsRune(s, '.') {
-		s += ".0"
-	}
-	return []byte(s), nil
 }

@@ -9,38 +9,38 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
-	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 type response struct {
-	ID                 int      `json:"id"`
-	AccountID          int      `json:"account_id"`
-	AccountName        string   `json:"account_name"`
-	AccountOwnerUserID *int     `json:"account_owner_user_id"`
-	Name               string   `json:"name"`
-	DebtType           string   `json:"debt_type"`
-	StartDate          isoDate  `json:"start_date"`
-	InitialAmount      pyFloat  `json:"initial_amount"`
-	InterestRate       pyFloat  `json:"interest_rate"`
-	Currency           string   `json:"currency"`
-	Notes              *string  `json:"notes"`
-	IsActive           bool     `json:"is_active"`
-	CreatedAt          isoNaive `json:"created_at"`
-	LatestBalance      *pyFloat `json:"latest_balance"`
-	LatestBalanceDate  *isoDate `json:"latest_balance_date"`
-	TotalPaid          pyFloat  `json:"total_paid"`
-	InterestPaid       pyFloat  `json:"interest_paid"`
+	ID                 int           `json:"id"`
+	AccountID          int           `json:"account_id"`
+	AccountName        string        `json:"account_name"`
+	AccountOwnerUserID *int          `json:"account_owner_user_id"`
+	Name               string        `json:"name"`
+	DebtType           string        `json:"debt_type"`
+	StartDate          wire.IsoDate  `json:"start_date"`
+	InitialAmount      wire.PyFloat  `json:"initial_amount"`
+	InterestRate       wire.PyFloat  `json:"interest_rate"`
+	Currency           string        `json:"currency"`
+	Notes              *string       `json:"notes"`
+	IsActive           bool          `json:"is_active"`
+	CreatedAt          wire.IsoNaive `json:"created_at"`
+	LatestBalance      *wire.PyFloat `json:"latest_balance"`
+	LatestBalanceDate  *wire.IsoDate `json:"latest_balance_date"`
+	TotalPaid          wire.PyFloat  `json:"total_paid"`
+	InterestPaid       wire.PyFloat  `json:"interest_paid"`
 }
 
 type listResponse struct {
-	Debts              []response `json:"debts"`
-	TotalCount         int        `json:"total_count"`
-	TotalInitialAmount pyFloat    `json:"total_initial_amount"`
-	ActiveDebtsCount   int        `json:"active_debts_count"`
+	Debts              []response   `json:"debts"`
+	TotalCount         int          `json:"total_count"`
+	TotalInitialAmount wire.PyFloat `json:"total_initial_amount"`
+	ActiveDebtsCount   int          `json:"active_debts_count"`
 }
 
 // Handler is the HTTP boundary.
@@ -106,7 +106,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	out.TotalCount = len(out.Debts)
 	out.ActiveDebtsCount = len(out.Debts)
 	f64, _ := totalInitial.Float64()
-	out.TotalInitialAmount = pyFloat(f64)
+	out.TotalInitialAmount = wire.PyFloat(f64)
 	writeJSON(w, http.StatusOK, out)
 }
 
@@ -327,27 +327,4 @@ func parseIDParam(w http.ResponseWriter, r *http.Request, urlKey, errField strin
 		return 0, false
 	}
 	return id, true
-}
-
-// wire types
-type isoDate time.Time
-
-func (d isoDate) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(d).Format("2006-01-02") + `"`), nil
-}
-
-type isoNaive time.Time
-
-func (t isoNaive) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(t).Format("2006-01-02T15:04:05.999999") + `"`), nil
-}
-
-type pyFloat float64
-
-func (f pyFloat) MarshalJSON() ([]byte, error) {
-	s := strconv.FormatFloat(float64(f), 'f', -1, 64)
-	if !strings.ContainsRune(s, '.') {
-		s += ".0"
-	}
-	return []byte(s), nil
 }

@@ -7,8 +7,9 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 // Handler is the HTTP boundary for /api/zus.
@@ -29,67 +30,67 @@ func NewHandler(store *Store, logger *slog.Logger) *Handler {
 // --- wire types ---
 
 type salaryHistoryEntry struct {
-	Year        int     `json:"year"`
-	AnnualGross pyFloat `json:"annual_gross"`
+	Year        int          `json:"year"`
+	AnnualGross wire.PyFloat `json:"annual_gross"`
 }
 
 type inputsResponse struct {
 	OwnerUserID               *int                 `json:"owner_user_id"`
-	BirthDate                 isoDate              `json:"birth_date"`
+	BirthDate                 wire.IsoDate         `json:"birth_date"`
 	Gender                    string               `json:"gender"`
 	RetirementAge             int                  `json:"retirement_age"`
-	CurrentGrossMonthlySalary pyFloat              `json:"current_gross_monthly_salary"`
-	SalaryGrowthRate          pyFloat              `json:"salary_growth_rate"`
-	InflationRate             pyFloat              `json:"inflation_rate"`
-	ValorizationRateKonto     pyFloat              `json:"valorization_rate_konto"`
-	ValorizationRateSubkonto  pyFloat              `json:"valorization_rate_subkonto"`
+	CurrentGrossMonthlySalary wire.PyFloat         `json:"current_gross_monthly_salary"`
+	SalaryGrowthRate          wire.PyFloat         `json:"salary_growth_rate"`
+	InflationRate             wire.PyFloat         `json:"inflation_rate"`
+	ValorizationRateKonto     wire.PyFloat         `json:"valorization_rate_konto"`
+	ValorizationRateSubkonto  wire.PyFloat         `json:"valorization_rate_subkonto"`
 	HasOFE                    bool                 `json:"has_ofe"`
-	KapitalPoczatkowy         pyFloat              `json:"kapital_poczatkowy"`
+	KapitalPoczatkowy         wire.PyFloat         `json:"kapital_poczatkowy"`
 	WorkStartYear             int                  `json:"work_start_year"`
 	SalaryHistory             []salaryHistoryEntry `json:"salary_history"`
 }
 
 type projectionResponse struct {
-	Year                 int     `json:"year"`
-	Age                  int     `json:"age"`
-	AnnualGrossSalary    pyFloat `json:"annual_gross_salary"`
-	SalaryCapped         bool    `json:"salary_capped"`
-	ContributionKonto    pyFloat `json:"contribution_konto"`
-	ContributionSubkonto pyFloat `json:"contribution_subkonto"`
-	KontoBalance         pyFloat `json:"konto_balance"`
-	SubkontoBalance      pyFloat `json:"subkonto_balance"`
-	TotalBalance         pyFloat `json:"total_balance"`
+	Year                 int          `json:"year"`
+	Age                  int          `json:"age"`
+	AnnualGrossSalary    wire.PyFloat `json:"annual_gross_salary"`
+	SalaryCapped         bool         `json:"salary_capped"`
+	ContributionKonto    wire.PyFloat `json:"contribution_konto"`
+	ContributionSubkonto wire.PyFloat `json:"contribution_subkonto"`
+	KontoBalance         wire.PyFloat `json:"konto_balance"`
+	SubkontoBalance      wire.PyFloat `json:"subkonto_balance"`
+	TotalBalance         wire.PyFloat `json:"total_balance"`
 }
 
 type sensitivityResponse struct {
-	Label                string  `json:"label"`
-	ValorizationKonto    pyFloat `json:"valorization_konto"`
-	ValorizationSubkonto pyFloat `json:"valorization_subkonto"`
-	MonthlyPensionGross  pyFloat `json:"monthly_pension_gross"`
-	MonthlyPensionNet    pyFloat `json:"monthly_pension_net"`
-	ReplacementRate      pyFloat `json:"replacement_rate"`
+	Label                string       `json:"label"`
+	ValorizationKonto    wire.PyFloat `json:"valorization_konto"`
+	ValorizationSubkonto wire.PyFloat `json:"valorization_subkonto"`
+	MonthlyPensionGross  wire.PyFloat `json:"monthly_pension_gross"`
+	MonthlyPensionNet    wire.PyFloat `json:"monthly_pension_net"`
+	ReplacementRate      wire.PyFloat `json:"replacement_rate"`
 }
 
 type calculateResponse struct {
 	Inputs                     inputsResponse        `json:"inputs"`
 	YearlyProjections          []projectionResponse  `json:"yearly_projections"`
-	LifeExpectancyMonths       pyFloat               `json:"life_expectancy_months"`
-	KontoAtRetirement          pyFloat               `json:"konto_at_retirement"`
-	SubkontoAtRetirement       pyFloat               `json:"subkonto_at_retirement"`
-	KapitalPoczatkowyValorized pyFloat               `json:"kapital_poczatkowy_valorized"`
-	TotalCapital               pyFloat               `json:"total_capital"`
-	MonthlyPensionGross        pyFloat               `json:"monthly_pension_gross"`
-	MonthlyPensionNet          pyFloat               `json:"monthly_pension_net"`
-	ReplacementRate            pyFloat               `json:"replacement_rate"`
-	LastGrossSalary            pyFloat               `json:"last_gross_salary"`
+	LifeExpectancyMonths       wire.PyFloat          `json:"life_expectancy_months"`
+	KontoAtRetirement          wire.PyFloat          `json:"konto_at_retirement"`
+	SubkontoAtRetirement       wire.PyFloat          `json:"subkonto_at_retirement"`
+	KapitalPoczatkowyValorized wire.PyFloat          `json:"kapital_poczatkowy_valorized"`
+	TotalCapital               wire.PyFloat          `json:"total_capital"`
+	MonthlyPensionGross        wire.PyFloat          `json:"monthly_pension_gross"`
+	MonthlyPensionNet          wire.PyFloat          `json:"monthly_pension_net"`
+	ReplacementRate            wire.PyFloat          `json:"replacement_rate"`
+	LastGrossSalary            wire.PyFloat          `json:"last_gross_salary"`
 	Sensitivity                []sensitivityResponse `json:"sensitivity"`
 }
 
 type prefillResponse struct {
-	BirthDate                 *isoDate             `json:"birth_date"`
+	BirthDate                 *wire.IsoDate        `json:"birth_date"`
 	RetirementAge             int                  `json:"retirement_age"`
 	Gender                    string               `json:"gender"`
-	CurrentGrossMonthlySalary *pyFloat             `json:"current_gross_monthly_salary"`
+	CurrentGrossMonthlySalary *wire.PyFloat        `json:"current_gross_monthly_salary"`
 	OwnerUserID               *int                 `json:"owner_user_id"`
 	SalaryHistory             []salaryHistoryEntry `json:"salary_history"`
 	WorkStartYear             *int                 `json:"work_start_year"`
@@ -114,51 +115,51 @@ func (h *Handler) Calculate(w http.ResponseWriter, r *http.Request) {
 	resp := calculateResponse{
 		Inputs: inputsResponse{
 			OwnerUserID:               req.Inputs.OwnerUserID,
-			BirthDate:                 isoDate(req.BirthDate),
+			BirthDate:                 wire.IsoDate(req.BirthDate),
 			Gender:                    req.Inputs.Gender,
 			RetirementAge:             req.Inputs.RetirementAge,
-			CurrentGrossMonthlySalary: pyFloat(req.Inputs.CurrentGrossMonthlySalary),
-			SalaryGrowthRate:          pyFloat(req.Inputs.SalaryGrowthRate),
-			InflationRate:             pyFloat(req.Inputs.InflationRate),
-			ValorizationRateKonto:     pyFloat(req.Inputs.ValorizationRateKonto),
-			ValorizationRateSubkonto:  pyFloat(req.Inputs.ValorizationRateSubkonto),
+			CurrentGrossMonthlySalary: wire.PyFloat(req.Inputs.CurrentGrossMonthlySalary),
+			SalaryGrowthRate:          wire.PyFloat(req.Inputs.SalaryGrowthRate),
+			InflationRate:             wire.PyFloat(req.Inputs.InflationRate),
+			ValorizationRateKonto:     wire.PyFloat(req.Inputs.ValorizationRateKonto),
+			ValorizationRateSubkonto:  wire.PyFloat(req.Inputs.ValorizationRateSubkonto),
 			HasOFE:                    req.Inputs.HasOFE,
-			KapitalPoczatkowy:         pyFloat(req.Inputs.KapitalPoczatkowy),
+			KapitalPoczatkowy:         wire.PyFloat(req.Inputs.KapitalPoczatkowy),
 			WorkStartYear:             req.Inputs.WorkStartYear,
 			SalaryHistory:             hist,
 		},
-		LifeExpectancyMonths:       pyFloat(result.LifeExpectancyMonths),
-		KontoAtRetirement:          pyFloat(result.KontoAtRetirement),
-		SubkontoAtRetirement:       pyFloat(result.SubkontoAtRetirement),
-		KapitalPoczatkowyValorized: pyFloat(result.KapitalPoczatkowyValorized),
-		TotalCapital:               pyFloat(result.TotalCapital),
-		MonthlyPensionGross:        pyFloat(result.MonthlyPensionGross),
-		MonthlyPensionNet:          pyFloat(result.MonthlyPensionNet),
-		ReplacementRate:            pyFloat(result.ReplacementRate),
-		LastGrossSalary:            pyFloat(result.LastGrossSalary),
+		LifeExpectancyMonths:       wire.PyFloat(result.LifeExpectancyMonths),
+		KontoAtRetirement:          wire.PyFloat(result.KontoAtRetirement),
+		SubkontoAtRetirement:       wire.PyFloat(result.SubkontoAtRetirement),
+		KapitalPoczatkowyValorized: wire.PyFloat(result.KapitalPoczatkowyValorized),
+		TotalCapital:               wire.PyFloat(result.TotalCapital),
+		MonthlyPensionGross:        wire.PyFloat(result.MonthlyPensionGross),
+		MonthlyPensionNet:          wire.PyFloat(result.MonthlyPensionNet),
+		ReplacementRate:            wire.PyFloat(result.ReplacementRate),
+		LastGrossSalary:            wire.PyFloat(result.LastGrossSalary),
 	}
 	resp.YearlyProjections = make([]projectionResponse, 0, len(result.YearlyProjections))
 	for _, p := range result.YearlyProjections {
 		resp.YearlyProjections = append(resp.YearlyProjections, projectionResponse{
 			Year: p.Year, Age: p.Age,
-			AnnualGrossSalary:    pyFloat(p.AnnualGrossSalary),
+			AnnualGrossSalary:    wire.PyFloat(p.AnnualGrossSalary),
 			SalaryCapped:         p.SalaryCapped,
-			ContributionKonto:    pyFloat(p.ContributionKonto),
-			ContributionSubkonto: pyFloat(p.ContributionSubkonto),
-			KontoBalance:         pyFloat(p.KontoBalance),
-			SubkontoBalance:      pyFloat(p.SubkontoBalance),
-			TotalBalance:         pyFloat(p.TotalBalance),
+			ContributionKonto:    wire.PyFloat(p.ContributionKonto),
+			ContributionSubkonto: wire.PyFloat(p.ContributionSubkonto),
+			KontoBalance:         wire.PyFloat(p.KontoBalance),
+			SubkontoBalance:      wire.PyFloat(p.SubkontoBalance),
+			TotalBalance:         wire.PyFloat(p.TotalBalance),
 		})
 	}
 	resp.Sensitivity = make([]sensitivityResponse, 0, len(result.Sensitivity))
 	for _, s := range result.Sensitivity {
 		resp.Sensitivity = append(resp.Sensitivity, sensitivityResponse{
 			Label:                s.Label,
-			ValorizationKonto:    pyFloat(s.ValorizationKonto),
-			ValorizationSubkonto: pyFloat(s.ValorizationSubkonto),
-			MonthlyPensionGross:  pyFloat(s.MonthlyPensionGross),
-			MonthlyPensionNet:    pyFloat(s.MonthlyPensionNet),
-			ReplacementRate:      pyFloat(s.ReplacementRate),
+			ValorizationKonto:    wire.PyFloat(s.ValorizationKonto),
+			ValorizationSubkonto: wire.PyFloat(s.ValorizationSubkonto),
+			MonthlyPensionGross:  wire.PyFloat(s.MonthlyPensionGross),
+			MonthlyPensionNet:    wire.PyFloat(s.MonthlyPensionNet),
+			ReplacementRate:      wire.PyFloat(s.ReplacementRate),
 		})
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -188,12 +189,12 @@ func (h *Handler) Prefill(w http.ResponseWriter, r *http.Request) {
 		Gender:        "M",
 	}
 	if data.BirthDate != nil {
-		d := isoDate(*data.BirthDate)
+		d := wire.IsoDate(*data.BirthDate)
 		resp.BirthDate = &d
 	}
 	resp.OwnerUserID = data.OwnerUserID
 	if data.CurrentGrossMonthlySalary != nil {
-		v := pyFloat(*data.CurrentGrossMonthlySalary)
+		v := wire.PyFloat(*data.CurrentGrossMonthlySalary)
 		resp.CurrentGrossMonthlySalary = &v
 	}
 	if data.WorkStartYear != nil {
@@ -212,40 +213,7 @@ func historyAsList(yearly map[int]float64) []salaryHistoryEntry {
 	sort.Ints(years)
 	out := make([]salaryHistoryEntry, 0, len(years))
 	for _, y := range years {
-		out = append(out, salaryHistoryEntry{Year: y, AnnualGross: pyFloat(yearly[y])})
+		out = append(out, salaryHistoryEntry{Year: y, AnnualGross: wire.PyFloat(yearly[y])})
 	}
 	return out
-}
-
-// --- wire types (shared) ---
-
-type isoDate time.Time
-
-const isoDateLayout = "2006-01-02"
-
-func (d isoDate) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(d).Format(isoDateLayout) + `"`), nil
-}
-
-func (d *isoDate) UnmarshalJSON(data []byte) error {
-	var s string
-	if err := json.Unmarshal(data, &s); err != nil {
-		return err
-	}
-	t, err := time.Parse(isoDateLayout, s)
-	if err != nil {
-		return err
-	}
-	*d = isoDate(t)
-	return nil
-}
-
-type pyFloat float64
-
-func (f pyFloat) MarshalJSON() ([]byte, error) {
-	s := strconv.FormatFloat(float64(f), 'f', -1, 64)
-	if !strings.ContainsRune(s, '.') {
-		s += ".0"
-	}
-	return []byte(s), nil
 }

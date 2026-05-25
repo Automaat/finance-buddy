@@ -13,6 +13,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 // validCategories mirrors backend/app/core/enums.Category. Only these strings
@@ -29,20 +31,20 @@ var validCategories = map[string]struct{}{
 // strings — different convention from app_config + personas where the column
 // type drove the Pydantic Decimal -> string default).
 type response struct {
-	ID                  int      `json:"id"`
-	Name                string   `json:"name"`
-	TargetAmount        float64  `json:"target_amount"`
-	TargetDate          isoDate  `json:"target_date"`
-	CurrentAmount       float64  `json:"current_amount"`
-	MonthlyContribution float64  `json:"monthly_contribution"`
-	IsCompleted         bool     `json:"is_completed"`
-	AccountID           *int     `json:"account_id"`
-	AccountName         *string  `json:"account_name"`
-	Category            *string  `json:"category"`
-	CreatedAt           isoNaive `json:"created_at"`
-	ProgressPercent     float64  `json:"progress_percent"`
-	RemainingAmount     float64  `json:"remaining_amount"`
-	ProjectedHitDate    *isoDate `json:"projected_hit_date"`
+	ID                  int           `json:"id"`
+	Name                string        `json:"name"`
+	TargetAmount        float64       `json:"target_amount"`
+	TargetDate          wire.IsoDate  `json:"target_date"`
+	CurrentAmount       float64       `json:"current_amount"`
+	MonthlyContribution float64       `json:"monthly_contribution"`
+	IsCompleted         bool          `json:"is_completed"`
+	AccountID           *int          `json:"account_id"`
+	AccountName         *string       `json:"account_name"`
+	Category            *string       `json:"category"`
+	CreatedAt           wire.IsoNaive `json:"created_at"`
+	ProgressPercent     float64       `json:"progress_percent"`
+	RemainingAmount     float64       `json:"remaining_amount"`
+	ProjectedHitDate    *wire.IsoDate `json:"projected_hit_date"`
 }
 
 type listResponse struct {
@@ -52,14 +54,14 @@ type listResponse struct {
 }
 
 type createRequest struct {
-	Name                string  `json:"name"`
-	TargetAmount        float64 `json:"target_amount"`
-	TargetDate          isoDate `json:"target_date"`
-	CurrentAmount       float64 `json:"current_amount"`
-	MonthlyContribution float64 `json:"monthly_contribution"`
-	IsCompleted         bool    `json:"is_completed"`
-	AccountID           *int    `json:"account_id"`
-	Category            *string `json:"category"`
+	Name                string       `json:"name"`
+	TargetAmount        float64      `json:"target_amount"`
+	TargetDate          wire.IsoDate `json:"target_date"`
+	CurrentAmount       float64      `json:"current_amount"`
+	MonthlyContribution float64      `json:"monthly_contribution"`
+	IsCompleted         bool         `json:"is_completed"`
+	AccountID           *int         `json:"account_id"`
+	Category            *string      `json:"category"`
 }
 
 // Handler is the HTTP boundary for /api/goals.
@@ -97,13 +99,13 @@ func (h *Handler) toResponse(g *Goal, accountName string) response {
 		ID:                  g.ID,
 		Name:                g.Name,
 		TargetAmount:        target,
-		TargetDate:          isoDate(g.TargetDate),
+		TargetDate:          wire.IsoDate(g.TargetDate),
 		CurrentAmount:       current,
 		MonthlyContribution: monthly,
 		IsCompleted:         g.IsCompleted,
 		AccountID:           g.AccountID,
 		Category:            g.Category,
-		CreatedAt:           isoNaive(g.CreatedAt),
+		CreatedAt:           wire.IsoNaive(g.CreatedAt),
 		ProgressPercent:     progress,
 		RemainingAmount:     remaining,
 	}
@@ -112,7 +114,7 @@ func (h *Handler) toResponse(g *Goal, accountName string) response {
 		out.AccountName = &name
 	}
 	if projected != nil {
-		d := isoDate(*projected)
+		d := wire.IsoDate(*projected)
 		out.ProjectedHitDate = &d
 	}
 	return out
@@ -260,34 +262,4 @@ func parseIDParam(w http.ResponseWriter, r *http.Request) (int, bool) {
 		return 0, false
 	}
 	return id, true
-}
-
-// isoDate is the same YYYY-MM-DD format used by config/personas/etc.
-type isoDate time.Time
-
-const isoDateLayout = "2006-01-02"
-
-func (d isoDate) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(d).Format(isoDateLayout) + `"`), nil
-}
-
-func (d *isoDate) UnmarshalJSON(data []byte) error {
-	var s string
-	if err := json.Unmarshal(data, &s); err != nil {
-		return fmt.Errorf("date must be YYYY-MM-DD string: %w", err)
-	}
-	t, err := time.Parse(isoDateLayout, s)
-	if err != nil {
-		return fmt.Errorf("date must be YYYY-MM-DD: %w", err)
-	}
-	*d = isoDate(t)
-	return nil
-}
-
-// isoNaive serializes a time.Time as ISO without a timezone suffix; mirrors
-// Python's datetime.isoformat() on naive datetimes.
-type isoNaive time.Time
-
-func (t isoNaive) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(t).Format("2006-01-02T15:04:05.999999") + `"`), nil
 }
