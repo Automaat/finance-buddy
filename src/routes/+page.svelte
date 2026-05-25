@@ -255,12 +255,19 @@
 					{#if hasBase}
 						<span
 							class="text-xs text-surface-700-300"
-							title="annual_expenses = miesięczne wydatki × 12&#10;FIRE = annual_expenses ÷ withdrawal_rate (np. ÷ 0.04 = ×25)&#10;FI = wartość netto ÷ FIRE × 100%&#10;runway = aktywa płynne (bank + saving_account) ÷ miesięczne wydatki"
+							title="annual_expenses = miesięczne wydatki × 12&#10;FIRE = annual_expenses ÷ withdrawal_rate (np. ÷ 0.04 = ×25)&#10;FI = fire_net_worth ÷ FIRE × 100%&#10;fire_net_worth = wartość netto − aktywa oznaczone „poza FIRE”&#10;runway = aktywa płynne (bank + saving_account) ÷ miesięczne wydatki"
 						>
 							SWR {wrPct}% · ø {annualExpensesPLN}/rok
 						</span>
 					{/if}
 				</header>
+				{#if fire.fire_excluded_value != null && fire.fire_net_worth != null}
+					<div class="text-xs text-surface-700-300">
+						FIRE liczone z {formatPLN(fire.fire_net_worth)} (wartość netto − {formatPLN(
+							fire.fire_excluded_value
+						)} aktywów oznaczonych „poza FIRE”).
+					</div>
+				{/if}
 				{#if hasBase}
 					<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 						<div class="space-y-1">

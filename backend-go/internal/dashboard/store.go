@@ -43,15 +43,16 @@ type AllocationJSONItem struct {
 // dashboard preserve historical snapshot values from soft-deleted
 // accounts while keeping "current state" reads filtered.
 type Account struct {
-	ID             int
-	Name           string
-	Type           string
-	Category       string
-	OwnerUserID    *int
-	AccountWrapper *string
-	Purpose        string
-	SquareMeters   *decimal.Decimal
-	IsActive       bool
+	ID               int
+	Name             string
+	Type             string
+	Category         string
+	OwnerUserID      *int
+	AccountWrapper   *string
+	Purpose          string
+	SquareMeters     *decimal.Decimal
+	IsActive         bool
+	ExcludedFromFire bool
 }
 
 // SnapshotValue is one snapshot_values row.
@@ -180,7 +181,7 @@ func (s *Store) AllSnapshots(ctx context.Context) ([]SnapshotMeta, error) {
 func (s *Store) AllAccounts(ctx context.Context) ([]Account, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT id, name, type, category, owner_user_id, account_wrapper,
-		       purpose, square_meters, is_active
+		       purpose, square_meters, is_active, excluded_from_fire
 		FROM accounts`,
 	)
 	if err != nil {
@@ -193,6 +194,7 @@ func (s *Store) AllAccounts(ctx context.Context) ([]Account, error) {
 		if err := rows.Scan(
 			&a.ID, &a.Name, &a.Type, &a.Category, &a.OwnerUserID,
 			&a.AccountWrapper, &a.Purpose, &a.SquareMeters, &a.IsActive,
+			&a.ExcludedFromFire,
 		); err != nil {
 			return nil, fmt.Errorf("scan account: %w", err)
 		}

@@ -30,6 +30,7 @@ type Account struct {
 	SquareMeters          *decimal.Decimal
 	IsActive              bool
 	ReceivesContributions bool
+	ExcludedFromFire      bool
 	CreatedAt             time.Time
 }
 
@@ -52,7 +53,7 @@ func NewStore(pool *pgxpool.Pool, aggs *aggregates.Store) *Store {
 
 const selectColumns = `
 	id, name, type, category, owner_user_id, currency, account_wrapper, purpose,
-	square_meters, is_active, receives_contributions, created_at
+	square_meters, is_active, receives_contributions, excluded_from_fire, created_at
 `
 
 // List returns active accounts.
@@ -157,13 +158,14 @@ func (s *Store) Create(ctx context.Context, a *Account) (*Account, error) {
 	row := s.pool.QueryRow(ctx, `
 		INSERT INTO accounts (
 			name, type, category, owner_user_id, currency, account_wrapper,
-			purpose, square_meters, is_active, receives_contributions, created_at
+			purpose, square_meters, is_active, receives_contributions,
+			excluded_from_fire, created_at
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, true, $9, $10
+			$1, $2, $3, $4, $5, $6, $7, $8, true, $9, $10, $11
 		)
 		RETURNING `+selectColumns,
 		a.Name, a.Type, a.Category, a.OwnerUserID, a.Currency, a.AccountWrapper, a.Purpose,
-		a.SquareMeters, a.ReceivesContributions, time.Now().UTC(),
+		a.SquareMeters, a.ReceivesContributions, a.ExcludedFromFire, time.Now().UTC(),
 	)
 	return scanAccount(row)
 }
@@ -182,6 +184,7 @@ type UpdatePatch struct {
 	SquareMetersSet       bool
 	SquareMeters          *decimal.Decimal
 	ReceivesContributions *bool
+	ExcludedFromFire      *bool
 }
 
 // Update applies the patch. Owner/category changes cascade into a
@@ -323,11 +326,11 @@ func (s *Store) updateRow(ctx context.Context, tx pgx.Tx, id int, a *Account) er
 			name = $1, type = $2, category = $3,
 			owner_user_id = $4, currency = $5,
 			account_wrapper = $6, purpose = $7, square_meters = $8,
-			receives_contributions = $9
-		WHERE id = $10`,
+			receives_contributions = $9, excluded_from_fire = $10
+		WHERE id = $11`,
 		a.Name, a.Type, a.Category, a.OwnerUserID, a.Currency,
 		a.AccountWrapper, a.Purpose, a.SquareMeters,
-		a.ReceivesContributions, id,
+		a.ReceivesContributions, a.ExcludedFromFire, id,
 	)
 	if err != nil {
 		return fmt.Errorf("update account: %w", err)
@@ -388,6 +391,9 @@ func applyPatch(a *Account, p UpdatePatch) {
 	if p.SquareMetersSet {
 		a.SquareMeters = p.SquareMeters
 	}
+	if p.ExcludedFromFire != nil {
+		a.ExcludedFromFire = *p.ExcludedFromFire
+	}
 }
 
 func scanAccount(row pgx.Row) (*Account, error) {
@@ -395,7 +401,7 @@ func scanAccount(row pgx.Row) (*Account, error) {
 	if err := row.Scan(
 		&a.ID, &a.Name, &a.Type, &a.Category, &a.OwnerUserID, &a.Currency,
 		&a.AccountWrapper, &a.Purpose, &a.SquareMeters,
-		&a.IsActive, &a.ReceivesContributions, &a.CreatedAt,
+		&a.IsActive, &a.ReceivesContributions, &a.ExcludedFromFire, &a.CreatedAt,
 	); err != nil {
 		return nil, err
 	}

@@ -508,6 +508,8 @@ func assignFIREMetrics(mc *metricCards, fire fireMetrics) {
 	mc.MonthlySavings = fire.MonthlySavings
 	mc.FIYearsRemaining = fire.FIYearsRemaining
 	mc.FIProjectedDate = fire.FIProjectedDate
+	mc.FireNetWorth = fire.FireNetWorth
+	mc.FireExcludedValue = fire.FireExcludedValue
 }
 
 // buildAllocationAnalysis is the shared allocation-analysis computation.

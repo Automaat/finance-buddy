@@ -44,6 +44,8 @@ type fireMetrics struct {
 	MonthlySavings       *float64
 	FIYearsRemaining     *float64
 	FIProjectedDate      *string
+	FireNetWorth         *float64
+	FireExcludedValue    *float64
 }
 
 // bridgeTargetAge is the age the bridge-to-60 metric projects to — IKE
@@ -69,13 +71,28 @@ var lockedWrapperCategories = map[string]struct{}{
 //
 //	annual_expenses = monthly_expenses × 12
 //	fire_number     = annual_expenses / withdrawal_rate
-//	fi_progress     = net_worth / fire_number × 100
+//	fi_progress     = fire_net_worth / fire_number × 100
 //	runway_months   = liquid_assets / monthly_expenses
 //
-// liquid_assets is the sum of active asset-account values whose category
-// is in liquidCategories at the latest snapshot.
+// fire_net_worth is net_worth minus the value of asset-accounts flagged
+// excluded_from_fire (typically a primary residence). The exclusion
+// applies to every FIRE-band, Coast/Barista/Bridge/Projection metric:
+// money that won't ever be drawn down for retirement income shouldn't
+// inflate progress toward any of them. liquid_assets is the sum of
+// active asset-account values whose category is in liquidCategories at
+// the latest snapshot — unchanged by the exclusion since runway is
+// strictly about cash on hand.
 func computeFIRE(latestRows []mergedRow, cfg AppConfig, netWorth float64) fireMetrics {
 	var out fireMetrics
+
+	excluded := fireExcludedValueOf(latestRows)
+	fireNetWorth := netWorth - excluded
+	if excluded > 0 {
+		ex := excluded
+		nw := fireNetWorth
+		out.FireExcludedValue = &ex
+		out.FireNetWorth = &nw
+	}
 
 	monthlyExpenses, _ := cfg.MonthlyExpenses.Float64()
 	withdrawalRate, _ := cfg.WithdrawalRate.Float64()
@@ -84,7 +101,7 @@ func computeFIRE(latestRows []mergedRow, cfg AppConfig, netWorth float64) fireMe
 	// Fat without setting Base monthly_expenses. Run the band computation up
 	// front so the early-return below (which fires when base monthly is 0)
 	// doesn't drop them.
-	addFIREBands(&out, cfg, netWorth, withdrawalRate)
+	addFIREBands(&out, cfg, fireNetWorth, withdrawalRate)
 
 	if monthlyExpenses <= 0 {
 		return out
@@ -98,8 +115,8 @@ func computeFIRE(latestRows []mergedRow, cfg AppConfig, netWorth float64) fireMe
 		out.WithdrawalRate = &wr
 		fire := annual / withdrawalRate
 		out.FIRENumber = &fire
-		if fire > 0 && netWorth > 0 {
-			progress := netWorth / fire * 100
+		if fire > 0 && fireNetWorth > 0 {
+			progress := fireNetWorth / fire * 100
 			out.FIProgress = &progress
 		}
 	}
@@ -128,11 +145,30 @@ func computeFIRE(latestRows []mergedRow, cfg AppConfig, netWorth float64) fireMe
 	}
 
 	now := time.Now().UTC()
-	addCoastFIRE(&out, cfg, netWorth, now)
-	addBaristaFIRE(&out, cfg, netWorth)
-	addBridgeToAccessAge(&out, latestRows, cfg, netWorth, now)
-	addFIProjection(&out, cfg, netWorth, now)
+	addCoastFIRE(&out, cfg, fireNetWorth, now)
+	addBaristaFIRE(&out, cfg, fireNetWorth)
+	addBridgeToAccessAge(&out, latestRows, cfg, fireNetWorth, now)
+	addFIProjection(&out, cfg, fireNetWorth, now)
 	return out
+}
+
+// fireExcludedValueOf sums latest-snapshot active asset-account values whose
+// account is flagged excluded_from_fire. Used to derive the fire_net_worth
+// figure that backs every FIRE/Coast/Barista/Lean/Fat/Bridge/Projection
+// metric. Liability rows and snapshot-only asset rows (no account_id) never
+// carry the flag, so they're skipped.
+func fireExcludedValueOf(latestRows []mergedRow) float64 {
+	total := 0.0
+	for _, r := range latestRows {
+		if r.AccountID == nil || r.AccType == nil || *r.AccType != "asset" {
+			continue
+		}
+		if !r.ExcludedFromFire {
+			continue
+		}
+		total += r.Value
+	}
+	return total
 }
 
 // addFIProjection fills FIYearsRemaining + FIProjectedDate from net worth,

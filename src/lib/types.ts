@@ -31,6 +31,7 @@ export interface Account {
 	square_meters: number | null;
 	is_active: boolean;
 	receives_contributions: boolean;
+	excluded_from_fire: boolean;
 	created_at: string;
 	current_value: number;
 }

@@ -36,6 +36,7 @@ export interface paths {
                                 currency?: string;
                                 /** Format: double */
                                 current_value?: number;
+                                excluded_from_fire?: boolean;
                                 id?: number;
                                 is_active?: boolean;
                                 name?: string;
@@ -54,6 +55,7 @@ export interface paths {
                                 currency?: string;
                                 /** Format: double */
                                 current_value?: number;
+                                excluded_from_fire?: boolean;
                                 id?: number;
                                 is_active?: boolean;
                                 name?: string;
@@ -94,6 +96,7 @@ export interface paths {
                             currency?: string;
                             /** Format: double */
                             current_value?: number;
+                            excluded_from_fire?: boolean;
                             id?: number;
                             is_active?: boolean;
                             name?: string;
@@ -462,6 +465,7 @@ export interface paths {
                             currency?: string;
                             /** Format: double */
                             current_value?: number;
+                            excluded_from_fire?: boolean;
                             id?: number;
                             is_active?: boolean;
                             name?: string;
@@ -2013,6 +2017,10 @@ export interface paths {
                                 fi_projected_date?: string | null;
                                 /** Format: double */
                                 fi_years_remaining?: number | null;
+                                /** Format: double */
+                                fire_excluded_value?: number | null;
+                                /** Format: double */
+                                fire_net_worth?: number | null;
                                 /** Format: double */
                                 fire_number?: number | null;
                                 /** Format: double */

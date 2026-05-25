@@ -15,6 +15,7 @@ export interface Account {
 	purpose: string;
 	is_active: boolean;
 	receives_contributions: boolean;
+	excluded_from_fire: boolean;
 	created_at: string;
 	current_value: number;
 	square_meters: number | null;

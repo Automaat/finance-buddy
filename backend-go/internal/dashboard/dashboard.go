@@ -65,6 +65,8 @@ type metricCards struct {
 	MonthlySavings          *float64
 	FIYearsRemaining        *float64
 	FIProjectedDate         *string
+	FireNetWorth            *float64
+	FireExcludedValue       *float64
 }
 
 type allocationBreakdown struct {

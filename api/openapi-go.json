@@ -35,6 +35,9 @@
                             "format": "double",
                             "type": "number"
                           },
+                          "excluded_from_fire": {
+                            "type": "boolean"
+                          },
                           "id": {
                             "type": "integer"
                           },
@@ -87,6 +90,9 @@
                           "current_value": {
                             "format": "double",
                             "type": "number"
+                          },
+                          "excluded_from_fire": {
+                            "type": "boolean"
                           },
                           "id": {
                             "type": "integer"
@@ -157,6 +163,9 @@
                     "current_value": {
                       "format": "double",
                       "type": "number"
+                    },
+                    "excluded_from_fire": {
+                      "type": "boolean"
                     },
                     "id": {
                       "type": "integer"
@@ -674,6 +683,9 @@
                     "current_value": {
                       "format": "double",
                       "type": "number"
+                    },
+                    "excluded_from_fire": {
+                      "type": "boolean"
                     },
                     "id": {
                       "type": "integer"
@@ -2922,6 +2934,16 @@
                           "type": "string"
                         },
                         "fi_years_remaining": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "fire_excluded_value": {
+                          "format": "double",
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "fire_net_worth": {
                           "format": "double",
                           "nullable": true,
                           "type": "number"

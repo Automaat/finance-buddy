@@ -82,6 +82,24 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 	if err := createSimulationScenariosTable(ctx, pool); err != nil {
 		return err
 	}
+	if err := addAccountsExcludedFromFire(ctx, pool); err != nil {
+		return err
+	}
+	return nil
+}
+
+// addAccountsExcludedFromFire adds the per-account opt-out flag for FIRE
+// math. A primary residence ("lived-in flat") inflates net worth without
+// ever being drawn down for retirement income, so counting it toward the
+// FIRE number distorts every downstream metric. Default false preserves
+// current behavior for every existing account; the user opts in per
+// account from the edit modal.
+func addAccountsExcludedFromFire(ctx context.Context, pool *pgxpool.Pool) error {
+	if _, err := pool.Exec(ctx, `
+		ALTER TABLE accounts
+		ADD COLUMN IF NOT EXISTS excluded_from_fire boolean NOT NULL DEFAULT false`); err != nil {
+		return fmt.Errorf("add excluded_from_fire to accounts: %w", err)
+	}
 	return nil
 }
 

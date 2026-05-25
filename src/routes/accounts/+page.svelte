@@ -143,7 +143,8 @@
 		account_wrapper: null as string | null,
 		purpose: 'general',
 		receives_contributions: true,
-		square_meters: null as number | null
+		square_meters: null as number | null,
+		excluded_from_fire: false
 	});
 
 	let error = $state('');
@@ -160,7 +161,8 @@
 				account_wrapper: editingAccount.account_wrapper,
 				purpose: editingAccount.purpose,
 				receives_contributions: editingAccount.receives_contributions,
-				square_meters: editingAccount.square_meters
+				square_meters: editingAccount.square_meters,
+				excluded_from_fire: editingAccount.excluded_from_fire ?? false
 			};
 		} else if (showForm) {
 			formData = {
@@ -172,7 +174,8 @@
 				account_wrapper: null,
 				purpose: 'general',
 				receives_contributions: true,
-				square_meters: null
+				square_meters: null,
+				excluded_from_fire: false
 			};
 		}
 	});
@@ -372,7 +375,17 @@
 
 {#snippet assetRow(account: Account)}
 	<tr>
-		<td class="font-medium">{account.name}</td>
+		<td class="font-medium">
+			{account.name}
+			{#if account.excluded_from_fire}
+				<span
+					class="chip preset-tonal-surface text-xs ml-1"
+					title="Wykluczone z liczby FIRE i powiązanych metryk"
+				>
+					poza FIRE
+				</span>
+			{/if}
+		</td>
 		<td>{categoryLabels[account.category] || account.category}</td>
 		<td>{ownerName(owners, account.owner_user_id)}</td>
 		<td class="font-semibold text-primary-600-400">{formatPLN(account.current_value)}</td>
@@ -658,6 +671,18 @@
 					metrów mieszkania jest nasze".
 				</span>
 			</label>
+		{/if}
+
+		{#if formData.type === 'asset'}
+			<label class="flex items-center gap-2">
+				<input type="checkbox" class="checkbox" bind:checked={formData.excluded_from_fire} />
+				<span class="text-sm">Wyklucz z FIRE</span>
+			</label>
+			<p class="text-xs text-surface-700-300 italic">
+				Wartość tego konta nie wlicza się do liczby FIRE ani powiązanych metryk (Coast / Barista /
+				Lean / Fat / Bridge / projekcja). Zaznacz dla mieszkania, w którym mieszkasz, lub innych
+				aktywów, których nie będziesz spieniężać na emeryturze.
+			</p>
 		{/if}
 	</form>
 </Modal>

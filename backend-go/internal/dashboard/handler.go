@@ -213,6 +213,8 @@ type metricCardsWire struct {
 	MonthlySavings          *pyFloat `json:"monthly_savings"`
 	FIYearsRemaining        *pyFloat `json:"fi_years_remaining"`
 	FIProjectedDate         *string  `json:"fi_projected_date"`
+	FireNetWorth            *pyFloat `json:"fire_net_worth"`
+	FireExcludedValue       *pyFloat `json:"fire_excluded_value"`
 }
 
 type allocationBreakdownWire struct {
@@ -369,6 +371,8 @@ func metricCardsToWire(m metricCards) metricCardsWire {
 		MonthlySavings:          floatPtr(m.MonthlySavings),
 		FIYearsRemaining:        floatPtr(m.FIYearsRemaining),
 		FIProjectedDate:         m.FIProjectedDate,
+		FireNetWorth:            floatPtr(m.FireNetWorth),
+		FireExcludedValue:       floatPtr(m.FireExcludedValue),
 	}
 }
 

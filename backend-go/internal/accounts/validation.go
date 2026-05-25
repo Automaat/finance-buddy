@@ -19,6 +19,7 @@ type createRequest struct {
 	Purpose               string
 	SquareMeters          *decimal.Decimal
 	ReceivesContributions bool
+	ExcludedFromFire      bool
 }
 
 // buildCreateRequest validates the POST body.
@@ -77,6 +78,12 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *validat
 		return r, vErr
 	}
 	r.ReceivesContributions = recv
+
+	excl, vErr := optionalBoolDefaultFalse(raw, "excluded_from_fire")
+	if vErr != nil {
+		return r, vErr
+	}
+	r.ExcludedFromFire = excl
 	return r, nil
 }
 
@@ -154,6 +161,13 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *validationE
 			return p, &validationError{Field: "receives_contributions", Msg: "must be a boolean"}
 		}
 		p.ReceivesContributions = &b
+	}
+	if v, ok := raw["excluded_from_fire"]; ok && !isNull(v) {
+		var b bool
+		if err := json.Unmarshal(v, &b); err != nil {
+			return p, &validationError{Field: "excluded_from_fire", Msg: "must be a boolean"}
+		}
+		p.ExcludedFromFire = &b
 	}
 	return p, nil
 }
@@ -257,6 +271,18 @@ func optionalBoolDefaultTrue(raw map[string]json.RawMessage, key string) (bool, 
 	}
 	if isNull(v) {
 		return false, &validationError{Field: key, Msg: "must be a boolean"}
+	}
+	var b bool
+	if err := json.Unmarshal(v, &b); err != nil {
+		return false, &validationError{Field: key, Msg: "must be a boolean"}
+	}
+	return b, nil
+}
+
+func optionalBoolDefaultFalse(raw map[string]json.RawMessage, key string) (bool, *validationError) {
+	v, ok := raw[key]
+	if !ok || isNull(v) {
+		return false, nil
 	}
 	var b bool
 	if err := json.Unmarshal(v, &b); err != nil {
