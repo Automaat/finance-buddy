@@ -6,6 +6,11 @@ export interface MonteCarloBand {
 	p5: number;
 	p50: number;
 	p95: number;
+	p5_real: number;
+	p50_real: number;
+	p95_real: number;
+	spending: number;
+	spending_real: number;
 }
 
 export interface MonteCarloAllocationOut {
@@ -19,6 +24,8 @@ export interface MonteCarloAssumptions {
 	volatility: number;
 	source: 'manual' | 'allocation';
 	allocation?: MonteCarloAllocationOut;
+	inflation_mean: number;
+	inflation_volatility: number;
 }
 
 export interface MonteCarloResult {
@@ -46,11 +53,18 @@ function escapeHtml(value: string): string {
 
 // Fan chart: shaded P5–P95 band with the P50 median overlaid. Implemented
 // as a stack — base = P5, ribbon = P95 - P5 (transparent fill on top).
-export function buildMonteCarloFanOption(result: MonteCarloResult): EChartsOption {
+// Pass {real: true} to plot the real (inflation-adjusted) bands instead
+// of the nominal ones; tooltip labels follow the choice.
+export function buildMonteCarloFanOption(
+	result: MonteCarloResult,
+	opts: { real?: boolean } = {}
+): EChartsOption {
+	const real = opts.real === true;
 	const ages = result.bands.map((b) => b.age);
-	const p5 = result.bands.map((b) => b.p5);
-	const p50 = result.bands.map((b) => b.p50);
-	const ribbon = result.bands.map((b) => b.p95 - b.p5);
+	const p5 = result.bands.map((b) => (real ? b.p5_real : b.p5));
+	const p50 = result.bands.map((b) => (real ? b.p50_real : b.p50));
+	const p95 = result.bands.map((b) => (real ? b.p95_real : b.p95));
+	const ribbon = p95.map((v, i) => v - p5[i]);
 
 	const series: LineSeriesOption[] = [
 		{
@@ -83,8 +97,9 @@ export function buildMonteCarloFanOption(result: MonteCarloResult): EChartsOptio
 		}
 	];
 
+	const suffix = real ? ' (realne)' : '';
 	return {
-		title: { text: 'Symulacja Monte Carlo — projekcja salda' },
+		title: { text: `Symulacja Monte Carlo — projekcja salda${suffix}` },
 		tooltip: {
 			trigger: 'axis',
 			formatter: (params: TopLevelFormatterParams) => {
@@ -93,11 +108,14 @@ export function buildMonteCarloFanOption(result: MonteCarloResult): EChartsOptio
 				const idx = items[0].dataIndex;
 				const band = result.bands[idx as number];
 				if (!band) return '';
+				const v5 = real ? band.p5_real : band.p5;
+				const v50 = real ? band.p50_real : band.p50;
+				const v95 = real ? band.p95_real : band.p95;
 				return (
-					`<strong>Wiek ${escapeHtml(String(age))}</strong><br/>` +
-					`P5: ${fmtPLN(band.p5)} PLN<br/>` +
-					`P50 (mediana): ${fmtPLN(band.p50)} PLN<br/>` +
-					`P95: ${fmtPLN(band.p95)} PLN`
+					`<strong>Wiek ${escapeHtml(String(age))}${suffix}</strong><br/>` +
+					`P5: ${fmtPLN(v5)} PLN<br/>` +
+					`P50 (mediana): ${fmtPLN(v50)} PLN<br/>` +
+					`P95: ${fmtPLN(v95)} PLN`
 				);
 			}
 		},

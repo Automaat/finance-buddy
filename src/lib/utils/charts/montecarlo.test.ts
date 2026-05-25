@@ -5,8 +5,24 @@ function makeResult(bands: Array<[number, number, number, number]>): MonteCarloR
 	return {
 		success_rate: 0.9,
 		paths: 1000,
-		bands: bands.map(([age, p5, p50, p95]) => ({ age, p5, p50, p95 })),
-		assumptions: { expected_return: 6, volatility: 15, source: 'manual' }
+		bands: bands.map(([age, p5, p50, p95]) => ({
+			age,
+			p5,
+			p50,
+			p95,
+			p5_real: p5,
+			p50_real: p50,
+			p95_real: p95,
+			spending: 0,
+			spending_real: 0
+		})),
+		assumptions: {
+			expected_return: 6,
+			volatility: 15,
+			source: 'manual',
+			inflation_mean: 0,
+			inflation_volatility: 0
+		}
 	};
 }
 

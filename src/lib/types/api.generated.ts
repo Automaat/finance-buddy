@@ -4748,6 +4748,10 @@ export interface paths {
                                 } | null;
                                 /** Format: double */
                                 expected_return?: number;
+                                /** Format: double */
+                                inflation_mean?: number;
+                                /** Format: double */
+                                inflation_volatility?: number;
                                 source?: string;
                                 /** Format: double */
                                 volatility?: number;
@@ -4759,7 +4763,17 @@ export interface paths {
                                 /** Format: double */
                                 p50?: number;
                                 /** Format: double */
+                                p50_real?: number;
+                                /** Format: double */
+                                p5_real?: number;
+                                /** Format: double */
                                 p95?: number;
+                                /** Format: double */
+                                p95_real?: number;
+                                /** Format: double */
+                                spending?: number;
+                                /** Format: double */
+                                spending_real?: number;
                             }[];
                             paths?: number;
                             /** Format: double */

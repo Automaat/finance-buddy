@@ -215,6 +215,157 @@ func TestRunMonteCarlo_ManualSourceWhenNoAllocation(t *testing.T) {
 	}
 }
 
+func TestRunMonteCarlo_ZeroInflation_RealEqualsNominal(t *testing.T) {
+	got := RunMonteCarlo(newSeededRng(), MonteCarloInputs{
+		CurrentPortfolio:    100000,
+		AnnualContribution:  10000,
+		ExpectedReturn:      5,
+		Volatility:          10,
+		CurrentAge:          30,
+		RetirementAge:       60,
+		LifeExpectancy:      40,
+		AnnualWithdrawal:    20000,
+		Paths:               50,
+		InflationMean:       0,
+		InflationVolatility: 0,
+	})
+	for _, b := range got.Bands {
+		if math.Abs(b.P5-b.P5Real) > 1e-9 || math.Abs(b.P50-b.P50Real) > 1e-9 || math.Abs(b.P95-b.P95Real) > 1e-9 {
+			t.Errorf("age %d: zero-inflation should make real == nominal (got p5=%v vs %v, p50=%v vs %v, p95=%v vs %v)",
+				b.Age, b.P5, b.P5Real, b.P50, b.P50Real, b.P95, b.P95Real)
+		}
+		if math.Abs(b.Spending-b.SpendingReal) > 1e-9 {
+			t.Errorf("age %d: zero-inflation spending real (%v) should equal nominal (%v)", b.Age, b.SpendingReal, b.Spending)
+		}
+	}
+}
+
+func TestRunMonteCarlo_FixedInflation_DeflatesGeometrically(t *testing.T) {
+	// Zero return volatility AND zero inflation volatility => deterministic
+	// path. Real balance at year Y should equal nominal / (1+inf)^Y exactly.
+	infMean := 3.0
+	got := RunMonteCarlo(newSeededRng(), MonteCarloInputs{
+		CurrentPortfolio:    100000,
+		AnnualContribution:  0,
+		ExpectedReturn:      5,
+		Volatility:          0,
+		CurrentAge:          60,
+		RetirementAge:       60,
+		LifeExpectancy:      65,
+		AnnualWithdrawal:    0,
+		Paths:               10,
+		InflationMean:       infMean,
+		InflationVolatility: 0,
+	})
+	for y, b := range got.Bands {
+		factor := math.Pow(1+infMean/100, float64(y+1))
+		wantReal := b.P50 / factor
+		if math.Abs(b.P50Real-wantReal) > 1e-6 {
+			t.Errorf("age %d: real = %v, want %v (nominal %v / %v)", b.Age, b.P50Real, wantReal, b.P50, factor)
+		}
+	}
+}
+
+func TestRunMonteCarlo_FixedInflation_InflatesNominalWithdrawals(t *testing.T) {
+	// Zero return vol + zero inflation vol => every path is identical. The
+	// retiree's real spending stays at the supplied AnnualWithdrawal; the
+	// nominal spending grows by (1+inf)^yearsSinceRetirement.
+	infMean := 3.0
+	withdrawal := 40000.0
+	got := RunMonteCarlo(newSeededRng(), MonteCarloInputs{
+		CurrentPortfolio:    10_000_000,
+		AnnualContribution:  0,
+		ExpectedReturn:      0,
+		Volatility:          0,
+		CurrentAge:          60,
+		RetirementAge:       60,
+		LifeExpectancy:      65,
+		AnnualWithdrawal:    withdrawal,
+		Paths:               5,
+		InflationMean:       infMean,
+		InflationVolatility: 0,
+	})
+	for y, b := range got.Bands {
+		wantNominal := withdrawal * math.Pow(1+infMean/100, float64(y+1))
+		if math.Abs(b.Spending-wantNominal) > 1e-6 {
+			t.Errorf("age %d: nominal spend = %v, want %v", b.Age, b.Spending, wantNominal)
+		}
+		if math.Abs(b.SpendingReal-withdrawal) > 1e-6 {
+			t.Errorf("age %d: real spend = %v, want constant %v", b.Age, b.SpendingReal, withdrawal)
+		}
+	}
+}
+
+func TestRunMonteCarlo_NegativeInflation_RealOutpacesNominal(t *testing.T) {
+	// Deterministic deflation of 2% per year: nominal balance is unchanged
+	// (zero return), but real balance grows because each PLN is worth more.
+	got := RunMonteCarlo(newSeededRng(), MonteCarloInputs{
+		CurrentPortfolio:    100000,
+		AnnualContribution:  0,
+		ExpectedReturn:      0,
+		Volatility:          0,
+		CurrentAge:          60,
+		RetirementAge:       60,
+		LifeExpectancy:      65,
+		AnnualWithdrawal:    0,
+		Paths:               5,
+		InflationMean:       -2,
+		InflationVolatility: 0,
+	})
+	last := got.Bands[len(got.Bands)-1]
+	if last.P50Real <= last.P50 {
+		t.Errorf("deflation should make real (%v) > nominal (%v)", last.P50Real, last.P50)
+	}
+}
+
+func TestRunMonteCarlo_BustedPath_SpendingCapped(t *testing.T) {
+	// Tiny portfolio + giant withdrawal forces every path to bust quickly.
+	// After bust, recorded spending must never exceed the portfolio's
+	// pre-bust real balance — i.e. SpendingReal cannot exceed AnnualWithdrawal
+	// (which is the real per-year ask).
+	withdrawal := 50000.0
+	got := RunMonteCarlo(newSeededRng(), MonteCarloInputs{
+		CurrentPortfolio:    1000,
+		AnnualContribution:  0,
+		ExpectedReturn:      0,
+		Volatility:          0,
+		CurrentAge:          65,
+		RetirementAge:       65,
+		LifeExpectancy:      75,
+		AnnualWithdrawal:    withdrawal,
+		Paths:               5,
+		InflationMean:       3,
+		InflationVolatility: 0,
+	})
+	for _, b := range got.Bands {
+		if b.SpendingReal > withdrawal+1e-6 {
+			t.Errorf("age %d: real spending %v exceeds the requested %v on a busted path",
+				b.Age, b.SpendingReal, withdrawal)
+		}
+		if b.P50 < 0 || b.P50Real < 0 {
+			t.Errorf("age %d: negative balance band p50=%v p50_real=%v", b.Age, b.P50, b.P50Real)
+		}
+	}
+}
+
+func TestRunMonteCarlo_AssumptionsEchoesInflation(t *testing.T) {
+	got := RunMonteCarlo(newSeededRng(), MonteCarloInputs{
+		CurrentPortfolio:    100000,
+		CurrentAge:          30,
+		RetirementAge:       65,
+		LifeExpectancy:      90,
+		ExpectedReturn:      6,
+		Volatility:          15,
+		AnnualWithdrawal:    30000,
+		Paths:               10,
+		InflationMean:       3.2,
+		InflationVolatility: 1.5,
+	})
+	if got.Assumptions.InflationMean != 3.2 || got.Assumptions.InflationVolatility != 1.5 {
+		t.Errorf("inflation assumptions echo = %+v, want mean=3.2 vol=1.5", got.Assumptions)
+	}
+}
+
 func TestRunMonteCarlo_PercentilesAreSorted(t *testing.T) {
 	// Across reasonable inputs p5 <= p50 <= p95 at every age.
 	got := RunMonteCarlo(newSeededRng(), MonteCarloInputs{
