@@ -1,6 +1,7 @@
 package simulations
 
 import (
+	"math"
 	"math/rand/v2"
 	"testing"
 )
@@ -127,6 +128,90 @@ func TestPercentile_KnownValues(t *testing.T) {
 				t.Errorf("percentile(%v, %v) = %v, want %v", tc.sorted, tc.pct, got, tc.want)
 			}
 		})
+	}
+}
+
+func TestDeriveAssumptions_AllStocksMatchesStockConstants(t *testing.T) {
+	r, v := DeriveAssumptions(MonteCarloAllocation{StocksPct: 100})
+	if r != AssetReturnStocksPct {
+		t.Errorf("100%% stocks return = %v, want %v", r, AssetReturnStocksPct)
+	}
+	if v != AssetVolStocksPct {
+		t.Errorf("100%% stocks vol = %v, want %v", v, AssetVolStocksPct)
+	}
+}
+
+func TestDeriveAssumptions_AllCashMatchesCashConstants(t *testing.T) {
+	r, v := DeriveAssumptions(MonteCarloAllocation{CashPct: 100})
+	if r != AssetReturnCashPct {
+		t.Errorf("100%% cash return = %v, want %v", r, AssetReturnCashPct)
+	}
+	if v != AssetVolCashPct {
+		t.Errorf("100%% cash vol = %v, want %v", v, AssetVolCashPct)
+	}
+}
+
+func TestDeriveAssumptions_BalancedDiversifies(t *testing.T) {
+	// 50/50 stocks/bonds: return is the simple weighted mean; volatility
+	// (zero-corr) is strictly less than the weighted mean of vols thanks
+	// to diversification.
+	r, v := DeriveAssumptions(MonteCarloAllocation{StocksPct: 50, BondsPct: 50})
+	wantR := 0.5*AssetReturnStocksPct + 0.5*AssetReturnBondsPct
+	if r != wantR {
+		t.Errorf("50/50 return = %v, want %v", r, wantR)
+	}
+	weightedVol := 0.5*AssetVolStocksPct + 0.5*AssetVolBondsPct
+	if v >= weightedVol {
+		t.Errorf("50/50 vol = %v, expected < weighted mean %v (diversification)", v, weightedVol)
+	}
+}
+
+func TestRunMonteCarlo_AllocationOverridesManualAssumptions(t *testing.T) {
+	got := RunMonteCarlo(newSeededRng(), MonteCarloInputs{
+		CurrentPortfolio: 100000,
+		ExpectedReturn:   99, // should be ignored
+		Volatility:       99, // should be ignored
+		CurrentAge:       30,
+		RetirementAge:    65,
+		LifeExpectancy:   90,
+		AnnualWithdrawal: 30000,
+		Paths:            100,
+		Allocation:       &MonteCarloAllocation{StocksPct: 60, BondsPct: 30, CashPct: 10},
+	})
+	if got.Assumptions.Source != "allocation" {
+		t.Errorf("source = %q, want %q", got.Assumptions.Source, "allocation")
+	}
+	wantR, wantV := DeriveAssumptions(MonteCarloAllocation{StocksPct: 60, BondsPct: 30, CashPct: 10})
+	if math.Abs(got.Assumptions.ExpectedReturn-wantR) > 1e-9 {
+		t.Errorf("ER = %v, want %v", got.Assumptions.ExpectedReturn, wantR)
+	}
+	if math.Abs(got.Assumptions.Volatility-wantV) > 1e-9 {
+		t.Errorf("vol = %v, want %v", got.Assumptions.Volatility, wantV)
+	}
+	if got.Assumptions.Allocation == nil || got.Assumptions.Allocation.StocksPct != 60 {
+		t.Errorf("allocation echo missing or wrong: %+v", got.Assumptions.Allocation)
+	}
+}
+
+func TestRunMonteCarlo_ManualSourceWhenNoAllocation(t *testing.T) {
+	got := RunMonteCarlo(newSeededRng(), MonteCarloInputs{
+		CurrentPortfolio: 100000,
+		ExpectedReturn:   6,
+		Volatility:       15,
+		CurrentAge:       30,
+		RetirementAge:    65,
+		LifeExpectancy:   90,
+		AnnualWithdrawal: 30000,
+		Paths:            10,
+	})
+	if got.Assumptions.Source != "manual" {
+		t.Errorf("source = %q, want %q", got.Assumptions.Source, "manual")
+	}
+	if got.Assumptions.ExpectedReturn != 6 || got.Assumptions.Volatility != 15 {
+		t.Errorf("assumptions = %+v, want ER=6 vol=15", got.Assumptions)
+	}
+	if got.Assumptions.Allocation != nil {
+		t.Errorf("allocation should be nil, got %+v", got.Assumptions.Allocation)
 	}
 }
 

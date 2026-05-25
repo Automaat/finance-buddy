@@ -8,10 +8,24 @@ export interface MonteCarloBand {
 	p95: number;
 }
 
+export interface MonteCarloAllocationOut {
+	stocks_pct: number;
+	bonds_pct: number;
+	cash_pct: number;
+}
+
+export interface MonteCarloAssumptions {
+	expected_return: number;
+	volatility: number;
+	source: 'manual' | 'allocation';
+	allocation?: MonteCarloAllocationOut;
+}
+
 export interface MonteCarloResult {
 	success_rate: number;
 	bands: MonteCarloBand[];
 	paths: number;
+	assumptions: MonteCarloAssumptions;
 }
 
 function fmtPLN(value: number): string {

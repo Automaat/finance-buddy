@@ -288,15 +288,22 @@ func (h *Handler) Retirement(w http.ResponseWriter, r *http.Request) {
 
 // monteCarloInputsWire mirrors MonteCarloInputs over JSON.
 type monteCarloInputsWire struct {
-	CurrentPortfolio   pyFloat `json:"current_portfolio"`
-	AnnualContribution pyFloat `json:"annual_contribution"`
-	ExpectedReturn     pyFloat `json:"expected_return"`
-	Volatility         pyFloat `json:"volatility"`
-	CurrentAge         int     `json:"current_age"`
-	RetirementAge      int     `json:"retirement_age"`
-	LifeExpectancy     int     `json:"life_expectancy"`
-	AnnualWithdrawal   pyFloat `json:"annual_withdrawal"`
-	Paths              int     `json:"paths,omitempty"`
+	CurrentPortfolio   pyFloat                   `json:"current_portfolio"`
+	AnnualContribution pyFloat                   `json:"annual_contribution"`
+	ExpectedReturn     pyFloat                   `json:"expected_return"`
+	Volatility         pyFloat                   `json:"volatility"`
+	CurrentAge         int                       `json:"current_age"`
+	RetirementAge      int                       `json:"retirement_age"`
+	LifeExpectancy     int                       `json:"life_expectancy"`
+	AnnualWithdrawal   pyFloat                   `json:"annual_withdrawal"`
+	Paths              int                       `json:"paths,omitempty"`
+	Allocation         *monteCarloAllocationWire `json:"allocation,omitempty"`
+}
+
+type monteCarloAllocationWire struct {
+	StocksPct pyFloat `json:"stocks_pct"`
+	BondsPct  pyFloat `json:"bonds_pct"`
+	CashPct   pyFloat `json:"cash_pct"`
 }
 
 // MonteCarlo serves POST /api/simulations/monte-carlo. It runs `paths`
@@ -316,16 +323,33 @@ func (h *Handler) MonteCarlo(w http.ResponseWriter, r *http.Request) {
 		writeValidationError(w, "retirement_age", "retirement_age must be between current_age and life_expectancy", "")
 		return
 	}
-	if in.Volatility < 0 {
-		writeValidationError(w, "volatility", "volatility must be non-negative", "")
-		return
-	}
 	if in.CurrentPortfolio < 0 || in.AnnualContribution < 0 || in.AnnualWithdrawal < 0 {
 		writeValidationError(w, "amount", "monetary inputs must be non-negative", "")
 		return
 	}
 	if in.Paths < 0 || in.Paths > 10000 {
 		writeValidationError(w, "paths", "paths must be in [0, 10000]", "")
+		return
+	}
+
+	var allocation *MonteCarloAllocation
+	if in.Allocation != nil {
+		stocks := float64(in.Allocation.StocksPct)
+		bonds := float64(in.Allocation.BondsPct)
+		cash := float64(in.Allocation.CashPct)
+		if stocks < 0 || bonds < 0 || cash < 0 {
+			writeValidationError(w, "allocation", "allocation percentages must be non-negative", "")
+			return
+		}
+		sum := stocks + bonds + cash
+		if math.Abs(sum-100) > 0.01 {
+			writeValidationError(w, "allocation",
+				fmt.Sprintf("allocation must sum to 100 (got %.2f)", sum), "")
+			return
+		}
+		allocation = &MonteCarloAllocation{StocksPct: stocks, BondsPct: bonds, CashPct: cash}
+	} else if in.Volatility < 0 {
+		writeValidationError(w, "volatility", "volatility must be non-negative", "")
 		return
 	}
 
@@ -340,6 +364,7 @@ func (h *Handler) MonteCarlo(w http.ResponseWriter, r *http.Request) {
 		LifeExpectancy:     in.LifeExpectancy,
 		AnnualWithdrawal:   float64(in.AnnualWithdrawal),
 		Paths:              in.Paths,
+		Allocation:         allocation,
 	})
 	writeJSON(w, http.StatusOK, result)
 }
