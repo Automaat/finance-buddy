@@ -4737,6 +4737,21 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            assumptions?: {
+                                allocation?: {
+                                    /** Format: double */
+                                    bonds_pct?: number;
+                                    /** Format: double */
+                                    cash_pct?: number;
+                                    /** Format: double */
+                                    stocks_pct?: number;
+                                } | null;
+                                /** Format: double */
+                                expected_return?: number;
+                                source?: string;
+                                /** Format: double */
+                                volatility?: number;
+                            };
                             bands?: {
                                 age?: number;
                                 /** Format: double */

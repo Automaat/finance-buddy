@@ -17,6 +17,12 @@
 	let lifeExpectancy = $state(90);
 	let annualWithdrawal = $state(40000);
 
+	let useAllocation = $state(false);
+	let allocStocks = $state(60);
+	let allocBonds = $state(30);
+	let allocCash = $state(10);
+	const allocSum = $derived(allocStocks + allocBonds + allocCash);
+
 	let loading = $state(false);
 	let error = $state('');
 	let result: MonteCarloResult | null = $state(null);
@@ -48,21 +54,34 @@
 				loading = false;
 				return;
 			}
+			if (useAllocation && Math.abs(allocSum - 100) > 0.01) {
+				error = `Alokacja musi sumować się do 100% (obecnie ${allocSum.toFixed(1)}%)`;
+				loading = false;
+				return;
+			}
 
 			const apiUrl = resolveApiUrl();
+			const body: Record<string, unknown> = {
+				current_portfolio: currentPortfolio,
+				annual_contribution: annualContribution,
+				expected_return: expectedReturn,
+				volatility,
+				current_age: currentAge,
+				retirement_age: retirementAge,
+				life_expectancy: lifeExpectancy,
+				annual_withdrawal: annualWithdrawal
+			};
+			if (useAllocation) {
+				body.allocation = {
+					stocks_pct: allocStocks,
+					bonds_pct: allocBonds,
+					cash_pct: allocCash
+				};
+			}
 			const response = await fetch(`${apiUrl}/api/simulations/monte-carlo`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					current_portfolio: currentPortfolio,
-					annual_contribution: annualContribution,
-					expected_return: expectedReturn,
-					volatility,
-					current_age: currentAge,
-					retirement_age: retirementAge,
-					life_expectancy: lifeExpectancy,
-					annual_withdrawal: annualWithdrawal
-				})
+				body: JSON.stringify(body)
 			});
 			if (!response.ok) throw new Error(`Symulacja nieudana: ${response.statusText}`);
 			result = await response.json();
@@ -147,11 +166,24 @@
 			</label>
 			<label class="space-y-1">
 				<span class="text-xs font-semibold">Oczekiwana stopa zwrotu (%)</span>
-				<input type="number" step="0.1" class="input w-full" bind:value={expectedReturn} />
+				<input
+					type="number"
+					step="0.1"
+					class="input w-full"
+					bind:value={expectedReturn}
+					disabled={useAllocation}
+				/>
 			</label>
 			<label class="space-y-1">
 				<span class="text-xs font-semibold">Zmienność / odchylenie std. (%)</span>
-				<input type="number" min="0" step="0.1" class="input w-full" bind:value={volatility} />
+				<input
+					type="number"
+					min="0"
+					step="0.1"
+					class="input w-full"
+					bind:value={volatility}
+					disabled={useAllocation}
+				/>
 			</label>
 			<label class="space-y-1">
 				<span class="text-xs font-semibold">Obecny wiek</span>
@@ -169,6 +201,57 @@
 				<span class="text-xs font-semibold">Roczna wypłata na emeryturze (PLN)</span>
 				<input type="number" min="0" class="input w-full" bind:value={annualWithdrawal} />
 			</label>
+		</div>
+
+		<div class="space-y-3 pt-2 border-t border-surface-300-700">
+			<label class="flex items-center gap-2 text-sm font-semibold">
+				<input type="checkbox" class="checkbox" bind:checked={useAllocation} />
+				Wyprowadź stopę zwrotu i zmienność z alokacji portfela
+			</label>
+			{#if useAllocation}
+				<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+					<label class="space-y-1">
+						<span class="text-xs font-semibold">Akcje (%)</span>
+						<input
+							type="number"
+							min="0"
+							max="100"
+							step="1"
+							class="input w-full"
+							bind:value={allocStocks}
+						/>
+					</label>
+					<label class="space-y-1">
+						<span class="text-xs font-semibold">Obligacje (%)</span>
+						<input
+							type="number"
+							min="0"
+							max="100"
+							step="1"
+							class="input w-full"
+							bind:value={allocBonds}
+						/>
+					</label>
+					<label class="space-y-1">
+						<span class="text-xs font-semibold">Gotówka (%)</span>
+						<input
+							type="number"
+							min="0"
+							max="100"
+							step="1"
+							class="input w-full"
+							bind:value={allocCash}
+						/>
+					</label>
+				</div>
+				<div
+					class="text-xs {Math.abs(allocSum - 100) < 0.01
+						? 'text-success-600-400'
+						: 'text-error-600-400'}"
+				>
+					Suma: {allocSum.toFixed(1)}% (musi być 100%)
+				</div>
+			{/if}
 		</div>
 
 		<button
@@ -218,6 +301,28 @@
 					</p>
 				</div>
 			{/if}
+
+			<div class="card preset-tonal-surface p-3 text-sm space-y-1">
+				<div class="font-semibold text-xs uppercase text-surface-600-400">
+					Założenia symulacji
+				</div>
+				<div>
+					Stopa zwrotu: <strong>{result.assumptions.expected_return.toFixed(2)}%</strong>,
+					zmienność: <strong>{result.assumptions.volatility.toFixed(2)}%</strong>
+					<span class="text-xs text-surface-600-400">
+						({result.assumptions.source === 'allocation'
+							? 'wyprowadzone z alokacji'
+							: 'wpisane ręcznie'})
+					</span>
+				</div>
+				{#if result.assumptions.allocation}
+					<div class="text-xs text-surface-700-300">
+						Alokacja: {result.assumptions.allocation.stocks_pct}% akcje /
+						{result.assumptions.allocation.bonds_pct}% obligacje /
+						{result.assumptions.allocation.cash_pct}% gotówka
+					</div>
+				{/if}
+			</div>
 
 			<div bind:this={chartContainer} class="w-full h-[320px] sm:h-[420px]"></div>
 

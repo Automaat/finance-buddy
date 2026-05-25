@@ -7003,6 +7003,40 @@
               "application/json": {
                 "schema": {
                   "properties": {
+                    "assumptions": {
+                      "properties": {
+                        "allocation": {
+                          "nullable": true,
+                          "properties": {
+                            "bonds_pct": {
+                              "format": "double",
+                              "type": "number"
+                            },
+                            "cash_pct": {
+                              "format": "double",
+                              "type": "number"
+                            },
+                            "stocks_pct": {
+                              "format": "double",
+                              "type": "number"
+                            }
+                          },
+                          "type": "object"
+                        },
+                        "expected_return": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "source": {
+                          "type": "string"
+                        },
+                        "volatility": {
+                          "format": "double",
+                          "type": "number"
+                        }
+                      },
+                      "type": "object"
+                    },
                     "bands": {
                       "items": {
                         "properties": {
