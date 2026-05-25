@@ -23,8 +23,8 @@
 	let allocCash = $state(10);
 	const allocSum = $derived(allocStocks + allocBonds + allocCash);
 
-	let inflationMean = $state(3);
-	let inflationVolatility = $state(1);
+	let inflationMean = $state(0);
+	let inflationVolatility = $state(0);
 	let showReal = $state(true);
 
 	let loading = $state(false);
@@ -373,7 +373,7 @@
 				{@const lastP5 = showReal ? last.p5_real : last.p5}
 				{@const lastP50 = showReal ? last.p50_real : last.p50}
 				{@const lastP95 = showReal ? last.p95_real : last.p95}
-				{@const lastSpending = showReal ? last.spending_real : last.spending}
+				{@const spendingBand = result.bands.find((b) => b.spending > 0)}
 				{@const valueLabel = showReal ? 'realne' : 'nominalne'}
 				<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
 					<div class="card preset-tonal-surface p-4">
@@ -395,12 +395,14 @@
 						<div class="text-xl font-bold">{formatPLN(lastP95)} PLN</div>
 					</div>
 				</div>
-				{#if lastSpending > 0}
+				{#if spendingBand}
 					<div class="card preset-tonal-surface p-4">
 						<div class="text-xs text-surface-600-400">
-							Średnia wypłata w wieku {last.age} ({valueLabel})
+							Średnia wypłata na początku emerytury (wiek {spendingBand.age}, {valueLabel})
 						</div>
-						<div class="text-xl font-bold">{formatPLN(lastSpending)} PLN</div>
+						<div class="text-xl font-bold">
+							{formatPLN(showReal ? spendingBand.spending_real : spendingBand.spending)} PLN
+						</div>
 					</div>
 				{/if}
 			{/if}
