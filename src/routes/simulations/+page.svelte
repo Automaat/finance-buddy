@@ -69,8 +69,8 @@
 
 	const owners = $derived((data.owners || []) as OwnerOption[]);
 
-	let currentAge = $state(untrack(() => data.current_age));
-	let retirementAge = $state(untrack(() => data.retirement_age));
+	let currentAge = $state(untrack(() => data?.defaults?.currentAge ?? data.current_age));
+	let retirementAge = $state(untrack(() => data?.defaults?.retirementAge ?? data.retirement_age));
 
 	// Dynamic IKE/IKZE accounts - one per owner per wrapper
 	let ikeIkzeAccounts: IkeIkzeConfig[] = $state([]);
@@ -124,8 +124,8 @@
 		}
 	});
 
-	// Assumptions
-	let annualReturnRate = $state(7.0);
+	// Assumptions — return rate defaults from app_config.expected_return_rate.
+	let annualReturnRate = $state(untrack(() => data?.defaults?.annualReturnPct ?? 7.0));
 	let limitGrowthRate = $state(5.0);
 	let expectedSalaryGrowth = $state(3.0);
 	let inflationRate = $state(3.0);

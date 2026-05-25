@@ -1,9 +1,15 @@
 <script lang="ts">
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
 	import { resolveApiUrl } from '$lib/api';
 	import * as echarts from 'echarts';
 	import type { EChartsOption } from 'echarts';
 	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
+	import type { PageData } from './$types';
+
+	interface Props {
+		data: PageData;
+	}
+	let { data }: Props = $props();
 
 	interface MortgageVsInvestYearlyRow {
 		year: number;
@@ -45,12 +51,15 @@
 		summary: MortgageVsInvestSummary;
 	}
 
-	// Form state
+	// Form state. Defaults pull from app_config where mappings exist:
+	// expectedAnnualReturn ← expected_return_rate, totalMonthlyBudget ←
+	// monthly_mortgage_payment (when set). Mortgage-specific fields (balance,
+	// rate, term) have no config equivalent yet — keep numeric placeholders.
 	let remainingPrincipal = $state(300000);
 	let annualInterestRate = $state(6.5);
 	let remainingMonths = $state(240);
-	let totalMonthlyBudget = $state(3500);
-	let expectedAnnualReturn = $state(7.0);
+	let totalMonthlyBudget = $state(untrack(() => data?.defaults?.monthlyMortgagePLN ?? 0) || 3500);
+	let expectedAnnualReturn = $state(untrack(() => data?.defaults?.annualReturnPct ?? 7.0));
 	let inflationRate = $state(3.0);
 	let enableVariableRate = $state(false);
 
