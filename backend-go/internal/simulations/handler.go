@@ -323,10 +323,6 @@ func (h *Handler) MonteCarlo(w http.ResponseWriter, r *http.Request) {
 		writeValidationError(w, "retirement_age", "retirement_age must be between current_age and life_expectancy", "")
 		return
 	}
-	if in.Volatility < 0 {
-		writeValidationError(w, "volatility", "volatility must be non-negative", "")
-		return
-	}
 	if in.CurrentPortfolio < 0 || in.AnnualContribution < 0 || in.AnnualWithdrawal < 0 {
 		writeValidationError(w, "amount", "monetary inputs must be non-negative", "")
 		return
@@ -352,6 +348,9 @@ func (h *Handler) MonteCarlo(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		allocation = &MonteCarloAllocation{StocksPct: stocks, BondsPct: bonds, CashPct: cash}
+	} else if in.Volatility < 0 {
+		writeValidationError(w, "volatility", "volatility must be non-negative", "")
+		return
 	}
 
 	rng := rand.New(rand.NewPCG(uint64(h.now().UnixNano()), 0xdeadbeef))

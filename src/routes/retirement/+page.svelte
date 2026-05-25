@@ -303,9 +303,7 @@
 			{/if}
 
 			<div class="card preset-tonal-surface p-3 text-sm space-y-1">
-				<div class="font-semibold text-xs uppercase text-surface-600-400">
-					Założenia symulacji
-				</div>
+				<div class="font-semibold text-xs uppercase text-surface-600-400">Założenia symulacji</div>
 				<div>
 					Stopa zwrotu: <strong>{result.assumptions.expected_return.toFixed(2)}%</strong>,
 					zmienność: <strong>{result.assumptions.volatility.toFixed(2)}%</strong>
