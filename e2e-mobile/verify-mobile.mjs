@@ -32,9 +32,18 @@ const MIN_TAP = 44;
 
 async function audit(page, url) {
 	await page.goto(url, { waitUntil: 'networkidle', timeout: 20000 }).catch(() => {});
-	// `networkidle` covers fetch waterfalls; `load` handles late-paint passes
-	// (echarts hooks into requestAnimationFrame) without a fixed sleep.
-	await page.waitForLoadState('load').catch(() => {});
+	// `networkidle` waits for fetch traffic. Echarts paints inside
+	// requestAnimationFrame after that, so settle on two consecutive frames
+	// (one to schedule, one to confirm nothing else queued) — replaces the
+	// previous fixed 600ms sleep without losing the late-paint buffer.
+	await page
+		.evaluate(
+			() =>
+				new Promise((resolve) => {
+					requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+				})
+		)
+		.catch(() => {});
 
 	return await page.evaluate((minTap) => {
 		const doc = document.documentElement;
