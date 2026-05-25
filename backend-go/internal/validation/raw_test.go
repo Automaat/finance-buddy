@@ -67,3 +67,11 @@ func TestRawDecimal(t *testing.T) {
 		t.Fatalf("ws got %s err %v", d, err)
 	}
 }
+
+func TestRawDecimalRejectsQuotedString(t *testing.T) {
+	// Quoted strings are NOT accepted — callers translate the error
+	// into "must be a number" to match pydantic's behavior.
+	if _, err := RawDecimal(json.RawMessage(`"123.45"`)); err == nil {
+		t.Fatal("expected error for quoted decimal")
+	}
+}
