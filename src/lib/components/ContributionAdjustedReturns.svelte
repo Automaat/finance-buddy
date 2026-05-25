@@ -116,52 +116,63 @@
 			Brak snapshotów — utwórz snapshot, by zobaczyć zwroty.
 		</p>
 	{:else}
-		<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-			<div class="card preset-tonal-surface p-3">
-				<div class="text-xs text-surface-600-400">Wpłacono netto</div>
-				<div class="text-lg font-semibold">{fmt(data.net_contributed)} PLN</div>
-				<div class="text-xs text-surface-600-400">
-					+{fmt(data.deposits)} / -{fmt(data.withdrawals)}
-				</div>
+		<dl class="divide-y divide-surface-200-800">
+			<div class="flex items-baseline justify-between gap-3 py-2">
+				<dt class="text-xs text-surface-600-400 shrink-0">
+					Wpłacono netto
+					<span class="block text-[10px] opacity-70">
+						+{fmt(data.deposits)} / -{fmt(data.withdrawals)}
+					</span>
+				</dt>
+				<dd class="text-base font-semibold text-right tabular-nums">
+					{fmt(data.net_contributed)} PLN
+				</dd>
 			</div>
-			<div class="card preset-tonal-surface p-3">
-				<div class="text-xs text-surface-600-400">Wartość obecna</div>
-				<div class="text-lg font-semibold">{fmt(data.current_value)} PLN</div>
-				<div class="text-xs text-surface-600-400">na {data.as_of}</div>
+			<div class="flex items-baseline justify-between gap-3 py-2">
+				<dt class="text-xs text-surface-600-400 shrink-0">
+					Wartość obecna
+					<span class="block text-[10px] opacity-70">na {data.as_of}</span>
+				</dt>
+				<dd class="text-base font-semibold text-right tabular-nums">
+					{fmt(data.current_value)} PLN
+				</dd>
 			</div>
-			<div class="card preset-tonal-surface p-3">
-				<div class="text-xs text-surface-600-400">Zmiana wyceny</div>
-				<div
-					class="text-lg font-semibold {data.valuation_change >= 0
+			<div class="flex items-baseline justify-between gap-3 py-2">
+				<dt class="text-xs text-surface-600-400 shrink-0">
+					Zmiana wyceny
+					<span class="block text-[10px] opacity-70">wartość − wpłaty</span>
+				</dt>
+				<dd
+					class="text-base font-semibold text-right tabular-nums {data.valuation_change >= 0
 						? 'text-success-500'
 						: 'text-error-500'}"
 				>
 					{data.valuation_change >= 0 ? '+' : ''}{fmt(data.valuation_change)} PLN
-				</div>
-				<div class="text-xs text-surface-600-400">wartość − wpłaty</div>
+				</dd>
 			</div>
-			<div class="card preset-tonal-surface p-3">
-				<div class="text-xs text-surface-600-400">Zwrot (XIRR)</div>
+			<div class="flex items-baseline justify-between gap-3 py-2">
+				<dt class="text-xs text-surface-600-400 shrink-0">
+					Zwrot (XIRR)
+					{#if data.money_weighted_pct !== null || data.convergence_failed}
+						<span class="block text-[10px] opacity-70">
+							prosty ROI: {fmtPct(data.simple_roi_pct)}
+						</span>
+					{/if}
+				</dt>
 				{#if data.money_weighted_pct !== null}
-					<div
-						class="text-lg font-semibold {data.money_weighted_pct >= 0
+					<dd
+						class="text-base font-semibold text-right tabular-nums {data.money_weighted_pct >= 0
 							? 'text-success-500'
 							: 'text-error-500'}"
 					>
 						{fmtPct(data.money_weighted_pct)}
-					</div>
-					<div class="text-xs text-surface-600-400">
-						prosty ROI: {fmtPct(data.simple_roi_pct)}
-					</div>
+					</dd>
 				{:else if data.convergence_failed}
-					<div class="text-sm text-surface-700-300">Nie udało się obliczyć</div>
-					<div class="text-xs text-surface-600-400">
-						prosty ROI: {fmtPct(data.simple_roi_pct)}
-					</div>
+					<dd class="text-sm text-surface-700-300 text-right">Nie udało się obliczyć</dd>
 				{:else}
-					<div class="text-sm text-surface-700-300">—</div>
+					<dd class="text-sm text-surface-700-300 text-right">—</dd>
 				{/if}
 			</div>
-		</div>
+		</dl>
 	{/if}
 </section>
