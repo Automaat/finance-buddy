@@ -12,29 +12,31 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 type valueResponse struct {
-	ID          int     `json:"id"`
-	AssetID     *int    `json:"asset_id"`
-	AssetName   *string `json:"asset_name"`
-	AccountID   *int    `json:"account_id"`
-	AccountName *string `json:"account_name"`
-	Value       pyFloat `json:"value"`
+	ID          int          `json:"id"`
+	AssetID     *int         `json:"asset_id"`
+	AssetName   *string      `json:"asset_name"`
+	AccountID   *int         `json:"account_id"`
+	AccountName *string      `json:"account_name"`
+	Value       wire.PyFloat `json:"value"`
 }
 
 type response struct {
 	ID     int             `json:"id"`
-	Date   isoDate         `json:"date"`
+	Date   wire.IsoDate    `json:"date"`
 	Notes  *string         `json:"notes"`
 	Values []valueResponse `json:"values"`
 }
 
 type listItem struct {
-	ID            int     `json:"id"`
-	Date          isoDate `json:"date"`
-	Notes         *string `json:"notes"`
-	TotalNetWorth pyFloat `json:"total_net_worth"`
+	ID            int          `json:"id"`
+	Date          wire.IsoDate `json:"date"`
+	Notes         *string      `json:"notes"`
+	TotalNetWorth wire.PyFloat `json:"total_net_worth"`
 }
 
 // Handler is the HTTP boundary for /api/snapshots.
@@ -54,7 +56,7 @@ func NewHandler(store *Store, logger *slog.Logger) *Handler {
 func buildResponse(snap *Snapshot, values []Value) response {
 	out := response{
 		ID:    snap.ID,
-		Date:  isoDate(snap.Date),
+		Date:  wire.IsoDate(snap.Date),
 		Notes: snap.Notes,
 	}
 	out.Values = make([]valueResponse, 0, len(values))
@@ -63,7 +65,7 @@ func buildResponse(snap *Snapshot, values []Value) response {
 		out.Values = append(out.Values, valueResponse{
 			ID: v.ID, AssetID: v.AssetID, AssetName: v.AssetName,
 			AccountID: v.AccountID, AccountName: v.AccountName,
-			Value: pyFloat(f),
+			Value: wire.PyFloat(f),
 		})
 	}
 	return out
@@ -80,8 +82,8 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	out := make([]listItem, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, listItem{
-			ID: row.ID, Date: isoDate(row.Date), Notes: row.Notes,
-			TotalNetWorth: pyFloat(row.TotalNetWorth),
+			ID: row.ID, Date: wire.IsoDate(row.Date), Notes: row.Notes,
+			TotalNetWorth: wire.PyFloat(row.TotalNetWorth),
 		})
 	}
 	writeJSON(w, http.StatusOK, out)
@@ -201,24 +203,4 @@ func parseIDParam(w http.ResponseWriter, r *http.Request) (int, bool) {
 		return 0, false
 	}
 	return id, true
-}
-
-// --- wire types ---
-
-type isoDate time.Time
-
-const isoDateLayout = "2006-01-02"
-
-func (d isoDate) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(d).Format(isoDateLayout) + `"`), nil
-}
-
-type pyFloat float64
-
-func (f pyFloat) MarshalJSON() ([]byte, error) {
-	s := strconv.FormatFloat(float64(f), 'f', -1, 64)
-	if !strings.ContainsRune(s, '.') {
-		s += ".0"
-	}
-	return []byte(s), nil
 }

@@ -4,6 +4,8 @@ import (
 	"math"
 
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 // computeYearlyStat folds the contribution totals against the configured
@@ -32,17 +34,17 @@ func computeYearlyStat(year int, wrapper string, ownerUserID *int, totals Contri
 	if limitF > 0 {
 		percentage = totalF / limitF * 100
 	}
-	lAmt := pyFloat(limitF)
-	rem := pyFloat(remaining)
-	pct := pyFloat(math.Round(percentage*10) / 10)
+	lAmt := wire.PyFloat(limitF)
+	rem := wire.PyFloat(remaining)
+	pct := wire.PyFloat(math.Round(percentage*10) / 10)
 	return yearlyStat{
 		Year:                year,
 		AccountWrapper:      wrapper,
 		OwnerUserID:         ownerUserID,
 		LimitAmount:         &lAmt,
-		TotalContributed:    pyFloat(totalF),
-		EmployeeContributed: pyFloat(employeeF),
-		EmployerContributed: pyFloat(employerF),
+		TotalContributed:    wire.PyFloat(totalF),
+		EmployeeContributed: wire.PyFloat(employeeF),
+		EmployerContributed: wire.PyFloat(employerF),
 		Remaining:           &rem,
 		PercentageUsed:      &pct,
 		IsWarning:           percentage >= 90,
@@ -70,13 +72,13 @@ func computePPKStat(ownerUserID *int, totals ContributionTotals, latest decimal.
 	roiRounded := math.Round(roi*100) / 100
 	return ppkStat{
 		OwnerUserID:           ownerUserID,
-		TotalValue:            pyFloat(totalValue),
-		EmployeeContributed:   pyFloat(employeeF),
-		EmployerContributed:   pyFloat(employerF),
-		GovernmentContributed: pyFloat(governmentF),
-		TotalContributed:      pyFloat(totalF),
-		Returns:               pyFloat(returns),
-		ROIPercentage:         pyFloat(roiRounded),
+		TotalValue:            wire.PyFloat(totalValue),
+		EmployeeContributed:   wire.PyFloat(employeeF),
+		EmployerContributed:   wire.PyFloat(employerF),
+		GovernmentContributed: wire.PyFloat(governmentF),
+		TotalContributed:      wire.PyFloat(totalF),
+		Returns:               wire.PyFloat(returns),
+		ROIPercentage:         wire.PyFloat(roiRounded),
 	}
 }
 
@@ -121,13 +123,13 @@ func computePPKGenerateResponse(
 		OwnerUserID:         req.OwnerUserID,
 		Month:               req.Month,
 		Year:                req.Year,
-		GrossSalary:         pyFloat(grossF),
-		EmployeeAmount:      pyFloat(empF),
-		EmployerAmount:      pyFloat(emprF),
-		GovernmentAmount:    pyFloat(govF),
+		GrossSalary:         wire.PyFloat(grossF),
+		EmployeeAmount:      wire.PyFloat(empF),
+		EmployerAmount:      wire.PyFloat(emprF),
+		GovernmentAmount:    wire.PyFloat(govF),
 		WelcomeApplied:      welcomeApplied,
 		AnnualApplied:       annualApplied,
-		TotalAmount:         pyFloat(empF + emprF + govF),
+		TotalAmount:         wire.PyFloat(empF + emprF + govF),
 		TransactionsCreated: ids,
 	}
 }

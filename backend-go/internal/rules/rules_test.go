@@ -120,7 +120,7 @@ func TestByCategoryFiltersAndPreservesOrder(t *testing.T) {
 }
 
 // decodeRawList decodes the wire payload into the loose map[string]any
-// shape so the test doesn't depend on dimString/isoDate UnmarshalJSON
+// shape so the test doesn't depend on dimString/wire.IsoDate UnmarshalJSON
 // implementations (they're write-only on purpose).
 func decodeRawList(t *testing.T, payload []byte) []map[string]any {
 	t.Helper()

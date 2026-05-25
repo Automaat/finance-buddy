@@ -9,27 +9,28 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 type response struct {
-	ID          int      `json:"id"`
-	AccountID   int      `json:"account_id"`
-	AccountName string   `json:"account_name"`
-	Amount      pyFloat  `json:"amount"`
-	Date        isoDate  `json:"date"`
-	OwnerUserID *int     `json:"owner_user_id"`
-	CreatedAt   isoNaive `json:"created_at"`
+	ID          int           `json:"id"`
+	AccountID   int           `json:"account_id"`
+	AccountName string        `json:"account_name"`
+	Amount      wire.PyFloat  `json:"amount"`
+	Date        wire.IsoDate  `json:"date"`
+	OwnerUserID *int          `json:"owner_user_id"`
+	CreatedAt   wire.IsoNaive `json:"created_at"`
 }
 
 type listResponse struct {
-	Payments     []response `json:"payments"`
-	TotalPaid    pyFloat    `json:"total_paid"`
-	PaymentCount int        `json:"payment_count"`
+	Payments     []response   `json:"payments"`
+	TotalPaid    wire.PyFloat `json:"total_paid"`
+	PaymentCount int          `json:"payment_count"`
 }
 
 // Handler is the HTTP boundary.
@@ -50,8 +51,8 @@ func toResponse(p DebtPayment, name string) response {
 	amt, _ := p.Amount.Float64()
 	return response{
 		ID: p.ID, AccountID: p.AccountID, AccountName: name,
-		Amount: pyFloat(amt), Date: isoDate(p.Date), OwnerUserID: p.OwnerUserID,
-		CreatedAt: isoNaive(p.CreatedAt.UTC()),
+		Amount: wire.PyFloat(amt), Date: wire.IsoDate(p.Date), OwnerUserID: p.OwnerUserID,
+		CreatedAt: wire.IsoNaive(p.CreatedAt.UTC()),
 	}
 }
 
@@ -84,7 +85,7 @@ func (h *Handler) ListForAccount(w http.ResponseWriter, r *http.Request) {
 	}
 	out.PaymentCount = len(out.Payments)
 	f, _ := total.Float64()
-	out.TotalPaid = pyFloat(f)
+	out.TotalPaid = wire.PyFloat(f)
 	writeJSON(w, http.StatusOK, out)
 }
 
@@ -138,7 +139,7 @@ func (h *Handler) ListAll(w http.ResponseWriter, r *http.Request) {
 	}
 	out.PaymentCount = len(out.Payments)
 	f64, _ := total.Float64()
-	out.TotalPaid = pyFloat(f64)
+	out.TotalPaid = wire.PyFloat(f64)
 	writeJSON(w, http.StatusOK, out)
 }
 
@@ -341,27 +342,4 @@ func requireAmount(raw map[string]json.RawMessage) (decimal.Decimal, *validation
 
 func isNull(v json.RawMessage) bool {
 	return bytes.Equal(bytes.TrimSpace(v), []byte("null"))
-}
-
-// wire types
-type isoDate time.Time
-
-func (d isoDate) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(d).Format("2006-01-02") + `"`), nil
-}
-
-type isoNaive time.Time
-
-func (t isoNaive) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(t).Format("2006-01-02T15:04:05.999999") + `"`), nil
-}
-
-type pyFloat float64
-
-func (f pyFloat) MarshalJSON() ([]byte, error) {
-	s := strconv.FormatFloat(float64(f), 'f', -1, 64)
-	if !strings.ContainsRune(s, '.') {
-		s += ".0"
-	}
-	return []byte(s), nil
 }

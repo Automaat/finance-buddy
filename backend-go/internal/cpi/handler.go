@@ -7,9 +7,9 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"strconv"
-	"strings"
 	"time"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 // Handler is the HTTP boundary for /api/cpi.
@@ -31,9 +31,9 @@ func NewHandler(store *Store, fetcher *GUSFetcher, logger *slog.Logger) *Handler
 }
 
 type cpiPoint struct {
-	Year            int     `json:"year"`
-	YoYRate         pyFloat `json:"yoy_rate"`
-	CumulativeIndex pyFloat `json:"cumulative_index"`
+	Year            int          `json:"year"`
+	YoYRate         wire.PyFloat `json:"yoy_rate"`
+	CumulativeIndex wire.PyFloat `json:"cumulative_index"`
 }
 
 type seriesResponse struct {
@@ -44,12 +44,12 @@ type seriesResponse struct {
 }
 
 type adjustResponse struct {
-	OriginalAmount pyFloat `json:"original_amount"`
-	AdjustedAmount pyFloat `json:"adjusted_amount"`
-	Factor         pyFloat `json:"factor"`
-	FromDate       isoDate `json:"from_date"`
-	ToDate         isoDate `json:"to_date"`
-	AsOfYear       int     `json:"as_of_year"`
+	OriginalAmount wire.PyFloat `json:"original_amount"`
+	AdjustedAmount wire.PyFloat `json:"adjusted_amount"`
+	Factor         wire.PyFloat `json:"factor"`
+	FromDate       wire.IsoDate `json:"from_date"`
+	ToDate         wire.IsoDate `json:"to_date"`
+	AsOfYear       int          `json:"as_of_year"`
 }
 
 type refreshResponse struct {
@@ -73,8 +73,8 @@ func (h *Handler) GetSeries(w http.ResponseWriter, r *http.Request) {
 		idx, _ := indexMap[y].Float64()
 		points = append(points, cpiPoint{
 			Year:            y,
-			YoYRate:         pyFloat(yoy),
-			CumulativeIndex: pyFloat(idx),
+			YoYRate:         wire.PyFloat(yoy),
+			CumulativeIndex: wire.PyFloat(idx),
 		})
 	}
 	out := seriesResponse{Points: points, Source: GUSSourceTag}
@@ -142,11 +142,11 @@ func (h *Handler) Adjust(w http.ResponseWriter, r *http.Request) {
 		factor = adjusted / amount
 	}
 	writeJSON(w, http.StatusOK, adjustResponse{
-		OriginalAmount: pyFloat(amount),
-		AdjustedAmount: pyFloat(adjusted),
-		Factor:         pyFloat(factor),
-		FromDate:       isoDate(from),
-		ToDate:         isoDate(to),
+		OriginalAmount: wire.PyFloat(amount),
+		AdjustedAmount: wire.PyFloat(adjusted),
+		Factor:         wire.PyFloat(factor),
+		FromDate:       wire.IsoDate(from),
+		ToDate:         wire.IsoDate(to),
 		AsOfYear:       latest,
 	})
 }
@@ -210,37 +210,4 @@ func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *valida
 
 func isNull(v json.RawMessage) bool {
 	return bytes.Equal(bytes.TrimSpace(v), []byte("null"))
-}
-
-// --- wire types (copies — promote when shared helper lands) ---
-
-type isoDate time.Time
-
-const isoDateLayout = "2006-01-02"
-
-func (d isoDate) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(d).Format(isoDateLayout) + `"`), nil
-}
-
-func (d *isoDate) UnmarshalJSON(data []byte) error {
-	var s string
-	if err := json.Unmarshal(data, &s); err != nil {
-		return err
-	}
-	t, err := time.Parse(isoDateLayout, s)
-	if err != nil {
-		return err
-	}
-	*d = isoDate(t)
-	return nil
-}
-
-type pyFloat float64
-
-func (f pyFloat) MarshalJSON() ([]byte, error) {
-	s := strconv.FormatFloat(float64(f), 'f', -1, 64)
-	if !strings.ContainsRune(s, '.') {
-		s += ".0"
-	}
-	return []byte(s), nil
 }

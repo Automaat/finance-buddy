@@ -9,21 +9,22 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 // response is the wire shape for a single allocation_targets row.
 type response struct {
-	ID          int      `json:"id"`
-	Category    string   `json:"category"`
-	OwnerUserID *int     `json:"owner_user_id"`
-	TargetPct   float64  `json:"target_pct"`
-	CreatedAt   isoNaive `json:"created_at"`
+	ID          int           `json:"id"`
+	Category    string        `json:"category"`
+	OwnerUserID *int          `json:"owner_user_id"`
+	TargetPct   float64       `json:"target_pct"`
+	CreatedAt   wire.IsoNaive `json:"created_at"`
 }
 
 type listResponse struct {
@@ -103,7 +104,7 @@ func toResponse(t *Target) response {
 		Category:    t.Category,
 		OwnerUserID: t.OwnerUserID,
 		TargetPct:   pct,
-		CreatedAt:   isoNaive(t.CreatedAt),
+		CreatedAt:   wire.IsoNaive(t.CreatedAt),
 	}
 }
 
@@ -334,12 +335,4 @@ func (h *HoldingsFromSnapshots) LatestHoldings(ctx context.Context) ([]CategoryA
 		return nil, fmt.Errorf("iterate snapshot values: %w", err)
 	}
 	return out, nil
-}
-
-// isoNaive serializes a time.Time as ISO without a timezone suffix; mirrors
-// Python's datetime.isoformat() on naive datetimes.
-type isoNaive time.Time
-
-func (t isoNaive) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(t).Format("2006-01-02T15:04:05.999999") + `"`), nil
 }

@@ -66,8 +66,8 @@ func formatDatePtr(t *time.Time) *string {
 	return &s
 }
 
-// formatTimestamp matches the isoNaive layout used across the rest of the Go
-// API (microsecond precision, naive UTC). Cf. internal/transactions/handler.go.
+// formatTimestamp matches the wire.IsoNaive layout used across the rest of
+// the Go API (microsecond precision, naive UTC). Cf. internal/wire/types.go.
 func formatTimestamp(t time.Time) string { return t.UTC().Format("2006-01-02T15:04:05.999999") }
 
 func (h *Handler) toResponse(r Recurring) response {

@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 func rawJSON(t *testing.T, m map[string]any) map[string]json.RawMessage {
@@ -26,7 +28,7 @@ func validReq(t *testing.T) *createRequest {
 	return &createRequest{
 		Name:                "Wakacje",
 		TargetAmount:        10000,
-		TargetDate:          isoDate(time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC)),
+		TargetDate:          wire.IsoDate(time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC)),
 		CurrentAmount:       1000,
 		MonthlyContribution: 500,
 	}
@@ -63,7 +65,7 @@ func TestValidateCreateBlankName(t *testing.T) {
 
 func TestValidateCreateMissingDate(t *testing.T) {
 	req := validReq(t)
-	req.TargetDate = isoDate(time.Time{})
+	req.TargetDate = wire.IsoDate(time.Time{})
 	if err := validateCreate(req); err == nil || err.Field != "target_date" {
 		t.Fatalf("expected target_date error, got %+v", err)
 	}

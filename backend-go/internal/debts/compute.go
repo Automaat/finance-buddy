@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 // debtTypeToCategory maps a debt_type to the liability account category
@@ -57,19 +59,19 @@ func toResponse(d Debt, a AccountInfo, m debtMetrics) response {
 	ip, _ := interestPaid.Float64()
 	out := response{
 		ID: d.ID, AccountID: d.AccountID, AccountName: a.Name, AccountOwnerUserID: a.OwnerUserID,
-		Name: d.Name, DebtType: d.DebtType, StartDate: isoDate(d.StartDate),
-		InitialAmount: pyFloat(initial), InterestRate: pyFloat(rate),
+		Name: d.Name, DebtType: d.DebtType, StartDate: wire.IsoDate(d.StartDate),
+		InitialAmount: wire.PyFloat(initial), InterestRate: wire.PyFloat(rate),
 		Currency: d.Currency, Notes: d.Notes, IsActive: d.IsActive,
-		CreatedAt: isoNaive(d.CreatedAt.UTC()),
-		TotalPaid: pyFloat(totalPaid), InterestPaid: pyFloat(ip),
+		CreatedAt: wire.IsoNaive(d.CreatedAt.UTC()),
+		TotalPaid: wire.PyFloat(totalPaid), InterestPaid: wire.PyFloat(ip),
 	}
 	if m.latestBalance != nil {
 		f, _ := m.latestBalance.Float64()
-		pf := pyFloat(f)
+		pf := wire.PyFloat(f)
 		out.LatestBalance = &pf
 	}
 	if m.latestBalanceDate != nil {
-		d := isoDate(*m.latestBalanceDate)
+		d := wire.IsoDate(*m.latestBalanceDate)
 		out.LatestBalanceDate = &d
 	}
 	return out

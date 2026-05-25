@@ -14,6 +14,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/cpi"
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 // CPILoader is the subset of cpi.Store the handler needs. Decoupling the
@@ -40,19 +41,19 @@ func NewHandler(store *Store, cpiStore CPILoader, logger *slog.Logger) *Handler 
 
 // response is the wire shape for a single bond.
 type response struct {
-	ID            int      `json:"id"`
-	Type          string   `json:"type"`
-	Series        string   `json:"series"`
-	FaceValue     float64  `json:"face_value"`
-	PurchaseDate  isoDate  `json:"purchase_date"`
-	MaturityDate  isoDate  `json:"maturity_date"`
-	OwnerUserID   *int     `json:"owner_user_id"`
-	FirstYearRate float64  `json:"first_year_rate"`
-	Margin        float64  `json:"margin"`
-	Capitalize    bool     `json:"capitalize"`
-	CurrentValue  float64  `json:"current_value"`
-	CurrentYield  float64  `json:"current_yield"`
-	CreatedAt     isoNaive `json:"created_at"`
+	ID            int           `json:"id"`
+	Type          string        `json:"type"`
+	Series        string        `json:"series"`
+	FaceValue     float64       `json:"face_value"`
+	PurchaseDate  wire.IsoDate  `json:"purchase_date"`
+	MaturityDate  wire.IsoDate  `json:"maturity_date"`
+	OwnerUserID   *int          `json:"owner_user_id"`
+	FirstYearRate float64       `json:"first_year_rate"`
+	Margin        float64       `json:"margin"`
+	Capitalize    bool          `json:"capitalize"`
+	CurrentValue  float64       `json:"current_value"`
+	CurrentYield  float64       `json:"current_yield"`
+	CreatedAt     wire.IsoNaive `json:"created_at"`
 }
 
 type listResponse struct {
@@ -62,10 +63,10 @@ type listResponse struct {
 }
 
 type ytmPointResponse struct {
-	Year     int     `json:"year"`
-	Date     isoDate `json:"date"`
-	Value    float64 `json:"value"`
-	YearRate float64 `json:"year_rate"`
+	Year     int          `json:"year"`
+	Date     wire.IsoDate `json:"date"`
+	Value    float64      `json:"value"`
+	YearRate float64      `json:"year_rate"`
 }
 
 type ytmResponse struct {
@@ -74,14 +75,14 @@ type ytmResponse struct {
 }
 
 type createRequest struct {
-	Type          string  `json:"type"`
-	Series        string  `json:"series"`
-	FaceValue     float64 `json:"face_value"`
-	PurchaseDate  isoDate `json:"purchase_date"`
-	OwnerUserID   *int    `json:"owner_user_id"`
-	FirstYearRate float64 `json:"first_year_rate"`
-	Margin        float64 `json:"margin"`
-	Capitalize    bool    `json:"capitalize"`
+	Type          string       `json:"type"`
+	Series        string       `json:"series"`
+	FaceValue     float64      `json:"face_value"`
+	PurchaseDate  wire.IsoDate `json:"purchase_date"`
+	OwnerUserID   *int         `json:"owner_user_id"`
+	FirstYearRate float64      `json:"first_year_rate"`
+	Margin        float64      `json:"margin"`
+	Capitalize    bool         `json:"capitalize"`
 }
 
 func (h *Handler) toResponse(b *TreasuryBond, yoy map[int]decimal.Decimal) response {
@@ -97,15 +98,15 @@ func (h *Handler) toResponse(b *TreasuryBond, yoy map[int]decimal.Decimal) respo
 		Type:          string(b.Type),
 		Series:        b.Series,
 		FaceValue:     face,
-		PurchaseDate:  isoDate(b.PurchaseDate),
-		MaturityDate:  isoDate(MaturityDate(b)),
+		PurchaseDate:  wire.IsoDate(b.PurchaseDate),
+		MaturityDate:  wire.IsoDate(MaturityDate(b)),
 		OwnerUserID:   b.OwnerUserID,
 		FirstYearRate: firstYear,
 		Margin:        margin,
 		Capitalize:    b.Capitalize,
 		CurrentValue:  currentFloat,
 		CurrentYield:  yieldRate,
-		CreatedAt:     isoNaive(b.CreatedAt),
+		CreatedAt:     wire.IsoNaive(b.CreatedAt),
 	}
 }
 
@@ -181,7 +182,7 @@ func (h *Handler) YTM(w http.ResponseWriter, r *http.Request) {
 		rate, _ := p.YearRate.Float64()
 		out.Points = append(out.Points, ytmPointResponse{
 			Year:     p.Year,
-			Date:     isoDate(p.Date),
+			Date:     wire.IsoDate(p.Date),
 			Value:    v,
 			YearRate: rate,
 		})
@@ -298,33 +299,3 @@ func parseIDParam(w http.ResponseWriter, r *http.Request) (int, bool) {
 // Sanity: keep the package's cpi import alive even if the production wiring
 // uses a different interface; the cpi.Store satisfies CPILoader exactly.
 var _ CPILoader = (*cpi.Store)(nil)
-
-// isoDate is the same YYYY-MM-DD format used elsewhere in the backend.
-type isoDate time.Time
-
-const isoDateLayout = "2006-01-02"
-
-func (d isoDate) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(d).Format(isoDateLayout) + `"`), nil
-}
-
-func (d *isoDate) UnmarshalJSON(data []byte) error {
-	var s string
-	if err := json.Unmarshal(data, &s); err != nil {
-		return err
-	}
-	t, err := time.Parse(isoDateLayout, s)
-	if err != nil {
-		return err
-	}
-	*d = isoDate(t)
-	return nil
-}
-
-// isoNaive serializes time.Time without timezone, matching the Python-era
-// JSON shape used by other endpoints.
-type isoNaive time.Time
-
-func (t isoNaive) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(t).Format("2006-01-02T15:04:05.999999") + `"`), nil
-}

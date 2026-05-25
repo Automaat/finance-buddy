@@ -16,6 +16,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/fx"
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 var (
@@ -32,24 +33,24 @@ var (
 
 // response mirrors backend/app/schemas/bonus_events.BonusEventResponse.
 //
-// CreatedAt uses isoNaive — same format every Go-served endpoint emits.
+// CreatedAt uses wire.IsoNaive — same format every Go-served endpoint emits.
 // Python's bonus_events column is TIMESTAMPTZ and Pydantic appends Z; the
 // Go API deliberately diverges (no Z) so the new API stays internally
 // coherent regardless of which migration declared which column type.
 type response struct {
-	ID           int      `json:"id"`
-	Date         isoDate  `json:"date"`
-	Amount       pyFloat  `json:"amount"`
-	Currency     string   `json:"currency"`
-	Type         string   `json:"type"`
-	Company      string   `json:"company"`
-	OwnerUserID  *int     `json:"owner_user_id"`
-	ContractType string   `json:"contract_type"`
-	Notes        *string  `json:"notes"`
-	IsActive     bool     `json:"is_active"`
-	CreatedAt    isoNaive `json:"created_at"`
-	AmountPLN    *pyFloat `json:"amount_pln"`
-	FXRate       *pyFloat `json:"fx_rate"`
+	ID           int           `json:"id"`
+	Date         wire.IsoDate  `json:"date"`
+	Amount       wire.PyFloat  `json:"amount"`
+	Currency     string        `json:"currency"`
+	Type         string        `json:"type"`
+	Company      string        `json:"company"`
+	OwnerUserID  *int          `json:"owner_user_id"`
+	ContractType string        `json:"contract_type"`
+	Notes        *string       `json:"notes"`
+	IsActive     bool          `json:"is_active"`
+	CreatedAt    wire.IsoNaive `json:"created_at"`
+	AmountPLN    *wire.PyFloat `json:"amount_pln"`
+	FXRate       *wire.PyFloat `json:"fx_rate"`
 }
 
 type listResponse struct {
@@ -95,8 +96,8 @@ func (h *Handler) toResponse(ctx context.Context, b *BonusEvent) (response, erro
 	amt, _ := b.Amount.Float64()
 	out := response{
 		ID:           b.ID,
-		Date:         isoDate(b.Date),
-		Amount:       pyFloat(amt),
+		Date:         wire.IsoDate(b.Date),
+		Amount:       wire.PyFloat(amt),
 		Currency:     b.Currency,
 		Type:         b.Type,
 		Company:      b.Company,
@@ -104,16 +105,16 @@ func (h *Handler) toResponse(ctx context.Context, b *BonusEvent) (response, erro
 		ContractType: b.ContractType,
 		Notes:        b.Notes,
 		IsActive:     b.IsActive,
-		CreatedAt:    isoNaive(b.CreatedAt.UTC()),
+		CreatedAt:    wire.IsoNaive(b.CreatedAt.UTC()),
 	}
 	if hasPLN {
 		f, _ := plnAmount.Float64()
-		pf := pyFloat(f)
+		pf := wire.PyFloat(f)
 		out.AmountPLN = &pf
 	}
 	if rate.Found {
 		f, _ := rate.Rate.Float64()
-		pf := pyFloat(f)
+		pf := wire.PyFloat(f)
 		out.FXRate = &pf
 	}
 	return out, nil
@@ -298,46 +299,4 @@ func parseIDParam(w http.ResponseWriter, r *http.Request) (int, bool) {
 		return 0, false
 	}
 	return id, true
-}
-
-// --- shared wire-format helpers (copied per package; promote when third user needs them) ---
-
-type isoDate time.Time
-
-const isoDateLayout = "2006-01-02"
-
-func (d isoDate) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(d).Format(isoDateLayout) + `"`), nil
-}
-
-func (d *isoDate) UnmarshalJSON(data []byte) error {
-	var s string
-	if err := json.Unmarshal(data, &s); err != nil {
-		return fmt.Errorf("date must be a string: %w", err)
-	}
-	t, err := time.Parse(isoDateLayout, s)
-	if err != nil {
-		return fmt.Errorf("date must be YYYY-MM-DD: %w", err)
-	}
-	*d = isoDate(t)
-	return nil
-}
-
-// isoNaive emits a UTC-normalized ISO timestamp without a TZ suffix — the
-// unified format the Go API uses on every created_at field, regardless of
-// whether the underlying Postgres column was declared TIMESTAMPTZ or not.
-type isoNaive time.Time
-
-func (t isoNaive) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(t).Format("2006-01-02T15:04:05.999999") + `"`), nil
-}
-
-type pyFloat float64
-
-func (f pyFloat) MarshalJSON() ([]byte, error) {
-	s := strconv.FormatFloat(float64(f), 'f', -1, 64)
-	if !strings.ContainsRune(s, '.') {
-		s += ".0"
-	}
-	return []byte(s), nil
 }

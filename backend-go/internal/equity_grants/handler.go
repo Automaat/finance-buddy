@@ -18,6 +18,7 @@ import (
 
 	companyvaluations "github.com/Automaat/finance-buddy/backend-go/internal/company_valuations"
 	"github.com/Automaat/finance-buddy/backend-go/internal/fx"
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 var (
@@ -38,38 +39,38 @@ var (
 // response mirrors backend/app/schemas/equity_grants.EquityGrantResponse.
 type response struct {
 	ID                     int                   `json:"id"`
-	GrantDate              isoDate               `json:"grant_date"`
+	GrantDate              wire.IsoDate          `json:"grant_date"`
 	Type                   string                `json:"type"`
 	Company                string                `json:"company"`
 	OwnerUserID            *int                  `json:"owner_user_id"`
 	TotalShares            int                   `json:"total_shares"`
-	StrikePrice            *pyFloat              `json:"strike_price"`
+	StrikePrice            *wire.PyFloat         `json:"strike_price"`
 	Currency               string                `json:"currency"`
-	VestStartDate          isoDate               `json:"vest_start_date"`
+	VestStartDate          wire.IsoDate          `json:"vest_start_date"`
 	VestCliffMonths        int                   `json:"vest_cliff_months"`
 	VestTotalMonths        int                   `json:"vest_total_months"`
 	VestFrequency          string                `json:"vest_frequency"`
 	VestCustomSchedule     []CustomScheduleEntry `json:"vest_custom_schedule"`
 	RequiresLiquidityEvent bool                  `json:"requires_liquidity_event"`
-	LiquidityEventDate     *isoDate              `json:"liquidity_event_date"`
+	LiquidityEventDate     *wire.IsoDate         `json:"liquidity_event_date"`
 	TaxTreatment           string                `json:"tax_treatment"`
 	Notes                  *string               `json:"notes"`
 	IsActive               bool                  `json:"is_active"`
-	CreatedAt              isoNaive              `json:"created_at"`
+	CreatedAt              wire.IsoNaive         `json:"created_at"`
 
 	// Computed
-	VestedSharesToday  int      `json:"vested_shares_today"`
-	VestingProgressPct pyFloat  `json:"vesting_progress_pct"`
-	PaperValueBase     *pyFloat `json:"paper_value_base"`
-	PaperValueLow      *pyFloat `json:"paper_value_low"`
-	PaperValueHigh     *pyFloat `json:"paper_value_high"`
-	PaperValueCurrency *string  `json:"paper_value_currency"`
-	PaperValueBasePLN  *pyFloat `json:"paper_value_base_pln"`
-	PaperValueLowPLN   *pyFloat `json:"paper_value_low_pln"`
-	PaperValueHighPLN  *pyFloat `json:"paper_value_high_pln"`
-	FXRate             *pyFloat `json:"fx_rate"`
-	ValuationDate      *isoDate `json:"valuation_date"`
-	ValuationSource    *string  `json:"valuation_source"`
+	VestedSharesToday  int           `json:"vested_shares_today"`
+	VestingProgressPct wire.PyFloat  `json:"vesting_progress_pct"`
+	PaperValueBase     *wire.PyFloat `json:"paper_value_base"`
+	PaperValueLow      *wire.PyFloat `json:"paper_value_low"`
+	PaperValueHigh     *wire.PyFloat `json:"paper_value_high"`
+	PaperValueCurrency *string       `json:"paper_value_currency"`
+	PaperValueBasePLN  *wire.PyFloat `json:"paper_value_base_pln"`
+	PaperValueLowPLN   *wire.PyFloat `json:"paper_value_low_pln"`
+	PaperValueHighPLN  *wire.PyFloat `json:"paper_value_high_pln"`
+	FXRate             *wire.PyFloat `json:"fx_rate"`
+	ValuationDate      *wire.IsoDate `json:"valuation_date"`
+	ValuationSource    *string       `json:"valuation_source"`
 }
 
 type listResponse struct {
@@ -136,13 +137,13 @@ func (h *Handler) toResponse(ctx context.Context, g *EquityGrant) (response, err
 
 	out := response{
 		ID:                     g.ID,
-		GrantDate:              isoDate(g.GrantDate),
+		GrantDate:              wire.IsoDate(g.GrantDate),
 		Type:                   g.Type,
 		Company:                g.Company,
 		OwnerUserID:            g.OwnerUserID,
 		TotalShares:            g.TotalShares,
 		Currency:               g.Currency,
-		VestStartDate:          isoDate(g.VestStartDate),
+		VestStartDate:          wire.IsoDate(g.VestStartDate),
 		VestCliffMonths:        g.VestCliffMonths,
 		VestTotalMonths:        g.VestTotalMonths,
 		VestFrequency:          g.VestFrequency,
@@ -151,17 +152,17 @@ func (h *Handler) toResponse(ctx context.Context, g *EquityGrant) (response, err
 		TaxTreatment:           g.TaxTreatment,
 		Notes:                  g.Notes,
 		IsActive:               g.IsActive,
-		CreatedAt:              isoNaive(g.CreatedAt.UTC()),
+		CreatedAt:              wire.IsoNaive(g.CreatedAt.UTC()),
 		VestedSharesToday:      vested,
-		VestingProgressPct:     pyFloat(progress),
+		VestingProgressPct:     wire.PyFloat(progress),
 	}
 	if g.StrikePrice != nil {
 		f, _ := g.StrikePrice.Float64()
-		pf := pyFloat(f)
+		pf := wire.PyFloat(f)
 		out.StrikePrice = &pf
 	}
 	if g.LiquidityEventDate != nil {
-		d := isoDate(*g.LiquidityEventDate)
+		d := wire.IsoDate(*g.LiquidityEventDate)
 		out.LiquidityEventDate = &d
 	}
 	attachPaperValues(&out, paper)
@@ -172,17 +173,17 @@ func (h *Handler) toResponse(ctx context.Context, g *EquityGrant) (response, err
 func attachPaperValues(out *response, paper paperValueResult) {
 	if paper.Base != nil {
 		f, _ := paper.Base.Float64()
-		pf := pyFloat(f)
+		pf := wire.PyFloat(f)
 		out.PaperValueBase = &pf
 	}
 	if paper.Low != nil {
 		f, _ := paper.Low.Float64()
-		pf := pyFloat(f)
+		pf := wire.PyFloat(f)
 		out.PaperValueLow = &pf
 	}
 	if paper.High != nil {
 		f, _ := paper.High.Float64()
-		pf := pyFloat(f)
+		pf := wire.PyFloat(f)
 		out.PaperValueHigh = &pf
 	}
 	if paper.Currency != "" {
@@ -190,7 +191,7 @@ func attachPaperValues(out *response, paper paperValueResult) {
 		out.PaperValueCurrency = &c
 	}
 	if paper.ValuationDate != nil {
-		d := isoDate(*paper.ValuationDate)
+		d := wire.IsoDate(*paper.ValuationDate)
 		out.ValuationDate = &d
 	}
 	if paper.ValuationSource != "" {
@@ -205,7 +206,7 @@ func attachFX(out *response, rate fx.Result, currency string, paper paperValueRe
 	}
 	if rate.Found {
 		f, _ := rate.Rate.Float64()
-		pf := pyFloat(f)
+		pf := wire.PyFloat(f)
 		out.FXRate = &pf
 	}
 	out.PaperValueBasePLN = pln(paper.Base, currency, rate)
@@ -213,13 +214,13 @@ func attachFX(out *response, rate fx.Result, currency string, paper paperValueRe
 	out.PaperValueHighPLN = pln(paper.High, currency, rate)
 }
 
-func pln(amount *decimal.Decimal, currency string, rate fx.Result) *pyFloat {
+func pln(amount *decimal.Decimal, currency string, rate fx.Result) *wire.PyFloat {
 	v, ok := fx.ToPLN(amount, currency, rate)
 	if !ok {
 		return nil
 	}
 	f, _ := v.Float64()
-	pf := pyFloat(f)
+	pf := wire.PyFloat(f)
 	return &pf
 }
 
@@ -368,43 +369,4 @@ func parseIDParam(w http.ResponseWriter, r *http.Request) (int, bool) {
 		return 0, false
 	}
 	return id, true
-}
-
-// --- shared wire types ---
-
-type isoDate time.Time
-
-const isoDateLayout = "2006-01-02"
-
-func (d isoDate) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(d).Format(isoDateLayout) + `"`), nil
-}
-
-func (d *isoDate) UnmarshalJSON(data []byte) error {
-	var s string
-	if err := json.Unmarshal(data, &s); err != nil {
-		return fmt.Errorf("date must be a string: %w", err)
-	}
-	t, err := time.Parse(isoDateLayout, s)
-	if err != nil {
-		return fmt.Errorf("date must be YYYY-MM-DD: %w", err)
-	}
-	*d = isoDate(t)
-	return nil
-}
-
-type isoNaive time.Time
-
-func (t isoNaive) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(t).Format("2006-01-02T15:04:05.999999") + `"`), nil
-}
-
-type pyFloat float64
-
-func (f pyFloat) MarshalJSON() ([]byte, error) {
-	s := strconv.FormatFloat(float64(f), 'f', -1, 64)
-	if !strings.ContainsRune(s, '.') {
-		s += ".0"
-	}
-	return []byte(s), nil
 }

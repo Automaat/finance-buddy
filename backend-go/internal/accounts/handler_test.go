@@ -10,10 +10,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 func TestIsoNaiveMarshalJSON(t *testing.T) {
-	tm := isoNaive(time.Date(2026, 5, 23, 10, 11, 12, 345678000, time.UTC))
+	tm := wire.IsoNaive(time.Date(2026, 5, 23, 10, 11, 12, 345678000, time.UTC))
 	got, err := tm.MarshalJSON()
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
@@ -25,7 +27,7 @@ func TestIsoNaiveMarshalJSON(t *testing.T) {
 }
 
 func TestIsoNaiveZeroValueFormatsAsZero(t *testing.T) {
-	tm := isoNaive(time.Time{})
+	tm := wire.IsoNaive(time.Time{})
 	got, err := tm.MarshalJSON()
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
@@ -36,7 +38,7 @@ func TestIsoNaiveZeroValueFormatsAsZero(t *testing.T) {
 }
 
 func TestPyFloatIntegerGetsDotZero(t *testing.T) {
-	got, err := pyFloat(5).MarshalJSON()
+	got, err := wire.PyFloat(5).MarshalJSON()
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
@@ -46,7 +48,7 @@ func TestPyFloatIntegerGetsDotZero(t *testing.T) {
 }
 
 func TestPyFloatPreservesDecimal(t *testing.T) {
-	got, err := pyFloat(5.5).MarshalJSON()
+	got, err := wire.PyFloat(5.5).MarshalJSON()
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
@@ -56,7 +58,7 @@ func TestPyFloatPreservesDecimal(t *testing.T) {
 }
 
 func TestPyFloatNegative(t *testing.T) {
-	got, err := pyFloat(-12.34).MarshalJSON()
+	got, err := wire.PyFloat(-12.34).MarshalJSON()
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}

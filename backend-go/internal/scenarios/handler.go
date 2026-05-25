@@ -3,15 +3,15 @@ package scenarios
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
 // response mirrors the wire shape returned to the frontend. CreatedAt /
@@ -22,8 +22,8 @@ type response struct {
 	Name       string          `json:"name"`
 	Kind       string          `json:"kind"`
 	InputsJSON json.RawMessage `json:"inputs_json"`
-	CreatedAt  isoNaive        `json:"created_at"`
-	UpdatedAt  isoNaive        `json:"updated_at"`
+	CreatedAt  wire.IsoNaive   `json:"created_at"`
+	UpdatedAt  wire.IsoNaive   `json:"updated_at"`
 }
 
 type listResponse struct {
@@ -224,15 +224,7 @@ func toResponse(sc *Scenario) response {
 		Name:       sc.Name,
 		Kind:       sc.Kind,
 		InputsJSON: sc.InputsJSON,
-		CreatedAt:  isoNaive(sc.CreatedAt),
-		UpdatedAt:  isoNaive(sc.UpdatedAt),
+		CreatedAt:  wire.IsoNaive(sc.CreatedAt.UTC()),
+		UpdatedAt:  wire.IsoNaive(sc.UpdatedAt.UTC()),
 	}
-}
-
-// isoNaive marshals a time.Time as a naive ISO-8601 timestamp (no zone)
-// matching the rest of the codebase's `timestamp without time zone` columns.
-type isoNaive time.Time
-
-func (t isoNaive) MarshalJSON() ([]byte, error) {
-	return fmt.Appendf(nil, "%q", time.Time(t).UTC().Format("2006-01-02T15:04:05.999999")), nil
 }
