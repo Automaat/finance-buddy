@@ -7027,6 +7027,14 @@
                           "format": "double",
                           "type": "number"
                         },
+                        "inflation_mean": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "inflation_volatility": {
+                          "format": "double",
+                          "type": "number"
+                        },
                         "source": {
                           "type": "string"
                         },
@@ -7051,7 +7059,27 @@
                             "format": "double",
                             "type": "number"
                           },
+                          "p50_real": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "p5_real": {
+                            "format": "double",
+                            "type": "number"
+                          },
                           "p95": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "p95_real": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "spending": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "spending_real": {
                             "format": "double",
                             "type": "number"
                           }

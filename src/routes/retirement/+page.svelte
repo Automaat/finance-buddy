@@ -23,6 +23,10 @@
 	let allocCash = $state(10);
 	const allocSum = $derived(allocStocks + allocBonds + allocCash);
 
+	let inflationMean = $state(3);
+	let inflationVolatility = $state(1);
+	let showReal = $state(true);
+
 	let loading = $state(false);
 	let error = $state('');
 	let result: MonteCarloResult | null = $state(null);
@@ -59,6 +63,11 @@
 				loading = false;
 				return;
 			}
+			if (inflationVolatility < 0) {
+				error = 'Zmienność inflacji nie może być ujemna';
+				loading = false;
+				return;
+			}
 
 			const apiUrl = resolveApiUrl();
 			const body: Record<string, unknown> = {
@@ -69,7 +78,9 @@
 				current_age: currentAge,
 				retirement_age: retirementAge,
 				life_expectancy: lifeExpectancy,
-				annual_withdrawal: annualWithdrawal
+				annual_withdrawal: annualWithdrawal,
+				inflation_mean: inflationMean,
+				inflation_volatility: inflationVolatility
 			};
 			if (useAllocation) {
 				body.allocation = {
@@ -92,7 +103,8 @@
 		}
 	}
 
-	// Render the fan chart whenever results land and the container is bound.
+	// Render the fan chart whenever results land and the container is bound,
+	// or the real/nominal toggle flips.
 	$effect(() => {
 		if (!chartContainer) {
 			chartHandle?.dispose();
@@ -106,7 +118,7 @@
 			chartHandle = createChart(chartContainer);
 			chart = chartHandle.chart;
 		}
-		chart?.setOption(buildMonteCarloFanOption(result));
+		chart?.setOption(buildMonteCarloFanOption(result, { real: showReal }), true);
 	});
 
 	const successPercent = $derived.by(() => {
@@ -201,6 +213,29 @@
 				<span class="text-xs font-semibold">Roczna wypłata na emeryturze (PLN)</span>
 				<input type="number" min="0" class="input w-full" bind:value={annualWithdrawal} />
 			</label>
+		</div>
+
+		<div class="space-y-3 pt-2 border-t border-surface-300-700">
+			<div class="text-sm font-semibold">Inflacja</div>
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+				<label class="space-y-1">
+					<span class="text-xs font-semibold">Średnia roczna inflacja (%)</span>
+					<input type="number" step="0.1" class="input w-full" bind:value={inflationMean} />
+				</label>
+				<label class="space-y-1">
+					<span class="text-xs font-semibold">Zmienność inflacji / odch. std. (%)</span>
+					<input
+						type="number"
+						min="0"
+						step="0.1"
+						class="input w-full"
+						bind:value={inflationVolatility}
+					/>
+				</label>
+			</div>
+			<p class="text-xs text-surface-600-400">
+				Roczna wypłata jest interpretowana jako kwota w dzisiejszych PLN i rośnie razem z inflacją.
+			</p>
 		</div>
 
 		<div class="space-y-3 pt-2 border-t border-surface-300-700">
@@ -313,6 +348,10 @@
 							: 'wpisane ręcznie'})
 					</span>
 				</div>
+				<div class="text-xs text-surface-700-300">
+					Inflacja: średnia <strong>{result.assumptions.inflation_mean.toFixed(2)}%</strong>,
+					zmienność <strong>{result.assumptions.inflation_volatility.toFixed(2)}%</strong>
+				</div>
 				{#if result.assumptions.allocation}
 					<div class="text-xs text-surface-700-300">
 						Alokacja: {result.assumptions.allocation.stocks_pct}% akcje /
@@ -322,24 +361,48 @@
 				{/if}
 			</div>
 
+			<label class="flex items-center gap-2 text-sm">
+				<input type="checkbox" class="checkbox" bind:checked={showReal} />
+				Pokaż wartości realne (w dzisiejszych PLN)
+			</label>
+
 			<div bind:this={chartContainer} class="w-full h-[320px] sm:h-[420px]"></div>
 
 			{#if result.bands.length > 0}
 				{@const last = result.bands[result.bands.length - 1]}
+				{@const lastP5 = showReal ? last.p5_real : last.p5}
+				{@const lastP50 = showReal ? last.p50_real : last.p50}
+				{@const lastP95 = showReal ? last.p95_real : last.p95}
+				{@const lastSpending = showReal ? last.spending_real : last.spending}
+				{@const valueLabel = showReal ? 'realne' : 'nominalne'}
 				<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
 					<div class="card preset-tonal-surface p-4">
-						<div class="text-xs text-surface-600-400">Pesymistyczne (P5) w wieku {last.age}</div>
-						<div class="text-xl font-bold">{formatPLN(last.p5)} PLN</div>
+						<div class="text-xs text-surface-600-400">
+							Pesymistyczne (P5) w wieku {last.age} ({valueLabel})
+						</div>
+						<div class="text-xl font-bold">{formatPLN(lastP5)} PLN</div>
 					</div>
 					<div class="card preset-tonal-surface p-4">
-						<div class="text-xs text-surface-600-400">Mediana (P50) w wieku {last.age}</div>
-						<div class="text-xl font-bold">{formatPLN(last.p50)} PLN</div>
+						<div class="text-xs text-surface-600-400">
+							Mediana (P50) w wieku {last.age} ({valueLabel})
+						</div>
+						<div class="text-xl font-bold">{formatPLN(lastP50)} PLN</div>
 					</div>
 					<div class="card preset-tonal-surface p-4">
-						<div class="text-xs text-surface-600-400">Optymistyczne (P95) w wieku {last.age}</div>
-						<div class="text-xl font-bold">{formatPLN(last.p95)} PLN</div>
+						<div class="text-xs text-surface-600-400">
+							Optymistyczne (P95) w wieku {last.age} ({valueLabel})
+						</div>
+						<div class="text-xl font-bold">{formatPLN(lastP95)} PLN</div>
 					</div>
 				</div>
+				{#if lastSpending > 0}
+					<div class="card preset-tonal-surface p-4">
+						<div class="text-xs text-surface-600-400">
+							Średnia wypłata w wieku {last.age} ({valueLabel})
+						</div>
+						<div class="text-xl font-bold">{formatPLN(lastSpending)} PLN</div>
+					</div>
+				{/if}
 			{/if}
 		</section>
 	{/if}

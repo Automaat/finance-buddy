@@ -288,16 +288,18 @@ func (h *Handler) Retirement(w http.ResponseWriter, r *http.Request) {
 
 // monteCarloInputsWire mirrors MonteCarloInputs over JSON.
 type monteCarloInputsWire struct {
-	CurrentPortfolio   pyFloat                   `json:"current_portfolio"`
-	AnnualContribution pyFloat                   `json:"annual_contribution"`
-	ExpectedReturn     pyFloat                   `json:"expected_return"`
-	Volatility         pyFloat                   `json:"volatility"`
-	CurrentAge         int                       `json:"current_age"`
-	RetirementAge      int                       `json:"retirement_age"`
-	LifeExpectancy     int                       `json:"life_expectancy"`
-	AnnualWithdrawal   pyFloat                   `json:"annual_withdrawal"`
-	Paths              int                       `json:"paths,omitempty"`
-	Allocation         *monteCarloAllocationWire `json:"allocation,omitempty"`
+	CurrentPortfolio    pyFloat                   `json:"current_portfolio"`
+	AnnualContribution  pyFloat                   `json:"annual_contribution"`
+	ExpectedReturn      pyFloat                   `json:"expected_return"`
+	Volatility          pyFloat                   `json:"volatility"`
+	CurrentAge          int                       `json:"current_age"`
+	RetirementAge       int                       `json:"retirement_age"`
+	LifeExpectancy      int                       `json:"life_expectancy"`
+	AnnualWithdrawal    pyFloat                   `json:"annual_withdrawal"`
+	Paths               int                       `json:"paths,omitempty"`
+	Allocation          *monteCarloAllocationWire `json:"allocation,omitempty"`
+	InflationMean       pyFloat                   `json:"inflation_mean"`
+	InflationVolatility pyFloat                   `json:"inflation_volatility"`
 }
 
 type monteCarloAllocationWire struct {
@@ -352,19 +354,29 @@ func (h *Handler) MonteCarlo(w http.ResponseWriter, r *http.Request) {
 		writeValidationError(w, "volatility", "volatility must be non-negative", "")
 		return
 	}
+	if in.InflationVolatility < 0 {
+		writeValidationError(w, "inflation_volatility", "inflation_volatility must be non-negative", "")
+		return
+	}
+	if in.InflationMean < -50 || in.InflationMean > 50 {
+		writeValidationError(w, "inflation_mean", "inflation_mean must be within [-50, 50]", "")
+		return
+	}
 
 	rng := rand.New(rand.NewPCG(uint64(h.now().UnixNano()), 0xdeadbeef))
 	result := RunMonteCarlo(rng, MonteCarloInputs{
-		CurrentPortfolio:   float64(in.CurrentPortfolio),
-		AnnualContribution: float64(in.AnnualContribution),
-		ExpectedReturn:     float64(in.ExpectedReturn),
-		Volatility:         float64(in.Volatility),
-		CurrentAge:         in.CurrentAge,
-		RetirementAge:      in.RetirementAge,
-		LifeExpectancy:     in.LifeExpectancy,
-		AnnualWithdrawal:   float64(in.AnnualWithdrawal),
-		Paths:              in.Paths,
-		Allocation:         allocation,
+		CurrentPortfolio:    float64(in.CurrentPortfolio),
+		AnnualContribution:  float64(in.AnnualContribution),
+		ExpectedReturn:      float64(in.ExpectedReturn),
+		Volatility:          float64(in.Volatility),
+		CurrentAge:          in.CurrentAge,
+		RetirementAge:       in.RetirementAge,
+		LifeExpectancy:      in.LifeExpectancy,
+		AnnualWithdrawal:    float64(in.AnnualWithdrawal),
+		Paths:               in.Paths,
+		Allocation:          allocation,
+		InflationMean:       float64(in.InflationMean),
+		InflationVolatility: float64(in.InflationVolatility),
 	})
 	writeJSON(w, http.StatusOK, result)
 }
