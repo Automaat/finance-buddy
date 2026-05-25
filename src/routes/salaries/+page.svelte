@@ -14,6 +14,7 @@
 		isNonNegative,
 		isoDateLocal
 	} from '$lib/utils/salaries';
+	import { computeYearlyEquityComp } from '$lib/utils/equity_vesting';
 	import { buildCpiLookup, inflationAdjust, parseIsoDate } from '$lib/utils/inflation';
 	import { grossToNet, type PlContractType } from '$lib/utils/pl_tax';
 	import { PL_RULES } from '$lib/utils/pl_rules.generated';
@@ -151,9 +152,10 @@
 		baseAnnualNet: number;
 		bonusesPln: number;
 		bonusesNetPln: number;
-		equityPaperPln: number;
-		equityPaperLowPln: number;
-		equityPaperHighPln: number;
+		equityVestedYearPln: number;
+		equityVestedYearLowPln: number;
+		equityVestedYearHighPln: number;
+		equityLockedYearPln: number;
 		equityNetPln: number;
 		hasEquityWithoutFx: boolean;
 	};
@@ -197,25 +199,15 @@
 					.netAnnual - baseAnnualNet
 			: 0;
 
-		let equityPaperPln = 0;
-		let equityPaperLowPln = 0;
-		let equityPaperHighPln = 0;
-		let hasEquityWithoutFx = false;
-		for (const g of data.equity?.equity_grants ?? []) {
-			if (g.owner_user_id !== ownerUserId) continue;
-			if (g.paper_value_base_pln === null && g.paper_value_base !== null) {
-				hasEquityWithoutFx = true;
-				continue;
-			}
-			if (g.paper_value_base_pln !== null) {
-				equityPaperPln += g.paper_value_base_pln;
-				equityPaperLowPln += g.paper_value_low_pln ?? g.paper_value_base_pln;
-				equityPaperHighPln += g.paper_value_high_pln ?? g.paper_value_base_pln;
-			}
-		}
+		const equity = computeYearlyEquityComp(
+			data.equity?.equity_grants ?? [],
+			data.valuations?.company_valuations ?? [],
+			ownerUserId,
+			totalCompYear
+		);
 		// Equity "net" assumes capital-gains treatment on realization; grants on
 		// employment_income would be ~12/32% + ZUS instead. Rough estimate only.
-		const equityNetPln = equityPaperPln * (1 - EQUITY_CAPITAL_GAINS_RATE);
+		const equityNetPln = equity.vestedPln * (1 - EQUITY_CAPITAL_GAINS_RATE);
 
 		return {
 			ownerUserId,
@@ -223,11 +215,12 @@
 			baseAnnualNet,
 			bonusesPln,
 			bonusesNetPln,
-			equityPaperPln,
-			equityPaperLowPln,
-			equityPaperHighPln,
+			equityVestedYearPln: equity.vestedPln,
+			equityVestedYearLowPln: equity.vestedLowPln,
+			equityVestedYearHighPln: equity.vestedHighPln,
+			equityLockedYearPln: equity.lockedPln,
 			equityNetPln,
-			hasEquityWithoutFx
+			hasEquityWithoutFx: equity.hasEquityWithoutFx
 		};
 	});
 
@@ -236,7 +229,7 @@
 	const totalCompGross = $derived(
 		(compSummary?.baseAnnualGross ?? 0) +
 			(compSummary?.bonusesPln ?? 0) +
-			(includeEquityInTotal ? (compSummary?.equityPaperPln ?? 0) : 0)
+			(includeEquityInTotal ? (compSummary?.equityVestedYearPln ?? 0) : 0)
 	);
 	const totalCompNet = $derived(
 		(compSummary?.baseAnnualNet ?? 0) +
@@ -1111,14 +1104,19 @@
 			companyMap.get(companyName)!.push([r.date, r.gross_amount]);
 		});
 
-		companyMap.forEach((rows) =>
-			rows.sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
-		);
-
 		const colors = ['#5E81AC', '#88C0D0', '#A3BE8C', '#EBCB8B', '#D08770', '#B48EAD', '#BF616A'];
 		// Date-only `today` matches the backend (which is also date-only).
 		const now = new Date();
 		const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+		const todayIso = isoDateLocal(todayDate);
+
+		companyMap.forEach((rows) => {
+			rows.sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime());
+			// Carry the most recent salary forward to today so a single-record
+			// series still renders as a flat line instead of a lone dot.
+			const last = rows[rows.length - 1];
+			if (last && last[0] < todayIso) rows.push([todayIso, last[1]]);
+		});
 		const cpiLookup = buildCpiLookup(cpiSeries);
 		const hasCpi = cpiLookup !== null;
 
@@ -1319,16 +1317,23 @@
 					{/if}
 				</div>
 				<div class="card preset-tonal-surface p-3">
-					<div class="text-xs text-surface-700-300">Equity (paper, dziś)</div>
-					<div class="text-lg font-semibold">{formatPLN(compSummary.equityPaperPln)}</div>
-					{#if compSummary.equityPaperLowPln !== compSummary.equityPaperHighPln}
+					<div class="text-xs text-surface-700-300">Equity vesting w {totalCompYear}</div>
+					<div class="text-lg font-semibold">{formatPLN(compSummary.equityVestedYearPln)}</div>
+					{#if compSummary.equityVestedYearLowPln !== compSummary.equityVestedYearHighPln}
 						<div class="text-xs text-surface-700-300">
-							{formatPLN(compSummary.equityPaperLowPln)}–{formatPLN(compSummary.equityPaperHighPln)}
+							{formatPLN(compSummary.equityVestedYearLowPln)}–{formatPLN(
+								compSummary.equityVestedYearHighPln
+							)}
 						</div>
 					{/if}
-					{#if compSummary.equityPaperPln > 0}
+					{#if compSummary.equityVestedYearPln > 0}
 						<div class="text-xs text-surface-700-300">
 							po podatku 19% (szac.): {formatPLN(compSummary.equityNetPln)}
+						</div>
+					{/if}
+					{#if compSummary.equityLockedYearPln > 0}
+						<div class="text-xs text-warning-500">
+							+ {formatPLN(compSummary.equityLockedYearPln)} zablokowane (RSU, czeka na liquidity event)
 						</div>
 					{/if}
 					{#if compSummary.hasEquityWithoutFx}
@@ -1346,12 +1351,12 @@
 				</div>
 			</div>
 			<div class="text-xs text-surface-700-300">
-				Pensja + bonusy filtrowane po roku. Equity zawsze jako wartość dzisiejsza (bieżący vested ×
-				najnowsza wycena), niezależnie od wybranego roku.
+				Pensja, bonusy i equity filtrowane po roku. Equity = akcje time-vesting w wybranym roku ×
+				najnowsza wycena per share (intrinsic spread dla opcji, FMV dla RSU).
 			</div>
 			<label class="flex items-center gap-2 text-sm cursor-pointer">
 				<input type="checkbox" class="checkbox" bind:checked={includeEquityInTotal} />
-				<span>Wlicz equity paper value do total (uwaga: nie zrealizowane do sprzedaży)</span>
+				<span>Wlicz equity vesting w tym roku do total (uwaga: nie zrealizowane do sprzedaży)</span>
 			</label>
 		{:else}
 			<p class="text-sm text-surface-700-300">Wybierz właściciela aby zobaczyć podsumowanie.</p>
