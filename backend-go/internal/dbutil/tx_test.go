@@ -46,6 +46,9 @@ func TestWithTxWrapsBeginError(t *testing.T) {
 		return nil
 	})
 
+	if err == nil {
+		t.Fatal("err nil")
+	}
 	if !errors.Is(err, inner) {
 		t.Fatalf("inner not wrapped: %v", err)
 	}
@@ -83,6 +86,9 @@ func TestWithTxRollsBackCommitError(t *testing.T) {
 		return nil
 	})
 
+	if err == nil {
+		t.Fatal("err nil")
+	}
 	if !errors.Is(err, inner) {
 		t.Fatalf("inner not wrapped: %v", err)
 	}

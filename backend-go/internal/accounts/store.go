@@ -185,7 +185,7 @@ type UpdatePatch struct {
 // snapshot_aggregates recompute for every snapshot referencing the account.
 // The whole op runs in one transaction.
 func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*Account, error) {
-	var updated *Account
+	var updated Account
 	err := dbutil.WithTx(ctx, s.pool, "begin update tx", "commit update tx", func(tx pgx.Tx) error {
 		current, err := lockAccount(ctx, tx, id)
 		if err != nil {
@@ -215,13 +215,17 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*Account, er
 				return err
 			}
 		}
-		updated, err = loadAccount(ctx, tx, id)
-		return err
+		loaded, err := loadAccount(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		updated = *loaded
+		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	return updated, nil
+	return &updated, nil
 }
 
 // Delete soft-deletes + cascades into aggregate recompute.

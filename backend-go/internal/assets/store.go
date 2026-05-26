@@ -127,7 +127,7 @@ func (s *Store) Create(ctx context.Context, name string) (*Asset, error) {
 // Update applies the (only) field: name. No cascade — assets don't carry
 // owner/category, so aggregates are unaffected by a rename.
 func (s *Store) Update(ctx context.Context, id int, name *string) (*Asset, error) {
-	var updated *Asset
+	var updated Asset
 	err := dbutil.WithTx(ctx, s.pool, "begin update tx", "commit update tx", func(tx pgx.Tx) error {
 		current, err := lockAsset(ctx, tx, id)
 		if err != nil {
@@ -142,13 +142,13 @@ func (s *Store) Update(ctx context.Context, id int, name *string) (*Asset, error
 			}
 			current.Name = *name
 		}
-		updated = current
+		updated = *current
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	return updated, nil
+	return &updated, nil
 }
 
 // Delete soft-deletes and cascades into aggregate recompute.

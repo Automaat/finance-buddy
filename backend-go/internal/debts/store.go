@@ -373,7 +373,7 @@ type UpdatePatch struct {
 
 // Update applies the patch.
 func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*DebtWithAccount, error) {
-	var updated *DebtWithAccount
+	var updated DebtWithAccount
 	err := dbutil.WithTx(ctx, s.pool, "begin update tx", "commit update", func(tx pgx.Tx) error {
 		row := tx.QueryRow(ctx,
 			`SELECT `+debtCols+` FROM debts WHERE id = $1 AND is_active = true FOR UPDATE`, id,
@@ -401,13 +401,13 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*DebtWithAcc
 		if err := row.Scan(&a.Name, &a.OwnerUserID); err != nil {
 			return fmt.Errorf("load account for debt: %w", err)
 		}
-		updated = &DebtWithAccount{Debt: *current, Account: a}
+		updated = DebtWithAccount{Debt: *current, Account: a}
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	return updated, nil
+	return &updated, nil
 }
 
 // Delete soft-deletes a debt.

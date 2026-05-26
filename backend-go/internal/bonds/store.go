@@ -110,7 +110,7 @@ type UpdatePatch struct {
 
 // Update applies the patch and returns the refreshed bond.
 func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*TreasuryBond, error) {
-	var updated *TreasuryBond
+	var updated TreasuryBond
 	err := dbutil.WithTx(ctx, s.pool, "begin update tx", "commit update tx", func(tx pgx.Tx) error {
 		row := tx.QueryRow(ctx,
 			`SELECT `+selectColumns+` FROM treasury_bonds WHERE id = $1 AND is_active = true FOR UPDATE`, id,
@@ -152,16 +152,17 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*TreasuryBon
 			string(b.Type), b.Series, b.FaceValue, b.PurchaseDate, b.OwnerUserID,
 			b.FirstYearRate, b.Margin, b.Capitalize, id,
 		)
-		updated, err = scanBond(row)
+		loaded, err := scanBond(row)
 		if err != nil {
 			return fmt.Errorf("update treasury bond: %w", err)
 		}
+		updated = *loaded
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	return updated, nil
+	return &updated, nil
 }
 
 // Delete soft-deletes the bond by toggling is_active. Hard delete would
