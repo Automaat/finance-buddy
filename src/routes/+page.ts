@@ -22,11 +22,12 @@ export async function load({ fetch, url }) {
 
 	const dashboardData = (async () => {
 		try {
-			const [dashboardRes, retirementRes, bondsRes, driftRes] = await Promise.all([
+			const [dashboardRes, retirementRes, bondsRes, driftRes, ladderRes] = await Promise.all([
 				fetch(dashboardURL),
 				fetch(`${apiUrl}/api/retirement/stats?year=${currentYear}`),
 				fetch(`${apiUrl}/api/bonds`),
-				fetch(`${apiUrl}/api/allocation/drift`)
+				fetch(`${apiUrl}/api/allocation/drift`),
+				fetch(`${apiUrl}/api/bonds/maturity-ladder`)
 			]);
 
 			if (!dashboardRes.ok) {
@@ -37,13 +38,17 @@ export async function load({ fetch, url }) {
 			const retirementStats = retirementRes.ok ? await retirementRes.json() : [];
 			const bondsBody = bondsRes.ok ? await bondsRes.json() : { total_value: 0, total_count: 0 };
 			const allocationDrift = driftRes.ok ? await driftRes.json() : { scopes: [] };
+			const bondsLadder = ladderRes.ok
+				? await ladderRes.json()
+				: { events: [], next_maturity: null, tax_rate_pct: 19 };
 
 			return {
 				...dashboard,
 				retirementStats,
 				treasuryBondsValue: bondsBody.total_value ?? 0,
 				treasuryBondsCount: bondsBody.total_count ?? 0,
-				allocationDrift
+				allocationDrift,
+				bondsNextMaturity: bondsLadder.next_maturity
 			};
 		} catch (err) {
 			if (isHttpError(err)) {

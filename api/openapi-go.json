@@ -1835,6 +1835,116 @@
         ]
       }
     },
+    "/api/bonds/maturity-ladder": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "events": {
+                      "items": {
+                        "properties": {
+                          "bond_ids": {
+                            "items": {
+                              "type": "integer"
+                            },
+                            "type": "array"
+                          },
+                          "count": {
+                            "type": "integer"
+                          },
+                          "interest_gross": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "month": {
+                            "format": "date",
+                            "type": "string"
+                          },
+                          "net_cashflow": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "principal": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "tax": {
+                            "format": "double",
+                            "type": "number"
+                          },
+                          "type": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "next_maturity": {
+                      "nullable": true,
+                      "properties": {
+                        "bond_ids": {
+                          "items": {
+                            "type": "integer"
+                          },
+                          "type": "array"
+                        },
+                        "count": {
+                          "type": "integer"
+                        },
+                        "date": {
+                          "format": "date",
+                          "type": "string"
+                        },
+                        "days_until": {
+                          "type": "integer"
+                        },
+                        "interest_gross": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "net_cashflow": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "principal": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "tax": {
+                          "format": "double",
+                          "type": "number"
+                        },
+                        "type": {
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "tax_rate_pct": {
+                      "format": "double",
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Maturity ladder calendar",
+        "tags": [
+          "bonds"
+        ]
+      }
+    },
     "/api/bonds/{id}": {
       "delete": {
         "parameters": [

@@ -527,6 +527,20 @@
 					{dashboard.treasuryBondsCount}
 					{dashboard.treasuryBondsCount === 1 ? 'obligacja' : 'obligacji'} (auto-wycena wg CPI)
 				</p>
+				{#if dashboard.bondsNextMaturity && dashboard.bondsNextMaturity.days_until <= 90}
+					{@const nm = dashboard.bondsNextMaturity}
+					{@const urgent = nm.days_until <= 30}
+					<div
+						class="card p-2 text-xs flex items-center gap-1 {urgent
+							? 'preset-filled-error-500'
+							: 'preset-filled-warning-500'}"
+					>
+						<AlertTriangle size={14} />
+						<span>
+							Wykup {nm.type} za {nm.days_until} dni ({formatPLN(nm.net_cashflow)} netto)
+						</span>
+					</div>
+				{/if}
 			</a>
 		{/if}
 
