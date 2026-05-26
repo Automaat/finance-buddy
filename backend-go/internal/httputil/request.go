@@ -24,10 +24,17 @@ func DecodeJSON(w http.ResponseWriter, r *http.Request, maxBytes int64, dst any)
 // PathInt parses an integer chi path parameter and writes the backend's
 // existing validation envelope on parse failure.
 func PathInt(w http.ResponseWriter, r *http.Request, param string) (int, bool) {
+	return PathIntField(w, r, param, param)
+}
+
+// PathIntField parses an integer chi path parameter and writes a validation
+// envelope under field. Use when the URL placeholder differs from the legacy
+// Pydantic error field that clients/tests already expect.
+func PathIntField(w http.ResponseWriter, r *http.Request, param, field string) (int, bool) {
 	raw := chi.URLParam(r, param)
 	id, err := strconv.Atoi(raw)
 	if err != nil {
-		WriteBodyValidationError(w, param, "must be an integer", raw)
+		WriteBodyValidationError(w, field, "must be an integer", raw)
 		return 0, false
 	}
 	return id, true

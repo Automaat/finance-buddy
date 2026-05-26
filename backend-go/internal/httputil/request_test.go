@@ -71,6 +71,19 @@ func TestPathIntInvalid(t *testing.T) {
 	assertValidationField(t, rec, "account_id")
 }
 
+func TestPathIntFieldInvalid(t *testing.T) {
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/goals/x", http.NoBody)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", "x")
+	req = req.WithContext(contextWithRoute(req, rctx))
+	rec := httptest.NewRecorder()
+
+	if _, ok := PathIntField(rec, req, "id", "goal_id"); ok {
+		t.Fatal("PathIntField returned true")
+	}
+	assertValidationField(t, rec, "goal_id")
+}
+
 func TestOptionalQueryInt(t *testing.T) {
 	rec := httptest.NewRecorder()
 	got, ok := OptionalQueryInt(rec, url.Values{"owner_user_id": []string{"7"}}, "owner_user_id")
