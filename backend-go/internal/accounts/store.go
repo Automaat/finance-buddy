@@ -70,19 +70,7 @@ func (s *Store) List(ctx context.Context) ([]Account, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list accounts: %w", err)
 	}
-	defer rows.Close()
-	out := []Account{}
-	for rows.Next() {
-		a, err := scanAccount(rows)
-		if err != nil {
-			return nil, fmt.Errorf("scan account: %w", err)
-		}
-		out = append(out, *a)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate accounts: %w", err)
-	}
-	return out, nil
+	return dbutil.CollectRows(rows, scanAccountValue, "scan account", "iterate accounts")
 }
 
 // Get returns the account regardless of is_active, mirroring Python's
@@ -197,53 +185,47 @@ type UpdatePatch struct {
 // snapshot_aggregates recompute for every snapshot referencing the account.
 // The whole op runs in one transaction.
 func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*Account, error) {
-	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("begin update tx: %w", err)
-	}
-	committed := false
-	defer func() {
-		if !committed {
-			_ = tx.Rollback(ctx)
-		}
-	}()
-	current, err := lockAccount(ctx, tx, id)
-	if err != nil {
-		return nil, err
-	}
-	if p.Name != nil && *p.Name != current.Name {
-		if err := s.checkDuplicateNameTx(ctx, tx, *p.Name, id); err != nil {
-			return nil, err
-		}
-	}
-	// Capture pre-patch values to decide whether the request meaningfully
-	// changed owner or category — matches Python's old_owner/old_category.
-	oldOwnerUserID := current.OwnerUserID
-	oldCategory := current.Category
-	applyPatch(current, p)
-	needsRecompute := (p.OwnerUserIDSet && !intPtrEqual(p.OwnerUserID, oldOwnerUserID)) ||
-		(p.Category != nil && *p.Category != oldCategory)
-	if err := s.updateRow(ctx, tx, id, current); err != nil {
-		return nil, err
-	}
-	if needsRecompute {
-		ids, err := s.aggregates.AffectedSnapshotIDsForAccount(ctx, tx, id)
+	var updated Account
+	err := dbutil.WithTx(ctx, s.pool, "begin update tx", "commit update tx", func(tx pgx.Tx) error {
+		current, err := lockAccount(ctx, tx, id)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		if err := s.aggregates.RecomputeForSnapshots(ctx, tx, ids); err != nil {
-			return nil, err
+		if p.Name != nil && *p.Name != current.Name {
+			if err := s.checkDuplicateNameTx(ctx, tx, *p.Name, id); err != nil {
+				return err
+			}
 		}
-	}
-	updated, err := loadAccount(ctx, tx, id)
+		// Capture pre-patch values to decide whether the request meaningfully
+		// changed owner or category — matches Python's old_owner/old_category.
+		oldOwnerUserID := current.OwnerUserID
+		oldCategory := current.Category
+		applyPatch(current, p)
+		needsRecompute := (p.OwnerUserIDSet && !intPtrEqual(p.OwnerUserID, oldOwnerUserID)) ||
+			(p.Category != nil && *p.Category != oldCategory)
+		if err := s.updateRow(ctx, tx, id, current); err != nil {
+			return err
+		}
+		if needsRecompute {
+			ids, err := s.aggregates.AffectedSnapshotIDsForAccount(ctx, tx, id)
+			if err != nil {
+				return err
+			}
+			if err := s.aggregates.RecomputeForSnapshots(ctx, tx, ids); err != nil {
+				return err
+			}
+		}
+		loaded, err := loadAccount(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		updated = *loaded
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("commit update tx: %w", err)
-	}
-	committed = true
-	return updated, nil
+	return &updated, nil
 }
 
 // Delete soft-deletes + cascades into aggregate recompute.
@@ -411,6 +393,14 @@ func scanAccount(row pgx.Row) (*Account, error) {
 		return nil, err
 	}
 	return &a, nil
+}
+
+func scanAccountValue(row pgx.Row) (Account, error) {
+	a, err := scanAccount(row)
+	if err != nil {
+		return Account{}, err
+	}
+	return *a, nil
 }
 
 // intPtrEqual reports whether two optional ints are equal (both nil counts).

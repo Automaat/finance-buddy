@@ -1,6 +1,6 @@
-// Package dbutil holds small pgx helpers shared across stores. The goal
-// is not abstraction — it's killing the 4-line "if ErrNoRows → sentinel /
-// else wrap" pattern that repeats in every Get/scan call site.
+// Package dbutil holds small pgx helpers shared across stores. Keep helpers
+// mechanical: map scan errors, collect row scans, and wrap transaction
+// commit/rollback boilerplate.
 package dbutil
 
 import (

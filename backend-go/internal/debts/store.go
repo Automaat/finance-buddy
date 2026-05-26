@@ -373,47 +373,41 @@ type UpdatePatch struct {
 
 // Update applies the patch.
 func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*DebtWithAccount, error) {
-	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("begin update tx: %w", err)
-	}
-	committed := false
-	defer func() {
-		if !committed {
-			_ = tx.Rollback(ctx)
+	var updated DebtWithAccount
+	err := dbutil.WithTx(ctx, s.pool, "begin update tx", "commit update", func(tx pgx.Tx) error {
+		row := tx.QueryRow(ctx,
+			`SELECT `+debtCols+` FROM debts WHERE id = $1 AND is_active = true FOR UPDATE`, id,
+		)
+		current, err := scanDebt(row)
+		if err != nil {
+			return dbutil.MapErr(err, ErrNotFound, "lock debt")
 		}
-	}()
-	row := tx.QueryRow(ctx,
-		`SELECT `+debtCols+` FROM debts WHERE id = $1 AND is_active = true FOR UPDATE`, id,
-	)
-	current, err := scanDebt(row)
+		applyPatch(current, p)
+		if _, err := tx.Exec(ctx, `
+			UPDATE debts SET
+				name = $1, debt_type = $2, start_date = $3, initial_amount = $4,
+				interest_rate = $5, currency = $6, notes = $7
+			WHERE id = $8`,
+			current.Name, current.DebtType, current.StartDate, current.InitialAmount,
+			current.InterestRate, current.Currency, current.Notes, id,
+		); err != nil {
+			return fmt.Errorf("update debt: %w", err)
+		}
+		row = tx.QueryRow(ctx,
+			`SELECT name, owner_user_id FROM accounts WHERE id = $1`, current.AccountID,
+		)
+		var a AccountInfo
+		a.ID = current.AccountID
+		if err := row.Scan(&a.Name, &a.OwnerUserID); err != nil {
+			return fmt.Errorf("load account for debt: %w", err)
+		}
+		updated = DebtWithAccount{Debt: *current, Account: a}
+		return nil
+	})
 	if err != nil {
-		return nil, dbutil.MapErr(err, ErrNotFound, "lock debt")
+		return nil, err
 	}
-	applyPatch(current, p)
-	if _, err := tx.Exec(ctx, `
-		UPDATE debts SET
-			name = $1, debt_type = $2, start_date = $3, initial_amount = $4,
-			interest_rate = $5, currency = $6, notes = $7
-		WHERE id = $8`,
-		current.Name, current.DebtType, current.StartDate, current.InitialAmount,
-		current.InterestRate, current.Currency, current.Notes, id,
-	); err != nil {
-		return nil, fmt.Errorf("update debt: %w", err)
-	}
-	row = tx.QueryRow(ctx,
-		`SELECT name, owner_user_id FROM accounts WHERE id = $1`, current.AccountID,
-	)
-	var a AccountInfo
-	a.ID = current.AccountID
-	if err := row.Scan(&a.Name, &a.OwnerUserID); err != nil {
-		return nil, fmt.Errorf("load account for debt: %w", err)
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("commit update: %w", err)
-	}
-	committed = true
-	return &DebtWithAccount{Debt: *current, Account: a}, nil
+	return &updated, nil
 }
 
 // Delete soft-deletes a debt.

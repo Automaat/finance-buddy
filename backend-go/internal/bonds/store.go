@@ -60,19 +60,7 @@ func (s *Store) List(ctx context.Context) ([]TreasuryBond, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list treasury bonds: %w", err)
 	}
-	defer rows.Close()
-	out := []TreasuryBond{}
-	for rows.Next() {
-		b, err := scanBond(rows)
-		if err != nil {
-			return nil, fmt.Errorf("scan treasury bond: %w", err)
-		}
-		out = append(out, *b)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate treasury bonds: %w", err)
-	}
-	return out, nil
+	return dbutil.CollectRows(rows, scanBondValue, "scan treasury bond", "iterate treasury bonds")
 }
 
 // Get returns one bond by id; ErrNotFound when missing or soft-deleted.
@@ -122,65 +110,59 @@ type UpdatePatch struct {
 
 // Update applies the patch and returns the refreshed bond.
 func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*TreasuryBond, error) {
-	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("begin update tx: %w", err)
-	}
-	committed := false
-	defer func() {
-		if !committed {
-			_ = tx.Rollback(ctx)
+	var updated TreasuryBond
+	err := dbutil.WithTx(ctx, s.pool, "begin update tx", "commit update tx", func(tx pgx.Tx) error {
+		row := tx.QueryRow(ctx,
+			`SELECT `+selectColumns+` FROM treasury_bonds WHERE id = $1 AND is_active = true FOR UPDATE`, id,
+		)
+		b, err := scanBond(row)
+		if err != nil {
+			return dbutil.MapErr(err, ErrNotFound, "lock treasury bond")
 		}
-	}()
-	row := tx.QueryRow(ctx,
-		`SELECT `+selectColumns+` FROM treasury_bonds WHERE id = $1 AND is_active = true FOR UPDATE`, id,
-	)
-	b, err := scanBond(row)
+		if p.Type != nil {
+			b.Type = *p.Type
+		}
+		if p.Series != nil {
+			b.Series = *p.Series
+		}
+		if p.FaceValue != nil {
+			b.FaceValue = *p.FaceValue
+		}
+		if p.PurchaseDate != nil {
+			b.PurchaseDate = *p.PurchaseDate
+		}
+		if p.OwnerUserIDSet {
+			b.OwnerUserID = p.OwnerUserID
+		}
+		if p.FirstYearRate != nil {
+			b.FirstYearRate = *p.FirstYearRate
+		}
+		if p.Margin != nil {
+			b.Margin = *p.Margin
+		}
+		if p.Capitalize != nil {
+			b.Capitalize = *p.Capitalize
+		}
+		row = tx.QueryRow(ctx, `
+			UPDATE treasury_bonds SET
+				type = $1, series = $2, face_value = $3, purchase_date = $4,
+				owner_user_id = $5, first_year_rate = $6, margin = $7, capitalize = $8
+			WHERE id = $9
+			RETURNING `+selectColumns,
+			string(b.Type), b.Series, b.FaceValue, b.PurchaseDate, b.OwnerUserID,
+			b.FirstYearRate, b.Margin, b.Capitalize, id,
+		)
+		loaded, err := scanBond(row)
+		if err != nil {
+			return fmt.Errorf("update treasury bond: %w", err)
+		}
+		updated = *loaded
+		return nil
+	})
 	if err != nil {
-		return nil, dbutil.MapErr(err, ErrNotFound, "lock treasury bond")
+		return nil, err
 	}
-	if p.Type != nil {
-		b.Type = *p.Type
-	}
-	if p.Series != nil {
-		b.Series = *p.Series
-	}
-	if p.FaceValue != nil {
-		b.FaceValue = *p.FaceValue
-	}
-	if p.PurchaseDate != nil {
-		b.PurchaseDate = *p.PurchaseDate
-	}
-	if p.OwnerUserIDSet {
-		b.OwnerUserID = p.OwnerUserID
-	}
-	if p.FirstYearRate != nil {
-		b.FirstYearRate = *p.FirstYearRate
-	}
-	if p.Margin != nil {
-		b.Margin = *p.Margin
-	}
-	if p.Capitalize != nil {
-		b.Capitalize = *p.Capitalize
-	}
-	row = tx.QueryRow(ctx, `
-		UPDATE treasury_bonds SET
-			type = $1, series = $2, face_value = $3, purchase_date = $4,
-			owner_user_id = $5, first_year_rate = $6, margin = $7, capitalize = $8
-		WHERE id = $9
-		RETURNING `+selectColumns,
-		string(b.Type), b.Series, b.FaceValue, b.PurchaseDate, b.OwnerUserID,
-		b.FirstYearRate, b.Margin, b.Capitalize, id,
-	)
-	updated, err := scanBond(row)
-	if err != nil {
-		return nil, fmt.Errorf("update treasury bond: %w", err)
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("commit update tx: %w", err)
-	}
-	committed = true
-	return updated, nil
+	return &updated, nil
 }
 
 // Delete soft-deletes the bond by toggling is_active. Hard delete would
@@ -219,4 +201,12 @@ func scanBond(row pgx.Row) (*TreasuryBond, error) {
 	}
 	b.Type = BondType(typ)
 	return &b, nil
+}
+
+func scanBondValue(row pgx.Row) (TreasuryBond, error) {
+	b, err := scanBond(row)
+	if err != nil {
+		return TreasuryBond{}, err
+	}
+	return *b, nil
 }

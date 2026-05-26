@@ -52,19 +52,7 @@ func (s *Store) List(ctx context.Context) ([]Asset, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list assets: %w", err)
 	}
-	defer rows.Close()
-	out := []Asset{}
-	for rows.Next() {
-		a, err := scanAsset(rows)
-		if err != nil {
-			return nil, fmt.Errorf("scan asset: %w", err)
-		}
-		out = append(out, *a)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate assets: %w", err)
-	}
-	return out, nil
+	return dbutil.CollectRows(rows, scanAssetValue, "scan asset", "iterate assets")
 }
 
 // LatestValuesByAsset returns the most recent snapshot value per asset.
@@ -139,34 +127,28 @@ func (s *Store) Create(ctx context.Context, name string) (*Asset, error) {
 // Update applies the (only) field: name. No cascade — assets don't carry
 // owner/category, so aggregates are unaffected by a rename.
 func (s *Store) Update(ctx context.Context, id int, name *string) (*Asset, error) {
-	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("begin update tx: %w", err)
-	}
-	committed := false
-	defer func() {
-		if !committed {
-			_ = tx.Rollback(ctx)
+	var updated Asset
+	err := dbutil.WithTx(ctx, s.pool, "begin update tx", "commit update tx", func(tx pgx.Tx) error {
+		current, err := lockAsset(ctx, tx, id)
+		if err != nil {
+			return err
 		}
-	}()
-	current, err := lockAsset(ctx, tx, id)
+		if name != nil && *name != current.Name {
+			if err := s.checkDuplicateNameTx(ctx, tx, *name, id); err != nil {
+				return err
+			}
+			if _, err := tx.Exec(ctx, `UPDATE assets SET name = $1 WHERE id = $2`, *name, id); err != nil {
+				return fmt.Errorf("update asset: %w", err)
+			}
+			current.Name = *name
+		}
+		updated = *current
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	if name != nil && *name != current.Name {
-		if err := s.checkDuplicateNameTx(ctx, tx, *name, id); err != nil {
-			return nil, err
-		}
-		if _, err := tx.Exec(ctx, `UPDATE assets SET name = $1 WHERE id = $2`, *name, id); err != nil {
-			return nil, fmt.Errorf("update asset: %w", err)
-		}
-		current.Name = *name
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("commit update tx: %w", err)
-	}
-	committed = true
-	return current, nil
+	return &updated, nil
 }
 
 // Delete soft-deletes and cascades into aggregate recompute.
@@ -261,4 +243,12 @@ func scanAsset(row pgx.Row) (*Asset, error) {
 		return nil, err
 	}
 	return &a, nil
+}
+
+func scanAssetValue(row pgx.Row) (Asset, error) {
+	a, err := scanAsset(row)
+	if err != nil {
+		return Asset{}, err
+	}
+	return *a, nil
 }
