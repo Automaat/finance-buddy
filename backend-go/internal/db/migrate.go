@@ -32,6 +32,26 @@ var ownerFK = map[string]string{
 
 const migrationSQLSnippetMaxLen = 96
 
+type migrationFunc func(context.Context, *pgxpool.Pool) error
+
+type columnDef struct {
+	name       string
+	definition string
+}
+
+var schemaExtensionMigrations = []migrationFunc{
+	addAppConfigWithdrawalRate,
+	addAppConfigCoastFIRE,
+	addAppConfigBaristaFIRE,
+	addAppConfigFIREBands,
+	addAppConfigMonthlySavings,
+	createRecurringTransactionsTable,
+	createHoldingsTables,
+	createSimulationScenariosTable,
+	addAccountsExcludedFromFire,
+	addAccountsInterestRatePct,
+}
+
 // Migrate converges an existing database onto the final personas->users
 // schema: it drops the legacy `owner` string column from every owner-bearing
 // table, rebuilds the affected unique constraints on owner_user_id, adds the
@@ -61,35 +81,10 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 	if _, err := pool.Exec(ctx, `DROP TABLE IF EXISTS personas`); err != nil {
 		return fmt.Errorf("drop personas table: %w", err)
 	}
-	if err := addAppConfigWithdrawalRate(ctx, pool); err != nil {
-		return err
-	}
-	if err := addAppConfigCoastFIRE(ctx, pool); err != nil {
-		return err
-	}
-	if err := addAppConfigBaristaFIRE(ctx, pool); err != nil {
-		return err
-	}
-	if err := addAppConfigFIREBands(ctx, pool); err != nil {
-		return err
-	}
-	if err := addAppConfigMonthlySavings(ctx, pool); err != nil {
-		return err
-	}
-	if err := createRecurringTransactionsTable(ctx, pool); err != nil {
-		return err
-	}
-	if err := createHoldingsTables(ctx, pool); err != nil {
-		return err
-	}
-	if err := createSimulationScenariosTable(ctx, pool); err != nil {
-		return err
-	}
-	if err := addAccountsExcludedFromFire(ctx, pool); err != nil {
-		return err
-	}
-	if err := addAccountsInterestRatePct(ctx, pool); err != nil {
-		return err
+	for _, migrate := range schemaExtensionMigrations {
+		if err := migrate(ctx, pool); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -115,14 +110,33 @@ func migrationSQLSnippet(stmt string) string {
 	return snippet[:migrationSQLSnippetMaxLen] + "..."
 }
 
+func addColumnsIfMissing(
+	ctx context.Context,
+	pool *pgxpool.Pool,
+	label string,
+	table string,
+	columns ...columnDef,
+) error {
+	stmts := make([]string, 0, len(columns))
+	for _, col := range columns {
+		stmts = append(stmts, addColumnIfMissingSQL(table, col))
+	}
+	return execMigrationSQL(ctx, pool, label, stmts...)
+}
+
+func addColumnIfMissingSQL(table string, col columnDef) string {
+	return fmt.Sprintf("ALTER TABLE %s\nADD COLUMN IF NOT EXISTS %s %s",
+		table, col.name, col.definition)
+}
+
 // addAccountsInterestRatePct adds the optional nominal-yield field for
 // interest-bearing accounts (issue #573). Nullable on purpose — non-cash
 // accounts and accounts whose rate the user hasn't recorded leave it NULL,
 // in which case the real-yield widget hides for that row.
 func addAccountsInterestRatePct(ctx context.Context, pool *pgxpool.Pool) error {
-	return execMigrationSQL(ctx, pool, "add interest_rate_pct to accounts", `
-		ALTER TABLE accounts
-		ADD COLUMN IF NOT EXISTS interest_rate_pct numeric(6,4)`)
+	return addColumnsIfMissing(ctx, pool, "add interest_rate_pct to accounts", "accounts",
+		columnDef{name: "interest_rate_pct", definition: "numeric(6,4)"},
+	)
 }
 
 // addAccountsExcludedFromFire adds the per-account opt-out flag for FIRE
@@ -132,9 +146,9 @@ func addAccountsInterestRatePct(ctx context.Context, pool *pgxpool.Pool) error {
 // current behavior for every existing account; the user opts in per
 // account from the edit modal.
 func addAccountsExcludedFromFire(ctx context.Context, pool *pgxpool.Pool) error {
-	return execMigrationSQL(ctx, pool, "add excluded_from_fire to accounts", `
-		ALTER TABLE accounts
-		ADD COLUMN IF NOT EXISTS excluded_from_fire boolean NOT NULL DEFAULT false`)
+	return addColumnsIfMissing(ctx, pool, "add excluded_from_fire to accounts", "accounts",
+		columnDef{name: "excluded_from_fire", definition: "boolean NOT NULL DEFAULT false"},
+	)
 }
 
 // createSimulationScenariosTable creates the simulation_scenarios table for
@@ -161,20 +175,18 @@ func createSimulationScenariosTable(ctx context.Context, pool *pgxpool.Pool) err
 // projected-FI-date metric (issue #551). Nullable — when unset, the FI
 // projection tile shows an empty state asking the user to configure it.
 func addAppConfigMonthlySavings(ctx context.Context, pool *pgxpool.Pool) error {
-	return execMigrationSQL(ctx, pool, "add monthly_savings to app_config", `
-		ALTER TABLE app_config
-		ADD COLUMN IF NOT EXISTS monthly_savings numeric(15,2)`)
+	return addColumnsIfMissing(ctx, pool, "add monthly_savings to app_config", "app_config",
+		columnDef{name: "monthly_savings", definition: "numeric(15,2)"},
+	)
 }
 
 // addAppConfigFIREBands adds the Lean and Fat FIRE monthly-expense bands
 // to app_config (issue #550). Both nullable — when unset the band tile is
 // hidden and only the existing Base FIRE number (monthly_expenses) shows.
 func addAppConfigFIREBands(ctx context.Context, pool *pgxpool.Pool) error {
-	return execMigrationSQL(ctx, pool, "add fire bands to app_config",
-		`ALTER TABLE app_config
-		ADD COLUMN IF NOT EXISTS lean_monthly_expenses numeric(15,2)`,
-		`ALTER TABLE app_config
-		ADD COLUMN IF NOT EXISTS fat_monthly_expenses numeric(15,2)`,
+	return addColumnsIfMissing(ctx, pool, "add fire bands to app_config", "app_config",
+		columnDef{name: "lean_monthly_expenses", definition: "numeric(15,2)"},
+		columnDef{name: "fat_monthly_expenses", definition: "numeric(15,2)"},
 	)
 }
 
@@ -182,9 +194,9 @@ func addAppConfigFIREBands(ctx context.Context, pool *pgxpool.Pool) error {
 // #552): an optional `barista_monthly_income`. Nullable on purpose — when
 // unset the Barista FIRE tile is hidden, matching the Coast FIRE convention.
 func addAppConfigBaristaFIRE(ctx context.Context, pool *pgxpool.Pool) error {
-	return execMigrationSQL(ctx, pool, "add barista_monthly_income to app_config", `
-		ALTER TABLE app_config
-		ADD COLUMN IF NOT EXISTS barista_monthly_income numeric(15,2)`)
+	return addColumnsIfMissing(ctx, pool, "add barista_monthly_income to app_config", "app_config",
+		columnDef{name: "barista_monthly_income", definition: "numeric(15,2)"},
+	)
 }
 
 // addAppConfigCoastFIRE adds the Coast FIRE inputs to app_config (issue #548):
@@ -192,11 +204,9 @@ func addAppConfigBaristaFIRE(ctx context.Context, pool *pgxpool.Pool) error {
 // `expected_return_rate` (defaults to 0.07, a conservative real-return
 // assumption matching the retirement-savings projection on the settings page).
 func addAppConfigCoastFIRE(ctx context.Context, pool *pgxpool.Pool) error {
-	return execMigrationSQL(ctx, pool, "add coast fire columns to app_config",
-		`ALTER TABLE app_config
-		ADD COLUMN IF NOT EXISTS coast_fire_target_age integer`,
-		`ALTER TABLE app_config
-		ADD COLUMN IF NOT EXISTS expected_return_rate numeric(5,4) NOT NULL DEFAULT 0.07`,
+	return addColumnsIfMissing(ctx, pool, "add coast fire columns to app_config", "app_config",
+		columnDef{name: "coast_fire_target_age", definition: "integer"},
+		columnDef{name: "expected_return_rate", definition: "numeric(5,4) NOT NULL DEFAULT 0.07"},
 	)
 }
 
@@ -275,9 +285,9 @@ func createRecurringTransactionsTable(ctx context.Context, pool *pgxpool.Pool) e
 // Trinity-study default; the column is created with that default so any
 // existing app_config row is backfilled without a separate UPDATE.
 func addAppConfigWithdrawalRate(ctx context.Context, pool *pgxpool.Pool) error {
-	return execMigrationSQL(ctx, pool, "add withdrawal_rate to app_config", `
-		ALTER TABLE app_config
-		ADD COLUMN IF NOT EXISTS withdrawal_rate numeric(5,4) NOT NULL DEFAULT 0.04`)
+	return addColumnsIfMissing(ctx, pool, "add withdrawal_rate to app_config", "app_config",
+		columnDef{name: "withdrawal_rate", definition: "numeric(5,4) NOT NULL DEFAULT 0.04"},
+	)
 }
 
 // dropOwnerDependentObjects removes the index and unique constraints keyed on
