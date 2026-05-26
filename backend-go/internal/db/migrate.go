@@ -50,6 +50,7 @@ var schemaExtensionMigrations = []migrationFunc{
 	createSimulationScenariosTable,
 	addAccountsExcludedFromFire,
 	addAccountsInterestRatePct,
+	dropAppConfigLegacyPPKRates,
 }
 
 // Migrate converges an existing database onto the final personas->users
@@ -277,6 +278,21 @@ func createRecurringTransactionsTable(ctx context.Context, pool *pgxpool.Pool) e
 		`ALTER TABLE recurring_transactions ADD COLUMN IF NOT EXISTS category varchar(50)`,
 		`CREATE INDEX IF NOT EXISTS ix_recurring_transactions_active_account
 		   ON recurring_transactions (active, account_id)`,
+	)
+}
+
+// dropAppConfigLegacyPPKRates drops four NOT NULL Python-era columns
+// (ppk_{employee,employer}_rate_{marcin,ewa}) from app_config. PPK rates now
+// live per-user in the users table, but these columns were never dropped on
+// existing databases — so every PUT /api/config fails with a NOT NULL
+// violation because the Go INSERT doesn't list them.
+func dropAppConfigLegacyPPKRates(ctx context.Context, pool *pgxpool.Pool) error {
+	return execMigrationSQL(ctx, pool, "drop legacy ppk rate columns from app_config",
+		`ALTER TABLE app_config
+			DROP COLUMN IF EXISTS ppk_employee_rate_marcin,
+			DROP COLUMN IF EXISTS ppk_employer_rate_marcin,
+			DROP COLUMN IF EXISTS ppk_employee_rate_ewa,
+			DROP COLUMN IF EXISTS ppk_employer_rate_ewa`,
 	)
 }
 
