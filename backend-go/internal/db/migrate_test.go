@@ -56,6 +56,17 @@ func TestMigrationSQLSnippet(t *testing.T) {
 	})
 }
 
+func TestAddColumnIfMissingSQL(t *testing.T) {
+	got := addColumnIfMissingSQL("app_config", columnDef{
+		name:       "expected_return_rate",
+		definition: "numeric(5,4) NOT NULL DEFAULT 0.07",
+	})
+	want := "ALTER TABLE app_config\nADD COLUMN IF NOT EXISTS expected_return_rate numeric(5,4) NOT NULL DEFAULT 0.07"
+	if got != want {
+		t.Fatalf("statement = %q, want %q", got, want)
+	}
+}
+
 func TestMigrateIsIdempotent(t *testing.T) {
 	pool := integrationPool(t)
 	ctx := t.Context()
