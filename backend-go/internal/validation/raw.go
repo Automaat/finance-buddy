@@ -1,8 +1,9 @@
-// Package validation holds primitive helpers for parsing request bodies
-// that arrive as map[string]json.RawMessage (the PATCH/null-vs-missing
-// pattern). Domain packages keep their require*/patch* wrappers so error
-// messages remain wire-stable; this package only owns the small parsing
-// primitives that were duplicated across every domain.
+// Package validation holds helpers for parsing request bodies that arrive as
+// map[string]json.RawMessage (the PATCH/null-vs-missing pattern).
+//
+// Raw* helpers expose small type-parsing primitives. Field-level helpers wrap
+// common required/optional field rules and return httputil.ValidationError so
+// domain packages can share parsing logic while keeping wire-stable messages.
 package validation
 
 import (
