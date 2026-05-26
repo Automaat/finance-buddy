@@ -120,9 +120,11 @@
 			key: 'real_yield',
 			label: 'Realne %',
 			sortable: true,
-			// Sort accounts without a tracked rate to the bottom so the column
-			// stays scannable when most rows have no yield.
-			accessor: (a) => a.real_yield_pct ?? Number.NEGATIVE_INFINITY
+			// Return null for missing rates so SortableTable's null-handling in
+			// compareValues keeps rows without a tracked yield at the bottom on
+			// asc and at the top on desc — consistent with other null-bearing
+			// columns instead of pretending they're the smallest number.
+			accessor: (a) => a.real_yield_pct
 		},
 		{ key: 'actions', label: 'Akcje', align: 'right' }
 	]);
@@ -151,21 +153,26 @@
 	}
 
 	// Color buckets per issue #573 acceptance: green > 1%, amber 0–1%, red < 0%.
+	// Exactly 1.00% stays amber so the boundary case lands on the conservative
+	// side ("not yet beating inflation comfortably").
 	function realYieldColorClass(v: number): string {
 		if (v < 0) return 'text-error-600-400';
-		if (v < 1) return 'text-warning-600-400';
+		if (v <= 1) return 'text-warning-600-400';
 		return 'text-success-600-400';
 	}
 
 	// Native `title` tooltips collapse newlines in some browsers, so we join
-	// the math steps with " · " for reliable single-line rendering.
+	// the math steps with " · " for reliable single-line rendering. We avoid
+	// hardcoding the Belka percentage here so the tooltip doesn't drift when
+	// the rate changes year-to-year — the canonical value lives in the
+	// backend `rules` table.
 	function realYieldTooltip(a: Account): string {
 		if (a.interest_rate_pct == null) return '';
 		const nominal = a.interest_rate_pct.toFixed(2);
 		const shielded = a.account_wrapper === 'IKE' || a.account_wrapper === 'IKZE';
 		const belkaPart = shielded
 			? `bez podatku Belki (opakowanie ${a.account_wrapper})`
-			: 'minus 19% Belki';
+			: 'minus podatek Belki';
 		if (a.cpi_yoy_pct == null || a.cpi_as_of_year == null) {
 			return `Nominalne ${nominal}% · ${belkaPart} · brak danych CPI`;
 		}

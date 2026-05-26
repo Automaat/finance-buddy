@@ -92,10 +92,19 @@ type realYieldCtx struct {
 }
 
 // belkaRatePct is the Polish capital-gains tax (Belka) applied to interest
-// earned outside an IKE/IKZE wrapper. Sourced from the centralized rules
-// table (issue #545) so the value stays in lockstep with the rest of the
-// app.
-var belkaRatePct = decimal.NewFromFloat(rules.MustFloat64("capital_gains_tax_2026")).Mul(decimal.NewFromInt(100))
+// earned outside an IKE/IKZE wrapper, expressed as a percentage (e.g.
+// 19.0). Sourced from the centralized rules table (issue #545) as a
+// decimal — going through float64 here would inject rounding drift into a
+// financial calculation, so we read the rule's Value directly.
+var belkaRatePct = mustBelkaRatePct()
+
+func mustBelkaRatePct() decimal.Decimal {
+	r, ok := rules.Get("capital_gains_tax_2026")
+	if !ok {
+		panic("accounts: rules table missing capital_gains_tax_2026")
+	}
+	return r.Value.Mul(decimal.NewFromInt(100))
+}
 
 // isShieldedFromBelka reports whether interest in this wrapper is exempt
 // from the 19% Belka withholding. IKE income is tax-free at withdrawal; IKZE
@@ -164,6 +173,18 @@ func toResponse(a *Account, currentValue decimal.Decimal, ry realYieldCtx) respo
 		}
 	}
 	return out
+}
+
+// realYieldCtxFor is the single-account variant of loadRealYieldCtx: when
+// the account has no nominal rate, the real-yield columns are null anyway,
+// so we skip the CPI round-trip entirely. Used by Create/Update where the
+// response carries one row and the typical case (account without a rate)
+// shouldn't pay for two extra DB reads.
+func (h *Handler) realYieldCtxFor(ctx context.Context, a *Account) realYieldCtx {
+	if a == nil || a.InterestRatePct == nil {
+		return realYieldCtx{}
+	}
+	return h.loadRealYieldCtx(ctx)
 }
 
 // loadRealYieldCtx pulls the latest known CPI YoY from the index table and
@@ -266,7 +287,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	httputil.WriteJSON(w, http.StatusCreated, toResponse(created, decimal.Zero, h.loadRealYieldCtx(r.Context())))
+	httputil.WriteJSON(w, http.StatusCreated, toResponse(created, decimal.Zero, h.realYieldCtxFor(r.Context(), created)))
 }
 
 // Update serves PUT /api/accounts/{id}.
@@ -296,7 +317,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	httputil.WriteJSON(w, http.StatusOK, toResponse(updated, cv, h.loadRealYieldCtx(r.Context())))
+	httputil.WriteJSON(w, http.StatusOK, toResponse(updated, cv, h.realYieldCtxFor(r.Context(), updated)))
 }
 
 // Delete serves DELETE /api/accounts/{id}.
