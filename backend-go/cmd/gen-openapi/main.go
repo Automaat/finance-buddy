@@ -101,6 +101,17 @@ func addRoute(doc *openapi3.T, gen *openapi3gen.Generator, rt *apispec.Route) er
 			},
 		})
 	}
+	for _, q := range rt.Query {
+		op.Parameters = append(op.Parameters, &openapi3.ParameterRef{
+			Value: &openapi3.Parameter{
+				Name:        q.Name,
+				In:          "query",
+				Required:    q.Required,
+				Description: q.Description,
+				Schema:      queryParamSchema(q),
+			},
+		})
+	}
 	if rt.Request != nil {
 		schema, err := gen.NewSchemaRefForValue(rt.Request, nil)
 		if err != nil {
@@ -190,6 +201,25 @@ func pathParamSchema(name string) *openapi3.SchemaRef {
 	default:
 		return openapi3.NewStringSchema().NewRef()
 	}
+}
+
+func queryParamSchema(p apispec.QueryParam) *openapi3.SchemaRef {
+	schema := openapi3.NewStringSchema()
+	switch p.Type {
+	case "integer":
+		schema = openapi3.NewIntegerSchema()
+	case "number":
+		schema = openapi3.NewFloat64Schema()
+	case "boolean":
+		schema = openapi3.NewBoolSchema()
+	}
+	if p.Format != "" {
+		schema.Format = p.Format
+	}
+	for _, v := range p.Enum {
+		schema = schema.WithEnum(v)
+	}
+	return schema.NewRef()
 }
 
 func pathParams(path string) []string {

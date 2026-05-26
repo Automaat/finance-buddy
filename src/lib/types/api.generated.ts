@@ -2747,6 +2747,73 @@ export interface paths {
         };
         trace?: never;
     };
+    "/api/exposure/currency": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Currency exposure for the latest snapshot */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Optional PLN target percentage; enables drift reporting when present. */
+                    target_pln_pct?: number;
+                    /** @description Optional non-negative drift tolerance percentage; defaults to 5. */
+                    tolerance?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            currencies?: {
+                                currency?: string;
+                                /** Format: double */
+                                percent?: number;
+                                /** Format: double */
+                                value_pln?: number;
+                            }[];
+                            drift?: {
+                                /** Format: double */
+                                actual_pln_pct?: number;
+                                /** Format: double */
+                                drift_pln_pct?: number;
+                                /** Format: double */
+                                target_pln_pct?: number;
+                                /** Format: double */
+                                tolerance_pct?: number;
+                                within_tolerance?: boolean;
+                            } | null;
+                            /** Format: double */
+                            foreign_pct?: number;
+                            /** Format: double */
+                            pln_pct?: number;
+                            snapshot_date?: string;
+                            /** Format: double */
+                            total_pln?: number;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/goals": {
         parameters: {
             query?: never;
@@ -3582,6 +3649,73 @@ export interface paths {
                     content: {
                         "application/json": {
                             [key: string]: number;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pit38/realized": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** PIT-38 realized gains worksheet */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Optional report year; defaults from PIT filing window. */
+                    year?: number;
+                    /** @description Optional csv value returns a downloadable text/csv report. */
+                    format?: "csv";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            rows?: {
+                                cost_basis?: string;
+                                cost_basis_pln?: string;
+                                currency?: string;
+                                /** Format: date */
+                                date?: string;
+                                fees?: string;
+                                fees_pln?: string;
+                                fx_rate?: string;
+                                has_fx?: boolean;
+                                proceeds?: string;
+                                proceeds_pln?: string;
+                                quantity?: string;
+                                realized_gain?: string;
+                                realized_pln?: string;
+                                security_id?: number;
+                                symbol?: string;
+                            }[];
+                            totals?: {
+                                cost_basis_pln?: string;
+                                fees_pln?: string;
+                                proceeds_pln?: string;
+                                realized_pln?: string;
+                            };
+                            year?: number;
                         };
                     };
                 };

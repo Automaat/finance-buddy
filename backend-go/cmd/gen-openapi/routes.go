@@ -14,9 +14,11 @@ import (
 	debtpayments "github.com/Automaat/finance-buddy/backend-go/internal/debt_payments"
 	"github.com/Automaat/finance-buddy/backend-go/internal/debts"
 	equitygrants "github.com/Automaat/finance-buddy/backend-go/internal/equity_grants"
+	"github.com/Automaat/finance-buddy/backend-go/internal/exposure"
 	"github.com/Automaat/finance-buddy/backend-go/internal/goals"
 	"github.com/Automaat/finance-buddy/backend-go/internal/holdings"
 	"github.com/Automaat/finance-buddy/backend-go/internal/investment"
+	"github.com/Automaat/finance-buddy/backend-go/internal/pit38"
 	"github.com/Automaat/finance-buddy/backend-go/internal/recurring"
 	"github.com/Automaat/finance-buddy/backend-go/internal/retirement"
 	"github.com/Automaat/finance-buddy/backend-go/internal/rules"
@@ -64,6 +66,8 @@ func allRoutes() []apispec.Route {
 		simulations.APISpec,
 		scenarios.APISpec,
 		rules.APISpec,
+		exposure.APISpec,
+		pit38.APISpec,
 		transactions.APISpec,
 		recurring.APISpec,
 		debtpayments.APISpec,
