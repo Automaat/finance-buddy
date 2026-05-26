@@ -22,6 +22,7 @@ type createRequest struct {
 	SquareMeters          *decimal.Decimal
 	ReceivesContributions bool
 	ExcludedFromFire      bool
+	InterestRatePct       *decimal.Decimal
 }
 
 // buildCreateRequest validates the POST body.
@@ -86,6 +87,12 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 		return r, vErr
 	}
 	r.ExcludedFromFire = excl
+
+	rate, vErr := optionalInterestRatePct(raw)
+	if vErr != nil {
+		return r, vErr
+	}
+	r.InterestRatePct = rate
 	return r, nil
 }
 
@@ -171,7 +178,55 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 		}
 		p.ExcludedFromFire = &b
 	}
+	if v, ok := raw["interest_rate_pct"]; ok {
+		p.InterestRatePctSet = true
+		if validation.IsNull(v) {
+			p.InterestRatePct = nil
+		} else {
+			d, vErr := parseInterestRate(v)
+			if vErr != nil {
+				return p, vErr
+			}
+			p.InterestRatePct = &d
+		}
+	}
 	return p, nil
+}
+
+// optionalInterestRatePct parses an optional interest_rate_pct on create.
+// Absent or explicit null -> nil. Out-of-range or non-numeric -> validation
+// error. The same range gate runs on update (patch) via parseInterestRate.
+func optionalInterestRatePct(raw map[string]json.RawMessage) (*decimal.Decimal, *httputil.ValidationError) {
+	v, ok := raw["interest_rate_pct"]
+	if !ok || validation.IsNull(v) {
+		return nil, nil
+	}
+	d, vErr := parseInterestRate(v)
+	if vErr != nil {
+		return nil, vErr
+	}
+	return &d, nil
+}
+
+// interestRateMaxPct caps the accepted nominal-yield input at 50%. The widget
+// reports real yield after CPI + Belka and is meant for cash-like holdings
+// (savings, EDO/COI/ROR); higher inputs almost always mean the user typed a
+// decimal as basis points (e.g. 535 for 5.35%), so we surface a validation
+// error instead of silently rendering a misleading number.
+const interestRateMaxPct = 50
+
+func parseInterestRate(v json.RawMessage) (decimal.Decimal, *httputil.ValidationError) {
+	d, err := validation.RawDecimal(v)
+	if err != nil {
+		return decimal.Zero, &httputil.ValidationError{Field: "interest_rate_pct", Msg: "must be a number"}
+	}
+	if d.IsNegative() || d.GreaterThan(decimal.NewFromInt(interestRateMaxPct)) {
+		return decimal.Zero, &httputil.ValidationError{
+			Field: "interest_rate_pct",
+			Msg:   fmt.Sprintf("Interest rate must be between 0 and %d", interestRateMaxPct),
+		}
+	}
+	return d, nil
 }
 
 // --- helpers ---

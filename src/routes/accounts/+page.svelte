@@ -116,8 +116,62 @@
 			accessor: (a) => ownerName(owners, a.owner_user_id)
 		},
 		{ key: 'value', label: 'Wartość', sortable: true, accessor: (a) => a.current_value },
+		{
+			key: 'real_yield',
+			label: 'Realne %',
+			sortable: true,
+			// Sort accounts without a tracked rate to the bottom so the column
+			// stays scannable when most rows have no yield.
+			accessor: (a) => a.real_yield_pct ?? Number.NEGATIVE_INFINITY
+		},
 		{ key: 'actions', label: 'Akcje', align: 'right' }
 	]);
+
+	const liabilityColumns = $derived<SortableColumn<Account>[]>([
+		{ key: 'name', label: 'Nazwa', sortable: true, accessor: (a) => a.name },
+		{
+			key: 'category',
+			label: 'Kategoria',
+			sortable: true,
+			accessor: (a) => categoryLabels[a.category] ?? a.category
+		},
+		{
+			key: 'owner',
+			label: 'Właściciel',
+			sortable: true,
+			accessor: (a) => ownerName(owners, a.owner_user_id)
+		},
+		{ key: 'value', label: 'Wartość', sortable: true, accessor: (a) => a.current_value },
+		{ key: 'actions', label: 'Akcje', align: 'right' }
+	]);
+
+	function formatPct(v: number): string {
+		const sign = v > 0 ? '+' : '';
+		return `${sign}${v.toFixed(2)}%`;
+	}
+
+	// Color buckets per issue #573 acceptance: green > 1%, amber 0–1%, red < 0%.
+	function realYieldColorClass(v: number): string {
+		if (v < 0) return 'text-error-600-400';
+		if (v < 1) return 'text-warning-600-400';
+		return 'text-success-600-400';
+	}
+
+	// Native `title` tooltips collapse newlines in some browsers, so we join
+	// the math steps with " · " for reliable single-line rendering.
+	function realYieldTooltip(a: Account): string {
+		if (a.interest_rate_pct == null) return '';
+		const nominal = a.interest_rate_pct.toFixed(2);
+		const shielded = a.account_wrapper === 'IKE' || a.account_wrapper === 'IKZE';
+		const belkaPart = shielded
+			? `bez podatku Belki (opakowanie ${a.account_wrapper})`
+			: 'minus 19% Belki';
+		if (a.cpi_yoy_pct == null || a.cpi_as_of_year == null) {
+			return `Nominalne ${nominal}% · ${belkaPart} · brak danych CPI`;
+		}
+		const cpi = a.cpi_yoy_pct.toFixed(2);
+		return `Nominalne ${nominal}% · ${belkaPart} · minus CPI ${a.cpi_as_of_year}: ${cpi}%`;
+	}
 
 	function startCreate() {
 		editingAccount = null;
@@ -144,7 +198,8 @@
 		purpose: 'general',
 		receives_contributions: true,
 		square_meters: null as number | null,
-		excluded_from_fire: false
+		excluded_from_fire: false,
+		interest_rate_pct: null as number | null
 	});
 
 	let error = $state('');
@@ -162,7 +217,8 @@
 				purpose: editingAccount.purpose,
 				receives_contributions: editingAccount.receives_contributions,
 				square_meters: editingAccount.square_meters,
-				excluded_from_fire: editingAccount.excluded_from_fire ?? false
+				excluded_from_fire: editingAccount.excluded_from_fire ?? false,
+				interest_rate_pct: editingAccount.interest_rate_pct
 			};
 		} else if (showForm) {
 			formData = {
@@ -175,7 +231,8 @@
 				purpose: 'general',
 				receives_contributions: true,
 				square_meters: null,
-				excluded_from_fire: false
+				excluded_from_fire: false,
+				interest_rate_pct: null
 			};
 		}
 	});
@@ -389,6 +446,22 @@
 		<td>{categoryLabels[account.category] || account.category}</td>
 		<td>{ownerName(owners, account.owner_user_id)}</td>
 		<td class="font-semibold text-primary-600-400">{formatPLN(account.current_value)}</td>
+		<td class="whitespace-nowrap">
+			{#if account.real_yield_pct != null}
+				<span
+					class="font-semibold {realYieldColorClass(account.real_yield_pct)}"
+					title={realYieldTooltip(account)}
+				>
+					{formatPct(account.real_yield_pct)}
+				</span>
+			{:else if account.interest_rate_pct != null}
+				<span class="text-surface-700-300" title={realYieldTooltip(account)}>
+					{account.interest_rate_pct.toFixed(2)}%
+				</span>
+			{:else}
+				<span class="text-surface-500-500" aria-hidden="true">—</span>
+			{/if}
+		</td>
 		<td class="text-right whitespace-nowrap">
 			<button
 				type="button"
@@ -465,7 +538,7 @@
 
 {#await data.accountsData}
 	<div role="status" aria-live="polite" aria-label="Ładowanie kont" class="space-y-4">
-		{#each [{ icon: Wallet, title: 'Aktywa' }, { icon: TrendingDown, title: 'Pasywa' }] as section}
+		{#each [{ icon: Wallet, title: 'Aktywa', isAsset: true }, { icon: TrendingDown, title: 'Pasywa', isAsset: false }] as section}
 			<div class="card preset-filled-surface-100-900 p-4 space-y-4">
 				<header>
 					<h3 class="h3 flex items-center gap-2">
@@ -481,6 +554,9 @@
 								<th>Kategoria</th>
 								<th>Właściciel</th>
 								<th>Wartość</th>
+								{#if section.isAsset}
+									<th>Realne %</th>
+								{/if}
 								<th class="text-right">Akcje</th>
 							</tr>
 						</thead>
@@ -491,6 +567,9 @@
 									<td><Skeleton height="1rem" width="60%" /></td>
 									<td><Skeleton height="1rem" width="50%" /></td>
 									<td><Skeleton height="1rem" width="65%" /></td>
+									{#if section.isAsset}
+										<td><Skeleton height="1rem" width="40%" /></td>
+									{/if}
 									<td>
 										<div class="flex justify-end gap-2">
 											<Skeleton height="2rem" width="2rem" rounded="md" />
@@ -532,7 +611,7 @@
 				<div class="text-center py-12 text-surface-700-300"><p>Brak pasywów</p></div>
 			{:else}
 				<SortableTable
-					columns={accountColumns}
+					columns={liabilityColumns}
 					items={accounts.liabilities}
 					row={liabilityRow}
 					paramName="sortL"
@@ -669,6 +748,25 @@
 				<span class="text-xs text-surface-700-300 italic">
 					Powierzchnia nieruchomości w metrach kwadratowych. Używana do obliczania metryki "Ile
 					metrów mieszkania jest nasze".
+				</span>
+			</label>
+		{/if}
+
+		{#if formData.type === 'asset' && (formData.category === 'bank' || formData.category === 'saving_account' || formData.category === 'bond')}
+			<label class="label">
+				<span class="font-semibold text-sm">Oprocentowanie nominalne (%)</span>
+				<input
+					type="number"
+					class="input"
+					bind:value={formData.interest_rate_pct}
+					min="0"
+					max="50"
+					step="0.01"
+					placeholder="np. 5.35"
+				/>
+				<span class="text-xs text-surface-700-300 italic">
+					Roczna stopa nominalna. Tabela kont wyliczy realną stopę po inflacji i 19% Belce (gdy nie
+					w opakowaniu IKE/IKZE).
 				</span>
 			</label>
 		{/if}

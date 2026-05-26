@@ -88,6 +88,9 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 	if err := addAccountsExcludedFromFire(ctx, pool); err != nil {
 		return err
 	}
+	if err := addAccountsInterestRatePct(ctx, pool); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -110,6 +113,16 @@ func migrationSQLSnippet(stmt string) string {
 		return snippet
 	}
 	return snippet[:migrationSQLSnippetMaxLen] + "..."
+}
+
+// addAccountsInterestRatePct adds the optional nominal-yield field for
+// interest-bearing accounts (issue #573). Nullable on purpose — non-cash
+// accounts and accounts whose rate the user hasn't recorded leave it NULL,
+// in which case the real-yield widget hides for that row.
+func addAccountsInterestRatePct(ctx context.Context, pool *pgxpool.Pool) error {
+	return execMigrationSQL(ctx, pool, "add interest_rate_pct to accounts", `
+		ALTER TABLE accounts
+		ADD COLUMN IF NOT EXISTS interest_rate_pct numeric(6,4)`)
 }
 
 // addAccountsExcludedFromFire adds the per-account opt-out flag for FIRE

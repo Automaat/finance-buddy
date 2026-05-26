@@ -19,6 +19,10 @@ export interface Account {
 	created_at: string;
 	current_value: number;
 	square_meters: number | null;
+	interest_rate_pct: number | null;
+	real_yield_pct: number | null;
+	cpi_yoy_pct: number | null;
+	cpi_as_of_year: number | null;
 }
 
 export interface AccountsData {

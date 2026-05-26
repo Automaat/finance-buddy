@@ -303,7 +303,7 @@ func registerCPIAndPayrollRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.
 
 func registerPortfolioRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
 	aggregatesStore := aggregates.NewStore(pool)
-	accountsHandler := accounts.NewHandler(accounts.NewStore(pool, aggregatesStore), logger)
+	accountsHandler := accounts.NewHandler(accounts.NewStore(pool, aggregatesStore), cpi.NewStore(pool), logger)
 	r.Route("/api/accounts", func(r chi.Router) {
 		r.Get("/", accountsHandler.List)
 		r.Post("/", accountsHandler.Create)

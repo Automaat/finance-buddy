@@ -185,6 +185,69 @@ def test_excluded_from_fire_defaults_to_false(
         client.delete(f"/api/accounts/{created_id}")
 
 
+def test_interest_rate_real_yield_round_trip(
+    client: httpx.Client, request: pytest.FixtureRequest, owner_ids: dict[str, int]
+) -> None:
+    """Real-yield widget: setting interest_rate_pct surfaces a CPI-aware
+    real_yield_pct in the response. The seeded CPI table makes 2025 the
+    latest YoY (103.6 -> +3.6%), so a non-shielded 5.35% nominal yields
+    5.35 * 0.81 - 3.6 ≈ 0.7335%.
+    """
+    unique_name = f"bb-test-{request.node.name}-account"
+    create_response = client.post(
+        "/api/accounts",
+        json={
+            "name": unique_name,
+            "type": "asset",
+            "category": "saving_account",
+            "owner_user_id": owner_ids[PERSONA_MARCIN],
+            "currency": "PLN",
+            "purpose": "general",
+            "interest_rate_pct": 5.35,
+        },
+    )
+    assert create_response.status_code == 201, create_response.text
+    created = create_response.json()
+    created_id = int(created["id"])
+    try:
+        assert created["interest_rate_pct"] == pytest.approx(5.35)
+        listing = client.get("/api/accounts")
+        assert listing.status_code == 200, listing.text
+        match = next(a for a in listing.json()["assets"] if a["id"] == created_id)
+        assert match["interest_rate_pct"] == pytest.approx(5.35)
+        assert match["real_yield_pct"] is not None
+        assert match["real_yield_pct"] == pytest.approx(5.35 * 0.81 - 3.6, abs=1e-4)
+        assert match["cpi_as_of_year"] == 2025
+        assert match["cpi_yoy_pct"] == pytest.approx(3.6, abs=1e-4)
+
+        cleared = client.put(f"/api/accounts/{created_id}", json={"interest_rate_pct": None})
+        assert cleared.status_code == 200, cleared.text
+        body = cleared.json()
+        assert body["interest_rate_pct"] is None
+        assert body["real_yield_pct"] is None
+    finally:
+        client.delete(f"/api/accounts/{created_id}")
+
+
+def test_interest_rate_validation_rejects_out_of_range(
+    client: httpx.Client, owner_ids: dict[str, int]
+) -> None:
+    response = client.post(
+        "/api/accounts",
+        json={
+            "name": "bb-test-bad-rate",
+            "type": "asset",
+            "category": "saving_account",
+            "owner_user_id": owner_ids[PERSONA_MARCIN],
+            "currency": "PLN",
+            "purpose": "general",
+            "interest_rate_pct": 535,
+        },
+    )
+    assert response.status_code == 422, response.text
+    assert "interest_rate_pct" in response.text
+
+
 def test_delete_account_happy_path(
     client: httpx.Client, request: pytest.FixtureRequest, owner_ids: dict[str, int]
 ) -> None:
