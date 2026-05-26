@@ -24,6 +24,15 @@
                           "category": {
                             "type": "string"
                           },
+                          "cpi_as_of_year": {
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "cpi_yoy_pct": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
+                          },
                           "created_at": {
                             "format": "date-time",
                             "type": "string"
@@ -41,6 +50,11 @@
                           "id": {
                             "type": "integer"
                           },
+                          "interest_rate_pct": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
+                          },
                           "is_active": {
                             "type": "boolean"
                           },
@@ -53,6 +67,11 @@
                           },
                           "purpose": {
                             "type": "string"
+                          },
+                          "real_yield_pct": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
                           },
                           "receives_contributions": {
                             "type": "boolean"
@@ -80,6 +99,15 @@
                           "category": {
                             "type": "string"
                           },
+                          "cpi_as_of_year": {
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "cpi_yoy_pct": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
+                          },
                           "created_at": {
                             "format": "date-time",
                             "type": "string"
@@ -97,6 +125,11 @@
                           "id": {
                             "type": "integer"
                           },
+                          "interest_rate_pct": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
+                          },
                           "is_active": {
                             "type": "boolean"
                           },
@@ -109,6 +142,11 @@
                           },
                           "purpose": {
                             "type": "string"
+                          },
+                          "real_yield_pct": {
+                            "format": "double",
+                            "nullable": true,
+                            "type": "number"
                           },
                           "receives_contributions": {
                             "type": "boolean"
@@ -153,6 +191,15 @@
                     "category": {
                       "type": "string"
                     },
+                    "cpi_as_of_year": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "cpi_yoy_pct": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
                     "created_at": {
                       "format": "date-time",
                       "type": "string"
@@ -170,6 +217,11 @@
                     "id": {
                       "type": "integer"
                     },
+                    "interest_rate_pct": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
                     "is_active": {
                       "type": "boolean"
                     },
@@ -182,6 +234,11 @@
                     },
                     "purpose": {
                       "type": "string"
+                    },
+                    "real_yield_pct": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
                     },
                     "receives_contributions": {
                       "type": "boolean"
@@ -673,6 +730,15 @@
                     "category": {
                       "type": "string"
                     },
+                    "cpi_as_of_year": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "cpi_yoy_pct": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
                     "created_at": {
                       "format": "date-time",
                       "type": "string"
@@ -690,6 +756,11 @@
                     "id": {
                       "type": "integer"
                     },
+                    "interest_rate_pct": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
+                    },
                     "is_active": {
                       "type": "boolean"
                     },
@@ -702,6 +773,11 @@
                     },
                     "purpose": {
                       "type": "string"
+                    },
+                    "real_yield_pct": {
+                      "format": "double",
+                      "nullable": true,
+                      "type": "number"
                     },
                     "receives_contributions": {
                       "type": "boolean"

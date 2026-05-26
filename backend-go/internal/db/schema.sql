@@ -26,7 +26,8 @@ CREATE TABLE public.accounts (
     is_active boolean NOT NULL,
     receives_contributions boolean NOT NULL,
     created_at timestamp without time zone NOT NULL,
-    excluded_from_fire boolean DEFAULT false NOT NULL
+    excluded_from_fire boolean DEFAULT false NOT NULL,
+    interest_rate_pct numeric(6,4)
 );
 
 

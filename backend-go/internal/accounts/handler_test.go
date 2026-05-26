@@ -72,7 +72,7 @@ func TestToResponseSquareMetersOmitWhenNil(t *testing.T) {
 		ID: 7, Name: "Konto", Type: "asset", Category: "bank",
 		Currency: "PLN", Purpose: "general",
 	}
-	r := toResponse(a, decimal.NewFromInt(100))
+	r := toResponse(a, decimal.NewFromInt(100), realYieldCtx{})
 	if r.SquareMeters != nil {
 		t.Fatalf("square meters should be nil, got %+v", r.SquareMeters)
 	}
@@ -88,7 +88,7 @@ func TestToResponseSquareMetersForwarded(t *testing.T) {
 		Currency: "PLN", Purpose: "general",
 		SquareMeters: &sq,
 	}
-	r := toResponse(a, decimal.Zero)
+	r := toResponse(a, decimal.Zero, realYieldCtx{})
 	if r.SquareMeters == nil || float64(*r.SquareMeters) != 55.5 {
 		t.Fatalf("square meters mismatch: %+v", r.SquareMeters)
 	}
@@ -99,9 +99,105 @@ func TestToResponseExcludedFromFireForwarded(t *testing.T) {
 		ID: 11, Name: "Mieszkanie", Type: "asset", Category: "real_estate",
 		Currency: "PLN", Purpose: "general", ExcludedFromFire: true,
 	}
-	r := toResponse(a, decimal.Zero)
+	r := toResponse(a, decimal.Zero, realYieldCtx{})
 	if !r.ExcludedFromFire {
 		t.Fatalf("excluded_from_fire should be forwarded as true")
+	}
+}
+
+func TestToResponseInterestRateForwardedWithoutCPI(t *testing.T) {
+	rate := decimal.RequireFromString("5.35")
+	a := &Account{
+		ID: 1, Name: "EDO", Type: "asset", Category: "bond",
+		Currency: "PLN", Purpose: "general",
+		InterestRatePct: &rate,
+	}
+	r := toResponse(a, decimal.Zero, realYieldCtx{})
+	if r.InterestRatePct == nil || float64(*r.InterestRatePct) != 5.35 {
+		t.Fatalf("interest rate should forward, got %+v", r.InterestRatePct)
+	}
+	if r.RealYieldPct != nil || r.CPIYoYPct != nil || r.CPIAsOfYear != nil {
+		t.Fatalf("real yield columns must be nil when CPI unavailable: %+v", r)
+	}
+}
+
+func TestToResponseRealYieldBelkaAndCPI(t *testing.T) {
+	// Issue #573 worked example: 5.35% nominal, 4% CPI, 19% Belka, no
+	// wrapper -> real yield ~ 0.3335%.
+	rate := decimal.RequireFromString("5.35")
+	a := &Account{
+		ID: 1, Name: "Konto Oszczędnościowe", Type: "asset",
+		Category: "saving_account", Currency: "PLN", Purpose: "general",
+		InterestRatePct: &rate,
+	}
+	ry := realYieldCtx{
+		yoyPct:    decimal.NewFromInt(4),
+		asOfYear:  2025,
+		hasLatest: true,
+	}
+	r := toResponse(a, decimal.Zero, ry)
+	if r.RealYieldPct == nil {
+		t.Fatalf("real yield should be present")
+	}
+	got := float64(*r.RealYieldPct)
+	want := 0.3335
+	if diff := got - want; diff > 0.0005 || diff < -0.0005 {
+		t.Fatalf("real yield = %v, want ~%v", got, want)
+	}
+	if r.CPIAsOfYear == nil || *r.CPIAsOfYear != 2025 {
+		t.Fatalf("expected as_of_year=2025, got %+v", r.CPIAsOfYear)
+	}
+}
+
+func TestToResponseRealYieldShieldedByIKE(t *testing.T) {
+	// Inside IKE: Belka does not apply. Real yield = nominal - cpi.
+	rate := decimal.RequireFromString("5.35")
+	ike := "IKE"
+	a := &Account{
+		ID: 2, Name: "IKE", Type: "asset", Category: "saving_account",
+		Currency: "PLN", Purpose: "retirement",
+		AccountWrapper: &ike, InterestRatePct: &rate,
+	}
+	ry := realYieldCtx{
+		yoyPct:    decimal.NewFromInt(4),
+		asOfYear:  2025,
+		hasLatest: true,
+	}
+	r := toResponse(a, decimal.Zero, ry)
+	if r.RealYieldPct == nil || float64(*r.RealYieldPct) != 1.35 {
+		t.Fatalf("IKE-shielded real yield should be 1.35, got %+v", r.RealYieldPct)
+	}
+}
+
+func TestToResponseNoInterestRateNoRealYield(t *testing.T) {
+	a := &Account{ID: 3, Name: "Konto", Type: "asset", Category: "bank", Currency: "PLN", Purpose: "general"}
+	ry := realYieldCtx{yoyPct: decimal.NewFromInt(4), asOfYear: 2025, hasLatest: true}
+	r := toResponse(a, decimal.Zero, ry)
+	if r.InterestRatePct != nil || r.RealYieldPct != nil {
+		t.Fatalf("accounts without a rate should not surface a real yield: %+v", r)
+	}
+}
+
+func TestIsShieldedFromBelka(t *testing.T) {
+	ike := "IKE"
+	ikze := "IKZE"
+	ppk := "PPK"
+	cases := []struct {
+		name    string
+		wrapper *string
+		want    bool
+	}{
+		{"nil wrapper", nil, false},
+		{"IKE", &ike, true},
+		{"IKZE", &ikze, true},
+		{"PPK", &ppk, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := isShieldedFromBelka(tc.wrapper); got != tc.want {
+				t.Fatalf("got %v, want %v", got, tc.want)
+			}
+		})
 	}
 }
 
