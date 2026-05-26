@@ -288,10 +288,11 @@ func createRecurringTransactionsTable(ctx context.Context, pool *pgxpool.Pool) e
 // violation because the Go INSERT doesn't list them.
 func dropAppConfigLegacyPPKRates(ctx context.Context, pool *pgxpool.Pool) error {
 	return execMigrationSQL(ctx, pool, "drop legacy ppk rate columns from app_config",
-		`ALTER TABLE app_config DROP COLUMN IF EXISTS ppk_employee_rate_marcin`,
-		`ALTER TABLE app_config DROP COLUMN IF EXISTS ppk_employer_rate_marcin`,
-		`ALTER TABLE app_config DROP COLUMN IF EXISTS ppk_employee_rate_ewa`,
-		`ALTER TABLE app_config DROP COLUMN IF EXISTS ppk_employer_rate_ewa`,
+		`ALTER TABLE app_config
+			DROP COLUMN IF EXISTS ppk_employee_rate_marcin,
+			DROP COLUMN IF EXISTS ppk_employer_rate_marcin,
+			DROP COLUMN IF EXISTS ppk_employee_rate_ewa,
+			DROP COLUMN IF EXISTS ppk_employer_rate_ewa`,
 	)
 }
 
