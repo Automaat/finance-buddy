@@ -131,6 +131,31 @@ func TestAddRouteRejectsUnsupportedMethod(t *testing.T) {
 	}
 }
 
+func TestAllRoutesIncludesAuthRoutes(t *testing.T) {
+	got := routeSet(allRoutes())
+	for _, key := range []string{
+		"POST /api/auth/login",
+		"POST /api/auth/logout",
+		"GET /api/auth/me",
+		"GET /api/users",
+		"GET /api/auth/users",
+		"POST /api/auth/users",
+		"PUT /api/auth/users/{id}",
+	} {
+		if !got[key] {
+			t.Fatalf("%s missing from allRoutes", key)
+		}
+	}
+}
+
+func routeSet(routes []apispec.Route) map[string]bool {
+	out := make(map[string]bool, len(routes))
+	for _, route := range routes {
+		out[route.Method+" "+route.Path] = true
+	}
+	return out
+}
+
 func findParam(
 	t *testing.T,
 	params openapi3.Parameters,
