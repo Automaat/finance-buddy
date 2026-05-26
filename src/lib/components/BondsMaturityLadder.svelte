@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { formatPLN } from '$lib/utils/format';
+	import { daysLabel } from '$lib/utils/yearEnd';
 	import { CalendarClock, Coins, ArrowDownToLine } from 'lucide-svelte';
 	import type {
 		MaturityLadderEvent,
@@ -82,7 +83,8 @@
 				<span>
 					Najbliższy wykup: <strong>{nextMaturity.type}</strong> · {nextMaturity.count}
 					{nextMaturity.count === 1 ? 'obligacja' : 'obligacji'}
-					· {nextMaturity.date} ({nextMaturity.days_until} dni)
+					· {nextMaturity.date} ({nextMaturity.days_until}
+					{daysLabel(nextMaturity.days_until)})
 				</span>
 			</div>
 			<span class="font-semibold">{formatPLN(nextMaturity.net_cashflow)} netto</span>
@@ -91,7 +93,7 @@
 
 	{#if groupedByMonth.length === 0}
 		<p class="text-sm text-surface-700-300 text-center py-6">
-			Brak nadchodzących przepływów. Dodaj obligacje aby zobaczyć kalendarz.
+			Brak nadchodzących przepływów. Dodaj obligacje, aby zobaczyć kalendarz.
 		</p>
 	{:else}
 		<div class="space-y-3">

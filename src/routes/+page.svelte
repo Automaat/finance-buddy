@@ -537,7 +537,8 @@
 					>
 						<AlertTriangle size={14} />
 						<span>
-							Wykup {nm.type} za {nm.days_until} dni ({formatPLN(nm.net_cashflow)} netto)
+							Wykup {nm.type} za {nm.days_until}
+							{daysLabel(nm.days_until)} ({formatPLN(nm.net_cashflow)} netto)
 						</span>
 					</div>
 				{/if}

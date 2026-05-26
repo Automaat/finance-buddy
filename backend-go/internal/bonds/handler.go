@@ -21,18 +21,26 @@ import (
 )
 
 // belkaRate is the Belka (capital-gains) tax fraction (0.19) applied to
-// bond interest payouts. Sourced from the rules table on first use so a
-// future rate change updates the calendar without a code edit here.
+// bond interest payouts. The key is the 2026 entry; future-year rates
+// require a code change here once a new rule key lands in the rules
+// table. If the lookup ever fails (e.g. rules table edited out from
+// under us) we fall back to the statutory 0.19 and log — the calendar
+// is informational, so degrading is better than crashing the API.
 var (
-	belkaOnce sync.Once
-	belkaRate decimal.Decimal
+	belkaOnce     sync.Once
+	belkaRate     decimal.Decimal
+	belkaFallback = decimal.NewFromFloat(0.19)
+	belkaRuleKey  = "capital_gains_tax_2026"
 )
 
 func getBelkaRate() decimal.Decimal {
 	belkaOnce.Do(func() {
-		r, ok := rules.Get("capital_gains_tax_2026")
+		r, ok := rules.Get(belkaRuleKey)
 		if !ok {
-			panic("bonds: rules table missing capital_gains_tax_2026")
+			slog.Default().Warn("bonds: belka rule missing, using statutory fallback",
+				"key", belkaRuleKey, "fallback", belkaFallback.String())
+			belkaRate = belkaFallback
+			return
 		}
 		belkaRate = r.Value
 	})

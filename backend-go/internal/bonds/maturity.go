@@ -71,14 +71,21 @@ type LadderResult struct {
 // forward-looking, and a bond's matured principal has already hit the
 // owner's account.
 func MaturityLadder(bonds []TreasuryBond, yoyByYear map[int]decimal.Decimal, now time.Time, belkaRate decimal.Decimal) LadderResult {
+	if len(bonds) == 0 {
+		return LadderResult{Events: []LadderEvent{}, NextMaturity: nil}
+	}
 	bucketKey := func(month time.Time, t BondType, kind LadderEventKind) string {
 		return month.Format("2006-01") + "|" + string(t) + "|" + string(kind)
 	}
 	buckets := map[string]*LadderEvent{}
+	// Cache the per-bond redemption cashflow built during the main pass
+	// so computeNextMaturity doesn't recompute YieldToMaturity below.
+	redemptions := make(map[int]redemptionCashflow, len(bonds))
 
 	for i := range bonds {
 		b := &bonds[i]
-		appendBondEvents(b, yoyByYear, now, belkaRate, buckets, bucketKey)
+		cf := appendBondEvents(b, yoyByYear, now, belkaRate, buckets, bucketKey)
+		redemptions[b.ID] = cf
 	}
 
 	events := make([]LadderEvent, 0, len(buckets))
@@ -96,10 +103,13 @@ func MaturityLadder(bonds []TreasuryBond, yoyByYear map[int]decimal.Decimal, now
 		return events[i].Kind < events[j].Kind
 	})
 
-	next := computeNextMaturity(bonds, yoyByYear, now, belkaRate)
+	next := computeNextMaturity(bonds, yoyByYear, now, belkaRate, redemptions)
 	return LadderResult{Events: events, NextMaturity: next}
 }
 
+// appendBondEvents emits all calendar events for one bond and returns
+// the redemption cashflow so the dashboard-warning pass can reuse it
+// without recomputing YieldToMaturity.
 func appendBondEvents(
 	b *TreasuryBond,
 	yoy map[int]decimal.Decimal,
@@ -107,20 +117,16 @@ func appendBondEvents(
 	belka decimal.Decimal,
 	buckets map[string]*LadderEvent,
 	keyFn func(time.Time, BondType, LadderEventKind) string,
-) {
+) redemptionCashflow {
 	tenor := bondTenorYears(b.Type)
 	if tenor <= 0 {
-		return
+		return redemptionCashflow{}
 	}
 
 	if b.Capitalize {
-		maturityDate := MaturityDate(b)
-		if !maturityDate.After(now) {
-			return
-		}
 		final := YieldToMaturity(b, yoy)
 		if len(final) == 0 {
-			return
+			return redemptionCashflow{}
 		}
 		finalValue := final[len(final)-1].Value
 		interest := finalValue.Sub(b.FaceValue)
@@ -129,8 +135,12 @@ func appendBondEvents(
 		}
 		tax := interest.Mul(belka).Round(2)
 		net := finalValue.Sub(tax)
-		addEvent(buckets, keyFn, maturityDate, b.Type, EventRedemption, b.ID, b.FaceValue, interest, tax, net)
-		return
+		cf := redemptionCashflow{final: finalValue, interest: interest, tax: tax, net: net}
+		maturityDate := MaturityDate(b)
+		if maturityDate.After(now) {
+			addEvent(buckets, keyFn, maturityDate, b.Type, EventRedemption, b.ID, b.FaceValue, interest, tax, net)
+		}
+		return cf
 	}
 
 	for year := 1; year <= tenor; year++ {
@@ -149,6 +159,7 @@ func appendBondEvents(
 	if maturityDate.After(now) {
 		addEvent(buckets, keyFn, maturityDate, b.Type, EventRedemption, b.ID, b.FaceValue, decimal.Zero, decimal.Zero, b.FaceValue)
 	}
+	return redemptionCashflow{final: b.FaceValue, net: b.FaceValue}
 }
 
 func addEvent(
@@ -184,47 +195,35 @@ func addEvent(
 	ev.NetCashflow = ev.NetCashflow.Add(net)
 }
 
-// redemptionCashflow returns the (final, interest, tax, net) numbers for
-// a bond's redemption row — capitalized bonds carry compounded interest;
-// non-capitalized bonds return only principal at maturity.
+// redemptionCashflow is the (final value, interest, tax, net) tuple for
+// a bond's redemption row. Capitalized bonds carry compounded interest;
+// non-capitalized bonds return only principal at maturity (the interest
+// has already been paid as yearly coupons).
 type redemptionCashflow struct{ final, interest, tax, net decimal.Decimal }
 
-func bondRedemptionCashflow(b *TreasuryBond, yoy map[int]decimal.Decimal, belka decimal.Decimal) (redemptionCashflow, bool) {
-	if b.Capitalize {
-		pts := YieldToMaturity(b, yoy)
-		if len(pts) == 0 {
-			return redemptionCashflow{}, false
-		}
-		final := pts[len(pts)-1].Value
-		interest := final.Sub(b.FaceValue)
-		if interest.IsNegative() {
-			interest = decimal.Zero
-		}
-		tax := interest.Mul(belka).Round(2)
-		return redemptionCashflow{final: final, interest: interest, tax: tax, net: final.Sub(tax)}, true
-	}
-	return redemptionCashflow{final: b.FaceValue, net: b.FaceValue}, true
-}
-
 // computeNextMaturity collapses bonds redeeming in the soonest future
-// month into one warning record. Multiple bonds maturing on different
-// days within the same month are aggregated; the displayed Date is the
-// earliest individual maturity in that group so the dashboard's
-// "X dni" countdown stays accurate.
-func computeNextMaturity(bonds []TreasuryBond, yoy map[int]decimal.Decimal, now time.Time, belka decimal.Decimal) *NextMaturity {
+// month into one warning record. Aggregation is restricted to bonds of
+// the *same type* as the nearest match so the surfaced `Type` and the
+// summed cashflow stay coherent — if e.g. an EDO and a DOS happen to
+// mature in the same month, the warning still describes a single
+// homogeneous batch.
+func computeNextMaturity(bonds []TreasuryBond, yoy map[int]decimal.Decimal, now time.Time, belka decimal.Decimal, redemptions map[int]redemptionCashflow) *NextMaturity {
 	nearestIdx, nearestDate := pickNearestMaturity(bonds, now)
 	if nearestIdx < 0 {
 		return nil
 	}
-	out := &NextMaturity{Date: nearestDate, DaysUntil: daysBetween(now, nearestDate)}
-	out.Type = bonds[nearestIdx].Type
+	nearestType := bonds[nearestIdx].Type
+	out := &NextMaturity{Date: nearestDate, DaysUntil: daysBetween(now, nearestDate), Type: nearestType}
 	for i := range bonds {
 		b := &bonds[i]
+		if b.Type != nearestType {
+			continue
+		}
 		md := MaturityDate(b)
 		if !md.After(now) || !sameMonth(md, nearestDate) {
 			continue
 		}
-		cf, ok := bondRedemptionCashflow(b, yoy, belka)
+		cf, ok := redemptions[b.ID]
 		if !ok {
 			continue
 		}
