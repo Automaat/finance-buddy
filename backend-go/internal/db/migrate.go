@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -28,6 +29,8 @@ var ownerFK = map[string]string{
 	"retirement_limits":   "retirement_limits_owner_user_id_fkey",
 	"snapshot_aggregates": "snapshot_aggregates_owner_user_id_fkey",
 }
+
+const migrationSQLSnippetMaxLen = 96
 
 // Migrate converges an existing database onto the final personas->users
 // schema: it drops the legacy `owner` string column from every owner-bearing
@@ -89,12 +92,24 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 }
 
 func execMigrationSQL(ctx context.Context, pool *pgxpool.Pool, label string, stmts ...string) error {
-	for _, stmt := range stmts {
+	for idx, stmt := range stmts {
 		if _, err := pool.Exec(ctx, stmt); err != nil {
-			return fmt.Errorf("%s: %w", label, err)
+			return fmt.Errorf("%s statement %d %q: %w",
+				label, idx+1, migrationSQLSnippet(stmt), err)
 		}
 	}
 	return nil
+}
+
+func migrationSQLSnippet(stmt string) string {
+	snippet := strings.Join(strings.Fields(stmt), " ")
+	if snippet == "" {
+		return "<empty>"
+	}
+	if len(snippet) <= migrationSQLSnippetMaxLen {
+		return snippet
+	}
+	return snippet[:migrationSQLSnippetMaxLen] + "..."
 }
 
 // addAccountsExcludedFromFire adds the per-account opt-out flag for FIRE
