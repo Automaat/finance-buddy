@@ -393,3 +393,82 @@ describe('Dashboard — FIRE / runway / bonds cards', () => {
 		await waitFor(() => expect(screen.getByText('1 obligacja (auto-wycena wg CPI)')).toBeTruthy());
 	});
 });
+
+describe('Dashboard — IKE/IKZE year-end countdown', () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	function statAt(percentage_used: number) {
+		return {
+			account_wrapper: 'IKE',
+			owner_user_id: 1,
+			total_contributed: 1000,
+			limit_amount: 28260,
+			remaining: 27260,
+			percentage_used
+		};
+	}
+
+	function dataAt(percentage_used: number) {
+		return buildData({
+			dashboardData: {
+				net_worth_history: [{ date: '2024-01-01', value: 5000 }],
+				current_net_worth: 6000,
+				change_vs_last_month: 0,
+				total_assets: 10000,
+				total_liabilities: 4000,
+				allocation: [],
+				retirementStats: [statAt(percentage_used)],
+				tile_deltas: baseTileDeltas
+			},
+			owners: [{ id: 1, name: 'Marcin' }]
+		});
+	}
+
+	it('shows the days-to-Dec-31 countdown in the header', async () => {
+		vi.setSystemTime(new Date(2026, 5, 1, 12, 0, 0));
+		render(Page, { props: { data: dataAt(20) } });
+		await waitFor(() =>
+			expect(screen.getByRole('heading', { name: /Limity Emerytalne/ })).toBeTruthy()
+		);
+		expect(screen.getByText(/214 dni do 31 grudnia/)).toBeTruthy();
+	});
+
+	it('renders maxed badge when limit reached (any month)', async () => {
+		vi.setSystemTime(new Date(2026, 0, 15, 12, 0, 0));
+		render(Page, { props: { data: dataAt(100) } });
+		await waitFor(() => expect(screen.getByText('Limit osiągnięty')).toBeTruthy());
+	});
+
+	it('renders no urgency badge in Q1-Q2 when not maxed', async () => {
+		vi.setSystemTime(new Date(2026, 3, 15, 12, 0, 0));
+		render(Page, { props: { data: dataAt(10) } });
+		await waitFor(() =>
+			expect(screen.getByRole('heading', { name: /Limity Emerytalne/ })).toBeTruthy()
+		);
+		expect(screen.queryByText(/Końcówka roku/)).toBeNull();
+		expect(screen.queryByText(/Coraz mniej czasu/)).toBeNull();
+		expect(screen.queryByText('Limit osiągnięty')).toBeNull();
+	});
+
+	it('renders warn badge in Q3 when not maxed', async () => {
+		vi.setSystemTime(new Date(2026, 7, 15, 12, 0, 0));
+		render(Page, { props: { data: dataAt(40) } });
+		await waitFor(() =>
+			expect(screen.getByText(/Coraz mniej czasu na wykorzystanie limitu/)).toBeTruthy()
+		);
+	});
+
+	it('renders urgent badge in Q4 when not maxed', async () => {
+		vi.setSystemTime(new Date(2026, 10, 15, 12, 0, 0));
+		render(Page, { props: { data: dataAt(70) } });
+		await waitFor(() =>
+			expect(screen.getByText(/Końcówka roku — limit przepadnie 31\.12/)).toBeTruthy()
+		);
+	});
+});
