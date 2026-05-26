@@ -150,8 +150,8 @@ func TestAllRoutesIncludesAuthRoutes(t *testing.T) {
 
 func routeSet(routes []apispec.Route) map[string]bool {
 	out := make(map[string]bool, len(routes))
-	for _, route := range routes {
-		out[route.Method+" "+route.Path] = true
+	for i := range routes {
+		out[routes[i].Method+" "+routes[i].Path] = true
 	}
 	return out
 }
