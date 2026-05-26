@@ -2,6 +2,7 @@ package db
 
 import (
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -25,6 +26,34 @@ func TestOwnerTablesHaveForeignKeyNames(t *testing.T) {
 			t.Errorf("ownerFK has %q but ownerTables does not", tbl)
 		}
 	}
+}
+
+func TestMigrationSQLSnippet(t *testing.T) {
+	t.Run("compacts whitespace", func(t *testing.T) {
+		got := migrationSQLSnippet(`
+			ALTER TABLE app_config
+			ADD COLUMN IF NOT EXISTS monthly_savings numeric(15,2)
+		`)
+		want := "ALTER TABLE app_config ADD COLUMN IF NOT EXISTS monthly_savings numeric(15,2)"
+		if got != want {
+			t.Fatalf("snippet = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("marks empty statement", func(t *testing.T) {
+		got := migrationSQLSnippet(" \n\t ")
+		if got != "<empty>" {
+			t.Fatalf("snippet = %q, want <empty>", got)
+		}
+	})
+
+	t.Run("truncates long statement", func(t *testing.T) {
+		got := migrationSQLSnippet(strings.Repeat("x", migrationSQLSnippetMaxLen+1))
+		want := strings.Repeat("x", migrationSQLSnippetMaxLen) + "..."
+		if got != want {
+			t.Fatalf("snippet = %q, want %q", got, want)
+		}
+	})
 }
 
 func TestMigrateIsIdempotent(t *testing.T) {

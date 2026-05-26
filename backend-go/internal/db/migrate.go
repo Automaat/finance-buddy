@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -28,6 +29,8 @@ var ownerFK = map[string]string{
 	"retirement_limits":   "retirement_limits_owner_user_id_fkey",
 	"snapshot_aggregates": "snapshot_aggregates_owner_user_id_fkey",
 }
+
+const migrationSQLSnippetMaxLen = 96
 
 // Migrate converges an existing database onto the final personas->users
 // schema: it drops the legacy `owner` string column from every owner-bearing
@@ -88,6 +91,27 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 	return nil
 }
 
+func execMigrationSQL(ctx context.Context, pool *pgxpool.Pool, label string, stmts ...string) error {
+	for idx, stmt := range stmts {
+		if _, err := pool.Exec(ctx, stmt); err != nil {
+			return fmt.Errorf("%s statement %d %q: %w",
+				label, idx+1, migrationSQLSnippet(stmt), err)
+		}
+	}
+	return nil
+}
+
+func migrationSQLSnippet(stmt string) string {
+	snippet := strings.Join(strings.Fields(stmt), " ")
+	if snippet == "" {
+		return "<empty>"
+	}
+	if len(snippet) <= migrationSQLSnippetMaxLen {
+		return snippet
+	}
+	return snippet[:migrationSQLSnippetMaxLen] + "..."
+}
+
 // addAccountsExcludedFromFire adds the per-account opt-out flag for FIRE
 // math. A primary residence ("lived-in flat") inflates net worth without
 // ever being drawn down for retirement income, so counting it toward the
@@ -95,12 +119,9 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 // current behavior for every existing account; the user opts in per
 // account from the edit modal.
 func addAccountsExcludedFromFire(ctx context.Context, pool *pgxpool.Pool) error {
-	if _, err := pool.Exec(ctx, `
+	return execMigrationSQL(ctx, pool, "add excluded_from_fire to accounts", `
 		ALTER TABLE accounts
-		ADD COLUMN IF NOT EXISTS excluded_from_fire boolean NOT NULL DEFAULT false`); err != nil {
-		return fmt.Errorf("add excluded_from_fire to accounts: %w", err)
-	}
-	return nil
+		ADD COLUMN IF NOT EXISTS excluded_from_fire boolean NOT NULL DEFAULT false`)
 }
 
 // createSimulationScenariosTable creates the simulation_scenarios table for
@@ -109,7 +130,7 @@ func addAccountsExcludedFromFire(ctx context.Context, pool *pgxpool.Pool) error 
 // its current state into it, so adding fields to the form doesn't require
 // a schema change.
 func createSimulationScenariosTable(ctx context.Context, pool *pgxpool.Pool) error {
-	stmts := []string{
+	return execMigrationSQL(ctx, pool, "create simulation_scenarios",
 		`CREATE TABLE IF NOT EXISTS simulation_scenarios (
 			id serial PRIMARY KEY,
 			name varchar(200) NOT NULL,
@@ -120,55 +141,37 @@ func createSimulationScenariosTable(ctx context.Context, pool *pgxpool.Pool) err
 		)`,
 		`CREATE INDEX IF NOT EXISTS ix_simulation_scenarios_kind_updated_at
 			ON simulation_scenarios (kind, updated_at DESC)`,
-	}
-	for _, stmt := range stmts {
-		if _, err := pool.Exec(ctx, stmt); err != nil {
-			return fmt.Errorf("create simulation_scenarios: %w", err)
-		}
-	}
-	return nil
+	)
 }
 
 // addAppConfigMonthlySavings adds the monthly_savings input feeding the
 // projected-FI-date metric (issue #551). Nullable — when unset, the FI
 // projection tile shows an empty state asking the user to configure it.
 func addAppConfigMonthlySavings(ctx context.Context, pool *pgxpool.Pool) error {
-	if _, err := pool.Exec(ctx, `
+	return execMigrationSQL(ctx, pool, "add monthly_savings to app_config", `
 		ALTER TABLE app_config
-		ADD COLUMN IF NOT EXISTS monthly_savings numeric(15,2)`); err != nil {
-		return fmt.Errorf("add monthly_savings to app_config: %w", err)
-	}
-	return nil
+		ADD COLUMN IF NOT EXISTS monthly_savings numeric(15,2)`)
 }
 
 // addAppConfigFIREBands adds the Lean and Fat FIRE monthly-expense bands
 // to app_config (issue #550). Both nullable — when unset the band tile is
 // hidden and only the existing Base FIRE number (monthly_expenses) shows.
 func addAppConfigFIREBands(ctx context.Context, pool *pgxpool.Pool) error {
-	stmts := []string{
+	return execMigrationSQL(ctx, pool, "add fire bands to app_config",
 		`ALTER TABLE app_config
 		ADD COLUMN IF NOT EXISTS lean_monthly_expenses numeric(15,2)`,
 		`ALTER TABLE app_config
 		ADD COLUMN IF NOT EXISTS fat_monthly_expenses numeric(15,2)`,
-	}
-	for _, stmt := range stmts {
-		if _, err := pool.Exec(ctx, stmt); err != nil {
-			return fmt.Errorf("add fire bands to app_config: %w", err)
-		}
-	}
-	return nil
+	)
 }
 
 // addAppConfigBaristaFIRE adds the Barista FIRE input to app_config (issue
 // #552): an optional `barista_monthly_income`. Nullable on purpose — when
 // unset the Barista FIRE tile is hidden, matching the Coast FIRE convention.
 func addAppConfigBaristaFIRE(ctx context.Context, pool *pgxpool.Pool) error {
-	if _, err := pool.Exec(ctx, `
+	return execMigrationSQL(ctx, pool, "add barista_monthly_income to app_config", `
 		ALTER TABLE app_config
-		ADD COLUMN IF NOT EXISTS barista_monthly_income numeric(15,2)`); err != nil {
-		return fmt.Errorf("add barista_monthly_income to app_config: %w", err)
-	}
-	return nil
+		ADD COLUMN IF NOT EXISTS barista_monthly_income numeric(15,2)`)
 }
 
 // addAppConfigCoastFIRE adds the Coast FIRE inputs to app_config (issue #548):
@@ -176,25 +179,19 @@ func addAppConfigBaristaFIRE(ctx context.Context, pool *pgxpool.Pool) error {
 // `expected_return_rate` (defaults to 0.07, a conservative real-return
 // assumption matching the retirement-savings projection on the settings page).
 func addAppConfigCoastFIRE(ctx context.Context, pool *pgxpool.Pool) error {
-	stmts := []string{
+	return execMigrationSQL(ctx, pool, "add coast fire columns to app_config",
 		`ALTER TABLE app_config
 		ADD COLUMN IF NOT EXISTS coast_fire_target_age integer`,
 		`ALTER TABLE app_config
 		ADD COLUMN IF NOT EXISTS expected_return_rate numeric(5,4) NOT NULL DEFAULT 0.07`,
-	}
-	for _, stmt := range stmts {
-		if _, err := pool.Exec(ctx, stmt); err != nil {
-			return fmt.Errorf("add coast fire columns to app_config: %w", err)
-		}
-	}
-	return nil
+	)
 }
 
 // createHoldingsTables creates the securities / lots / price_quotes tables
 // (issue #400) on existing databases. Fresh installs get them from schema.sql.
 // All statements are idempotent.
 func createHoldingsTables(ctx context.Context, pool *pgxpool.Pool) error {
-	stmts := []string{
+	return execMigrationSQL(ctx, pool, "create holdings tables",
 		`CREATE TABLE IF NOT EXISTS securities (
 			id serial PRIMARY KEY,
 			symbol varchar(32) NOT NULL,
@@ -214,7 +211,7 @@ func createHoldingsTables(ctx context.Context, pool *pgxpool.Pool) error {
 			quantity numeric(20,8) NOT NULL,
 			price numeric(20,6) NOT NULL,
 			fee numeric(15,2) NOT NULL DEFAULT 0,
-			date ` + "DATE" + ` NOT NULL,
+			date DATE NOT NULL,
 			created_at timestamp without time zone NOT NULL DEFAULT (now() at time zone 'utc')
 		)`,
 		`CREATE INDEX IF NOT EXISTS ix_lots_security_date ON lots (security_id, date)`,
@@ -222,26 +219,20 @@ func createHoldingsTables(ctx context.Context, pool *pgxpool.Pool) error {
 		`CREATE TABLE IF NOT EXISTS price_quotes (
 			id serial PRIMARY KEY,
 			security_id integer NOT NULL REFERENCES securities(id) ON DELETE CASCADE,
-			date ` + "DATE" + ` NOT NULL,
+			date DATE NOT NULL,
 			price numeric(20,6) NOT NULL,
 			source varchar(40) NOT NULL DEFAULT 'manual',
 			created_at timestamp without time zone NOT NULL DEFAULT (now() at time zone 'utc')
 		)`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS uq_price_quotes_security_date ON price_quotes (security_id, date)`,
-	}
-	for _, stmt := range stmts {
-		if _, err := pool.Exec(ctx, stmt); err != nil {
-			return fmt.Errorf("create holdings tables: %w", err)
-		}
-	}
-	return nil
+	)
 }
 
 // createRecurringTransactionsTable creates the recurring_transactions table
 // for issue #384 on existing databases. New installs get it from schema.sql.
 // Idempotent via IF NOT EXISTS.
 func createRecurringTransactionsTable(ctx context.Context, pool *pgxpool.Pool) error {
-	stmts := []string{
+	return execMigrationSQL(ctx, pool, "create recurring_transactions",
 		`CREATE TABLE IF NOT EXISTS recurring_transactions (
 			id serial PRIMARY KEY,
 			account_id integer NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
@@ -263,13 +254,7 @@ func createRecurringTransactionsTable(ctx context.Context, pool *pgxpool.Pool) e
 		`ALTER TABLE recurring_transactions ADD COLUMN IF NOT EXISTS category varchar(50)`,
 		`CREATE INDEX IF NOT EXISTS ix_recurring_transactions_active_account
 		   ON recurring_transactions (active, account_id)`,
-	}
-	for _, stmt := range stmts {
-		if _, err := pool.Exec(ctx, stmt); err != nil {
-			return fmt.Errorf("create recurring_transactions: %w", err)
-		}
-	}
-	return nil
+	)
 }
 
 // addAppConfigWithdrawalRate adds the withdrawal_rate column to app_config
@@ -277,28 +262,19 @@ func createRecurringTransactionsTable(ctx context.Context, pool *pgxpool.Pool) e
 // Trinity-study default; the column is created with that default so any
 // existing app_config row is backfilled without a separate UPDATE.
 func addAppConfigWithdrawalRate(ctx context.Context, pool *pgxpool.Pool) error {
-	if _, err := pool.Exec(ctx, `
+	return execMigrationSQL(ctx, pool, "add withdrawal_rate to app_config", `
 		ALTER TABLE app_config
-		ADD COLUMN IF NOT EXISTS withdrawal_rate numeric(5,4) NOT NULL DEFAULT 0.04`); err != nil {
-		return fmt.Errorf("add withdrawal_rate to app_config: %w", err)
-	}
-	return nil
+		ADD COLUMN IF NOT EXISTS withdrawal_rate numeric(5,4) NOT NULL DEFAULT 0.04`)
 }
 
 // dropOwnerDependentObjects removes the index and unique constraints keyed on
 // the legacy `owner` column so the column can be dropped.
 func dropOwnerDependentObjects(ctx context.Context, pool *pgxpool.Pool) error {
-	stmts := []string{
+	return execMigrationSQL(ctx, pool, "drop owner-dependent object",
 		`DROP INDEX IF EXISTS ix_accounts_owner`,
 		`ALTER TABLE retirement_limits DROP CONSTRAINT IF EXISTS uq_year_wrapper_owner`,
 		`ALTER TABLE snapshot_aggregates DROP CONSTRAINT IF EXISTS uix_snapshot_agg_snapshot_owner`,
-	}
-	for _, stmt := range stmts {
-		if _, err := pool.Exec(ctx, stmt); err != nil {
-			return fmt.Errorf("drop owner-dependent object: %w", err)
-		}
-	}
-	return nil
+	)
 }
 
 // dropOwnerColumn runs a final owner->owner_user_id backfill while the legacy
