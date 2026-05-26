@@ -31,6 +31,9 @@ export interface paths {
                             assets?: {
                                 account_wrapper?: string | null;
                                 category?: string;
+                                cpi_as_of_year?: number | null;
+                                /** Format: double */
+                                cpi_yoy_pct?: number | null;
                                 /** Format: date-time */
                                 created_at?: string;
                                 currency?: string;
@@ -38,10 +41,14 @@ export interface paths {
                                 current_value?: number;
                                 excluded_from_fire?: boolean;
                                 id?: number;
+                                /** Format: double */
+                                interest_rate_pct?: number | null;
                                 is_active?: boolean;
                                 name?: string;
                                 owner_user_id?: number | null;
                                 purpose?: string;
+                                /** Format: double */
+                                real_yield_pct?: number | null;
                                 receives_contributions?: boolean;
                                 /** Format: double */
                                 square_meters?: number | null;
@@ -50,6 +57,9 @@ export interface paths {
                             liabilities?: {
                                 account_wrapper?: string | null;
                                 category?: string;
+                                cpi_as_of_year?: number | null;
+                                /** Format: double */
+                                cpi_yoy_pct?: number | null;
                                 /** Format: date-time */
                                 created_at?: string;
                                 currency?: string;
@@ -57,10 +67,14 @@ export interface paths {
                                 current_value?: number;
                                 excluded_from_fire?: boolean;
                                 id?: number;
+                                /** Format: double */
+                                interest_rate_pct?: number | null;
                                 is_active?: boolean;
                                 name?: string;
                                 owner_user_id?: number | null;
                                 purpose?: string;
+                                /** Format: double */
+                                real_yield_pct?: number | null;
                                 receives_contributions?: boolean;
                                 /** Format: double */
                                 square_meters?: number | null;
@@ -91,6 +105,9 @@ export interface paths {
                         "application/json": {
                             account_wrapper?: string | null;
                             category?: string;
+                            cpi_as_of_year?: number | null;
+                            /** Format: double */
+                            cpi_yoy_pct?: number | null;
                             /** Format: date-time */
                             created_at?: string;
                             currency?: string;
@@ -98,10 +115,14 @@ export interface paths {
                             current_value?: number;
                             excluded_from_fire?: boolean;
                             id?: number;
+                            /** Format: double */
+                            interest_rate_pct?: number | null;
                             is_active?: boolean;
                             name?: string;
                             owner_user_id?: number | null;
                             purpose?: string;
+                            /** Format: double */
+                            real_yield_pct?: number | null;
                             receives_contributions?: boolean;
                             /** Format: double */
                             square_meters?: number | null;
@@ -460,6 +481,9 @@ export interface paths {
                         "application/json": {
                             account_wrapper?: string | null;
                             category?: string;
+                            cpi_as_of_year?: number | null;
+                            /** Format: double */
+                            cpi_yoy_pct?: number | null;
                             /** Format: date-time */
                             created_at?: string;
                             currency?: string;
@@ -467,10 +491,14 @@ export interface paths {
                             current_value?: number;
                             excluded_from_fire?: boolean;
                             id?: number;
+                            /** Format: double */
+                            interest_rate_pct?: number | null;
                             is_active?: boolean;
                             name?: string;
                             owner_user_id?: number | null;
                             purpose?: string;
+                            /** Format: double */
+                            real_yield_pct?: number | null;
                             receives_contributions?: boolean;
                             /** Format: double */
                             square_meters?: number | null;
