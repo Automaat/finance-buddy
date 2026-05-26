@@ -44,6 +44,11 @@ type loginRequest struct {
 	RememberMe bool   `json:"remember_me"`
 }
 
+type loginResponse struct {
+	Token string       `json:"token"`
+	User  userResponse `json:"user"`
+}
+
 type createUserRequest struct {
 	Username        string           `json:"username"`
 	Password        string           `json:"password"`
@@ -127,7 +132,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.setSessionCookie(w, token, req.RememberMe, ttl)
-	httputil.WriteJSON(w, http.StatusOK, map[string]any{"token": token, "user": toUserResponse(user)})
+	httputil.WriteJSON(w, http.StatusOK, loginResponse{Token: token, User: toUserResponse(user)})
 }
 
 // Logout serves POST /api/auth/logout (public). It clears the session cookie;

@@ -1317,6 +1317,371 @@
         ]
       }
     },
+    "/api/auth/login": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "password": {
+                    "type": "string"
+                  },
+                  "remember_me": {
+                    "type": "boolean"
+                  },
+                  "username": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    },
+                    "user": {
+                      "properties": {
+                        "created_at": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "integer"
+                        },
+                        "is_admin": {
+                          "type": "boolean"
+                        },
+                        "name": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "ppk_employee_rate": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "ppk_employer_rate": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "surname": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "username": {
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Log in",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "summary": "Log out",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "created_at": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "is_admin": {
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "ppk_employee_rate": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "ppk_employer_rate": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "surname": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "username": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Read current user",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/users": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "properties": {
+                      "created_at": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "integer"
+                      },
+                      "is_admin": {
+                        "type": "boolean"
+                      },
+                      "name": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "ppk_employee_rate": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "ppk_employer_rate": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "surname": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "username": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List users",
+        "tags": [
+          "auth"
+        ]
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "name": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "ppk_employee_rate": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "ppk_employer_rate": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "surname": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "username": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "created_at": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "is_admin": {
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "ppk_employee_rate": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "ppk_employer_rate": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "surname": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "username": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "summary": "Create a user",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/users/{id}": {
+      "put": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "name": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "ppk_employee_rate": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "ppk_employer_rate": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "surname": {
+                    "nullable": true,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "created_at": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "is_admin": {
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "ppk_employee_rate": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "ppk_employer_rate": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "surname": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "username": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Update a user",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/bonds": {
       "get": {
         "responses": {
@@ -8139,6 +8504,37 @@
         "summary": "List valid transaction_type enum values",
         "tags": [
           "transactions"
+        ]
+      }
+    },
+    "/api/users": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List owner options",
+        "tags": [
+          "auth"
         ]
       }
     },
