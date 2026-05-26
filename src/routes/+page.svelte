@@ -22,6 +22,12 @@
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { ownerName, type OwnerOption } from '$lib/types/owners';
+	import {
+		countdownTier,
+		daysLabel,
+		daysUntilYearEnd,
+		type CountdownTier
+	} from '$lib/utils/yearEnd';
 	import type { PageData } from './$types';
 
 	interface Props {
@@ -115,6 +121,23 @@
 		if (last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14)) return 'lata';
 		return 'lat';
 	}
+
+	const now = new Date();
+	const daysLeft = daysUntilYearEnd(now);
+
+	const tierBar: Record<CountdownTier, string> = {
+		maxed: 'bg-success-500',
+		safe: 'bg-success-500',
+		warn: 'bg-warning-500',
+		urgent: 'bg-error-500'
+	};
+
+	const tierText: Record<CountdownTier, string> = {
+		maxed: 'text-success-600-400',
+		safe: 'text-success-600-400',
+		warn: 'text-warning-600-400',
+		urgent: 'text-error-600-400'
+	};
 </script>
 
 <svelte:head>
@@ -495,22 +518,29 @@
 
 		{#if dashboard.retirementStats && dashboard.retirementStats.length > 0}
 			<div class="card preset-filled-surface-100-900 p-4 space-y-4">
-				<header class="flex items-center justify-between gap-2">
+				<header class="flex items-center justify-between gap-2 flex-wrap">
 					<h3 class="h3 flex items-center gap-2">
 						<PiggyBank size={20} /> Limity Emerytalne {data.currentYear}
 					</h3>
-					<button
-						type="button"
-						class="btn-icon btn-icon-sm"
-						aria-label="Konfiguruj limity"
-						onclick={() => openLimitsModal(dashboard.retirementStats)}
-					>
-						<Settings size={18} />
-					</button>
+					<div class="flex items-center gap-2">
+						<span class="text-xs text-surface-700-300 whitespace-nowrap">
+							{daysLeft}
+							{daysLabel(daysLeft)} do 31 grudnia
+						</span>
+						<button
+							type="button"
+							class="btn-icon btn-icon-sm"
+							aria-label="Konfiguruj limity"
+							onclick={() => openLimitsModal(dashboard.retirementStats)}
+						>
+							<Settings size={18} />
+						</button>
+					</div>
 				</header>
 
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 					{#each dashboard.retirementStats as stat}
+						{@const tier = countdownTier(now, stat.percentage_used)}
 						<div class="card preset-tonal-surface p-4 space-y-2">
 							<div class="flex items-start justify-between gap-2">
 								<h4 class="font-bold">
@@ -523,39 +553,35 @@
 
 							<div class="h-2 rounded-full bg-surface-200-800 overflow-hidden">
 								<div
-									class="h-full transition-all {stat.percentage_used >= 100
-										? 'bg-success-500'
-										: stat.percentage_used >= 50
-											? 'bg-warning-500'
-											: 'bg-error-500'}"
+									class="h-full transition-all {tierBar[tier]}"
 									style="width: {Math.min(stat.percentage_used, 100)}%"
 								></div>
 							</div>
 
 							<div class="flex items-center justify-between text-sm">
 								<span class="text-surface-700-300">Pozostało: {formatPLN(stat.remaining)}</span>
-								<span
-									class="font-semibold {stat.percentage_used >= 100
-										? 'text-success-600-400'
-										: stat.percentage_used >= 50
-											? 'text-warning-600-400'
-											: 'text-error-600-400'}"
-								>
+								<span class="font-semibold {tierText[tier]}">
 									{stat.percentage_used}%
 								</span>
 							</div>
 
-							{#if stat.percentage_used >= 100}
+							{#if tier === 'maxed'}
 								<div
 									class="card preset-filled-success-500 p-2 text-xs text-center flex items-center justify-center gap-1"
 								>
 									<CheckCircle2 size={14} /> Limit osiągnięty
 								</div>
-							{:else if stat.percentage_used >= 50}
+							{:else if tier === 'urgent'}
+								<div
+									class="card preset-filled-error-500 p-2 text-xs text-center flex items-center justify-center gap-1"
+								>
+									<AlertTriangle size={14} /> Końcówka roku — limit przepadnie 31.12
+								</div>
+							{:else if tier === 'warn'}
 								<div
 									class="card preset-filled-warning-500 p-2 text-xs text-center flex items-center justify-center gap-1"
 								>
-									<AlertTriangle size={14} /> Zbliżasz się do limitu
+									<AlertTriangle size={14} /> Coraz mniej czasu na wykorzystanie limitu
 								</div>
 							{/if}
 						</div>
