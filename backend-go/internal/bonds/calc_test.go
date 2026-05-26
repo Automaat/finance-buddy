@@ -18,13 +18,13 @@ func bondEDO(purchase time.Time) *TreasuryBond {
 	}
 }
 
-func bondCOI(purchase time.Time, face, firstYearRate, margin float64) *TreasuryBond {
+func bondCOI(purchase time.Time) *TreasuryBond {
 	return &TreasuryBond{
 		Type:          BondCOI,
-		FaceValue:     decimal.NewFromFloat(face),
+		FaceValue:     decimal.NewFromInt(1000),
 		PurchaseDate:  purchase,
-		FirstYearRate: decimal.NewFromFloat(firstYearRate),
-		Margin:        decimal.NewFromFloat(margin),
+		FirstYearRate: decimal.NewFromFloat(6.55),
+		Margin:        decimal.NewFromFloat(1.25),
 		Capitalize:    false,
 	}
 }
@@ -73,7 +73,7 @@ func TestCurrentValueCOIInterestPaidOut(t *testing.T) {
 	yoy := map[int]decimal.Decimal{
 		2025: decimal.NewFromFloat(104.0),
 	}
-	b := bondCOI(purchase, 1000, 6.55, 1.25)
+	b := bondCOI(purchase)
 	// year 1: 1000 * 0.0655 = 65.50 paid out
 	// year 2: 1000 * (4.0 + 1.25)/100 = 52.50 paid out
 	// value = face + accrued = 1000 + 65.50 + 52.50 = 1118.00

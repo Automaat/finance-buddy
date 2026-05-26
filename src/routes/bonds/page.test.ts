@@ -35,12 +35,15 @@ vi.mock('echarts', () => ({
 	graphic: { LinearGradient: vi.fn() }
 }));
 
+const emptyLadder = { events: [], next_maturity: null, tax_rate_pct: 19 };
+
 const emptyData = {
 	user: null,
 	bonds: [],
 	total_value: 0,
 	total_count: 0,
-	owners: [{ id: 1, name: 'Marcin' }]
+	owners: [{ id: 1, name: 'Marcin' }],
+	ladder: emptyLadder
 };
 
 const sampleBond = {

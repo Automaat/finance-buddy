@@ -1329,6 +1329,77 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/bonds/maturity-ladder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Maturity ladder calendar */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            events?: {
+                                bond_ids?: number[];
+                                count?: number;
+                                /** Format: double */
+                                interest_gross?: number;
+                                kind?: string;
+                                /** Format: date */
+                                month?: string;
+                                /** Format: double */
+                                net_cashflow?: number;
+                                /** Format: double */
+                                principal?: number;
+                                /** Format: double */
+                                tax?: number;
+                                type?: string;
+                            }[];
+                            next_maturity?: {
+                                bond_ids?: number[];
+                                count?: number;
+                                /** Format: date */
+                                date?: string;
+                                days_until?: number;
+                                /** Format: double */
+                                interest_gross?: number;
+                                /** Format: double */
+                                net_cashflow?: number;
+                                /** Format: double */
+                                principal?: number;
+                                /** Format: double */
+                                tax?: number;
+                                type?: string;
+                            } | null;
+                            /** Format: double */
+                            tax_rate_pct?: number;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/bonds/{id}": {
         parameters: {
             query?: never;

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -15,8 +16,36 @@ import (
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/cpi"
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
+	"github.com/Automaat/finance-buddy/backend-go/internal/rules"
 	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
+
+// belkaRate is the Belka (capital-gains) tax fraction (0.19) applied to
+// bond interest payouts. The key is the 2026 entry; future-year rates
+// require a code change here once a new rule key lands in the rules
+// table. If the lookup ever fails (e.g. rules table edited out from
+// under us) we fall back to the statutory 0.19 and log — the calendar
+// is informational, so degrading is better than crashing the API.
+var (
+	belkaOnce     sync.Once
+	belkaRate     decimal.Decimal
+	belkaFallback = decimal.NewFromFloat(0.19)
+	belkaRuleKey  = "capital_gains_tax_2026"
+)
+
+func getBelkaRate() decimal.Decimal {
+	belkaOnce.Do(func() {
+		r, ok := rules.Get(belkaRuleKey)
+		if !ok {
+			slog.Default().Warn("bonds: belka rule missing, using statutory fallback",
+				"key", belkaRuleKey, "fallback", belkaFallback.String())
+			belkaRate = belkaFallback
+			return
+		}
+		belkaRate = r.Value
+	})
+	return belkaRate
+}
 
 // CPILoader is the subset of cpi.Store the handler needs. Decoupling the
 // import lets unit tests stub it without spinning up a pool.
@@ -73,6 +102,36 @@ type ytmPointResponse struct {
 type ytmResponse struct {
 	BondID int                `json:"bond_id"`
 	Points []ytmPointResponse `json:"points"`
+}
+
+type ladderEventResponse struct {
+	Month         wire.IsoDate `json:"month"`
+	Type          string       `json:"type"`
+	Kind          string       `json:"kind"`
+	BondIDs       []int        `json:"bond_ids"`
+	Count         int          `json:"count"`
+	Principal     float64      `json:"principal"`
+	InterestGross float64      `json:"interest_gross"`
+	Tax           float64      `json:"tax"`
+	NetCashflow   float64      `json:"net_cashflow"`
+}
+
+type nextMaturityResponse struct {
+	Date          wire.IsoDate `json:"date"`
+	Type          string       `json:"type"`
+	BondIDs       []int        `json:"bond_ids"`
+	Count         int          `json:"count"`
+	Principal     float64      `json:"principal"`
+	InterestGross float64      `json:"interest_gross"`
+	Tax           float64      `json:"tax"`
+	NetCashflow   float64      `json:"net_cashflow"`
+	DaysUntil     int          `json:"days_until"`
+}
+
+type maturityLadderResponse struct {
+	Events       []ladderEventResponse `json:"events"`
+	NextMaturity *nextMaturityResponse `json:"next_maturity"`
+	TaxRatePct   float64               `json:"tax_rate_pct"`
 }
 
 type createRequest struct {
@@ -189,6 +248,64 @@ func (h *Handler) YTM(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	httputil.WriteJSON(w, http.StatusOK, out)
+}
+
+// MaturityLadder serves GET /api/bonds/maturity-ladder — the calendar of
+// upcoming redemption + coupon cashflows plus the nearest-maturity
+// warning used by the dashboard.
+func (h *Handler) MaturityLadder(w http.ResponseWriter, r *http.Request) {
+	bonds, err := h.store.List(r.Context())
+	if err != nil {
+		h.logger.Error("list bonds for ladder", "err", err)
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	yoy, err := h.loadYoY(r.Context())
+	if err != nil {
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	belka := getBelkaRate()
+	result := MaturityLadder(bonds, yoy, h.now(), belka)
+
+	out := maturityLadderResponse{
+		Events:     make([]ladderEventResponse, 0, len(result.Events)),
+		TaxRatePct: floatFromDecimal(belka.Mul(decimal.NewFromInt(100))),
+	}
+	for i := range result.Events {
+		ev := &result.Events[i]
+		out.Events = append(out.Events, ladderEventResponse{
+			Month:         wire.IsoDate(ev.Month),
+			Type:          string(ev.Type),
+			Kind:          string(ev.Kind),
+			BondIDs:       ev.BondIDs,
+			Count:         ev.Count,
+			Principal:     floatFromDecimal(ev.Principal),
+			InterestGross: floatFromDecimal(ev.InterestGross),
+			Tax:           floatFromDecimal(ev.Tax),
+			NetCashflow:   floatFromDecimal(ev.NetCashflow),
+		})
+	}
+	if result.NextMaturity != nil {
+		nm := result.NextMaturity
+		out.NextMaturity = &nextMaturityResponse{
+			Date:          wire.IsoDate(nm.Date),
+			Type:          string(nm.Type),
+			BondIDs:       nm.BondIDs,
+			Count:         nm.Count,
+			Principal:     floatFromDecimal(nm.Principal),
+			InterestGross: floatFromDecimal(nm.InterestGross),
+			Tax:           floatFromDecimal(nm.Tax),
+			NetCashflow:   floatFromDecimal(nm.NetCashflow),
+			DaysUntil:     nm.DaysUntil,
+		}
+	}
+	httputil.WriteJSON(w, http.StatusOK, out)
+}
+
+func floatFromDecimal(d decimal.Decimal) float64 {
+	f, _ := d.Float64()
+	return f
 }
 
 // Create serves POST /api/bonds.

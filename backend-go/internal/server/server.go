@@ -331,6 +331,7 @@ func registerPortfolioRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logg
 	r.Route("/api/bonds", func(r chi.Router) {
 		r.Get("/", bondsHandler.List)
 		r.Post("/", bondsHandler.Create)
+		r.Get("/maturity-ladder", bondsHandler.MaturityLadder)
 		r.Get("/{id}", bondsHandler.Get)
 		r.Get("/{id}/ytm", bondsHandler.YTM)
 		r.Put("/{id}", bondsHandler.Update)

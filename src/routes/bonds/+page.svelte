@@ -3,6 +3,7 @@
 	import * as echarts from 'echarts';
 	import type { EChartsOption } from 'echarts';
 	import Modal from '$lib/components/Modal.svelte';
+	import BondsMaturityLadder from '$lib/components/BondsMaturityLadder.svelte';
 	import { formatPLN } from '$lib/utils/format';
 	import { chartAccent, chartAccentGradient } from '$lib/utils/theme';
 	import { createChart } from '$lib/utils/charts/lifecycle';
@@ -480,6 +481,12 @@
 			</div>
 		{/if}
 	</div>
+
+	<BondsMaturityLadder
+		events={data.ladder.events}
+		nextMaturity={data.ladder.next_maturity}
+		taxRatePct={data.ladder.tax_rate_pct}
+	/>
 
 	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
 		<header class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
