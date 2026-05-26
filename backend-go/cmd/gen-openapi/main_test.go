@@ -39,7 +39,11 @@ func TestAddRouteIncludesQueryParams(t *testing.T) {
 		t.Fatalf("add route: %v", err)
 	}
 
-	op := doc.Paths.Find(rt.Path).Get
+	item := doc.Paths.Find(rt.Path)
+	if item == nil {
+		t.Fatalf("path item %q missing", rt.Path)
+	}
+	op := item.Get
 	if op == nil {
 		t.Fatal("GET operation missing")
 	}
