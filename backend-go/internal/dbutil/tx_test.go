@@ -77,6 +77,28 @@ func TestWithTxRollsBackFnError(t *testing.T) {
 	}
 }
 
+func TestWithTxRollbackIgnoresCanceledContext(t *testing.T) {
+	inner := errors.New("bad write")
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	tx := &fakeTx{}
+	db := &fakeBeginner{tx: tx}
+
+	err := WithTx(ctx, db, "begin thing", "commit thing", func(pgx.Tx) error {
+		return inner
+	})
+
+	if !errors.Is(err, inner) {
+		t.Fatalf("inner not returned: %v", err)
+	}
+	if tx.rollbackCtx == nil {
+		t.Fatal("rollback ctx missing")
+	}
+	if err := tx.rollbackCtx.Err(); err != nil {
+		t.Fatalf("rollback ctx canceled: %v", err)
+	}
+}
+
 func TestWithTxRollsBackCommitError(t *testing.T) {
 	inner := errors.New("commit lost")
 	tx := &fakeTx{commitErr: inner}
@@ -113,9 +135,10 @@ func (b *fakeBeginner) BeginTx(context.Context, pgx.TxOptions) (pgx.Tx, error) {
 }
 
 type fakeTx struct {
-	committed  bool
-	rolledBack bool
-	commitErr  error
+	committed   bool
+	rolledBack  bool
+	rollbackCtx context.Context
+	commitErr   error
 }
 
 func (tx *fakeTx) Begin(context.Context) (pgx.Tx, error) {
@@ -127,7 +150,8 @@ func (tx *fakeTx) Commit(context.Context) error {
 	return tx.commitErr
 }
 
-func (tx *fakeTx) Rollback(context.Context) error {
+func (tx *fakeTx) Rollback(ctx context.Context) error {
+	tx.rollbackCtx = ctx
 	tx.rolledBack = true
 	return nil
 }

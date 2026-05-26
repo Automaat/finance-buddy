@@ -19,9 +19,10 @@ func WithTx(ctx context.Context, db txBeginner, beginPrefix, commitPrefix string
 		return fmt.Errorf("%s: %w", beginPrefix, err)
 	}
 	committed := false
+	rollbackCtx := context.WithoutCancel(ctx)
 	defer func() {
 		if !committed {
-			_ = tx.Rollback(ctx)
+			_ = tx.Rollback(rollbackCtx)
 		}
 	}()
 	if err := fn(tx); err != nil {
