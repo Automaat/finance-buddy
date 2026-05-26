@@ -46,6 +46,25 @@ func TestOptionalTrimmedString(t *testing.T) {
 	if vErr != nil || got != nil {
 		t.Fatalf("got = %v vErr = %#v", got, vErr)
 	}
+
+	got, vErr = OptionalTrimmedString(
+		map[string]json.RawMessage{"name": json.RawMessage(`null`)},
+		"name",
+		"Name cannot be empty",
+	)
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	got, vErr = OptionalTrimmedString(
+		map[string]json.RawMessage{"name": json.RawMessage(`"  "`)},
+		"name",
+		"Name cannot be empty",
+	)
+	if got != nil {
+		t.Fatalf("got = %v", got)
+	}
+	requireValidation(t, vErr, "name", "Name cannot be empty")
 }
 
 func TestRequiredDate(t *testing.T) {
