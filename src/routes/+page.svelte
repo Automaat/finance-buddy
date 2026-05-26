@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import Skeleton from '$lib/components/Skeleton.svelte';
 	import DashboardCharts from '$lib/components/DashboardCharts.svelte';
@@ -122,8 +122,22 @@
 		return 'lat';
 	}
 
-	const now = new Date();
-	const daysLeft = daysUntilYearEnd(now);
+	// Date-driven UI. SSR seeds with a server-side `now`; onMount resets to the
+	// client clock to avoid timezone drift, and a daily tick keeps the counter
+	// honest across midnight in long-lived sessions.
+	let now = $state(new Date());
+	const daysLeft = $derived(daysUntilYearEnd(now));
+
+	onMount(() => {
+		now = new Date();
+		const id = setInterval(
+			() => {
+				now = new Date();
+			},
+			60 * 60 * 1000
+		);
+		return () => clearInterval(id);
+	});
 
 	const tierBar: Record<CountdownTier, string> = {
 		maxed: 'bg-success-500',
