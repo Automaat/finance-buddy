@@ -24,6 +24,8 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/bonds"
 	"github.com/Automaat/finance-buddy/backend-go/internal/cpi"
 	"github.com/Automaat/finance-buddy/backend-go/internal/db"
+	"github.com/Automaat/finance-buddy/backend-go/internal/holdings"
+	"github.com/Automaat/finance-buddy/backend-go/internal/quotes"
 	"github.com/Automaat/finance-buddy/backend-go/internal/recurring"
 	"github.com/Automaat/finance-buddy/backend-go/internal/scheduler"
 	"github.com/Automaat/finance-buddy/backend-go/internal/server"
@@ -93,6 +95,7 @@ func run() int {
 		CORSOrigins:  envOrPresent("CORS_ORIGINS", "http://localhost:3000"),
 		JWTSecret:    jwtSecret,
 		CookieSecure: envOr("FB_COOKIE_SECURE", "false") == "true",
+		StooqAPIKey:  os.Getenv("FB_STOOQ_APIKEY"),
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -115,6 +118,12 @@ func run() int {
 		// Daily recurring-transaction generator (issue #384).
 		recSched := recurring.NewScheduler(recurring.NewStore(pool), logger)
 		go recSched.Run(ctx)
+
+		// Daily Stooq price-quote refresh for holdings securities.
+		hStore := holdings.NewStore(pool)
+		stooq := quotes.NewStooqFetcher(cfg.StooqAPIKey)
+		quotesSched := quotes.NewScheduler(hStore, stooq, logger)
+		go quotesSched.Run(ctx)
 	} else {
 		logger.Warn("no DB config (DATABASE_URL or PGHOST) — DB-backed endpoints will 404")
 	}

@@ -10,6 +10,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/fx"
 )
 
 // Store is the persistence boundary for securities, lots and price quotes.
@@ -49,6 +51,14 @@ type HoldingRow struct {
 	LatestQuoteDate *time.Time
 	MarketValue     decimal.Decimal
 	UnrealizedGain  decimal.Decimal
+
+	// PLN-converted fields. Populated when Running.HasPLN is true and an FX
+	// rate exists for LatestQuoteDate. LatestQuoteRatePLN is the rate used
+	// for MarketValuePLN/UnrealizedGainPLN — exposed so the UI can show it.
+	HasPLN             bool
+	MarketValuePLN     decimal.Decimal
+	UnrealizedGainPLN  decimal.Decimal
+	LatestQuoteRatePLN decimal.Decimal
 }
 
 // Sentinel errors.
@@ -213,6 +223,26 @@ func (s *Store) UpsertQuote(ctx context.Context, q PriceQuote) (PriceQuote, erro
 	return scanQuote(row)
 }
 
+// UpsertAutomatedQuote writes a quote without overwriting a manual entry for
+// the same (security_id, date). Used by scheduled fetchers (Stooq) so the
+// user's explicit price wins over any provider price for the same day.
+// Returns true when the row was written or refreshed, false when a manual
+// quote already occupied the slot.
+func (s *Store) UpsertAutomatedQuote(ctx context.Context, q PriceQuote) (bool, error) {
+	tag, err := s.pool.Exec(ctx, `
+		INSERT INTO price_quotes (security_id, date, price, source)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (security_id, date) DO UPDATE
+		SET price = EXCLUDED.price, source = EXCLUDED.source
+		WHERE price_quotes.source = EXCLUDED.source`,
+		q.SecurityID, q.Date, q.Price, q.Source,
+	)
+	if err != nil {
+		return false, fmt.Errorf("upsert automated quote: %w", err)
+	}
+	return tag.RowsAffected() > 0, nil
+}
+
 // ListQuotes returns all quotes for a security, ordered by date desc.
 func (s *Store) ListQuotes(ctx context.Context, securityID int) ([]PriceQuote, error) {
 	rows, err := s.pool.Query(ctx, `SELECT `+quoteCols+` FROM price_quotes WHERE security_id = $1 ORDER BY date DESC`, securityID)
@@ -243,6 +273,89 @@ func (s *Store) DeleteQuote(ctx context.Context, id int) error {
 	return nil
 }
 
+// LastStooqQuoteDate returns the latest stored stooq quote date for a
+// security. Zero time when none exist yet — caller uses min(lot.date) as
+// the backfill start.
+func (s *Store) LastStooqQuoteDate(ctx context.Context, securityID int) (time.Time, error) {
+	var t *time.Time
+	err := s.pool.QueryRow(ctx, `
+		SELECT MAX(date) FROM price_quotes
+		WHERE security_id = $1 AND source = 'stooq'`, securityID).Scan(&t)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("last stooq quote date: %w", err)
+	}
+	if t == nil {
+		return time.Time{}, nil
+	}
+	return *t, nil
+}
+
+// FirstLotDate returns the earliest lot date for a security. Zero time when
+// there are no lots — used as the backfill start when no stooq history exists.
+func (s *Store) FirstLotDate(ctx context.Context, securityID int) (time.Time, error) {
+	var t *time.Time
+	err := s.pool.QueryRow(ctx, `
+		SELECT MIN(date) FROM lots WHERE security_id = $1`, securityID).Scan(&t)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("first lot date: %w", err)
+	}
+	if t == nil {
+		return time.Time{}, nil
+	}
+	return *t, nil
+}
+
+// BulkUpsertAutomatedQuotes writes many quotes in a single transaction,
+// preserving rows tagged source != EXCLUDED.source (i.e. manual entries).
+// Returns the count of rows actually written or refreshed.
+func (s *Store) BulkUpsertAutomatedQuotes(ctx context.Context, rows []PriceQuote) (int, error) {
+	if len(rows) == 0 {
+		return 0, nil
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("begin bulk upsert: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	const q = `
+		INSERT INTO price_quotes (security_id, date, price, source)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (security_id, date) DO UPDATE
+		SET price = EXCLUDED.price, source = EXCLUDED.source
+		WHERE price_quotes.source = EXCLUDED.source`
+	written := 0
+	for i := range rows {
+		r := &rows[i]
+		tag, err := tx.Exec(ctx, q, r.SecurityID, r.Date, r.Price, r.Source)
+		if err != nil {
+			return 0, fmt.Errorf("bulk upsert row %d: %w", i, err)
+		}
+		if tag.RowsAffected() > 0 {
+			written++
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return 0, fmt.Errorf("commit bulk upsert: %w", err)
+	}
+	return written, nil
+}
+
+// LatestStooqQuoteTime returns the most recent created_at across price_quotes
+// rows tagged source='stooq'. Zero time when no stooq quotes exist yet.
+// Used by the quotes scheduler to decide whether to refresh on startup.
+func (s *Store) LatestStooqQuoteTime(ctx context.Context) (time.Time, error) {
+	var t *time.Time
+	err := s.pool.QueryRow(ctx, `
+		SELECT MAX(created_at) FROM price_quotes WHERE source = 'stooq'`).Scan(&t)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("latest stooq quote time: %w", err)
+	}
+	if t == nil {
+		return time.Time{}, nil
+	}
+	return *t, nil
+}
+
 // latestQuotes returns latest price per security as of now.
 func (s *Store) latestQuotes(ctx context.Context) (map[int]PriceQuote, error) {
 	rows, err := s.pool.Query(ctx, `
@@ -265,8 +378,10 @@ func (s *Store) latestQuotes(ctx context.Context) (map[int]PriceQuote, error) {
 }
 
 // Holdings replays every lot, groups by security, attaches the latest quote,
-// and returns one HoldingRow per security with non-zero quantity.
-func (s *Store) Holdings(ctx context.Context) ([]HoldingRow, error) {
+// and returns one HoldingRow per security with non-zero quantity. When rates
+// is non-nil, PLN-converted fields are also populated using trade-date NBP
+// rates for cost basis and the latest-quote-date rate for market value.
+func (s *Store) Holdings(ctx context.Context, rates RateProvider) ([]HoldingRow, error) {
 	securities, err := s.ListSecurities(ctx)
 	if err != nil {
 		return nil, err
@@ -287,10 +402,8 @@ func (s *Store) Holdings(ctx context.Context) ([]HoldingRow, error) {
 	out := []HoldingRow{}
 	for _, sec := range securities {
 		lots := bySec[sec.ID]
-		run, runErr := ComputeRunning(lots)
+		run, runErr := ComputeRunningPLN(ctx, lots, sec.Currency, rates)
 		if runErr != nil {
-			// Skip securities with corrupted lot histories rather than failing
-			// the whole endpoint. Log so the corruption is visible in ops.
 			slog.Default().Warn("holdings: skipping security with bad lot history",
 				"security_id", sec.ID, "symbol", sec.Symbol, "err", runErr)
 			continue
@@ -306,7 +419,36 @@ func (s *Store) Holdings(ctx context.Context) ([]HoldingRow, error) {
 		}
 		row.MarketValue = MarketValue(run, row.LatestQuote)
 		row.UnrealizedGain = UnrealizedGain(run, row.LatestQuote)
+		s.fillPLNValuation(ctx, &row, rates)
 		out = append(out, row)
 	}
 	return out, nil
+}
+
+// fillPLNValuation converts MarketValue + UnrealizedGain to PLN using the FX
+// rate for the latest-quote date (or today if no quote). Leaves PLN fields
+// zero on lookup miss — UI degrades to native-currency display.
+func (s *Store) fillPLNValuation(ctx context.Context, row *HoldingRow, rates RateProvider) {
+	if rates == nil || !row.Running.HasPLN {
+		return
+	}
+	rateDate := time.Now().UTC()
+	if row.LatestQuoteDate != nil {
+		rateDate = *row.LatestQuoteDate
+	}
+	rate, err := rates.GetRateToPLN(ctx, row.Security.Currency, rateDate)
+	if err != nil {
+		slog.Default().Warn("holdings: fx lookup failed for market value",
+			"security_id", row.Security.ID, "symbol", row.Security.Symbol, "err", err)
+		return
+	}
+	mv := row.MarketValue
+	mvPLN, ok := fx.ToPLN(&mv, row.Security.Currency, rate)
+	if !ok {
+		return
+	}
+	row.HasPLN = true
+	row.MarketValuePLN = mvPLN
+	row.LatestQuoteRatePLN = rate.Rate
+	row.UnrealizedGainPLN = mvPLN.Sub(row.Running.CostBasisPLN)
 }

@@ -1,12 +1,33 @@
 package holdings
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
 
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/fx"
 )
+
+// stubRates returns rate r for every lookup, found=true. For tests.
+type stubRates struct{ r decimal.Decimal }
+
+func (s stubRates) GetRateToPLN(_ context.Context, _ string, _ time.Time) (fx.Result, error) {
+	return fx.Result{Rate: s.r, Found: true}, nil
+}
+
+// dateRates returns per-date rates; lookups for missing dates return found=false.
+type dateRates map[string]decimal.Decimal
+
+func (m dateRates) GetRateToPLN(_ context.Context, _ string, on time.Time) (fx.Result, error) {
+	key := on.UTC().Format("2006-01-02")
+	if v, ok := m[key]; ok {
+		return fx.Result{Rate: v, Found: true}, nil
+	}
+	return fx.Result{}, nil
+}
 
 func d(s string) decimal.Decimal {
 	v, _ := decimal.NewFromString(s)
@@ -151,6 +172,86 @@ func TestMarketValue_QuotedUsesQuote(t *testing.T) {
 	r := Running{Quantity: d("10"), AverageCost: d("100"), CostBasis: d("1000")}
 	if !MarketValue(r, d("150")).Equal(d("1500")) {
 		t.Errorf("quote should give 1500")
+	}
+}
+
+func TestComputeRunningPLN_WeightedPLNAverage(t *testing.T) {
+	rates := dateRates{
+		"2025-05-02": d("3.7881"),
+		"2025-05-09": d("3.7988"),
+		"2026-05-26": d("3.6576"),
+	}
+	lots := []Lot{
+		{Side: SideBuy, Quantity: d("75.3421"), Price: d("89.310"), Date: date(t, "2025-05-02")},
+		{Side: SideBuy, Quantity: d("1.4583"), Price: d("90.013"), Date: date(t, "2025-05-09")},
+		{Side: SideBuy, Quantity: d("44.3344"), Price: d("121.070"), Date: date(t, "2026-05-26")},
+	}
+	r, err := ComputeRunningPLN(context.Background(), lots, "USD", rates)
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if !r.HasPLN {
+		t.Fatalf("expected HasPLN true")
+	}
+	// Per-lot opening PLN: 75.3421*89.310*3.7881 + 1.4583*90.013*3.7988 + 44.3344*121.070*3.6576 ≈ 45620.27.
+	// Compare with 0.5 PLN tolerance to absorb decimal rounding.
+	want := d("45620.27")
+	diff := r.CostBasisPLN.Sub(want).Abs()
+	if diff.GreaterThan(d("0.5")) {
+		t.Errorf("CostBasisPLN = %s, want ≈ 45620.27 (diff %s)", r.CostBasisPLN.StringFixed(2), diff)
+	}
+	if r.RealizedGainPLN.Cmp(decimal.Zero) != 0 {
+		t.Errorf("RealizedGainPLN should be zero (no sells), got %s", r.RealizedGainPLN)
+	}
+}
+
+func TestComputeRunningPLN_MissingRateLeavesPLNZero(t *testing.T) {
+	// One lot date has no rate — function should still return successfully
+	// but with HasPLN=false so the caller falls back to native rendering.
+	rates := dateRates{"2025-05-02": d("3.7881")}
+	lots := []Lot{
+		{Side: SideBuy, Quantity: d("10"), Price: d("100"), Date: date(t, "2025-05-02")},
+		{Side: SideBuy, Quantity: d("10"), Price: d("110"), Date: date(t, "2025-06-01")}, // no rate
+	}
+	r, err := ComputeRunningPLN(context.Background(), lots, "USD", rates)
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if r.HasPLN {
+		t.Errorf("HasPLN should be false on partial coverage")
+	}
+	if !r.AverageCost.Equal(d("105")) {
+		t.Errorf("native AverageCost = %s, want 105", r.AverageCost)
+	}
+}
+
+func TestComputeRunningPLN_PLNCurrencyPassesThrough(t *testing.T) {
+	r, err := ComputeRunningPLN(context.Background(), []Lot{
+		{Side: SideBuy, Quantity: d("10"), Price: d("100"), Date: date(t, "2024-01-01")},
+	}, "PLN", stubRates{r: d("1")})
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if !r.HasPLN {
+		t.Errorf("HasPLN should be true for PLN")
+	}
+	if !r.CostBasisPLN.Equal(d("1000")) {
+		t.Errorf("CostBasisPLN = %s, want 1000", r.CostBasisPLN)
+	}
+}
+
+func TestComputeRunningPLN_NilRatesActsLikeComputeRunning(t *testing.T) {
+	r, err := ComputeRunningPLN(context.Background(), []Lot{
+		{Side: SideBuy, Quantity: d("10"), Price: d("100"), Date: date(t, "2024-01-01")},
+	}, "USD", nil)
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if r.HasPLN {
+		t.Errorf("HasPLN should stay false with nil rates")
+	}
+	if !r.AverageCost.Equal(d("100")) {
+		t.Errorf("AverageCost = %s, want 100", r.AverageCost)
 	}
 }
 

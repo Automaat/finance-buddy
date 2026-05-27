@@ -17,4 +17,15 @@ var APISpec = []apispec.Route{
 	{Method: "GET", Path: "/api/holdings/lots", Tag: "holdings", Summary: "List lots (filterable by account_id/security_id)", Response: listLotsResponse{}},
 	{Method: "POST", Path: "/api/holdings/lots", Tag: "holdings", Summary: "Create a lot", Status: http.StatusCreated, Response: lotResponse{}},
 	{Method: "DELETE", Path: "/api/holdings/lots/{id}", Tag: "holdings", Summary: "Delete a lot", Status: http.StatusNoContent},
+	{Method: "POST", Path: "/api/holdings/refresh-quotes", Tag: "holdings", Summary: "Pull latest quotes from Stooq for all securities", Response: refreshQuotesResponse{}},
+}
+
+// refreshQuotesResponse mirrors quotes.RefreshResponse so the OpenAPI
+// generator sees it from the holdings tag without dragging a quotes import
+// into apispec (which would create a cycle via httputil).
+type refreshQuotesResponse struct {
+	Total         int `json:"total"`
+	Written       int `json:"written"`
+	SkippedManual int `json:"skipped_manual"`
+	Failed        int `json:"failed"`
 }

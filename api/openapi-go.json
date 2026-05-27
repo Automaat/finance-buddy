@@ -5397,7 +5397,15 @@
                           "average_cost": {
                             "type": "string"
                           },
+                          "average_cost_pln": {
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "cost_basis": {
+                            "type": "string"
+                          },
+                          "cost_basis_pln": {
+                            "nullable": true,
                             "type": "string"
                           },
                           "latest_quote": {
@@ -5408,13 +5416,25 @@
                             "nullable": true,
                             "type": "string"
                           },
+                          "latest_quote_rate_pln": {
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "market_value": {
+                            "type": "string"
+                          },
+                          "market_value_pln": {
+                            "nullable": true,
                             "type": "string"
                           },
                           "quantity": {
                             "type": "string"
                           },
                           "realized_gain": {
+                            "type": "string"
+                          },
+                          "realized_gain_pln": {
+                            "nullable": true,
                             "type": "string"
                           },
                           "security": {
@@ -5445,6 +5465,10 @@
                             "type": "object"
                           },
                           "unrealized_gain": {
+                            "type": "string"
+                          },
+                          "unrealized_gain_pln": {
+                            "nullable": true,
                             "type": "string"
                           }
                         },
@@ -5588,6 +5612,40 @@
           }
         },
         "summary": "Delete a lot",
+        "tags": [
+          "holdings"
+        ]
+      }
+    },
+    "/api/holdings/refresh-quotes": {
+      "post": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "failed": {
+                      "type": "integer"
+                    },
+                    "skipped_manual": {
+                      "type": "integer"
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "written": {
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Pull latest quotes from Stooq for all securities",
         "tags": [
           "holdings"
         ]

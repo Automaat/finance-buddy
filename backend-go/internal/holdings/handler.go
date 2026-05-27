@@ -32,15 +32,17 @@ const (
 // Handler is the HTTP boundary for /api/holdings.
 type Handler struct {
 	store  *Store
+	rates  RateProvider
 	logger *slog.Logger
 }
 
-// NewHandler wires store + logger.
-func NewHandler(store *Store, logger *slog.Logger) *Handler {
+// NewHandler wires store + rates + logger. rates may be nil — Holdings then
+// returns native-currency fields only and skips PLN conversion.
+func NewHandler(store *Store, rates RateProvider, logger *slog.Logger) *Handler {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &Handler{store: store, logger: logger}
+	return &Handler{store: store, rates: rates, logger: logger}
 }
 
 // --- security wire types ---
@@ -319,6 +321,15 @@ type holdingRowResponse struct {
 	MarketValue     string           `json:"market_value"`
 	UnrealizedGain  string           `json:"unrealized_gain"`
 	RealizedGain    string           `json:"realized_gain"`
+
+	// PLN-converted fields. Null when no FX rate was available for any lot
+	// date or the latest quote date; the UI then renders native currency only.
+	AverageCostPLN     *string `json:"average_cost_pln"`
+	CostBasisPLN       *string `json:"cost_basis_pln"`
+	MarketValuePLN     *string `json:"market_value_pln"`
+	UnrealizedGainPLN  *string `json:"unrealized_gain_pln"`
+	RealizedGainPLN    *string `json:"realized_gain_pln"`
+	LatestQuoteRatePLN *string `json:"latest_quote_rate_pln"`
 }
 
 type holdingsResponse struct {
@@ -327,7 +338,7 @@ type holdingsResponse struct {
 
 // Holdings serves GET /api/holdings.
 func (h *Handler) Holdings(w http.ResponseWriter, r *http.Request) {
-	rows, err := h.store.Holdings(r.Context())
+	rows, err := h.store.Holdings(r.Context(), h.rates)
 	if err != nil {
 		h.logger.Error("holdings", "err", err)
 		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
@@ -352,6 +363,22 @@ func (h *Handler) Holdings(w http.ResponseWriter, r *http.Request) {
 		if hr.LatestQuoteDate != nil {
 			d := hr.LatestQuoteDate.UTC().Format("2006-01-02")
 			row.LatestQuoteDate = &d
+		}
+		if hr.Running.HasPLN {
+			avg := hr.Running.AverageCostPLN.StringFixed(4)
+			cb := hr.Running.CostBasisPLN.StringFixed(2)
+			rg := hr.Running.RealizedGainPLN.StringFixed(2)
+			row.AverageCostPLN = &avg
+			row.CostBasisPLN = &cb
+			row.RealizedGainPLN = &rg
+		}
+		if hr.HasPLN {
+			mv := hr.MarketValuePLN.StringFixed(2)
+			ug := hr.UnrealizedGainPLN.StringFixed(2)
+			rate := hr.LatestQuoteRatePLN.StringFixed(4)
+			row.MarketValuePLN = &mv
+			row.UnrealizedGainPLN = &ug
+			row.LatestQuoteRatePLN = &rate
 		}
 		out = append(out, row)
 	}
