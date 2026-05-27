@@ -4,9 +4,16 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 )
+
+// refreshTimeout caps the synchronous Stooq pass. Picked so a single user
+// click can't outlive typical proxy timeouts (Traefik default ~3min) — with
+// the Stooq fetcher's 8s per-request timeout this leaves headroom for ~15
+// securities even when both Daily and the Latest fallback run.
+const refreshTimeout = 2 * time.Minute
 
 // RefreshHandler exposes POST /api/holdings/refresh-quotes — the user-driven
 // "fetch now" trigger. Reuses the scheduler's refreshOne so the behavior
@@ -40,21 +47,28 @@ type RefreshResponse struct {
 
 // Refresh runs an on-demand Stooq refresh pass and returns per-security
 // totals. Same logic as scheduler.refresh, just synchronous + with a
-// response payload.
+// response payload. The pass is bounded by refreshTimeout so a stuck
+// upstream can't pin the request goroutine indefinitely.
 func (h *RefreshHandler) Refresh(w http.ResponseWriter, r *http.Request) {
-	totals := h.run(r.Context())
+	ctx, cancel := context.WithTimeout(r.Context(), refreshTimeout)
+	defer cancel()
+	totals, err := h.run(ctx)
+	if err != nil {
+		h.logger.Error("refresh-quotes: list securities failed", "err", err)
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Failed to list securities")
+		return
+	}
 	httputil.WriteJSON(w, http.StatusOK, RefreshResponse(totals))
 }
 
-func (h *RefreshHandler) run(ctx context.Context) RefreshTotals {
+func (h *RefreshHandler) run(ctx context.Context) (RefreshTotals, error) {
 	secs, err := h.store.ListSecurities(ctx)
 	if err != nil {
-		h.logger.Warn("refresh-quotes: list securities failed", "err", err)
-		return RefreshTotals{}
+		return RefreshTotals{}, err
 	}
 	totals := RefreshTotals{Total: len(secs)}
 	for _, sec := range secs {
 		h.scheduler.refreshOne(ctx, sec, &totals)
 	}
-	return totals
+	return totals, nil
 }

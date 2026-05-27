@@ -18,11 +18,16 @@ On startup backend-go applies `internal/db/schema.sql` to an empty database
 
 Environment variables:
 
-| Var            | Default                 | Purpose                                        |
-| -------------- | ----------------------- | ---------------------------------------------- |
-| `FB_ADDR`      | `:8000`                 | Listen address                                 |
-| `CORS_ORIGINS` | `http://localhost:3000` | Comma-separated allowed origins                |
-| `DATABASE_URL` | —                       | Postgres DSN (or use the `PG*` libpq env vars) |
+| Var                 | Default                 | Purpose                                                                                                           |
+| ------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `FB_ADDR`           | `:8000`                 | Listen address                                                                                                    |
+| `CORS_ORIGINS`      | `http://localhost:3000` | Comma-separated allowed origins                                                                                   |
+| `DATABASE_URL`      | —                       | Postgres DSN (or use the `PG*` libpq env vars)                                                                    |
+| `FB_JWT_SECRET`     | — (required)            | Signs session cookies                                                                                             |
+| `FB_ADMIN_USERNAME` | `admin`                 | Admin user reseeded on every startup                                                                              |
+| `FB_ADMIN_PASSWORD` | — (required)            | Admin password reseeded on every startup                                                                          |
+| `FB_COOKIE_SECURE`  | `false`                 | Mark session cookie Secure (HTTPS-only deploys)                                                                   |
+| `FB_STOOQ_APIKEY`   | —                       | Stooq daily-history apikey for holdings backfill. Empty → keyless intraday snapshot only, no historical backfill. |
 
 ## Layout
 

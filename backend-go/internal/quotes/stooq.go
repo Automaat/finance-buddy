@@ -104,19 +104,16 @@ func parseStooqLatest(r io.Reader, sym string) (Quote, error) {
 	if err != nil {
 		return Quote{}, fmt.Errorf("read header: %w", err)
 	}
-	idx := map[string]int{}
-	for i, name := range header {
-		idx[strings.ToLower(strings.TrimSpace(name))] = i
-	}
-	needed := []string{"date", "close"}
-	for _, n := range needed {
-		if _, ok := idx[n]; !ok {
-			return Quote{}, fmt.Errorf("stooq missing %q column", n)
-		}
+	idx, err := csvColumns(header, "date", "close")
+	if err != nil {
+		return Quote{}, err
 	}
 	row, err := reader.Read()
 	if err != nil {
 		return Quote{}, fmt.Errorf("read row: %w", err)
+	}
+	if !rowHas(row, idx["date"], idx["close"]) {
+		return Quote{}, fmt.Errorf("stooq row truncated: %d cols, want > %d", len(row), maxIdx(idx))
 	}
 	if row[idx["date"]] == "N/D" || row[idx["close"]] == "N/D" {
 		return Quote{}, ErrNoData
@@ -134,6 +131,43 @@ func parseStooqLatest(r io.Reader, sym string) (Quote, error) {
 		Date:   d,
 		Close:  price,
 	}, nil
+}
+
+// csvColumns indexes header by lowercase name and verifies every needed
+// column is present. Returned map is keyed by lowercase column name.
+func csvColumns(header []string, needed ...string) (map[string]int, error) {
+	idx := map[string]int{}
+	for i, name := range header {
+		idx[strings.ToLower(strings.TrimSpace(name))] = i
+	}
+	for _, n := range needed {
+		if _, ok := idx[n]; !ok {
+			return nil, fmt.Errorf("stooq missing %q column", n)
+		}
+	}
+	return idx, nil
+}
+
+// rowHas reports whether row has cells at every supplied index. Guards the
+// CSV parsers against panics when Stooq returns short/malformed rows
+// (FieldsPerRecord = -1 doesn't enforce uniform width).
+func rowHas(row []string, idxs ...int) bool {
+	for _, i := range idxs {
+		if i >= len(row) {
+			return false
+		}
+	}
+	return true
+}
+
+func maxIdx(idx map[string]int) int {
+	m := 0
+	for _, v := range idx {
+		if v > m {
+			m = v
+		}
+	}
+	return m
 }
 
 // Daily fetches the daily history for symbol in [from, to] inclusive from
@@ -186,14 +220,9 @@ func parseStooqDaily(r io.Reader, sym string) ([]Quote, error) {
 		}
 		return nil, fmt.Errorf("read header: %w", err)
 	}
-	idx := map[string]int{}
-	for i, name := range header {
-		idx[strings.ToLower(strings.TrimSpace(name))] = i
-	}
-	for _, n := range []string{"date", "close"} {
-		if _, ok := idx[n]; !ok {
-			return nil, fmt.Errorf("stooq daily missing %q column", n)
-		}
+	idx, err := csvColumns(header, "date", "close")
+	if err != nil {
+		return nil, fmt.Errorf("stooq daily: %w", err)
 	}
 	out := []Quote{}
 	upperSym := strings.ToUpper(sym)
@@ -204,6 +233,9 @@ func parseStooqDaily(r io.Reader, sym string) ([]Quote, error) {
 		}
 		if err != nil {
 			return nil, fmt.Errorf("read row: %w", err)
+		}
+		if !rowHas(row, idx["date"], idx["close"]) {
+			return nil, fmt.Errorf("stooq daily row truncated: %d cols", len(row))
 		}
 		if row[idx["date"]] == "" || row[idx["close"]] == "" {
 			continue

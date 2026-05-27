@@ -99,6 +99,11 @@ func (s *Scheduler) startupRefresh(ctx context.Context) {
 		s.logger.Warn("quotes: staleness check failed", "err", err)
 		return
 	}
+	// Both sides are nominally UTC: price_quotes.created_at is `timestamp
+	// without time zone` defaulted to `now() at time zone 'utc'`, and pgx
+	// scans naive timestamps with time.UTC. s.now().UTC() makes the same
+	// assumption explicit on the application side. If price_quotes ever
+	// migrates to timestamptz, both branches still subtract correctly.
 	if last.IsZero() || s.now().UTC().Sub(last) > startupStale {
 		s.logger.Info("quotes: stale at startup, refreshing", "last", last)
 		s.refresh(ctx)
