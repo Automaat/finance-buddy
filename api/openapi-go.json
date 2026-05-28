@@ -5394,6 +5394,61 @@
                     "holdings": {
                       "items": {
                         "properties": {
+                          "accounts": {
+                            "items": {
+                              "properties": {
+                                "account_id": {
+                                  "type": "integer"
+                                },
+                                "account_name": {
+                                  "type": "string"
+                                },
+                                "average_cost": {
+                                  "type": "string"
+                                },
+                                "average_cost_pln": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "cost_basis": {
+                                  "type": "string"
+                                },
+                                "cost_basis_pln": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "market_value": {
+                                  "type": "string"
+                                },
+                                "market_value_pln": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "owner_user_id": {
+                                  "type": "integer"
+                                },
+                                "quantity": {
+                                  "type": "string"
+                                },
+                                "realized_gain": {
+                                  "type": "string"
+                                },
+                                "realized_gain_pln": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "unrealized_gain": {
+                                  "type": "string"
+                                },
+                                "unrealized_gain_pln": {
+                                  "nullable": true,
+                                  "type": "string"
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
                           "average_cost": {
                             "type": "string"
                           },

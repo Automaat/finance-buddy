@@ -278,7 +278,7 @@
 			<table class="table table-hover text-sm">
 				<thead>
 					<tr>
-						<th>Symbol</th>
+						<th>Symbol / Konto</th>
 						<th>Nazwa</th>
 						<th class="text-right">Ilość</th>
 						<th class="text-right">Średnia cena</th>
@@ -291,11 +291,11 @@
 				</thead>
 				<tbody>
 					{#each data.holdings as h (h.security.id)}
-						<tr>
+						<tr class="bg-surface-100-900/40 font-semibold">
 							<td>
-								<div class="font-semibold">{h.security.symbol}</div>
+								<div>{h.security.symbol}</div>
 								{#if h.security.isin}
-									<div class="text-xs text-surface-600-400">{h.security.isin}</div>
+									<div class="text-xs font-normal text-surface-600-400">{h.security.isin}</div>
 								{/if}
 							</td>
 							<td>{h.security.name}</td>
@@ -303,20 +303,24 @@
 							<td class="text-right">
 								<div>{fmt(h.average_cost)} {h.security.currency}</div>
 								{#if h.average_cost_pln && h.security.currency !== 'PLN'}
-									<div class="text-xs text-surface-600-400">{fmt(h.average_cost_pln)} PLN</div>
+									<div class="text-xs font-normal text-surface-600-400">
+										{fmt(h.average_cost_pln)} PLN
+									</div>
 								{/if}
 							</td>
 							<td class="text-right">
 								<div>{fmt(h.cost_basis)} {h.security.currency}</div>
 								{#if h.cost_basis_pln && h.security.currency !== 'PLN'}
-									<div class="text-xs text-surface-600-400">{fmt(h.cost_basis_pln)} PLN</div>
+									<div class="text-xs font-normal text-surface-600-400">
+										{fmt(h.cost_basis_pln)} PLN
+									</div>
 								{/if}
 							</td>
 							<td class="text-right">
 								{#if h.latest_quote}
 									{fmt(h.latest_quote)}
 									{h.security.currency}
-									<div class="text-xs text-surface-600-400">
+									<div class="text-xs font-normal text-surface-600-400">
 										{h.latest_quote_date}{#if h.latest_quote_rate_pln && h.security.currency !== 'PLN'}
 											· {fmt(h.latest_quote_rate_pln)} PLN/{h.security.currency}{/if}
 									</div>
@@ -327,7 +331,9 @@
 							<td class="text-right">
 								<div>{fmt(h.market_value)} {h.security.currency}</div>
 								{#if h.market_value_pln && h.security.currency !== 'PLN'}
-									<div class="text-xs text-surface-600-400">{fmt(h.market_value_pln)} PLN</div>
+									<div class="text-xs font-normal text-surface-600-400">
+										{fmt(h.market_value_pln)} PLN
+									</div>
 								{/if}
 							</td>
 							<td
@@ -338,7 +344,7 @@
 								<div>{fmt(h.unrealized_gain)} {h.security.currency}</div>
 								{#if h.unrealized_gain_pln && h.security.currency !== 'PLN'}
 									<div
-										class="text-xs {Number(h.unrealized_gain_pln) >= 0
+										class="text-xs font-normal {Number(h.unrealized_gain_pln) >= 0
 											? 'text-success-500'
 											: 'text-error-500'} opacity-80"
 									>
@@ -354,7 +360,7 @@
 								<div>{fmt(h.realized_gain)} {h.security.currency}</div>
 								{#if h.realized_gain_pln && h.security.currency !== 'PLN'}
 									<div
-										class="text-xs {Number(h.realized_gain_pln) >= 0
+										class="text-xs font-normal {Number(h.realized_gain_pln) >= 0
 											? 'text-success-500'
 											: 'text-error-500'} opacity-80"
 									>
@@ -363,6 +369,56 @@
 								{/if}
 							</td>
 						</tr>
+						{#each h.accounts as a (a.account_id)}
+							<tr class="text-surface-700-300">
+								<td class="pl-6 text-xs">↳ {a.account_name}</td>
+								<td></td>
+								<td class="text-right">{fmtQty(a.quantity)}</td>
+								<td class="text-right">
+									<div>{fmt(a.average_cost)} {h.security.currency}</div>
+									{#if a.average_cost_pln && h.security.currency !== 'PLN'}
+										<div class="text-xs text-surface-600-400">{fmt(a.average_cost_pln)} PLN</div>
+									{/if}
+								</td>
+								<td class="text-right">
+									<div>{fmt(a.cost_basis)} {h.security.currency}</div>
+									{#if a.cost_basis_pln && h.security.currency !== 'PLN'}
+										<div class="text-xs text-surface-600-400">{fmt(a.cost_basis_pln)} PLN</div>
+									{/if}
+								</td>
+								<td class="text-right text-surface-600-400">—</td>
+								<td class="text-right">
+									<div>{fmt(a.market_value)} {h.security.currency}</div>
+									{#if a.market_value_pln && h.security.currency !== 'PLN'}
+										<div class="text-xs text-surface-600-400">{fmt(a.market_value_pln)} PLN</div>
+									{/if}
+								</td>
+								<td
+									class="text-right {Number(a.unrealized_gain) >= 0
+										? 'text-success-500'
+										: 'text-error-500'}"
+								>
+									<div>{fmt(a.unrealized_gain)} {h.security.currency}</div>
+									{#if a.unrealized_gain_pln && h.security.currency !== 'PLN'}
+										<div
+											class="text-xs {Number(a.unrealized_gain_pln) >= 0
+												? 'text-success-500'
+												: 'text-error-500'} opacity-80"
+										>
+											{fmt(a.unrealized_gain_pln)} PLN
+										</div>
+									{/if}
+								</td>
+								<td
+									class="text-right {Number(a.realized_gain) >= 0
+										? 'text-success-500'
+										: 'text-error-500'}"
+								>
+									{fmt(a.realized_gain)}
+									{h.security.currency}
+								</td>
+							</tr>
+						{/each}
 					{/each}
 				</tbody>
 			</table>
