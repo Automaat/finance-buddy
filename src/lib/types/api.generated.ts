@@ -3464,12 +3464,17 @@ export interface paths {
                         "application/json": {
                             holdings?: {
                                 average_cost?: string;
+                                average_cost_pln?: string | null;
                                 cost_basis?: string;
+                                cost_basis_pln?: string | null;
                                 latest_quote?: string | null;
                                 latest_quote_date?: string | null;
+                                latest_quote_rate_pln?: string | null;
                                 market_value?: string;
+                                market_value_pln?: string | null;
                                 quantity?: string;
                                 realized_gain?: string;
+                                realized_gain_pln?: string | null;
                                 security?: {
                                     asset_type?: string;
                                     created_at?: string;
@@ -3480,6 +3485,7 @@ export interface paths {
                                     symbol?: string;
                                 };
                                 unrealized_gain?: string;
+                                unrealized_gain_pln?: string | null;
                             }[];
                         };
                     };
@@ -3603,6 +3609,47 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/holdings/refresh-quotes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pull latest quotes from Stooq for all securities */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            failed?: number;
+                            skipped_manual?: number;
+                            total?: number;
+                            written?: number;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;

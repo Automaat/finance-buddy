@@ -6,7 +6,7 @@
 	import { confirm } from '$lib/stores/confirm.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import PIT38Report from '$lib/components/PIT38Report.svelte';
-	import { Plus, Trash2, BarChart } from 'lucide-svelte';
+	import { Plus, Trash2, BarChart, RefreshCw } from 'lucide-svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -22,6 +22,7 @@
 	let lotModalOpen = $state(false);
 	let quoteModalOpen = $state(false);
 	let saving = $state(false);
+	let refreshing = $state(false);
 
 	let securityForm = $state({
 		symbol: '',
@@ -200,6 +201,36 @@
 		if (Number.isNaN(n)) return s;
 		return n.toLocaleString('pl-PL', { maximumFractionDigits: 6 });
 	}
+
+	async function refreshQuotes() {
+		refreshing = true;
+		try {
+			const apiUrl = resolveApiUrl();
+			const res = await fetch(`${apiUrl}/api/holdings/refresh-quotes`, {
+				method: 'POST'
+			});
+			if (!res.ok) {
+				const d = await res.json().catch(() => ({ detail: res.statusText }));
+				throw new Error(d.detail ?? res.statusText);
+			}
+			const body = (await res.json()) as {
+				total: number;
+				written: number;
+				skipped_manual: number;
+				failed: number;
+			};
+			toast.success(
+				`Stooq: ${body.written}/${body.total} zaktualizowano` +
+					(body.skipped_manual > 0 ? ` · ${body.skipped_manual} ręcznych pominięto` : '') +
+					(body.failed > 0 ? ` · ${body.failed} błędów` : '')
+			);
+			await invalidateAll();
+		} catch (err) {
+			if (err instanceof Error) toast.error(err.message);
+		} finally {
+			refreshing = false;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -216,6 +247,16 @@
 			</p>
 		</div>
 		<div class="flex gap-2">
+			<button
+				type="button"
+				class="btn preset-tonal-surface"
+				onclick={refreshQuotes}
+				disabled={refreshing}
+				title="Pobierz aktualne ceny z Stooq"
+			>
+				<RefreshCw size={16} class={refreshing ? 'animate-spin' : ''} />
+				<span>{refreshing ? 'Aktualizuję…' : 'Aktualizuj ceny'}</span>
+			</button>
 			<button type="button" class="btn preset-tonal-surface" onclick={openSecurityModal}>
 				<Plus size={16} /><span>Nowy papier</span>
 			</button>
@@ -259,31 +300,67 @@
 							</td>
 							<td>{h.security.name}</td>
 							<td class="text-right">{fmtQty(h.quantity)}</td>
-							<td class="text-right">{fmt(h.average_cost)} {h.security.currency}</td>
-							<td class="text-right">{fmt(h.cost_basis)} {h.security.currency}</td>
+							<td class="text-right">
+								<div>{fmt(h.average_cost)} {h.security.currency}</div>
+								{#if h.average_cost_pln && h.security.currency !== 'PLN'}
+									<div class="text-xs text-surface-600-400">{fmt(h.average_cost_pln)} PLN</div>
+								{/if}
+							</td>
+							<td class="text-right">
+								<div>{fmt(h.cost_basis)} {h.security.currency}</div>
+								{#if h.cost_basis_pln && h.security.currency !== 'PLN'}
+									<div class="text-xs text-surface-600-400">{fmt(h.cost_basis_pln)} PLN</div>
+								{/if}
+							</td>
 							<td class="text-right">
 								{#if h.latest_quote}
 									{fmt(h.latest_quote)}
 									{h.security.currency}
-									<div class="text-xs text-surface-600-400">{h.latest_quote_date}</div>
+									<div class="text-xs text-surface-600-400">
+										{h.latest_quote_date}{#if h.latest_quote_rate_pln && h.security.currency !== 'PLN'}
+											· {fmt(h.latest_quote_rate_pln)} PLN/{h.security.currency}{/if}
+									</div>
 								{:else}
 									<span class="text-surface-600-400">—</span>
 								{/if}
 							</td>
-							<td class="text-right">{fmt(h.market_value)} {h.security.currency}</td>
+							<td class="text-right">
+								<div>{fmt(h.market_value)} {h.security.currency}</div>
+								{#if h.market_value_pln && h.security.currency !== 'PLN'}
+									<div class="text-xs text-surface-600-400">{fmt(h.market_value_pln)} PLN</div>
+								{/if}
+							</td>
 							<td
 								class="text-right {Number(h.unrealized_gain) >= 0
 									? 'text-success-500'
 									: 'text-error-500'}"
 							>
-								{fmt(h.unrealized_gain)}
+								<div>{fmt(h.unrealized_gain)} {h.security.currency}</div>
+								{#if h.unrealized_gain_pln && h.security.currency !== 'PLN'}
+									<div
+										class="text-xs {Number(h.unrealized_gain_pln) >= 0
+											? 'text-success-500'
+											: 'text-error-500'} opacity-80"
+									>
+										{fmt(h.unrealized_gain_pln)} PLN
+									</div>
+								{/if}
 							</td>
 							<td
 								class="text-right {Number(h.realized_gain) >= 0
 									? 'text-success-500'
 									: 'text-error-500'}"
 							>
-								{fmt(h.realized_gain)}
+								<div>{fmt(h.realized_gain)} {h.security.currency}</div>
+								{#if h.realized_gain_pln && h.security.currency !== 'PLN'}
+									<div
+										class="text-xs {Number(h.realized_gain_pln) >= 0
+											? 'text-success-500'
+											: 'text-error-500'} opacity-80"
+									>
+										{fmt(h.realized_gain_pln)} PLN
+									</div>
+								{/if}
 							</td>
 						</tr>
 					{/each}

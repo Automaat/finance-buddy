@@ -36,6 +36,7 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/holdings"
 	"github.com/Automaat/finance-buddy/backend-go/internal/investment"
 	"github.com/Automaat/finance-buddy/backend-go/internal/pit38"
+	"github.com/Automaat/finance-buddy/backend-go/internal/quotes"
 	"github.com/Automaat/finance-buddy/backend-go/internal/recurring"
 	"github.com/Automaat/finance-buddy/backend-go/internal/retirement"
 	"github.com/Automaat/finance-buddy/backend-go/internal/rules"
@@ -65,6 +66,10 @@ type Config struct {
 	// CookieSecure marks the session cookie Secure (FB_COOKIE_SECURE).
 	// Off by default so plain-HTTP local/LAN deploys work.
 	CookieSecure bool
+	// StooqAPIKey unlocks the Stooq daily-history endpoint (FB_STOOQ_APIKEY).
+	// Empty means the scheduler/refresh handler falls back to the keyless
+	// "latest" snapshot — daily backfill is then unavailable.
+	StooqAPIKey string
 }
 
 // Deps bundles the runtime dependencies the router needs to construct
@@ -117,20 +122,20 @@ func registerRoutes(r chi.Router, cfg Config, pool *pgxpool.Pool, logger *slog.L
 		r.With(auth.RequireAdmin).Get("/api/auth/users", authHandler.ListUsers)
 		r.With(auth.RequireAdmin).Post("/api/auth/users", authHandler.CreateUser)
 		r.With(auth.RequireAdmin).Put("/api/auth/users/{id}", authHandler.UpdateUser)
-		registerAPIRoutes(r, pool, logger)
+		registerAPIRoutes(r, cfg, pool, logger)
 	})
 }
 
-func registerAPIRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
+func registerAPIRoutes(r chi.Router, cfg Config, pool *pgxpool.Pool, logger *slog.Logger) {
 	registerCoreRoutes(r, pool, logger)
 	registerEquityRoutes(r, pool, logger)
 	registerCPIAndPayrollRoutes(r, pool, logger)
 	registerPortfolioRoutes(r, pool, logger)
-	registerLedgerRoutes(r, pool, logger)
+	registerLedgerRoutes(r, cfg, pool, logger)
 	registerDashboardRoutes(r, pool, logger)
 }
 
-func registerLedgerRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
+func registerLedgerRoutes(r chi.Router, cfg Config, pool *pgxpool.Pool, logger *slog.Logger) {
 	txStore := transactions.NewStore(pool)
 	txHandler := transactions.NewHandler(txStore, logger)
 	r.Get("/api/accounts/{account_id}/transactions", txHandler.ListForAccount)
@@ -180,17 +185,7 @@ func registerLedgerRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger)
 	r.Get("/api/investment/bond-stats", invHandler.BondStats)
 	r.Get("/api/investment/returns", invHandler.Returns)
 
-	hStore := holdings.NewStore(pool)
-	hHandler := holdings.NewHandler(hStore, logger)
-	r.Get("/api/holdings", hHandler.Holdings)
-	r.Get("/api/holdings/securities", hHandler.ListSecurities)
-	r.Post("/api/holdings/securities", hHandler.CreateSecurity)
-	r.Delete("/api/holdings/securities/{id}", hHandler.DeleteSecurity)
-	r.Get("/api/holdings/securities/{id}/quotes", hHandler.ListQuotes)
-	r.Post("/api/holdings/securities/{id}/quotes", hHandler.UpsertQuote)
-	r.Get("/api/holdings/lots", hHandler.ListLots)
-	r.Post("/api/holdings/lots", hHandler.CreateLot)
-	r.Delete("/api/holdings/lots/{id}", hHandler.DeleteLot)
+	registerHoldingsRoutes(r, cfg.StooqAPIKey, pool, logger)
 
 	registerPIT38Routes(r, pool, logger)
 
@@ -224,6 +219,24 @@ func registerDashboardRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logg
 func registerPIT38Routes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
 	pitHandler := pit38.NewHandler(pit38.NewStore(pool), fx.NewService(pool, logger), logger)
 	r.Get("/api/pit38/realized", pitHandler.Realized)
+}
+
+func registerHoldingsRoutes(r chi.Router, stooqAPIKey string, pool *pgxpool.Pool, logger *slog.Logger) {
+	hStore := holdings.NewStore(pool)
+	hHandler := holdings.NewHandler(hStore, fx.NewService(pool, logger), logger)
+	r.Get("/api/holdings", hHandler.Holdings)
+	r.Get("/api/holdings/securities", hHandler.ListSecurities)
+	r.Post("/api/holdings/securities", hHandler.CreateSecurity)
+	r.Delete("/api/holdings/securities/{id}", hHandler.DeleteSecurity)
+	r.Get("/api/holdings/securities/{id}/quotes", hHandler.ListQuotes)
+	r.Post("/api/holdings/securities/{id}/quotes", hHandler.UpsertQuote)
+	r.Get("/api/holdings/lots", hHandler.ListLots)
+	r.Post("/api/holdings/lots", hHandler.CreateLot)
+	r.Delete("/api/holdings/lots/{id}", hHandler.DeleteLot)
+
+	stooq := quotes.NewStooqFetcher(stooqAPIKey)
+	refresh := quotes.NewRefreshHandler(hStore, stooq, logger)
+	r.Post("/api/holdings/refresh-quotes", refresh.Refresh)
 }
 
 func registerCoreRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {

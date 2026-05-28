@@ -22,6 +22,12 @@ export interface HoldingRow {
 	market_value: string;
 	unrealized_gain: string;
 	realized_gain: string;
+	average_cost_pln: string | null;
+	cost_basis_pln: string | null;
+	market_value_pln: string | null;
+	unrealized_gain_pln: string | null;
+	realized_gain_pln: string | null;
+	latest_quote_rate_pln: string | null;
 }
 
 export interface AccountOption {
