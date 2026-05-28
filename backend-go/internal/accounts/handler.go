@@ -74,7 +74,7 @@ type Handler struct {
 // HoldingsValuator returns the live PLN market value per account derived
 // from the holdings ledger. Snapshot/current_value pre-fill consumes this
 // for stock/etf/bond/fund accounts so user-typed snapshots already match
-// what brokers show. Implemented by holdings.Store.
+// what brokers show. Implemented by holdings.Valuator.
 type HoldingsValuator interface {
 	AccountValuesPLN(ctx context.Context) (map[int]decimal.Decimal, error)
 }
