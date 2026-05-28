@@ -65,18 +65,39 @@ type listResponse struct {
 
 // Handler is the HTTP boundary for /api/accounts.
 type Handler struct {
-	store  *Store
-	cpi    CPILoader
-	logger *slog.Logger
+	store    *Store
+	cpi      CPILoader
+	holdings HoldingsValuator
+	logger   *slog.Logger
 }
 
-// NewHandler wires the store + CPI loader + logger. cpiStore may be nil in
-// tests; the real-yield columns then read as null on every account.
-func NewHandler(store *Store, cpiStore CPILoader, logger *slog.Logger) *Handler {
+// HoldingsValuator returns the live PLN market value per account derived
+// from the holdings ledger. Snapshot/current_value pre-fill consumes this
+// for stock/etf/bond/fund accounts so user-typed snapshots already match
+// what brokers show. Implemented by holdings.Valuator.
+type HoldingsValuator interface {
+	AccountValuesPLN(ctx context.Context) (map[int]decimal.Decimal, error)
+}
+
+// investmentCategories names the account categories whose current_value
+// gets overridden by the live holdings sum. Bank/cash categories keep the
+// snapshot-derived value (they don't have lots).
+var investmentCategories = map[string]bool{
+	"stock": true,
+	"etf":   true,
+	"bond":  true,
+	"fund":  true,
+}
+
+// NewHandler wires the store + CPI loader + holdings valuator + logger.
+// cpiStore may be nil in tests (real-yield columns become null). holdings
+// may be nil — then current_value falls back to the snapshot-derived value
+// for every account.
+func NewHandler(store *Store, cpiStore CPILoader, holdings HoldingsValuator, logger *slog.Logger) *Handler {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &Handler{store: store, cpi: cpiStore, logger: logger}
+	return &Handler{store: store, cpi: cpiStore, holdings: holdings, logger: logger}
 }
 
 // realYieldCtx carries the per-request CPI snapshot used to compute real
@@ -172,6 +193,21 @@ func toResponse(a *Account, currentValue decimal.Decimal, ry realYieldCtx) respo
 	return out
 }
 
+// loadHoldingsValues fetches live PLN market value per account from the
+// holdings ledger. Returns nil on failure (logged) so the request still
+// succeeds with snapshot-derived values. Empty when no valuator wired.
+func (h *Handler) loadHoldingsValues(ctx context.Context) map[int]decimal.Decimal {
+	if h.holdings == nil {
+		return nil
+	}
+	vals, err := h.holdings.AccountValuesPLN(ctx)
+	if err != nil {
+		h.logger.Warn("accounts: holdings valuation failed", "err", err)
+		return nil
+	}
+	return vals
+}
+
 // realYieldCtxFor is the single-account variant of loadRealYieldCtx: when
 // the account has no nominal rate, the real-yield columns are null anyway,
 // so we skip the CPI round-trip entirely. Used by Create/Update where the
@@ -234,11 +270,17 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
+	holdingsValues := h.loadHoldingsValues(r.Context())
 	ry := h.loadRealYieldCtx(r.Context())
 	out := listResponse{Assets: []response{}, Liabilities: []response{}}
 	for i := range accounts {
 		a := &accounts[i]
 		cv := values[a.ID]
+		if investmentCategories[a.Category] {
+			if live, ok := holdingsValues[a.ID]; ok {
+				cv = live
+			}
+		}
 		resp := toResponse(a, cv, ry)
 		if a.Type == "asset" {
 			out.Assets = append(out.Assets, resp)

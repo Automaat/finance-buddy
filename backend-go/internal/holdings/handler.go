@@ -330,6 +330,28 @@ type holdingRowResponse struct {
 	UnrealizedGainPLN  *string `json:"unrealized_gain_pln"`
 	RealizedGainPLN    *string `json:"realized_gain_pln"`
 	LatestQuoteRatePLN *string `json:"latest_quote_rate_pln"`
+
+	// Accounts is the per-account breakdown of this security position.
+	// Always present (possibly empty if quantities aggregate to zero per
+	// account). Snapshot pre-fill consumes these per-account totals.
+	Accounts []accountPositionResponse `json:"accounts"`
+}
+
+type accountPositionResponse struct {
+	AccountID         int     `json:"account_id"`
+	AccountName       string  `json:"account_name"`
+	OwnerUserID       int     `json:"owner_user_id"`
+	Quantity          string  `json:"quantity"`
+	AverageCost       string  `json:"average_cost"`
+	CostBasis         string  `json:"cost_basis"`
+	MarketValue       string  `json:"market_value"`
+	UnrealizedGain    string  `json:"unrealized_gain"`
+	RealizedGain      string  `json:"realized_gain"`
+	AverageCostPLN    *string `json:"average_cost_pln"`
+	CostBasisPLN      *string `json:"cost_basis_pln"`
+	MarketValuePLN    *string `json:"market_value_pln"`
+	UnrealizedGainPLN *string `json:"unrealized_gain_pln"`
+	RealizedGainPLN   *string `json:"realized_gain_pln"`
 }
 
 type holdingsResponse struct {
@@ -380,9 +402,42 @@ func (h *Handler) Holdings(w http.ResponseWriter, r *http.Request) {
 			row.UnrealizedGainPLN = &ug
 			row.LatestQuoteRatePLN = &rate
 		}
+		row.Accounts = make([]accountPositionResponse, 0, len(hr.Accounts))
+		for j := range hr.Accounts {
+			row.Accounts = append(row.Accounts, toAccountPosition(&hr.Accounts[j]))
+		}
 		out = append(out, row)
 	}
 	httputil.WriteJSON(w, http.StatusOK, holdingsResponse{Holdings: out})
+}
+
+func toAccountPosition(p *AccountPosition) accountPositionResponse {
+	resp := accountPositionResponse{
+		AccountID:      p.AccountID,
+		AccountName:    p.AccountName,
+		OwnerUserID:    p.OwnerUserID,
+		Quantity:       p.Running.Quantity.String(),
+		AverageCost:    p.Running.AverageCost.String(),
+		CostBasis:      p.Running.CostBasis.StringFixed(2),
+		MarketValue:    p.MarketValue.StringFixed(2),
+		UnrealizedGain: p.UnrealizedGain.StringFixed(2),
+		RealizedGain:   p.Running.RealizedGain.StringFixed(2),
+	}
+	if p.Running.HasPLN {
+		avg := p.Running.AverageCostPLN.StringFixed(4)
+		cb := p.Running.CostBasisPLN.StringFixed(2)
+		rg := p.Running.RealizedGainPLN.StringFixed(2)
+		resp.AverageCostPLN = &avg
+		resp.CostBasisPLN = &cb
+		resp.RealizedGainPLN = &rg
+	}
+	if p.HasPLN {
+		mv := p.MarketValuePLN.StringFixed(2)
+		ug := p.UnrealizedGainPLN.StringFixed(2)
+		resp.MarketValuePLN = &mv
+		resp.UnrealizedGainPLN = &ug
+	}
+	return resp
 }
 
 // --- shared helpers ---

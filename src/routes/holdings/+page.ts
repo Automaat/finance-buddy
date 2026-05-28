@@ -12,6 +12,23 @@ export interface SecurityRow {
 	created_at: string;
 }
 
+export interface AccountPosition {
+	account_id: number;
+	account_name: string;
+	owner_user_id: number;
+	quantity: string;
+	average_cost: string;
+	cost_basis: string;
+	market_value: string;
+	unrealized_gain: string;
+	realized_gain: string;
+	average_cost_pln: string | null;
+	cost_basis_pln: string | null;
+	market_value_pln: string | null;
+	unrealized_gain_pln: string | null;
+	realized_gain_pln: string | null;
+}
+
 export interface HoldingRow {
 	security: SecurityRow;
 	quantity: string;
@@ -28,6 +45,7 @@ export interface HoldingRow {
 	unrealized_gain_pln: string | null;
 	realized_gain_pln: string | null;
 	latest_quote_rate_pln: string | null;
+	accounts: AccountPosition[];
 }
 
 export interface AccountOption {

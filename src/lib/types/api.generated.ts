@@ -3463,6 +3463,22 @@ export interface paths {
                     content: {
                         "application/json": {
                             holdings?: {
+                                accounts?: {
+                                    account_id?: number;
+                                    account_name?: string;
+                                    average_cost?: string;
+                                    average_cost_pln?: string | null;
+                                    cost_basis?: string;
+                                    cost_basis_pln?: string | null;
+                                    market_value?: string;
+                                    market_value_pln?: string | null;
+                                    owner_user_id?: number;
+                                    quantity?: string;
+                                    realized_gain?: string;
+                                    realized_gain_pln?: string | null;
+                                    unrealized_gain?: string;
+                                    unrealized_gain_pln?: string | null;
+                                }[];
                                 average_cost?: string;
                                 average_cost_pln?: string | null;
                                 cost_basis?: string;

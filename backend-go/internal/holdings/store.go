@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sort"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -59,6 +60,26 @@ type HoldingRow struct {
 	MarketValuePLN     decimal.Decimal
 	UnrealizedGainPLN  decimal.Decimal
 	LatestQuoteRatePLN decimal.Decimal
+
+	// Accounts is the per-account breakdown for this security. The same
+	// position appears in each account that has lots; the consolidated
+	// fields above are the sum/weighted-average across all of them.
+	Accounts []AccountPosition
+}
+
+// AccountPosition is the slice of a HoldingRow attributable to one account.
+// Cost basis is the weighted average across that account's lots only;
+// LatestQuote and FX rate are shared with the consolidated row.
+type AccountPosition struct {
+	AccountID         int
+	AccountName       string
+	OwnerUserID       int
+	Running           Running
+	MarketValue       decimal.Decimal
+	UnrealizedGain    decimal.Decimal
+	HasPLN            bool
+	MarketValuePLN    decimal.Decimal
+	UnrealizedGainPLN decimal.Decimal
 }
 
 // Sentinel errors.
@@ -340,6 +361,42 @@ func (s *Store) BulkUpsertAutomatedQuotes(ctx context.Context, rows []PriceQuote
 	return written, nil
 }
 
+// Valuator binds a Store + RateProvider so callers that don't want to deal
+// with FX wiring (notably accounts.Handler) can get per-account PLN values
+// through one method. Implements accounts.HoldingsValuator.
+type Valuator struct {
+	store *Store
+	rates RateProvider
+}
+
+// NewValuator wires a store + rates. rates may be nil — the valuator then
+// returns native-currency-zero for every account (PLN conversion needs FX).
+func NewValuator(store *Store, rates RateProvider) *Valuator {
+	return &Valuator{store: store, rates: rates}
+}
+
+// AccountValuesPLN returns the live PLN market value for every account that
+// holds at least one open position with FX data. Sums per-security MV PLN
+// across the account's lots.
+func (v *Valuator) AccountValuesPLN(ctx context.Context) (map[int]decimal.Decimal, error) {
+	rows, err := v.store.Holdings(ctx, v.rates)
+	if err != nil {
+		return nil, err
+	}
+	out := map[int]decimal.Decimal{}
+	for i := range rows {
+		accs := rows[i].Accounts
+		for j := range accs {
+			acct := &accs[j]
+			if !acct.HasPLN {
+				continue
+			}
+			out[acct.AccountID] = out[acct.AccountID].Add(acct.MarketValuePLN)
+		}
+	}
+	return out, nil
+}
+
 // LatestStooqQuoteTime returns the most recent created_at across price_quotes
 // rows tagged source='stooq'. Zero time when no stooq quotes exist yet.
 // Used by the quotes scheduler to decide whether to refresh on startup.
@@ -377,10 +434,36 @@ func (s *Store) latestQuotes(ctx context.Context) (map[int]PriceQuote, error) {
 	return out, rows.Err()
 }
 
+// accountMeta is the slice of accounts data Holdings needs to label the
+// per-account breakdown. Keyed by account id.
+type accountMeta struct {
+	Name        string
+	OwnerUserID int
+}
+
+func (s *Store) accountMeta(ctx context.Context) (map[int]accountMeta, error) {
+	rows, err := s.pool.Query(ctx, `SELECT id, name, owner_user_id FROM accounts`)
+	if err != nil {
+		return nil, fmt.Errorf("account meta: %w", err)
+	}
+	defer rows.Close()
+	out := map[int]accountMeta{}
+	for rows.Next() {
+		var id, owner int
+		var name string
+		if err := rows.Scan(&id, &name, &owner); err != nil {
+			return nil, fmt.Errorf("scan account meta: %w", err)
+		}
+		out[id] = accountMeta{Name: name, OwnerUserID: owner}
+	}
+	return out, rows.Err()
+}
+
 // Holdings replays every lot, groups by security, attaches the latest quote,
 // and returns one HoldingRow per security with non-zero quantity. When rates
 // is non-nil, PLN-converted fields are also populated using trade-date NBP
 // rates for cost basis and the latest-quote-date rate for market value.
+// Each row also exposes a per-account breakdown via HoldingRow.Accounts.
 func (s *Store) Holdings(ctx context.Context, rates RateProvider) ([]HoldingRow, error) {
 	securities, err := s.ListSecurities(ctx)
 	if err != nil {
@@ -394,35 +477,126 @@ func (s *Store) Holdings(ctx context.Context, rates RateProvider) ([]HoldingRow,
 	if err != nil {
 		return nil, err
 	}
-	bySec := map[int][]Lot{}
-	for i := range allLots {
-		l := &allLots[i]
-		bySec[l.SecurityID] = append(bySec[l.SecurityID], *l)
+	accounts, err := s.accountMeta(ctx)
+	if err != nil {
+		return nil, err
 	}
+	bySec, bySecAcct := groupLots(allLots)
 	out := []HoldingRow{}
 	for _, sec := range securities {
-		lots := bySec[sec.ID]
-		run, runErr := ComputeRunningPLN(ctx, lots, sec.Currency, rates)
-		if runErr != nil {
-			slog.Default().Warn("holdings: skipping security with bad lot history",
-				"security_id", sec.ID, "symbol", sec.Symbol, "err", runErr)
+		row, ok := s.buildHoldingRow(ctx, sec, bySec[sec.ID], bySecAcct[sec.ID], quotes, accounts, rates)
+		if !ok {
 			continue
 		}
-		if run.Quantity.IsZero() && run.RealizedGain.IsZero() {
-			continue
-		}
-		row := HoldingRow{Security: sec, Running: run}
-		if q, ok := quotes[sec.ID]; ok {
-			row.LatestQuote = q.Price
-			d := q.Date
-			row.LatestQuoteDate = &d
-		}
-		row.MarketValue = MarketValue(run, row.LatestQuote)
-		row.UnrealizedGain = UnrealizedGain(run, row.LatestQuote)
-		s.fillPLNValuation(ctx, &row, rates)
 		out = append(out, row)
 	}
 	return out, nil
+}
+
+// groupLots bins every lot by security_id and by (security_id, account_id).
+// Returned in lot insertion order, which matches ListLots' chronological sort.
+func groupLots(lots []Lot) (map[int][]Lot, map[int]map[int][]Lot) {
+	bySec := map[int][]Lot{}
+	bySecAcct := map[int]map[int][]Lot{}
+	for i := range lots {
+		l := &lots[i]
+		bySec[l.SecurityID] = append(bySec[l.SecurityID], *l)
+		if bySecAcct[l.SecurityID] == nil {
+			bySecAcct[l.SecurityID] = map[int][]Lot{}
+		}
+		bySecAcct[l.SecurityID][l.AccountID] = append(bySecAcct[l.SecurityID][l.AccountID], *l)
+	}
+	return bySec, bySecAcct
+}
+
+// buildHoldingRow runs ComputeRunningPLN for the consolidated security
+// position and then for every account that holds it, returning the assembled
+// HoldingRow. Skips (returns false) when the security has no open position
+// or its lot history is corrupted.
+func (s *Store) buildHoldingRow(
+	ctx context.Context,
+	sec Security,
+	allLots []Lot,
+	perAccount map[int][]Lot,
+	quotes map[int]PriceQuote,
+	accounts map[int]accountMeta,
+	rates RateProvider,
+) (HoldingRow, bool) {
+	run, runErr := ComputeRunningPLN(ctx, allLots, sec.Currency, rates)
+	if runErr != nil {
+		slog.Default().Warn("holdings: skipping security with bad lot history",
+			"security_id", sec.ID, "symbol", sec.Symbol, "err", runErr)
+		return HoldingRow{}, false
+	}
+	if run.Quantity.IsZero() && run.RealizedGain.IsZero() {
+		return HoldingRow{}, false
+	}
+	row := HoldingRow{Security: sec, Running: run}
+	if q, ok := quotes[sec.ID]; ok {
+		row.LatestQuote = q.Price
+		d := q.Date
+		row.LatestQuoteDate = &d
+	}
+	row.MarketValue = MarketValue(run, row.LatestQuote)
+	row.UnrealizedGain = UnrealizedGain(run, row.LatestQuote)
+	s.fillPLNValuation(ctx, &row, rates)
+
+	row.Accounts = s.buildAccountPositions(ctx, sec, perAccount, accounts, row.LatestQuote, rates, row.LatestQuoteRatePLN, row.HasPLN)
+	return row, true
+}
+
+// buildAccountPositions runs the cost-basis walk per account and returns one
+// AccountPosition per account that currently holds the security. Reuses the
+// consolidated row's FX rate (already looked up against latest-quote-date)
+// so per-account PLN math is consistent with the consolidated total.
+func (s *Store) buildAccountPositions(
+	ctx context.Context,
+	sec Security,
+	perAccount map[int][]Lot,
+	accounts map[int]accountMeta,
+	latestQuote decimal.Decimal,
+	rates RateProvider,
+	rowRatePLN decimal.Decimal,
+	rowHasPLN bool,
+) []AccountPosition {
+	out := []AccountPosition{}
+	for accountID, lots := range perAccount {
+		runAcct, err := ComputeRunningPLN(ctx, lots, sec.Currency, rates)
+		if err != nil {
+			slog.Default().Warn("holdings: skipping account with bad lot history",
+				"security_id", sec.ID, "account_id", accountID, "err", err)
+			continue
+		}
+		if runAcct.Quantity.IsZero() && runAcct.RealizedGain.IsZero() {
+			continue
+		}
+		meta := accounts[accountID]
+		pos := AccountPosition{
+			AccountID:      accountID,
+			AccountName:    meta.Name,
+			OwnerUserID:    meta.OwnerUserID,
+			Running:        runAcct,
+			MarketValue:    MarketValue(runAcct, latestQuote),
+			UnrealizedGain: UnrealizedGain(runAcct, latestQuote),
+		}
+		if rowHasPLN && runAcct.HasPLN && !rowRatePLN.IsZero() {
+			mvPLN := pos.MarketValue.Mul(rowRatePLN)
+			if sec.Currency == "PLN" {
+				mvPLN = pos.MarketValue
+			}
+			pos.HasPLN = true
+			pos.MarketValuePLN = mvPLN
+			pos.UnrealizedGainPLN = mvPLN.Sub(runAcct.CostBasisPLN)
+		}
+		out = append(out, pos)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].OwnerUserID != out[j].OwnerUserID {
+			return out[i].OwnerUserID < out[j].OwnerUserID
+		}
+		return out[i].AccountID < out[j].AccountID
+	})
+	return out
 }
 
 // fillPLNValuation converts MarketValue + UnrealizedGain to PLN using the FX
