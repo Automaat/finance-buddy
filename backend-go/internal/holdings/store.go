@@ -449,12 +449,17 @@ func (s *Store) accountMeta(ctx context.Context) (map[int]accountMeta, error) {
 	defer rows.Close()
 	out := map[int]accountMeta{}
 	for rows.Next() {
-		var id, owner int
+		var id int
 		var name string
+		var owner *int // accounts.owner_user_id is nullable
 		if err := rows.Scan(&id, &name, &owner); err != nil {
 			return nil, fmt.Errorf("scan account meta: %w", err)
 		}
-		out[id] = accountMeta{Name: name, OwnerUserID: owner}
+		meta := accountMeta{Name: name}
+		if owner != nil {
+			meta.OwnerUserID = *owner
+		}
+		out[id] = meta
 	}
 	return out, rows.Err()
 }
