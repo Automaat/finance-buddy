@@ -70,6 +70,23 @@ func TestParseRate_COIFormat(t *testing.T) {
 	}
 }
 
+func TestParseRate_LegacyFormat(t *testing.T) {
+	// Pre-2023 emissions render "w pierwszym ... : 7,25%" instead of
+	// "7,25% w pierwszym ...". EDO1232 (Dec 2022) is the canonical case.
+	html := `<div>w pierwszym rocznym okresie odsetkowym: 7,25%, w kolejnych ` +
+		`rocznych okresach odsetkowych: marża 1,25% + inflacja</div>`
+	r, err := parseRate(html)
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if !r.FirstYearRate.Equal(d("7.25")) {
+		t.Errorf("Y1 = %s, want 7.25", r.FirstYearRate)
+	}
+	if !r.Margin.Equal(d("1.25")) {
+		t.Errorf("margin = %s, want 1.25", r.Margin)
+	}
+}
+
 func TestParseRate_MissingFieldsErrs(t *testing.T) {
 	_, err := parseRate("<html>nothing relevant here</html>")
 	if !errors.Is(err, ErrParse) {

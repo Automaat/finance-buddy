@@ -116,9 +116,9 @@ func (f *ObligacjeSkarbowePLFetcher) Lookup(ctx context.Context, bondType, serie
 	return parseRate(string(body))
 }
 
-// rateLineRegex matches the rate description line. The Ministry renders it
-// as e.g. "7,25% w pierwszym rocznym okresie odsetkowym, w kolejnych …
-// marża 1,25% + inflacja". Both numbers use the Polish decimal comma.
+// rateLineRegex matches the rate description line as the 2023+ Ministry
+// renders it: "7,25% w pierwszym rocznym okresie odsetkowym, w kolejnych
+// ... marża 1,25% + inflacja". Both numbers use the Polish decimal comma.
 //
 // The leading rate is captured greedily — guarding against single-digit
 // integer-only renders ("4%") that pre-2017 emissions sometimes use.
@@ -127,12 +127,24 @@ var rateLineRegex = regexp.MustCompile(
 		`[\s\S]{0,300}?marża\s*([0-9]+(?:[,\.][0-9]+)?)\s*%\s*\+\s*inflacja`,
 )
 
-// parseRate extracts Y1 + margin from the product page HTML. The regex is
-// anchored to phrases the Ministry uses on every inflation-indexed product
-// page; a layout shift will trip ErrParse rather than silently returning
-// wrong numbers.
+// rateLineRegexLegacy matches the pre-2023 ordering where the phrase
+// comes first and the rate after a colon: "w pierwszym rocznym okresie
+// odsetkowym: 7,25%, w kolejnych ... marża 1,25% + inflacja". Older EDO
+// emissions (EDO1132, EDO1232, …) render this way on their product pages.
+var rateLineRegexLegacy = regexp.MustCompile(
+	`w\s*pierwszym\s*rocznym\s*okresie\s*odsetkowym\s*:\s*([0-9]+(?:[,\.][0-9]+)?)\s*%` +
+		`[\s\S]{0,300}?marża\s*([0-9]+(?:[,\.][0-9]+)?)\s*%\s*\+\s*inflacja`,
+)
+
+// parseRate extracts Y1 + margin from the product page HTML. Tries the
+// modern phrase-after-rate format first, then falls back to the legacy
+// phrase-then-colon-then-rate format pre-2023 emissions use. Both regexes
+// missing trips ErrParse rather than silently returning wrong numbers.
 func parseRate(html string) (Rate, error) {
 	m := rateLineRegex.FindStringSubmatch(html)
+	if m == nil {
+		m = rateLineRegexLegacy.FindStringSubmatch(html)
+	}
 	if m == nil {
 		return Rate{}, ErrParse
 	}
