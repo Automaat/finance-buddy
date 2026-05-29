@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -79,14 +80,19 @@ func (f *FREDFetcher) FetchSince(ctx context.Context, since time.Time) ([]MonthY
 	if since.IsZero() {
 		return nil, fmt.Errorf("fred: since is zero")
 	}
-	q := fmt.Sprintf(
-		"?series_id=%s&api_key=%s&file_type=json&units=pc1&observation_start=%04d-%02d-01",
-		FREDPolandCPISeries, f.apiKey, since.Year(), int(since.Month()),
-	)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, FREDObservationsURL+q, http.NoBody)
+	// URL is the package constant; params (including the apikey) flow only
+	// through net/url so taint analysis stays out of the request URL path.
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, FREDObservationsURL, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
 	}
+	req.URL.RawQuery = url.Values{
+		"series_id":         {FREDPolandCPISeries},
+		"api_key":           {f.apiKey},
+		"file_type":         {"json"},
+		"units":             {"pc1"},
+		"observation_start": {fmt.Sprintf("%04d-%02d-01", since.Year(), int(since.Month()))},
+	}.Encode()
 	resp, err := f.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("fred fetch: %w", err)

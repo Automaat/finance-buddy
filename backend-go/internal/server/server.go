@@ -71,6 +71,21 @@ type Config struct {
 	// Empty means the scheduler/refresh handler falls back to the keyless
 	// "latest" snapshot — daily backfill is then unavailable.
 	StooqAPIKey string
+	// FREDAPIKey selects FRED (OECD-sourced GUS CPI) as the monthly CPI
+	// source. Empty falls back to Eurostat HICP (free, no key, but drifts
+	// 0.1-0.3pp).
+	FREDAPIKey string
+}
+
+// PickMonthlyCPIFetcher returns the (fetcher, sourceTag) the scheduler and
+// /api/cpi/refresh-monthly should use. FRED if a key is configured, else
+// Eurostat. Centralized here so server-side wiring and the scheduler stay
+// in sync without duplicating the env-key check.
+func PickMonthlyCPIFetcher(fredAPIKey string) (cpi.MonthlyFetcher, string) {
+	if fred := cpi.NewFREDFetcher(fredAPIKey); fred != nil {
+		return fred, cpi.FREDMonthlySource
+	}
+	return cpi.NewEurostatHICPFetcher(), cpi.EurostatMonthlySource
 }
 
 // Deps bundles the runtime dependencies the router needs to construct
@@ -130,7 +145,7 @@ func registerRoutes(r chi.Router, cfg Config, pool *pgxpool.Pool, logger *slog.L
 func registerAPIRoutes(r chi.Router, cfg Config, pool *pgxpool.Pool, logger *slog.Logger) {
 	registerCoreRoutes(r, pool, logger)
 	registerEquityRoutes(r, pool, logger)
-	registerCPIAndPayrollRoutes(r, pool, logger)
+	registerCPIAndPayrollRoutes(r, cfg, pool, logger)
 	registerPortfolioRoutes(r, pool, logger)
 	registerLedgerRoutes(r, cfg, pool, logger)
 	registerDashboardRoutes(r, pool, logger)
@@ -291,13 +306,15 @@ func registerEquityRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger)
 	})
 }
 
-func registerCPIAndPayrollRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logger) {
+func registerCPIAndPayrollRoutes(r chi.Router, cfg Config, pool *pgxpool.Pool, logger *slog.Logger) {
 	cpiStore := cpi.NewStore(pool)
-	cpiHandler := cpi.NewHandler(cpiStore, cpi.NewGUSFetcher(), logger)
+	monthlyFetcher, monthlySource := PickMonthlyCPIFetcher(cfg.FREDAPIKey)
+	cpiHandler := cpi.NewHandler(cpiStore, cpi.NewGUSFetcher(), monthlyFetcher, monthlySource, logger)
 	r.Route("/api/cpi", func(r chi.Router) {
 		r.Get("/series", cpiHandler.GetSeries)
 		r.Post("/adjust", cpiHandler.Adjust)
 		r.Post("/refresh", cpiHandler.Refresh)
+		r.Post("/refresh-monthly", cpiHandler.RefreshMonthly)
 	})
 
 	salariesHandler := salaries.NewHandler(salaries.NewStore(pool), cpiStore, logger)

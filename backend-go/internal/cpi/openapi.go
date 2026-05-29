@@ -7,4 +7,5 @@ var APISpec = []apispec.Route{
 	{Method: "GET", Path: "/api/cpi/series", Tag: "cpi", Summary: "Get the CPI year-over-year series", Response: seriesResponse{}},
 	{Method: "POST", Path: "/api/cpi/adjust", Tag: "cpi", Summary: "Inflation-adjust an amount between two dates", Response: adjustResponse{}},
 	{Method: "POST", Path: "/api/cpi/refresh", Tag: "cpi", Summary: "Refresh CPI data from GUS", Response: refreshResponse{}},
+	{Method: "POST", Path: "/api/cpi/refresh-monthly", Tag: "cpi", Summary: "Refresh monthly CPI from configured source (FRED or Eurostat HICP)", Response: refreshMonthlyResponse{}},
 }

@@ -1,8 +1,10 @@
 package cpi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -13,22 +15,44 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
-// Handler is the HTTP boundary for /api/cpi.
-type Handler struct {
-	store   *Store
-	fetcher *GUSFetcher
-	logger  *slog.Logger
+// MonthlyFetcher is the slice of cpi.EurostatHICPFetcher / cpi.FREDFetcher
+// the manual refresh endpoint accepts. Declared as an interface so the
+// handler doesn't care which monthly source the scheduler resolved.
+type MonthlyFetcher interface {
+	FetchSince(ctx context.Context, since time.Time) ([]MonthYearRate, error)
 }
 
-// NewHandler wires the dependencies.
-func NewHandler(store *Store, fetcher *GUSFetcher, logger *slog.Logger) *Handler {
+// monthlyBackfillStart mirrors scheduler.monthlyBackfillStart. Duplicated
+// here rather than imported to avoid a handler→scheduler dependency
+// inversion (scheduler imports cpi, not the other way round).
+var monthlyBackfillStart = time.Date(2013, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+// Handler is the HTTP boundary for /api/cpi.
+type Handler struct {
+	store          *Store
+	fetcher        *GUSFetcher
+	monthlyFetcher MonthlyFetcher
+	monthlySource  string
+	logger         *slog.Logger
+}
+
+// NewHandler wires the dependencies. monthlyFetcher and monthlySource may
+// be empty in setups without a monthly source — Refresh-monthly then
+// returns 503.
+func NewHandler(store *Store, fetcher *GUSFetcher, monthlyFetcher MonthlyFetcher, monthlySource string, logger *slog.Logger) *Handler {
 	if logger == nil {
 		logger = slog.Default()
 	}
 	if fetcher == nil {
 		fetcher = NewGUSFetcher()
 	}
-	return &Handler{store: store, fetcher: fetcher, logger: logger}
+	return &Handler{
+		store:          store,
+		fetcher:        fetcher,
+		monthlyFetcher: monthlyFetcher,
+		monthlySource:  monthlySource,
+		logger:         logger,
+	}
 }
 
 type cpiPoint struct {
@@ -175,6 +199,45 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	if ok {
 		y := latest
 		out.LatestYear = &y
+	}
+	httputil.WriteJSON(w, http.StatusOK, out)
+}
+
+// refreshMonthlyResponse mirrors refreshResponse for the monthly path —
+// LatestMonth is YYYY-MM ("" when the table is still empty).
+type refreshMonthlyResponse struct {
+	RowsWritten int    `json:"rows_written"`
+	Source      string `json:"source"`
+	LatestMonth string `json:"latest_month"`
+}
+
+// RefreshMonthly serves POST /api/cpi/refresh-monthly. Mirrors the
+// existing annual /api/cpi/refresh: fetches from the wired monthly source
+// (FRED or Eurostat) and upserts. Used to backfill after a source change
+// or to short-circuit the scheduler's 7-day staleness gate.
+func (h *Handler) RefreshMonthly(w http.ResponseWriter, r *http.Request) {
+	if h.monthlyFetcher == nil {
+		httputil.WriteDetailError(w, http.StatusServiceUnavailable, "Monthly CPI source not configured")
+		return
+	}
+	rows, err := h.monthlyFetcher.FetchSince(r.Context(), monthlyBackfillStart)
+	if err != nil {
+		httputil.WriteDetailError(w, http.StatusBadGateway, "Monthly CPI fetch failed: "+err.Error())
+		return
+	}
+	written, err := h.store.UpsertMonthly(r.Context(), h.monthlySource, rows)
+	if err != nil {
+		h.logger.Error("upsert monthly cpi", "err", err)
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	out := refreshMonthlyResponse{RowsWritten: written, Source: h.monthlySource}
+	// Find the highest (year, month) in the fetched batch.
+	for _, r := range rows {
+		stamp := fmt.Sprintf("%04d-%02d", r.Year, r.Month)
+		if stamp > out.LatestMonth {
+			out.LatestMonth = stamp
+		}
 	}
 	httputil.WriteJSON(w, http.StatusOK, out)
 }

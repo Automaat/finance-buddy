@@ -96,6 +96,7 @@ func run() int {
 		JWTSecret:    jwtSecret,
 		CookieSecure: envOr("FB_COOKIE_SECURE", "false") == "true",
 		StooqAPIKey:  os.Getenv("FB_STOOQ_APIKEY"),
+		FREDAPIKey:   os.Getenv("FB_FRED_API_KEY"),
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -123,15 +124,10 @@ func run() int {
 			return 2
 		}
 		// FRED (OECD-sourced GUS CPI) is the canonical input; fall back to
-		// Eurostat HICP when no FRED key is configured. Both expose the
-		// MonthlyCPIFetcher interface, so the scheduler doesn't care which.
-		var monthlyFetcher scheduler.MonthlyCPIFetcher = cpi.NewEurostatHICPFetcher()
-		if fred := cpi.NewFREDFetcher(os.Getenv("FB_FRED_API_KEY")); fred != nil {
-			monthlyFetcher = fred
-			logger.Info("cpi: monthly source = FRED (GUS-sourced)")
-		} else {
-			logger.Info("cpi: monthly source = Eurostat HICP (FB_FRED_API_KEY unset)")
-		}
+		// Eurostat HICP when no FRED key is configured. The picker is shared
+		// with server.go so /api/cpi/refresh-monthly uses the same source.
+		monthlyFetcher, monthlySource := server.PickMonthlyCPIFetcher(cfg.FREDAPIKey)
+		logger.Info("cpi: monthly source", "source", monthlySource)
 		monthlySched := scheduler.NewMonthlyCPIScheduler(cpiStore, monthlyFetcher, logger)
 		go monthlySched.Run(ctx)
 
