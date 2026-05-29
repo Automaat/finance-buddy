@@ -9,6 +9,7 @@
 	import { createChart } from '$lib/utils/charts/lifecycle';
 	import { Banknote, Pencil, Plus, Trash2, TrendingUp } from 'lucide-svelte';
 	import { resolveApiUrl } from '$lib/api';
+	import { api } from '$lib/apiClient';
 	import { invalidateAll } from '$app/navigation';
 	import { CrudForm } from '$lib/stores/crudForm.svelte';
 	import { ownerName } from '$lib/types/owners';
@@ -118,13 +119,9 @@
 		bondForm.error = '';
 		lookingUp = true;
 		try {
-			const params = new URLSearchParams({ type: formData.type, series: formData.series });
-			const res = await fetch(`${apiUrl}/api/bonds/lookup?${params}`);
-			if (!res.ok) {
-				const d = await res.json().catch(() => ({ detail: res.statusText }));
-				throw new Error(d.detail ?? res.statusText);
-			}
-			const body = (await res.json()) as { first_year_rate: number; margin: number };
+			const body = await api.get<{ first_year_rate: number; margin: number }>('/api/bonds/lookup', {
+				query: { type: formData.type, series: formData.series }
+			});
 			formData = {
 				...formData,
 				first_year_rate: body.first_year_rate,
@@ -140,19 +137,10 @@
 	async function handleSubmit() {
 		const editing = bondForm.editing;
 		await bondForm.submit(async () => {
-			const endpoint = editing ? `${apiUrl}/api/bonds/${editing.id}` : `${apiUrl}/api/bonds`;
-			const method = editing ? 'PUT' : 'POST';
-			const response = await fetch(endpoint, {
-				method,
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(formData)
-			});
-			if (!response.ok) {
-				const body = await response.json();
-				const detail = Array.isArray(body.detail)
-					? body.detail.map((d: { msg: string }) => d.msg).join('; ')
-					: (body.detail ?? 'Nie udało się zapisać obligacji');
-				throw new Error(detail);
+			if (editing) {
+				await api.put(`/api/bonds/${editing.id}`, formData);
+			} else {
+				await api.post('/api/bonds', formData);
 			}
 			await invalidateAll();
 		});
@@ -169,8 +157,7 @@
 	async function confirmDelete() {
 		if (!bondToDelete) return;
 		try {
-			const response = await fetch(`${apiUrl}/api/bonds/${bondToDelete}`, { method: 'DELETE' });
-			if (!response.ok) throw new Error('Nie udało się usunąć obligacji');
+			await api.del(`/api/bonds/${bondToDelete}`);
 			await invalidateAll();
 		} catch (err) {
 			if (err instanceof Error) bondForm.error = err.message;

@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { resolveApiUrl } from '$lib/api';
+import { api, ApiError } from '$lib/apiClient';
 import type { PageLoad } from './$types';
 
 export interface Goal {
@@ -31,22 +31,17 @@ export interface AccountOption {
 }
 
 export const load: PageLoad = async ({ fetch }) => {
-	const apiUrl = resolveApiUrl();
-	const [goalsResponse, accountsResponse] = await Promise.all([
-		fetch(`${apiUrl}/api/goals`),
-		fetch(`${apiUrl}/api/accounts`)
-	]);
-	if (!goalsResponse.ok) {
-		throw error(goalsResponse.status, 'Failed to load goals');
+	let goalsData: GoalsListResponse;
+	try {
+		goalsData = await api.get<GoalsListResponse>('/api/goals', { fetch });
+	} catch (err) {
+		throw error(err instanceof ApiError ? err.status : 500, 'Failed to load goals');
 	}
-	const goalsData: GoalsListResponse = await goalsResponse.json();
-	const accounts: AccountOption[] = accountsResponse.ok
-		? await accountsResponse
-				.json()
-				.then((d: { assets: AccountOption[]; liabilities: AccountOption[] }) => [
-					...d.assets,
-					...d.liabilities
-				])
-		: [];
+	// Accounts are best-effort: the picker degrades to empty rather than
+	// failing the whole page.
+	const accounts = await api
+		.get<{ assets: AccountOption[]; liabilities: AccountOption[] }>('/api/accounts', { fetch })
+		.then((d) => [...d.assets, ...d.liabilities])
+		.catch(() => [] as AccountOption[]);
 	return { ...goalsData, accounts };
 };
