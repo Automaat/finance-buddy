@@ -12,7 +12,11 @@ export interface ReturnsAccountOption {
 }
 
 // Investment accounts feed the per-account scope selector. Categories and
-// wrappers are fixed sets, so only the account list needs fetching.
+// wrappers are fixed sets, so only the account list needs fetching. An active
+// account counts as investment-capable if its category is an investment one OR
+// it carries a retirement wrapper (IKE/IKZE/PPK accounts may be categorized as
+// ppk/other yet still hold investments) — matching how the returns endpoint
+// scopes per-account.
 export const load: PageLoad = async ({ fetch }) => {
 	const apiUrl = resolveApiUrl();
 	const res = await fetch(`${apiUrl}/api/accounts`);
@@ -21,7 +25,9 @@ export const load: PageLoad = async ({ fetch }) => {
 	}
 	const data: { assets: ReturnsAccountOption[] } = await res.json();
 	const accounts = (data.assets ?? [])
-		.filter((a) => a.is_active && INVESTMENT_CATEGORIES.has(a.category))
+		.filter(
+			(a) => a.is_active && (INVESTMENT_CATEGORIES.has(a.category) || a.account_wrapper != null)
+		)
 		.sort((a, b) => a.name.localeCompare(b.name, 'pl'));
 	return { accounts };
 };
