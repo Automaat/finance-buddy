@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/holdings"
+	"github.com/Automaat/finance-buddy/backend-go/internal/metrics"
 )
 
 const (
@@ -118,6 +119,7 @@ func (s *Scheduler) refresh(ctx context.Context) {
 	secs, err := s.store.ListSecurities(ctx)
 	if err != nil {
 		s.logger.Warn("quotes: list securities failed", "err", err)
+		metrics.SchedulerRun("quotes", "error")
 		return
 	}
 	totals := RefreshTotals{Total: len(secs)}
@@ -127,6 +129,9 @@ func (s *Scheduler) refresh(ctx context.Context) {
 	s.logger.Info("quotes: refresh complete",
 		"written", totals.Written, "skipped_manual", totals.SkippedManual,
 		"failed", totals.Failed, "total", totals.Total)
+	// A pass that listed securities is a successful run even if individual
+	// per-security fetches failed (those are tracked in totals.Failed).
+	metrics.SchedulerRun("quotes", "success")
 }
 
 // RefreshTotals is the per-pass counter shared between scheduler runs and

@@ -4,6 +4,8 @@ import (
 	"context"
 	"log/slog"
 	"time"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/metrics"
 )
 
 // Scheduler walks all active recurring templates and mints concrete
@@ -61,8 +63,12 @@ func (s *Scheduler) Run(ctx context.Context) {
 	// Process immediately on boot so a fresh start mints any missed runs.
 	if n, err := s.ProcessDue(ctx, time.Now().UTC()); err != nil {
 		s.logger.Warn("recurring: startup pass failed", "err", err)
-	} else if n > 0 {
-		s.logger.Info("recurring: startup pass minted transactions", "count", n)
+		metrics.SchedulerRun("recurring", "error")
+	} else {
+		metrics.SchedulerRun("recurring", "success")
+		if n > 0 {
+			s.logger.Info("recurring: startup pass minted transactions", "count", n)
+		}
 	}
 	for {
 		now := time.Now().In(loc)
@@ -76,8 +82,12 @@ func (s *Scheduler) Run(ctx context.Context) {
 		case <-timer.C:
 			if n, err := s.ProcessDue(ctx, time.Now().UTC()); err != nil {
 				s.logger.Warn("recurring: nightly pass failed", "err", err)
-			} else if n > 0 {
-				s.logger.Info("recurring: nightly pass minted transactions", "count", n)
+				metrics.SchedulerRun("recurring", "error")
+			} else {
+				metrics.SchedulerRun("recurring", "success")
+				if n > 0 {
+					s.logger.Info("recurring: nightly pass minted transactions", "count", n)
+				}
 			}
 		}
 	}

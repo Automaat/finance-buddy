@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/cpi"
+	"github.com/Automaat/finance-buddy/backend-go/internal/metrics"
 )
 
 const (
@@ -106,14 +107,17 @@ func (s *CPIScheduler) refresh(ctx context.Context) {
 	rows, err := s.fetcher.Fetch(ctx)
 	if err != nil {
 		s.logger.Warn("scheduler: GUS fetch failed", "err", err)
+		metrics.SchedulerRun("cpi", "error")
 		return
 	}
 	written, err := s.store.Upsert(ctx, cpi.GUSSourceTag, rows)
 	if err != nil {
 		s.logger.Warn("scheduler: CPI upsert failed", "err", err)
+		metrics.SchedulerRun("cpi", "error")
 		return
 	}
 	s.logger.Info("scheduler: CPI refresh complete", "rows_written", written)
+	metrics.SchedulerRun("cpi", "success")
 }
 
 // nextRefresh returns the next 16th-of-month 04:00 strictly after `from`,
