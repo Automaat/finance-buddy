@@ -21,6 +21,7 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/allocation"
 	"github.com/Automaat/finance-buddy/backend-go/internal/assets"
 	"github.com/Automaat/finance-buddy/backend-go/internal/auth"
+	"github.com/Automaat/finance-buddy/backend-go/internal/bondrates"
 	"github.com/Automaat/finance-buddy/backend-go/internal/bonds"
 	bonusevents "github.com/Automaat/finance-buddy/backend-go/internal/bonus_events"
 	companyvaluations "github.com/Automaat/finance-buddy/backend-go/internal/company_valuations"
@@ -342,10 +343,14 @@ func registerPortfolioRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logg
 		r.Put("/{id}", snapshotsHandler.Update)
 	})
 
-	bondsHandler := bonds.NewHandler(bonds.NewStore(pool), cpi.NewStore(pool), logger)
+	bondsHandler := bonds.NewHandler(
+		bonds.NewStore(pool), cpi.NewStore(pool),
+		bondrates.NewObligacjeSkarbowePLFetcher(), logger,
+	)
 	r.Route("/api/bonds", func(r chi.Router) {
 		r.Get("/", bondsHandler.List)
 		r.Post("/", bondsHandler.Create)
+		r.Get("/lookup", bondsHandler.Lookup)
 		r.Get("/maturity-ladder", bondsHandler.MaturityLadder)
 		r.Get("/{id}", bondsHandler.Get)
 		r.Get("/{id}/ytm", bondsHandler.YTM)

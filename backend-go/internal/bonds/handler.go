@@ -8,12 +8,14 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/shopspring/decimal"
 
+	"github.com/Automaat/finance-buddy/backend-go/internal/bondrates"
 	"github.com/Automaat/finance-buddy/backend-go/internal/cpi"
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 	"github.com/Automaat/finance-buddy/backend-go/internal/rules"
@@ -53,20 +55,28 @@ type CPILoader interface {
 	LoadYoYMap(ctx context.Context) (map[int]decimal.Decimal, error)
 }
 
+// RateLookup resolves Y1 rate + CPI margin for an emission by scraping the
+// Ministry's product page (bondrates.ObligacjeSkarbowePLFetcher). May be
+// nil in tests; the /api/bonds/lookup endpoint then returns 503.
+type RateLookup interface {
+	Lookup(ctx context.Context, bondType, series string) (bondrates.Rate, error)
+}
+
 // Handler is the HTTP boundary for /api/bonds.
 type Handler struct {
 	store  *Store
 	cpi    CPILoader
+	rates  RateLookup
 	logger *slog.Logger
 	now    func() time.Time
 }
 
-// NewHandler wires the store + CPI loader + logger.
-func NewHandler(store *Store, cpiStore CPILoader, logger *slog.Logger) *Handler {
+// NewHandler wires the store + CPI loader + rate-lookup + logger.
+func NewHandler(store *Store, cpiStore CPILoader, rates RateLookup, logger *slog.Logger) *Handler {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &Handler{store: store, cpi: cpiStore, logger: logger, now: time.Now}
+	return &Handler{store: store, cpi: cpiStore, rates: rates, logger: logger, now: time.Now}
 }
 
 // response is the wire shape for a single bond.
@@ -412,6 +422,62 @@ func parseIDParam(w http.ResponseWriter, r *http.Request) (int, bool) {
 		return 0, false
 	}
 	return id, true
+}
+
+// lookupResponse is the body of GET /api/bonds/lookup.
+type lookupResponse struct {
+	FirstYearRate float64 `json:"first_year_rate"`
+	Margin        float64 `json:"margin"`
+	Source        string  `json:"source"`
+}
+
+// Lookup serves GET /api/bonds/lookup?type=EDO&series=EDO0133. Resolves Y1
+// rate + CPI margin from the Ministry's product page so the user doesn't
+// have to type them in by hand when adding a bond. Returns 404 on unknown
+// series, 503 when no rate provider is wired, 502 when the upstream page
+// is unparseable.
+func (h *Handler) Lookup(w http.ResponseWriter, r *http.Request) {
+	if h.rates == nil {
+		httputil.WriteDetailError(w, http.StatusServiceUnavailable, "Rate lookup not configured")
+		return
+	}
+	bondType := strings.TrimSpace(r.URL.Query().Get("type"))
+	series := strings.TrimSpace(r.URL.Query().Get("series"))
+	if bondType == "" {
+		httputil.WriteQueryValidationError(w, "type", "required")
+		return
+	}
+	if series == "" {
+		httputil.WriteQueryValidationError(w, "series", "required")
+		return
+	}
+	rate, err := h.rates.Lookup(r.Context(), bondType, series)
+	switch {
+	case errors.Is(err, bondrates.ErrNotFound):
+		httputil.WriteDetailError(w, http.StatusNotFound,
+			"Series not found in Ministry catalog")
+		return
+	case errors.Is(err, bondrates.ErrUnknownType):
+		httputil.WriteQueryValidationError(w, "type", "unsupported bond type")
+		return
+	case errors.Is(err, bondrates.ErrParse):
+		h.logger.Warn("bonds: rate parse failed", "type", bondType, "series", series)
+		httputil.WriteDetailError(w, http.StatusBadGateway,
+			"Could not parse rate from Ministry page")
+		return
+	case err != nil:
+		h.logger.Warn("bonds: rate lookup failed", "type", bondType, "series", series, "err", err)
+		httputil.WriteDetailError(w, http.StatusBadGateway,
+			"Could not reach Ministry page")
+		return
+	}
+	y1, _ := rate.FirstYearRate.Float64()
+	margin, _ := rate.Margin.Float64()
+	httputil.WriteJSON(w, http.StatusOK, lookupResponse{
+		FirstYearRate: y1,
+		Margin:        margin,
+		Source:        "obligacjeskarbowe.pl",
+	})
 }
 
 // Sanity: keep the package's cpi import alive even if the production wiring

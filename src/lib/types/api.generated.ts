@@ -1329,6 +1329,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/bonds/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Look up Y1 rate + CPI margin for an emission (obligacjeskarbowe.pl) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: double */
+                            first_year_rate?: number;
+                            /** Format: double */
+                            margin?: number;
+                            source?: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/bonds/maturity-ladder": {
         parameters: {
             query?: never;

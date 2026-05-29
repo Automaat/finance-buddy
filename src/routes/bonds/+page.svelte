@@ -49,6 +49,7 @@
 	let editingBond: TreasuryBond | null = $state(null);
 	let saving = $state(false);
 	let formError = $state('');
+	let lookingUp = $state(false);
 	let showDeleteModal = $state(false);
 	let bondToDelete: number | null = $state(null);
 
@@ -115,6 +116,29 @@
 		if (editingBond) return;
 		const d = defaultsForType(formData.type);
 		formData = { ...formData, ...d };
+	}
+
+	async function lookupRate() {
+		formError = '';
+		lookingUp = true;
+		try {
+			const params = new URLSearchParams({ type: formData.type, series: formData.series });
+			const res = await fetch(`${apiUrl}/api/bonds/lookup?${params}`);
+			if (!res.ok) {
+				const d = await res.json().catch(() => ({ detail: res.statusText }));
+				throw new Error(d.detail ?? res.statusText);
+			}
+			const body = (await res.json()) as { first_year_rate: number; margin: number };
+			formData = {
+				...formData,
+				first_year_rate: body.first_year_rate,
+				margin: body.margin
+			};
+		} catch (err) {
+			if (err instanceof Error) formError = `Pobieranie stopy: ${err.message}`;
+		} finally {
+			lookingUp = false;
+		}
 	}
 
 	async function handleSubmit() {
@@ -329,13 +353,24 @@
 
 					<label class="label">
 						<span class="font-semibold text-sm">Seria</span>
-						<input
-							type="text"
-							class="input"
-							bind:value={formData.series}
-							required
-							placeholder="np. EDO0535"
-						/>
+						<div class="flex gap-2">
+							<input
+								type="text"
+								class="input"
+								bind:value={formData.series}
+								required
+								placeholder="np. EDO0535"
+							/>
+							<button
+								type="button"
+								class="btn preset-tonal-surface whitespace-nowrap"
+								onclick={lookupRate}
+								disabled={lookingUp || !formData.series || !formData.type}
+								title="Pobierz stopę z obligacjeskarbowe.pl"
+							>
+								{lookingUp ? '…' : 'Pobierz stopę'}
+							</button>
+						</div>
 					</label>
 
 					<label class="label">
