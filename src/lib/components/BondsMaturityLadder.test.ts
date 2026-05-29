@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import BondsMaturityLadder from './BondsMaturityLadder.svelte';
-import type { MaturityLadderEvent, NextMaturityWarning } from '../../routes/bonds/+page';
+import type {
+	MaturityLadderEvent,
+	NextMaturityWarning
+} from '../../routes/investments/bonds/+page';
 
 const emptyProps = {
 	events: [] as MaturityLadderEvent[],

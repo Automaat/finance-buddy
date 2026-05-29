@@ -514,7 +514,7 @@
 
 		{#if dashboard.treasuryBondsCount > 0}
 			<a
-				href="/bonds"
+				href="/investments/bonds"
 				class="card preset-filled-surface-100-900 p-4 space-y-2 block hover:preset-tonal-primary transition-colors"
 			>
 				<header>

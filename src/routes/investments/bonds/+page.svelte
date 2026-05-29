@@ -196,6 +196,15 @@
 		}
 	}
 
+	// Aggregate face + profit across all bonds. Face = "paid in" (each EDO
+	// is bought at face); current_value = principal + accrued interest, so
+	// profit is the straight delta. Same for COI in this app's model since
+	// the calc returns face + accrued and doesn't deduct past coupon payouts
+	// — fine for "where do I stand right now" tracking.
+	const totalPaid = $derived(data.bonds.reduce((sum, b) => sum + b.face_value, 0));
+	const totalProfit = $derived(data.total_value - totalPaid);
+	const profitPct = $derived(totalPaid > 0 ? (totalProfit / totalPaid) * 100 : 0);
+
 	// --- YTM chart ---
 	type YTMPoint = { year: number; date: string; value: number; year_rate: number };
 	let selectedBondId: number | null = $state(untrack(() => data.bonds[0]?.id ?? null));
@@ -305,18 +314,28 @@
 	</button>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
 	<div class="card preset-filled-surface-100-900 p-4 space-y-1">
-		<header class="text-sm text-surface-700-300">Łączna wartość bieżąca</header>
+		<header class="text-sm text-surface-700-300">Wpłacono</header>
+		<div class="text-2xl font-bold">{formatPLN(totalPaid)}</div>
+	</div>
+	<div class="card preset-filled-surface-100-900 p-4 space-y-1">
+		<header class="text-sm text-surface-700-300">Wartość bieżąca</header>
 		<div class="text-2xl font-bold text-primary-600-400">{formatPLN(data.total_value)}</div>
+	</div>
+	<div class="card preset-filled-surface-100-900 p-4 space-y-1">
+		<header class="text-sm text-surface-700-300">Zysk</header>
+		<div class="text-2xl font-bold {totalProfit >= 0 ? 'text-success-500' : 'text-error-500'}">
+			{totalProfit >= 0 ? '+' : ''}{formatPLN(totalProfit)}
+		</div>
+		<div class="text-xs text-surface-600-400">
+			{totalProfit >= 0 ? '+' : ''}{profitPct.toFixed(2)}%
+		</div>
 	</div>
 	<div class="card preset-filled-surface-100-900 p-4 space-y-1">
 		<header class="text-sm text-surface-700-300">Liczba obligacji</header>
 		<div class="text-2xl font-bold">{data.total_count}</div>
-	</div>
-	<div class="card preset-filled-surface-100-900 p-4 space-y-1">
-		<header class="text-sm text-surface-700-300">Typy</header>
-		<div class="text-sm">
+		<div class="text-xs text-surface-600-400">
 			{[...new Set(data.bonds.map((b) => b.type))].join(', ') || '—'}
 		</div>
 	</div>

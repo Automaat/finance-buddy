@@ -17,7 +17,16 @@
 		{ label: 'Konta', hint: '/accounts', run: () => goto('/accounts') },
 		{ label: 'Transakcje', hint: '/transactions', run: () => goto('/transactions') },
 		{ label: 'Majątek', hint: '/assets', run: () => goto('/assets') },
-		{ label: 'Obligacje skarbowe', hint: '/bonds', run: () => goto('/bonds') },
+		{
+			label: 'Akcje / ETF',
+			hint: '/investments/holdings',
+			run: () => goto('/investments/holdings')
+		},
+		{
+			label: 'Obligacje skarbowe',
+			hint: '/investments/bonds',
+			run: () => goto('/investments/bonds')
+		},
 		{ label: 'Zobowiązania', hint: '/debts', run: () => goto('/debts') },
 		{ label: 'Cele', hint: '/goals', run: () => goto('/goals') },
 		{ label: 'Snapshoty', hint: '/snapshots', run: () => goto('/snapshots') },
