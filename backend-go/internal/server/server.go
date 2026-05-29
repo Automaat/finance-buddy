@@ -51,6 +51,11 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/zus"
 )
 
+// requestTimeout bounds every request via middleware.Timeout. Set above the
+// longest legitimate handler (the 2-min quotes-refresh self-bound) so it acts
+// as a backstop against stuck requests without cutting off real work.
+const requestTimeout = 150 * time.Second
+
 // Config holds the runtime knobs the server reads at startup.
 //
 // The caller (cmd/api) owns env-var loading and defaulting; New treats every
@@ -106,6 +111,11 @@ func New(cfg Config, logger *slog.Logger, deps Deps) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recoverer)
+	// Per-request deadline: cancels r.Context() (propagated to pgx queries and
+	// outbound scrapes) so a stuck handler can't pin a connection. Sized above
+	// the 2-min self-bound /api/holdings/refresh-quotes pass; main.go's
+	// WriteTimeout sits higher still so the 504 lands before the write deadline.
+	r.Use(middleware.Timeout(requestTimeout))
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   splitOrigins(cfg.CORSOrigins),
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
