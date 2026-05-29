@@ -39,12 +39,14 @@
 			.sort((a, b) => (b.real_yield_pct ?? -Infinity) - (a.real_yield_pct ?? -Infinity))
 	);
 
-	const realClass = (value: number | null): string =>
-		value == null
-			? 'text-surface-600-400'
-			: value >= 0
-				? 'text-success-600-400'
-				: 'text-error-600-400';
+	// Color buckets match the /accounts real-yield UI (issue #573): green > 1%,
+	// amber 0–1% ("not yet comfortably beating inflation"), red < 0%.
+	const realClass = (value: number | null): string => {
+		if (value == null) return 'text-surface-600-400';
+		if (value < 0) return 'text-error-600-400';
+		if (value <= 1) return 'text-warning-600-400';
+		return 'text-success-600-400';
+	};
 </script>
 
 {#if rows.length > 0}
@@ -81,8 +83,7 @@
 			</tbody>
 		</table>
 		<p class="mt-3 text-xs opacity-60">
-			Realny zwrot = oprocentowanie po podatku Belki (19%, konta IKE/IKZE zwolnione) minus inflacja
-			r/r.
+			Realny zwrot = oprocentowanie po podatku Belki (konta IKE/IKZE zwolnione) minus inflacja r/r.
 		</p>
 	</div>
 {:else}
