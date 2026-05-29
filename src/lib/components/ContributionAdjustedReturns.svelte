@@ -55,7 +55,12 @@
 			const apiUrl = resolveApiUrl();
 			const res = await fetch(`${apiUrl}/api/investment/returns?${buildQuery()}`, { signal });
 			if (!res.ok) throw new Error('Nie udało się pobrać zwrotów');
-			data = (await res.json()) as ReturnsResponse;
+			const body = (await res.json()) as ReturnsResponse;
+			// Guard the success path too: a response that arrives after this run
+			// was superseded (signal aborted) must not overwrite the newer scope's
+			// data, even if the fetch itself didn't reject on abort.
+			if (signal.aborted) return;
+			data = body;
 		} catch (err) {
 			if (signal.aborted) return;
 			if (err instanceof Error) toast.error(err.message);

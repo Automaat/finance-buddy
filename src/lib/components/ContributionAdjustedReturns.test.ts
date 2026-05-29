@@ -58,6 +58,35 @@ describe('ContributionAdjustedReturns', () => {
 		});
 	});
 
+	it('aborted first response cannot overwrite the newer period data', async () => {
+		// Hold the first (period=all) request open; the second (period=1m)
+		// resolves immediately. The period change aborts the first, so when the
+		// first finally resolves with stale data it must be ignored.
+		let resolveFirst: (r: Response) => void = () => {};
+		const firstPromise = new Promise<Response>((res) => {
+			resolveFirst = res;
+		});
+		let call = 0;
+		fetchSpy.mockImplementation((() => {
+			call += 1;
+			if (call === 1) return firstPromise;
+			return Promise.resolve(new Response(JSON.stringify(successPayload)));
+		}) as typeof fetch);
+
+		render(ContributionAdjustedReturns, { props: { scope: { type: 'all' } } });
+		// Switch period → aborts the first request, issues the second.
+		await fireEvent.click(screen.getByRole('tab', { name: '1M' }));
+		await waitFor(() => expect(screen.getByText('Wartość obecna')).toBeTruthy());
+
+		// Late stale resolution of the aborted first request.
+		resolveFirst(new Response(JSON.stringify({ ...successPayload, current_value: 99999 })));
+		await Promise.resolve();
+		await Promise.resolve();
+
+		// The stale 99 999 value must never reach the DOM.
+		expect(screen.queryByText(/99[\s ]?999/)).toBeNull();
+	});
+
 	it('re-fetches when period changes', async () => {
 		render(ContributionAdjustedReturns, { props: { scope: { type: 'all' } } });
 		await waitFor(() => expect(fetchSpy).toHaveBeenCalled());

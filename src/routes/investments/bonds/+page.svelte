@@ -197,7 +197,13 @@
 
 	$effect(() => {
 		const id = selectedBondId;
-		if (id === null) return;
+		if (id === null) {
+			// No bond selected (e.g. the last one was deleted): clear the loading
+			// flag so the prior request's aborted finally — which skips it —
+			// can't leave the YTM panel stuck on "loading".
+			ytmLoading = false;
+			return;
+		}
 		ytmLoading = true;
 		ytmError = '';
 		// Abort the in-flight YTM fetch when the selected bond changes or the
