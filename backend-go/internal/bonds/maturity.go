@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
+
+	"github.com/Automaat/finance-buddy/backend-go/internal/cpi"
 )
 
 // LadderEventKind is the cashflow's role on the calendar.
@@ -70,7 +72,7 @@ type LadderResult struct {
 // Past events (cashflow date <= now) are dropped: the calendar is
 // forward-looking, and a bond's matured principal has already hit the
 // owner's account.
-func MaturityLadder(bonds []TreasuryBond, yoyByYear map[int]decimal.Decimal, now time.Time, belkaRate decimal.Decimal) LadderResult {
+func MaturityLadder(bonds []TreasuryBond, yoyByYear map[int]decimal.Decimal, monthly map[cpi.YearMonth]decimal.Decimal, now time.Time, belkaRate decimal.Decimal) LadderResult {
 	if len(bonds) == 0 {
 		return LadderResult{Events: []LadderEvent{}, NextMaturity: nil}
 	}
@@ -84,7 +86,7 @@ func MaturityLadder(bonds []TreasuryBond, yoyByYear map[int]decimal.Decimal, now
 
 	for i := range bonds {
 		b := &bonds[i]
-		cf := appendBondEvents(b, yoyByYear, now, belkaRate, buckets, bucketKey)
+		cf := appendBondEvents(b, yoyByYear, monthly, now, belkaRate, buckets, bucketKey)
 		redemptions[b.ID] = cf
 	}
 
@@ -103,7 +105,7 @@ func MaturityLadder(bonds []TreasuryBond, yoyByYear map[int]decimal.Decimal, now
 		return events[i].Kind < events[j].Kind
 	})
 
-	next := computeNextMaturity(bonds, yoyByYear, now, belkaRate, redemptions)
+	next := computeNextMaturity(bonds, yoyByYear, monthly, now, belkaRate, redemptions)
 	return LadderResult{Events: events, NextMaturity: next}
 }
 
@@ -113,6 +115,7 @@ func MaturityLadder(bonds []TreasuryBond, yoyByYear map[int]decimal.Decimal, now
 func appendBondEvents(
 	b *TreasuryBond,
 	yoy map[int]decimal.Decimal,
+	monthly map[cpi.YearMonth]decimal.Decimal,
 	now time.Time,
 	belka decimal.Decimal,
 	buckets map[string]*LadderEvent,
@@ -124,7 +127,7 @@ func appendBondEvents(
 	}
 
 	if b.Capitalize {
-		final := YieldToMaturity(b, yoy)
+		final := YieldToMaturity(b, yoy, monthly)
 		if len(final) == 0 {
 			return redemptionCashflow{}
 		}
@@ -148,7 +151,7 @@ func appendBondEvents(
 		if !couponDate.After(now) {
 			continue
 		}
-		rate := YearRate(b, yoy, year)
+		rate := YearRate(b, yoy, monthly, year)
 		gross := b.FaceValue.Mul(rate).Div(decimal.NewFromInt(100)).Round(2)
 		tax := gross.Mul(belka).Round(2)
 		net := gross.Sub(tax)
@@ -207,7 +210,7 @@ type redemptionCashflow struct{ final, interest, tax, net decimal.Decimal }
 // summed cashflow stay coherent — if e.g. an EDO and a DOS happen to
 // mature in the same month, the warning still describes a single
 // homogeneous batch.
-func computeNextMaturity(bonds []TreasuryBond, yoy map[int]decimal.Decimal, now time.Time, belka decimal.Decimal, redemptions map[int]redemptionCashflow) *NextMaturity {
+func computeNextMaturity(bonds []TreasuryBond, yoy map[int]decimal.Decimal, monthly map[cpi.YearMonth]decimal.Decimal, now time.Time, belka decimal.Decimal, redemptions map[int]redemptionCashflow) *NextMaturity {
 	nearestIdx, nearestDate := pickNearestMaturity(bonds, now)
 	if nearestIdx < 0 {
 		return nil
@@ -238,7 +241,7 @@ func computeNextMaturity(bonds []TreasuryBond, yoy map[int]decimal.Decimal, now 
 		// what the owner actually receives that month, not just the
 		// principal.
 		if !b.Capitalize {
-			coupon := finalYearCoupon(b, yoy, belka)
+			coupon := finalYearCoupon(b, yoy, monthly, belka)
 			out.InterestGross = out.InterestGross.Add(coupon.gross)
 			out.Tax = out.Tax.Add(coupon.tax)
 			out.NetCashflow = out.NetCashflow.Add(coupon.net)
@@ -273,12 +276,12 @@ func pickNearestMaturity(bonds []TreasuryBond, now time.Time) (int, time.Time) {
 // final-year payout into the redemption-month summary.
 type couponAmounts struct{ gross, tax, net decimal.Decimal }
 
-func finalYearCoupon(b *TreasuryBond, yoy map[int]decimal.Decimal, belka decimal.Decimal) couponAmounts {
+func finalYearCoupon(b *TreasuryBond, yoy map[int]decimal.Decimal, monthly map[cpi.YearMonth]decimal.Decimal, belka decimal.Decimal) couponAmounts {
 	tenor := bondTenorYears(b.Type)
 	if tenor <= 0 {
 		return couponAmounts{}
 	}
-	rate := YearRate(b, yoy, tenor)
+	rate := YearRate(b, yoy, monthly, tenor)
 	gross := b.FaceValue.Mul(rate).Div(decimal.NewFromInt(100)).Round(2)
 	tax := gross.Mul(belka).Round(2)
 	return couponAmounts{gross: gross, tax: tax, net: gross.Sub(tax)}
