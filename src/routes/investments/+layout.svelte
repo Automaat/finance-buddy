@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Briefcase, Coins } from 'lucide-svelte';
+	import { Briefcase, Coins, TrendingUp } from 'lucide-svelte';
 
 	let { children } = $props();
 
 	const tabs = [
 		{ href: '/investments/holdings', label: 'Akcje / ETF', icon: Briefcase },
-		{ href: '/investments/bonds', label: 'Obligacje', icon: Coins }
+		{ href: '/investments/bonds', label: 'Obligacje', icon: Coins },
+		{ href: '/investments/returns', label: 'Zwroty', icon: TrendingUp }
 	];
 
 	const activeTab = $derived(page.url.pathname);
