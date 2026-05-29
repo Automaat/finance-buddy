@@ -31,17 +31,23 @@ export interface AccountOption {
 }
 
 export const load: PageLoad = async ({ fetch }) => {
-	let goalsData: GoalsListResponse;
 	try {
-		goalsData = await api.get<GoalsListResponse>('/api/goals', { fetch });
+		// Fetch in parallel; accounts are best-effort (the picker degrades to
+		// empty rather than failing the page).
+		const [goalsData, accounts] = await Promise.all([
+			api.get<GoalsListResponse>('/api/goals', { fetch }),
+			api
+				.get<{ assets: AccountOption[]; liabilities: AccountOption[] }>('/api/accounts', { fetch })
+				.then((d) => [...d.assets, ...d.liabilities])
+				.catch(() => [] as AccountOption[])
+		]);
+		return { ...goalsData, accounts };
 	} catch (err) {
-		throw error(err instanceof ApiError ? err.status : 500, 'Failed to load goals');
+		// A backend failure maps to its status; anything else (e.g. the
+		// resolveApiUrl misconfig HttpError) rethrows with its actionable message.
+		if (err instanceof ApiError) {
+			throw error(err.status, 'Failed to load goals');
+		}
+		throw err;
 	}
-	// Accounts are best-effort: the picker degrades to empty rather than
-	// failing the whole page.
-	const accounts = await api
-		.get<{ assets: AccountOption[]; liabilities: AccountOption[] }>('/api/accounts', { fetch })
-		.then((d) => [...d.assets, ...d.liabilities])
-		.catch(() => [] as AccountOption[]);
-	return { ...goalsData, accounts };
 };
