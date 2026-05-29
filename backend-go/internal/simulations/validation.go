@@ -15,7 +15,7 @@ import (
 // PPK participant may lower their employee contribution from 2% to 0.5%.
 // Centralized via the rules package (#545) so the validator + frontend +
 // error message all read the same number.
-var ppkBelowThresholdSalary = rules.MustFloat64("ppk_below_threshold_2026")
+var ppkBelowThresholdSalary = rules.Float64Or("ppk_below_threshold_2026", 5767)
 
 // --- mortgage ---
 

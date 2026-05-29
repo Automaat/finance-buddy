@@ -60,24 +60,21 @@ func TestPolish2026Values(t *testing.T) {
 	}
 }
 
-func TestMustFloat64Resolves(t *testing.T) {
+func TestFloat64OrResolves(t *testing.T) {
 	t.Parallel()
-	if got := MustFloat64("ike_limit_2026"); got != 28260 {
-		t.Errorf("MustFloat64(ike_limit_2026) = %v, want 28260", got)
+	if got := Float64Or("ike_limit_2026", -1); got != 28260 {
+		t.Errorf("Float64Or(ike_limit_2026) = %v, want 28260", got)
 	}
-	if got := MustFloat64("pit_rate_first_2026"); got != 0.12 {
-		t.Errorf("MustFloat64(pit_rate_first_2026) = %v, want 0.12", got)
+	if got := Float64Or("pit_rate_first_2026", -1); got != 0.12 {
+		t.Errorf("Float64Or(pit_rate_first_2026) = %v, want 0.12", got)
 	}
 }
 
-func TestMustFloat64PanicsOnUnknown(t *testing.T) {
+func TestFloat64OrFallsBackOnUnknown(t *testing.T) {
 	t.Parallel()
-	defer func() {
-		if recover() == nil {
-			t.Error("expected panic on unknown key")
-		}
-	}()
-	MustFloat64("does_not_exist")
+	if got := Float64Or("does_not_exist", 42); got != 42 {
+		t.Errorf("Float64Or(does_not_exist, 42) = %v, want 42 (fallback)", got)
+	}
 }
 
 func TestRuleKeysAreUnique(t *testing.T) {

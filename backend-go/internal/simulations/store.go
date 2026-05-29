@@ -17,8 +17,8 @@ import (
 // Sourced from the centralized rules table (#545) so the literal lives in
 // one place and carries citation metadata for the UI.
 var (
-	defaultIKELimit  = rules.MustFloat64("ike_limit_2026")
-	defaultIKZELimit = rules.MustFloat64("ikze_limit_2026")
+	defaultIKELimit  = rules.Float64Or("ike_limit_2026", 28260)
+	defaultIKZELimit = rules.Float64Or("ikze_limit_2026", 11304)
 )
 
 // Store handles the DB reads for prefill + the retirement-limit lookup.

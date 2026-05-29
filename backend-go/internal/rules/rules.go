@@ -9,6 +9,7 @@
 package rules
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -273,15 +274,17 @@ func All() []Rule {
 	return out
 }
 
-// MustFloat64 returns the rule's Value as a float64 or panics if the key
-// is unknown. Use at package init time (or from a `var x = ...` block) to
-// pin a Go constant to the centralized table — the panic surfaces a typo
-// before the process serves traffic, which is what callers want for
-// long-lived defaults like default IKE/IKZE limits.
-func MustFloat64(key string) float64 {
+// Float64Or returns the rule's Value as a float64, or the supplied fallback
+// (logged at WARN) when the key is unknown. Use to pin a Go constant to the
+// centralized table without crashing the process if the table ever drifts —
+// callers pass the statutory default as the fallback, so a missing rule
+// degrades to a documented value instead of a panic.
+func Float64Or(key string, fallback float64) float64 {
 	r, ok := Get(key)
 	if !ok {
-		panic("rules: no rule with key " + key)
+		slog.Default().Warn("rules: missing rule, using fallback",
+			"key", key, "fallback", fallback)
+		return fallback
 	}
 	v, _ := r.Value.Float64()
 	return v
