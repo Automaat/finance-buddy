@@ -2257,6 +2257,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/cpi/refresh-monthly": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Refresh monthly CPI from configured source (FRED or Eurostat HICP) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            latest_month?: string;
+                            rows_written?: number;
+                            source?: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/cpi/series": {
         parameters: {
             query?: never;

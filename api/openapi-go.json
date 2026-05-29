@@ -3198,6 +3198,37 @@
         ]
       }
     },
+    "/api/cpi/refresh-monthly": {
+      "post": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "latest_month": {
+                      "type": "string"
+                    },
+                    "rows_written": {
+                      "type": "integer"
+                    },
+                    "source": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Refresh monthly CPI from configured source (FRED or Eurostat HICP)",
+        "tags": [
+          "cpi"
+        ]
+      }
+    },
     "/api/cpi/series": {
       "get": {
         "responses": {
