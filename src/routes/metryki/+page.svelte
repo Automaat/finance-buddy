@@ -10,10 +10,12 @@
 		buildWrapperTrendChartOption,
 		buildYearlyRoiChartOption
 	} from '$lib/utils/charts/metryki';
+	import { buildCumulativeInflationChartOption } from '$lib/utils/charts/inflation';
 	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
 	import { ownerName, type OwnerOption } from '$lib/types/owners';
 	import ContributionAdjustedReturns from '$lib/components/ContributionAdjustedReturns.svelte';
 	import CurrencyExposureWidget from '$lib/components/CurrencyExposureWidget.svelte';
+	import RealYieldsTable from '$lib/components/RealYieldsTable.svelte';
 
 	import type { PageData } from './$types';
 
@@ -28,8 +30,12 @@
 	const investmentTimeSeries = $derived(data.investmentTimeSeries);
 	const wrapperTimeSeries = $derived(data.wrapperTimeSeries);
 	const categoryTimeSeries = $derived(data.categoryTimeSeries);
+	const realYieldAccounts = $derived(data.realYieldAccounts ?? []);
+	const cpiSeries = $derived(data.cpiSeries);
+	const hasCpiSeries = $derived((cpiSeries?.points?.length ?? 0) > 0);
 
 	let allocationChart: HTMLDivElement;
+	let inflationChart = $state<HTMLDivElement | undefined>(undefined);
 	let wrapperChart: HTMLDivElement;
 	let investmentTrendChart: HTMLDivElement;
 	let ikeChart: HTMLDivElement;
@@ -66,6 +72,9 @@
 				wrapperTimeSeries.ppk
 			)
 		);
+		if (hasCpiSeries && inflationChart) {
+			mount(inflationChart, buildCumulativeInflationChartOption(cpiSeries));
+		}
 
 		return () => {
 			for (const handle of handles) handle.dispose();
@@ -390,6 +399,16 @@
 		<ContributionAdjustedReturns scope={{ type: 'category', value: 'stock' }} title="Akcje" />
 		<ContributionAdjustedReturns scope={{ type: 'category', value: 'bond' }} title="Obligacje" />
 	</div>
+
+	<h2 class="h2">Realne zwroty (po inflacji)</h2>
+
+	<RealYieldsTable accounts={realYieldAccounts} />
+
+	{#if hasCpiSeries}
+		<div class="card preset-filled-surface-100-900 p-4 mt-4">
+			<div bind:this={inflationChart} class="w-full h-[320px] sm:h-[440px]"></div>
+		</div>
+	{/if}
 
 	<h2 class="h2">Struktura portfela inwestycyjnego</h2>
 

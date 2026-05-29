@@ -47,6 +47,22 @@ export async function load({ fetch, url }) {
 		const ownersRes = await fetch(`${apiUrl}/api/users`);
 		const owners = ownersRes.ok ? await ownersRes.json() : [];
 
+		// Accounts carry per-account real_yield_pct (post-Belka, post-CPI) and
+		// the CPI series feeds the cumulative-inflation chart — both power the
+		// real-return section.
+		const accountsRes = await fetch(`${apiUrl}/api/accounts`);
+		const accountsData = accountsRes.ok
+			? await accountsRes.json()
+			: { assets: [], liabilities: [] };
+		const realYieldAccounts = (accountsData.assets ?? []).filter(
+			(a: { interest_rate_pct: number | null }) => a.interest_rate_pct != null
+		);
+
+		const cpiSeriesRes = await fetch(`${apiUrl}/api/cpi/series`);
+		const cpiSeries = cpiSeriesRes.ok
+			? await cpiSeriesRes.json()
+			: { points: [], base_year: null, latest_year: null, source: '' };
+
 		return {
 			metricCards: dashboard.metric_cards,
 			allocationAnalysis: dashboard.allocation_analysis,
@@ -57,6 +73,8 @@ export async function load({ fetch, url }) {
 			stockStats,
 			bondStats,
 			owners,
+			realYieldAccounts,
+			cpiSeries,
 			range,
 			dateFrom,
 			dateTo
