@@ -121,7 +121,7 @@
 				Ekspozycja walutowa
 			</h2>
 			<p class="text-sm text-surface-700-300">
-				Udział PLN vs walut obcych w ostatnim snapshotcie aktywów.
+				Udział PLN vs walut obcych w portfelu inwestycyjnym (bez mieszkania i ROR).
 			</p>
 		</div>
 		<div class="flex flex-wrap items-end gap-2">
