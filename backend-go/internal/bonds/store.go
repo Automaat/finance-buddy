@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
 
+	"github.com/Automaat/finance-buddy/backend-go/internal/cpi"
 	"github.com/Automaat/finance-buddy/backend-go/internal/dbutil"
 )
 
@@ -181,11 +182,13 @@ func (s *Store) Delete(ctx context.Context, id int) error {
 }
 
 // TotalCurrentValue sums CurrentValue across every active bond for the
-// dashboard "Obligacje skarbowe" tile. yoyByYear is the cpi_index map.
-func TotalCurrentValue(bonds []TreasuryBond, yoyByYear map[int]decimal.Decimal, now time.Time) decimal.Decimal {
+// dashboard "Obligacje skarbowe" tile. yoyByYear is the cpi_index map;
+// monthly is the period-aware Eurostat HICP map (empty falls back to
+// annual).
+func TotalCurrentValue(bonds []TreasuryBond, yoyByYear map[int]decimal.Decimal, monthly map[cpi.YearMonth]decimal.Decimal, now time.Time) decimal.Decimal {
 	total := decimal.Zero
 	for i := range bonds {
-		total = total.Add(CurrentValue(&bonds[i], yoyByYear, now))
+		total = total.Add(CurrentValue(&bonds[i], yoyByYear, monthly, now))
 	}
 	return total
 }

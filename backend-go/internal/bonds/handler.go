@@ -50,9 +50,12 @@ func getBelkaRate() decimal.Decimal {
 }
 
 // CPILoader is the subset of cpi.Store the handler needs. Decoupling the
-// import lets unit tests stub it without spinning up a pool.
+// import lets unit tests stub it without spinning up a pool. LoadMonthlyYoYMap
+// returns the period-aware reference used by the rate engine; an empty
+// map disables the monthly path and falls back to annual CPI.
 type CPILoader interface {
 	LoadYoYMap(ctx context.Context) (map[int]decimal.Decimal, error)
+	LoadMonthlyYoYMap(ctx context.Context) (map[cpi.YearMonth]decimal.Decimal, error)
 }
 
 // RateLookup resolves Y1 rate + CPI margin for an emission by scraping the
@@ -155,13 +158,13 @@ type createRequest struct {
 	Capitalize    bool         `json:"capitalize"`
 }
 
-func (h *Handler) toResponse(b *TreasuryBond, yoy map[int]decimal.Decimal) response {
+func (h *Handler) toResponse(b *TreasuryBond, yoy map[int]decimal.Decimal, monthly map[cpi.YearMonth]decimal.Decimal) response {
 	face, _ := b.FaceValue.Float64()
 	firstYear, _ := b.FirstYearRate.Float64()
 	margin, _ := b.Margin.Float64()
-	current := CurrentValue(b, yoy, h.now())
+	current := CurrentValue(b, yoy, monthly, h.now())
 	currentFloat, _ := current.Float64()
-	yieldRate, _ := YearRate(b, yoy, currentBondYear(b, h.now())).Float64()
+	yieldRate, _ := YearRate(b, yoy, monthly, currentBondYear(b, h.now())).Float64()
 
 	return response{
 		ID:            b.ID,
@@ -198,11 +201,12 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
+	monthly := h.loadMonthlyYoY(r.Context())
 	out := listResponse{Bonds: make([]response, 0, len(bonds))}
 	total := decimal.Zero
 	for i := range bonds {
-		out.Bonds = append(out.Bonds, h.toResponse(&bonds[i], yoy))
-		total = total.Add(CurrentValue(&bonds[i], yoy, h.now()))
+		out.Bonds = append(out.Bonds, h.toResponse(&bonds[i], yoy, monthly))
+		total = total.Add(CurrentValue(&bonds[i], yoy, monthly, h.now()))
 	}
 	t, _ := total.Float64()
 	out.TotalValue = t
@@ -226,7 +230,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	httputil.WriteJSON(w, http.StatusOK, h.toResponse(b, yoy))
+	httputil.WriteJSON(w, http.StatusOK, h.toResponse(b, yoy, h.loadMonthlyYoY(r.Context())))
 }
 
 // YTM serves GET /api/bonds/{id}/ytm — the yield-to-maturity projection.
@@ -245,7 +249,7 @@ func (h *Handler) YTM(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	pts := YieldToMaturity(b, yoy)
+	pts := YieldToMaturity(b, yoy, h.loadMonthlyYoY(r.Context()))
 	out := ytmResponse{BondID: b.ID, Points: make([]ytmPointResponse, 0, len(pts))}
 	for _, p := range pts {
 		v, _ := p.Value.Float64()
@@ -276,7 +280,7 @@ func (h *Handler) MaturityLadder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	belka := getBelkaRate()
-	result := MaturityLadder(bonds, yoy, h.now(), belka)
+	result := MaturityLadder(bonds, yoy, h.loadMonthlyYoY(r.Context()), h.now(), belka)
 
 	out := maturityLadderResponse{
 		Events:     make([]ladderEventResponse, 0, len(result.Events)),
@@ -350,7 +354,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	httputil.WriteJSON(w, http.StatusCreated, h.toResponse(created, yoy))
+	httputil.WriteJSON(w, http.StatusCreated, h.toResponse(created, yoy, h.loadMonthlyYoY(r.Context())))
 }
 
 // Update serves PUT /api/bonds/{id}.
@@ -379,7 +383,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	httputil.WriteJSON(w, http.StatusOK, h.toResponse(b, yoy))
+	httputil.WriteJSON(w, http.StatusOK, h.toResponse(b, yoy, h.loadMonthlyYoY(r.Context())))
 }
 
 // Delete serves DELETE /api/bonds/{id}.
@@ -412,6 +416,20 @@ func (h *Handler) loadYoY(ctx context.Context) (map[int]decimal.Decimal, error) 
 		return nil, err
 	}
 	return yoy, nil
+}
+
+// loadMonthlyYoY pulls the Eurostat HICP table. An empty map (table not
+// yet seeded by the scheduler) is not an error — calc.go falls back to
+// the annual yoy series. A real DB error is logged and swallowed for the
+// same reason: we'd rather degrade than 500 the bonds page over a CPI
+// scheduler hiccup.
+func (h *Handler) loadMonthlyYoY(ctx context.Context) map[cpi.YearMonth]decimal.Decimal {
+	m, err := h.cpi.LoadMonthlyYoYMap(ctx)
+	if err != nil {
+		h.logger.Warn("load monthly cpi (falling back to annual)", "err", err)
+		return nil
+	}
+	return m
 }
 
 func parseIDParam(w http.ResponseWriter, r *http.Request) (int, bool) {

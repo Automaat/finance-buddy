@@ -17,7 +17,7 @@ func TestMaturityLadderCapitalizedEDOEmitsSingleRedemption(t *testing.T) {
 	b.ID = 1
 	yoy := map[int]decimal.Decimal{2025: decimal.NewFromFloat(104)}
 
-	res := MaturityLadder([]TreasuryBond{*b}, yoy, now, testBelka)
+	res := MaturityLadder([]TreasuryBond{*b}, yoy, nil, now, testBelka)
 
 	if len(res.Events) != 1 {
 		t.Fatalf("EDO should produce 1 event, got %d: %+v", len(res.Events), res.Events)
@@ -64,7 +64,7 @@ func TestMaturityLadderCOIEmitsYearlyCouponsAndRedemption(t *testing.T) {
 		2028: decimal.NewFromFloat(102),
 	}
 
-	res := MaturityLadder([]TreasuryBond{*b}, yoy, now, testBelka)
+	res := MaturityLadder([]TreasuryBond{*b}, yoy, nil, now, testBelka)
 
 	if len(res.Events) != 5 {
 		t.Fatalf("COI should produce 5 events (4 coupons + redemption), got %d", len(res.Events))
@@ -111,7 +111,7 @@ func TestMaturityLadderSkipsPastEvents(t *testing.T) {
 	b.ID = 1
 	yoy := map[int]decimal.Decimal{2025: decimal.NewFromFloat(104), 2026: decimal.NewFromFloat(103)}
 
-	res := MaturityLadder([]TreasuryBond{*b}, yoy, now, testBelka)
+	res := MaturityLadder([]TreasuryBond{*b}, yoy, nil, now, testBelka)
 
 	// year-1 (2025-01) + year-2 (2026-01) coupons are in the past; only
 	// year-3 + year-4 coupons and the redemption remain.
@@ -134,7 +134,7 @@ func TestMaturityLadderGroupsSameMonthSameType(t *testing.T) {
 	b2 := bondEDO(purchase.AddDate(0, 0, 10)) // same month
 	b2.ID = 2
 
-	res := MaturityLadder([]TreasuryBond{*b1, *b2}, map[int]decimal.Decimal{}, now, testBelka)
+	res := MaturityLadder([]TreasuryBond{*b1, *b2}, map[int]decimal.Decimal{}, nil, now, testBelka)
 
 	if len(res.Events) != 1 {
 		t.Fatalf("two EDO maturing in same month should merge, got %d events", len(res.Events))
@@ -159,7 +159,7 @@ func TestMaturityLadderSortsByMonthThenTypeThenKind(t *testing.T) {
 	lateEDO := bondEDO(time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)) // 2036-06
 	lateEDO.ID = 2
 
-	res := MaturityLadder([]TreasuryBond{*lateEDO, *earlyEDO}, map[int]decimal.Decimal{}, now, testBelka)
+	res := MaturityLadder([]TreasuryBond{*lateEDO, *earlyEDO}, map[int]decimal.Decimal{}, nil, now, testBelka)
 	if len(res.Events) != 2 {
 		t.Fatalf("expected 2 events, got %d", len(res.Events))
 	}
@@ -183,7 +183,7 @@ func TestNextMaturityIsNearestFuture(t *testing.T) {
 	far := bondEDO(time.Date(2025, 3, 1, 0, 0, 0, 0, time.UTC))
 	far.ID = 11
 
-	res := MaturityLadder([]TreasuryBond{*far, *soon}, map[int]decimal.Decimal{}, now, testBelka)
+	res := MaturityLadder([]TreasuryBond{*far, *soon}, map[int]decimal.Decimal{}, nil, now, testBelka)
 	if res.NextMaturity == nil {
 		t.Fatal("NextMaturity should be set")
 	}
@@ -217,7 +217,7 @@ func TestNextMaturityAggregatesSameMonth(t *testing.T) {
 		Capitalize:    true,
 	}
 
-	res := MaturityLadder([]TreasuryBond{*dos1, *dos2}, map[int]decimal.Decimal{}, now, testBelka)
+	res := MaturityLadder([]TreasuryBond{*dos1, *dos2}, map[int]decimal.Decimal{}, nil, now, testBelka)
 	if res.NextMaturity == nil {
 		t.Fatal("NextMaturity should be set")
 	}
@@ -235,7 +235,7 @@ func TestNextMaturityAggregatesSameMonth(t *testing.T) {
 }
 
 func TestMaturityLadderEmptyForNoBonds(t *testing.T) {
-	res := MaturityLadder(nil, map[int]decimal.Decimal{}, time.Now(), testBelka)
+	res := MaturityLadder(nil, map[int]decimal.Decimal{}, nil, time.Now(), testBelka)
 	if len(res.Events) != 0 || res.NextMaturity != nil {
 		t.Fatalf("empty input should return empty result, got %+v", res)
 	}
@@ -250,7 +250,7 @@ func TestMaturityLadderNonCapFinalMonthEmitsCouponAndRedemption(t *testing.T) {
 	b.ID = 1
 	yoy := map[int]decimal.Decimal{2025: decimal.NewFromFloat(104)}
 
-	res := MaturityLadder([]TreasuryBond{*b}, yoy, now, testBelka)
+	res := MaturityLadder([]TreasuryBond{*b}, yoy, nil, now, testBelka)
 
 	if len(res.Events) != 2 {
 		t.Fatalf("final month should have 2 rows (coupon + redemption), got %d", len(res.Events))
@@ -276,7 +276,7 @@ func TestNextMaturityFoldsFinalCouponForNonCapBond(t *testing.T) {
 	b.ID = 1
 	yoy := map[int]decimal.Decimal{2025: decimal.NewFromFloat(104)}
 
-	res := MaturityLadder([]TreasuryBond{*b}, yoy, now, testBelka)
+	res := MaturityLadder([]TreasuryBond{*b}, yoy, nil, now, testBelka)
 
 	if res.NextMaturity == nil {
 		t.Fatal("NextMaturity should be set")
@@ -299,7 +299,7 @@ func TestMaturityLadderHandlesNilYoYMap(t *testing.T) {
 	b := bondCOI(purchase)
 	b.ID = 1
 
-	res := MaturityLadder([]TreasuryBond{*b}, nil, now, testBelka)
+	res := MaturityLadder([]TreasuryBond{*b}, nil, nil, now, testBelka)
 
 	if len(res.Events) == 0 {
 		t.Fatal("nil yoy should still emit future events via FirstYearRate fallback")
@@ -336,7 +336,7 @@ func TestMaturityLadderSkipsAlreadyMaturedBond(t *testing.T) {
 	b.ID = 99
 	now := time.Date(2026, 5, 26, 0, 0, 0, 0, time.UTC)
 
-	res := MaturityLadder([]TreasuryBond{*b}, map[int]decimal.Decimal{}, now, testBelka)
+	res := MaturityLadder([]TreasuryBond{*b}, map[int]decimal.Decimal{}, nil, now, testBelka)
 	if len(res.Events) != 0 {
 		t.Fatalf("matured bond should emit no future events, got %d", len(res.Events))
 	}

@@ -112,8 +112,18 @@ func run() int {
 		deps.Pool = pool
 
 		// CPI monthly-refresh scheduler — replaces the Python APScheduler job.
-		sched := scheduler.NewCPIScheduler(cpi.NewStore(pool), cpi.NewGUSFetcher(), logger)
+		cpiStore := cpi.NewStore(pool)
+		sched := scheduler.NewCPIScheduler(cpiStore, cpi.NewGUSFetcher(), logger)
 		go sched.Run(ctx)
+
+		// Monthly HICP YoY refresh — feeds the period-aware bond rate engine.
+		// EnsureMonthlySchema is idempotent and cheap; safe to run every boot.
+		if err := cpiStore.EnsureMonthlySchema(ctx); err != nil {
+			logger.Error("ensure cpi_monthly_index schema", "err", err)
+			return 2
+		}
+		monthlySched := scheduler.NewMonthlyCPIScheduler(cpiStore, cpi.NewEurostatHICPFetcher(), logger)
+		go monthlySched.Run(ctx)
 
 		// Daily recurring-transaction generator (issue #384).
 		recSched := recurring.NewScheduler(recurring.NewStore(pool), logger)
