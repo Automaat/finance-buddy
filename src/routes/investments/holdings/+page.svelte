@@ -202,18 +202,18 @@
 		return n.toLocaleString('pl-PL', { maximumFractionDigits: 6 });
 	}
 
-	// Aggregate paid + current + profit across all open positions, all in
-	// PLN. Falls back to native-currency cost_basis / market_value when an
-	// FX rate wasn't available — those rows won't compare meaningfully
-	// against PLN totals but at least don't silently vanish from the sum.
-	function pln(value: string | null, native: string): number {
-		return Number(value ?? native) || 0;
-	}
-	const totalPaid = $derived(
-		data.holdings.reduce((sum, h) => sum + pln(h.cost_basis_pln, h.cost_basis), 0)
+	// Aggregate paid + current + profit across positions whose PLN values
+	// are known. Skipping a row without an FX rate (rather than summing its
+	// native USD/EUR figure into a PLN total) keeps the tiles honest at
+	// the cost of under-counting a partially-priced portfolio. The skipped
+	// count is surfaced under the tiles so an under-count isn't silent.
+	const pricedHoldings = $derived(
+		data.holdings.filter((h) => h.cost_basis_pln !== null && h.market_value_pln !== null)
 	);
+	const skippedCount = $derived(data.holdings.length - pricedHoldings.length);
+	const totalPaid = $derived(pricedHoldings.reduce((sum, h) => sum + Number(h.cost_basis_pln), 0));
 	const totalValue = $derived(
-		data.holdings.reduce((sum, h) => sum + pln(h.market_value_pln, h.market_value), 0)
+		pricedHoldings.reduce((sum, h) => sum + Number(h.market_value_pln), 0)
 	);
 	const totalProfit = $derived(totalValue - totalPaid);
 	const profitPct = $derived(totalPaid > 0 ? (totalProfit / totalPaid) * 100 : 0);
@@ -318,6 +318,12 @@
 				</div>
 			</div>
 		</div>
+		{#if skippedCount > 0}
+			<p class="text-xs text-warning-500">
+				Sumy pomijają {skippedCount}
+				{skippedCount === 1 ? 'pozycję' : 'pozycje'} bez kursu PLN.
+			</p>
+		{/if}
 	{/if}
 
 	{#if data.holdings.length === 0}
