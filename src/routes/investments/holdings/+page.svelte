@@ -202,6 +202,28 @@
 		return n.toLocaleString('pl-PL', { maximumFractionDigits: 6 });
 	}
 
+	// Aggregate paid + current + profit across all open positions, all in
+	// PLN. Falls back to native-currency cost_basis / market_value when an
+	// FX rate wasn't available — those rows won't compare meaningfully
+	// against PLN totals but at least don't silently vanish from the sum.
+	function pln(value: string | null, native: string): number {
+		return Number(value ?? native) || 0;
+	}
+	const totalPaid = $derived(
+		data.holdings.reduce((sum, h) => sum + pln(h.cost_basis_pln, h.cost_basis), 0)
+	);
+	const totalValue = $derived(
+		data.holdings.reduce((sum, h) => sum + pln(h.market_value_pln, h.market_value), 0)
+	);
+	const totalProfit = $derived(totalValue - totalPaid);
+	const profitPct = $derived(totalPaid > 0 ? (totalProfit / totalPaid) * 100 : 0);
+
+	function fmtPLN(n: number): string {
+		return (
+			n.toLocaleString('pl-PL', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' zł'
+		);
+	}
+
 	async function refreshQuotes() {
 		refreshing = true;
 		try {
@@ -268,6 +290,35 @@
 			</button>
 		</div>
 	</div>
+
+	{#if data.holdings.length > 0}
+		<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+			<div class="card preset-filled-surface-100-900 p-4 space-y-1">
+				<header class="text-sm text-surface-700-300">Wpłacono</header>
+				<div class="text-2xl font-bold">{fmtPLN(totalPaid)}</div>
+			</div>
+			<div class="card preset-filled-surface-100-900 p-4 space-y-1">
+				<header class="text-sm text-surface-700-300">Wartość bieżąca</header>
+				<div class="text-2xl font-bold text-primary-600-400">{fmtPLN(totalValue)}</div>
+			</div>
+			<div class="card preset-filled-surface-100-900 p-4 space-y-1">
+				<header class="text-sm text-surface-700-300">Zysk</header>
+				<div class="text-2xl font-bold {totalProfit >= 0 ? 'text-success-500' : 'text-error-500'}">
+					{totalProfit >= 0 ? '+' : ''}{fmtPLN(totalProfit)}
+				</div>
+				<div class="text-xs text-surface-600-400">
+					{totalProfit >= 0 ? '+' : ''}{profitPct.toFixed(2)}%
+				</div>
+			</div>
+			<div class="card preset-filled-surface-100-900 p-4 space-y-1">
+				<header class="text-sm text-surface-700-300">Pozycji</header>
+				<div class="text-2xl font-bold">{data.holdings.length}</div>
+				<div class="text-xs text-surface-600-400">
+					{data.holdings.map((h) => h.security.symbol).join(', ')}
+				</div>
+			</div>
+		</div>
+	{/if}
 
 	{#if data.holdings.length === 0}
 		<div class="card preset-tonal-surface p-6 text-center text-sm text-surface-700-300">
