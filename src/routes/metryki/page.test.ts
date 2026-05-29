@@ -75,6 +75,8 @@ const mockData = {
 	stockStats: null,
 	bondStats: null,
 	owners: [],
+	realYieldAccounts: [],
+	cpiSeries: { points: [], base_year: null, latest_year: null, source: '' },
 	range: 'all' as const,
 	dateFrom: null,
 	dateTo: null
@@ -182,6 +184,26 @@ describe('Metryki Page with populated data', () => {
 			roi_percentage: 5.26
 		},
 		owners: [{ id: 1, name: 'Marcin' }],
+		realYieldAccounts: [
+			{
+				id: 1,
+				name: 'Konto oszczędnościowe',
+				category: 'saving_account',
+				account_wrapper: null,
+				interest_rate_pct: 5,
+				cpi_yoy_pct: 3,
+				real_yield_pct: 1.05
+			}
+		],
+		cpiSeries: {
+			points: [
+				{ year: 2023, yoy_rate: 11, cumulative_index: 111 },
+				{ year: 2024, yoy_rate: 3, cumulative_index: 114.3 }
+			],
+			base_year: 2022,
+			latest_year: 2024,
+			source: 'GUS'
+		},
 		range: 'all' as const,
 		dateFrom: null,
 		dateTo: null

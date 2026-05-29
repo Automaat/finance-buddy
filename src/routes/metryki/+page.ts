@@ -1,6 +1,8 @@
 import { error } from '@sveltejs/kit';
 import { resolveApiUrl } from '$lib/api';
 import { resolveRangeParams } from '$lib/utils/dateRange';
+import type { CpiSeries } from '$lib/types/cpi';
+import type { RealYieldAccount } from '$lib/components/RealYieldsTable.svelte';
 
 export async function load({ fetch, url }) {
 	try {
@@ -47,6 +49,33 @@ export async function load({ fetch, url }) {
 		const ownersRes = await fetch(`${apiUrl}/api/users`);
 		const owners = ownersRes.ok ? await ownersRes.json() : [];
 
+		// Accounts carry per-account real_yield_pct (post-Belka, post-CPI) and
+		// the CPI series feeds the cumulative-inflation chart — both power the
+		// real-return section. These are best-effort: a failure (network or
+		// malformed JSON) degrades only that section to empty, never the whole
+		// metrics page, so they get their own try/catch.
+		let realYieldAccounts: RealYieldAccount[] = [];
+		let cpiSeries: CpiSeries = { points: [], base_year: null, latest_year: null, source: '' };
+		try {
+			const accountsRes = await fetch(`${apiUrl}/api/accounts`);
+			if (accountsRes.ok) {
+				const accountsData = await accountsRes.json();
+				realYieldAccounts = (accountsData.assets ?? []).filter(
+					(a: RealYieldAccount) => a.interest_rate_pct != null
+				);
+			}
+		} catch {
+			realYieldAccounts = [];
+		}
+		try {
+			const cpiSeriesRes = await fetch(`${apiUrl}/api/cpi/series`);
+			if (cpiSeriesRes.ok) {
+				cpiSeries = await cpiSeriesRes.json();
+			}
+		} catch {
+			// keep the empty default
+		}
+
 		return {
 			metricCards: dashboard.metric_cards,
 			allocationAnalysis: dashboard.allocation_analysis,
@@ -57,6 +86,8 @@ export async function load({ fetch, url }) {
 			stockStats,
 			bondStats,
 			owners,
+			realYieldAccounts,
+			cpiSeries,
 			range,
 			dateFrom,
 			dateTo
