@@ -7,6 +7,7 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import PIT38Report from '$lib/components/PIT38Report.svelte';
 	import { Plus, Trash2, BarChart, RefreshCw, Coins } from 'lucide-svelte';
+	import { CrudForm } from '$lib/stores/crudForm.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -25,11 +26,10 @@
 		{ value: 'fund', label: 'Fundusz' }
 	];
 
-	let securityModalOpen = $state(false);
-	let lotModalOpen = $state(false);
-	let quoteModalOpen = $state(false);
-	let dividendModalOpen = $state(false);
-	let saving = $state(false);
+	const securityCrud = new CrudForm();
+	const lotCrud = new CrudForm();
+	const quoteCrud = new CrudForm();
+	const dividendCrud = new CrudForm();
 	let refreshing = $state(false);
 
 	let dividendForm = $state(
@@ -70,9 +70,21 @@
 		}))
 	);
 
+	// saveVia wraps a create through a CrudForm (saving/error/close bookkeeping)
+	// and surfaces the outcome as a toast — holdings reports via toast rather
+	// than inline error.
+	async function saveVia(form: CrudForm, action: () => Promise<void>, successMsg: string) {
+		const ok = await form.submit(action);
+		if (ok) {
+			toast.success(successMsg);
+		} else {
+			toast.error(form.error);
+		}
+	}
+
 	function openSecurityModal() {
 		securityForm = { symbol: '', isin: '', name: '', asset_type: 'stock', currency: 'PLN' };
-		securityModalOpen = true;
+		securityCrud.openCreate();
 	}
 
 	function openLotModal() {
@@ -93,7 +105,7 @@
 			fee: '0',
 			date: new Date().toISOString().slice(0, 10)
 		};
-		lotModalOpen = true;
+		lotCrud.openCreate();
 	}
 
 	function openQuoteModal() {
@@ -106,7 +118,7 @@
 			date: new Date().toISOString().slice(0, 10),
 			price: '0'
 		};
-		quoteModalOpen = true;
+		quoteCrud.openCreate();
 	}
 
 	function openDividendModal() {
@@ -125,30 +137,27 @@
 			gross_amount: '0',
 			withholding_tax: '0'
 		};
-		dividendModalOpen = true;
+		dividendCrud.openCreate();
 	}
 
 	async function saveDividend() {
-		saving = true;
-		try {
-			const apiUrl = resolveApiUrl();
-			const res = await fetch(`${apiUrl}/api/holdings/dividends`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(dividendForm)
-			});
-			if (!res.ok) {
-				const d = await res.json().catch(() => ({ detail: res.statusText }));
-				throw new Error(d.detail ?? res.statusText);
-			}
-			dividendModalOpen = false;
-			toast.success('Dodano dywidendę');
-			await invalidateAll();
-		} catch (err) {
-			if (err instanceof Error) toast.error(err.message);
-		} finally {
-			saving = false;
-		}
+		const apiUrl = resolveApiUrl();
+		await saveVia(
+			dividendCrud,
+			async () => {
+				const res = await fetch(`${apiUrl}/api/holdings/dividends`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(dividendForm)
+				});
+				if (!res.ok) {
+					const d = await res.json().catch(() => ({ detail: res.statusText }));
+					throw new Error(d.detail ?? res.statusText);
+				}
+				await invalidateAll();
+			},
+			'Dodano dywidendę'
+		);
 	}
 
 	async function deleteDividend(id: number) {
@@ -174,78 +183,72 @@
 	}
 
 	async function saveSecurity() {
-		saving = true;
-		try {
-			const apiUrl = resolveApiUrl();
-			const res = await fetch(`${apiUrl}/api/holdings/securities`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					symbol: securityForm.symbol,
-					isin: securityForm.isin || null,
-					name: securityForm.name,
-					asset_type: securityForm.asset_type,
-					currency: securityForm.currency
-				})
-			});
-			if (!res.ok) {
-				const d = await res.json().catch(() => ({ detail: res.statusText }));
-				throw new Error(d.detail ?? res.statusText);
-			}
-			securityModalOpen = false;
-			toast.success('Dodano papier wartościowy');
-			await invalidateAll();
-		} catch (err) {
-			if (err instanceof Error) toast.error(err.message);
-		} finally {
-			saving = false;
-		}
+		const apiUrl = resolveApiUrl();
+		await saveVia(
+			securityCrud,
+			async () => {
+				const res = await fetch(`${apiUrl}/api/holdings/securities`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						symbol: securityForm.symbol,
+						isin: securityForm.isin || null,
+						name: securityForm.name,
+						asset_type: securityForm.asset_type,
+						currency: securityForm.currency
+					})
+				});
+				if (!res.ok) {
+					const d = await res.json().catch(() => ({ detail: res.statusText }));
+					throw new Error(d.detail ?? res.statusText);
+				}
+				await invalidateAll();
+			},
+			'Dodano papier wartościowy'
+		);
 	}
 
 	async function saveLot() {
-		saving = true;
-		try {
-			const apiUrl = resolveApiUrl();
-			const res = await fetch(`${apiUrl}/api/holdings/lots`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(lotForm)
-			});
-			if (!res.ok) {
-				const d = await res.json().catch(() => ({ detail: res.statusText }));
-				throw new Error(d.detail ?? res.statusText);
-			}
-			lotModalOpen = false;
-			toast.success('Dodano transakcję');
-			await invalidateAll();
-		} catch (err) {
-			if (err instanceof Error) toast.error(err.message);
-		} finally {
-			saving = false;
-		}
+		const apiUrl = resolveApiUrl();
+		await saveVia(
+			lotCrud,
+			async () => {
+				const res = await fetch(`${apiUrl}/api/holdings/lots`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(lotForm)
+				});
+				if (!res.ok) {
+					const d = await res.json().catch(() => ({ detail: res.statusText }));
+					throw new Error(d.detail ?? res.statusText);
+				}
+				await invalidateAll();
+			},
+			'Dodano transakcję'
+		);
 	}
 
 	async function saveQuote() {
-		saving = true;
-		try {
-			const apiUrl = resolveApiUrl();
-			const res = await fetch(`${apiUrl}/api/holdings/securities/${quoteForm.security_id}/quotes`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ date: quoteForm.date, price: quoteForm.price })
-			});
-			if (!res.ok) {
-				const d = await res.json().catch(() => ({ detail: res.statusText }));
-				throw new Error(d.detail ?? res.statusText);
-			}
-			quoteModalOpen = false;
-			toast.success('Zapisano notowanie');
-			await invalidateAll();
-		} catch (err) {
-			if (err instanceof Error) toast.error(err.message);
-		} finally {
-			saving = false;
-		}
+		const apiUrl = resolveApiUrl();
+		await saveVia(
+			quoteCrud,
+			async () => {
+				const res = await fetch(
+					`${apiUrl}/api/holdings/securities/${quoteForm.security_id}/quotes`,
+					{
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ date: quoteForm.date, price: quoteForm.price })
+					}
+				);
+				if (!res.ok) {
+					const d = await res.json().catch(() => ({ detail: res.statusText }));
+					throw new Error(d.detail ?? res.statusText);
+				}
+				await invalidateAll();
+			},
+			'Zapisano notowanie'
+		);
 	}
 
 	async function deleteSecurity(s: { id: number; symbol: string }) {
@@ -661,12 +664,12 @@
 </div>
 
 <Modal
-	open={securityModalOpen}
+	open={securityCrud.open}
 	title="Nowy papier wartościowy"
-	onCancel={() => (securityModalOpen = false)}
+	onCancel={() => securityCrud.close()}
 	onConfirm={saveSecurity}
-	confirmDisabled={saving}
-	confirmText={saving ? 'Zapisywanie...' : 'Zapisz'}
+	confirmDisabled={securityCrud.saving}
+	confirmText={securityCrud.saving ? 'Zapisywanie...' : 'Zapisz'}
 >
 	<div class="flex flex-col gap-3">
 		<label class="label">
@@ -697,12 +700,12 @@
 </Modal>
 
 <Modal
-	open={lotModalOpen}
+	open={lotCrud.open}
 	title="Nowa transakcja"
-	onCancel={() => (lotModalOpen = false)}
+	onCancel={() => lotCrud.close()}
 	onConfirm={saveLot}
-	confirmDisabled={saving}
-	confirmText={saving ? 'Zapisywanie...' : 'Zapisz'}
+	confirmDisabled={lotCrud.saving}
+	confirmText={lotCrud.saving ? 'Zapisywanie...' : 'Zapisz'}
 >
 	<div class="flex flex-col gap-3">
 		<label class="label">
@@ -748,12 +751,12 @@
 </Modal>
 
 <Modal
-	open={quoteModalOpen}
+	open={quoteCrud.open}
 	title="Nowe notowanie"
-	onCancel={() => (quoteModalOpen = false)}
+	onCancel={() => quoteCrud.close()}
 	onConfirm={saveQuote}
-	confirmDisabled={saving}
-	confirmText={saving ? 'Zapisywanie...' : 'Zapisz'}
+	confirmDisabled={quoteCrud.saving}
+	confirmText={quoteCrud.saving ? 'Zapisywanie...' : 'Zapisz'}
 >
 	<div class="flex flex-col gap-3">
 		<label class="label">
@@ -779,12 +782,12 @@
 </Modal>
 
 <Modal
-	open={dividendModalOpen}
+	open={dividendCrud.open}
 	title="Nowa dywidenda"
-	onCancel={() => (dividendModalOpen = false)}
+	onCancel={() => dividendCrud.close()}
 	onConfirm={saveDividend}
-	confirmDisabled={saving}
-	confirmText={saving ? 'Zapisywanie...' : 'Zapisz'}
+	confirmDisabled={dividendCrud.saving}
+	confirmText={dividendCrud.saving ? 'Zapisywanie...' : 'Zapisz'}
 >
 	<div class="flex flex-col gap-3">
 		<label class="label">

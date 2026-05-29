@@ -7,6 +7,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { confirm } from '$lib/stores/confirm.svelte';
+	import { CrudForm } from '$lib/stores/crudForm.svelte';
 	import { ownerName, type OwnerOption } from '$lib/types/owners';
 	import { untrack } from 'svelte';
 	import type { Transaction } from '$lib/types/transactions';
@@ -41,24 +42,20 @@
 	let filterDateFrom = $state(untrack(() => data.filters.date_from || ''));
 	let filterDateTo = $state(untrack(() => data.filters.date_to || ''));
 
-	let showNewTransactionModal = $state(false);
+	const txForm = new CrudForm();
 	let newTransactionData = $state({
 		account_id: '',
 		amount: 0,
 		date: new Date().toISOString().split('T')[0],
 		owner_user_id: untrack(() => defaultOwnerUserId)
 	});
-	let transactionError = $state('');
-	let savingTransaction = $state(false);
 
-	let showPPKGenerateModal = $state(false);
+	const ppkForm = new CrudForm();
 	let ppkGenerateData = $state({
 		owner: untrack(() => defaultOwnerName),
 		month: new Date().getMonth() + 1,
 		year: new Date().getFullYear()
 	});
-	let ppkGenerateError = $state('');
-	let ppkGenerating = $state(false);
 
 	function applyFilters() {
 		const params = new URLSearchParams();
@@ -111,13 +108,11 @@
 			date: new Date().toISOString().split('T')[0],
 			owner_user_id: defaultOwnerUserId
 		};
-		transactionError = '';
-		showNewTransactionModal = true;
+		txForm.openCreate();
 	}
 
 	function closeNewTransactionModal() {
-		showNewTransactionModal = false;
-		transactionError = '';
+		txForm.close();
 	}
 
 	function openPPKGenerateModal() {
@@ -126,57 +121,38 @@
 			month: new Date().getMonth() + 1,
 			year: new Date().getFullYear()
 		};
-		ppkGenerateError = '';
-		showPPKGenerateModal = true;
+		ppkForm.openCreate();
 	}
 
 	function closePPKGenerateModal() {
-		showPPKGenerateModal = false;
-		ppkGenerateError = '';
+		ppkForm.close();
 	}
 
 	async function generatePPKContributions() {
 		if (!ppkGenerateData.owner) {
-			ppkGenerateError = 'Wybierz właściciela';
+			ppkForm.error = 'Wybierz właściciela';
 			return;
 		}
-
-		ppkGenerateError = '';
-		ppkGenerating = true;
-
-		try {
+		await ppkForm.submit(async () => {
 			const response = await fetch(`${apiUrl}/api/retirement/ppk-contributions/generate`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(ppkGenerateData)
 			});
-
 			if (!response.ok) {
 				const errorData = await response.json();
 				throw new Error(errorData.detail || 'Nie udało się wygenerować wpłat PPK');
 			}
-
 			await invalidateAll();
-			closePPKGenerateModal();
-		} catch (err) {
-			if (err instanceof Error) {
-				ppkGenerateError = err.message;
-			}
-		} finally {
-			ppkGenerating = false;
-		}
+		});
 	}
 
 	async function createTransaction() {
 		if (!newTransactionData.account_id) {
-			transactionError = 'Wybierz konto';
+			txForm.error = 'Wybierz konto';
 			return;
 		}
-
-		transactionError = '';
-		savingTransaction = true;
-
-		try {
+		await txForm.submit(async () => {
 			const response = await fetch(
 				`${apiUrl}/api/accounts/${newTransactionData.account_id}/transactions`,
 				{
@@ -189,21 +165,12 @@
 					})
 				}
 			);
-
 			if (!response.ok) {
 				const errorData = await response.json();
 				throw new Error(errorData.detail || 'Failed to create transaction');
 			}
-
 			await invalidateAll();
-			closeNewTransactionModal();
-		} catch (err) {
-			if (err instanceof Error) {
-				transactionError = err.message;
-			}
-		} finally {
-			savingTransaction = false;
-		}
+		});
 	}
 </script>
 
@@ -330,12 +297,12 @@
 </div>
 
 <Modal
-	open={showNewTransactionModal}
+	open={txForm.open}
 	title="Nowa Transakcja"
 	onConfirm={createTransaction}
 	onCancel={closeNewTransactionModal}
-	confirmText={savingTransaction ? 'Zapisywanie...' : 'Dodaj transakcję'}
-	confirmDisabled={savingTransaction}
+	confirmText={txForm.saving ? 'Zapisywanie...' : 'Dodaj transakcję'}
+	confirmDisabled={txForm.saving}
 >
 	<form
 		onsubmit={(event) => {
@@ -344,8 +311,8 @@
 		}}
 		class="space-y-4"
 	>
-		{#if transactionError}
-			<div class="card preset-filled-error-500 p-3 text-sm">{transactionError}</div>
+		{#if txForm.error}
+			<div class="card preset-filled-error-500 p-3 text-sm">{txForm.error}</div>
 		{/if}
 
 		<label class="label">
@@ -395,12 +362,12 @@
 </Modal>
 
 <Modal
-	open={showPPKGenerateModal}
+	open={ppkForm.open}
 	title="Generuj wpłaty PPK"
 	onConfirm={generatePPKContributions}
 	onCancel={closePPKGenerateModal}
-	confirmText={ppkGenerating ? 'Generowanie...' : 'Generuj'}
-	confirmDisabled={ppkGenerating}
+	confirmText={ppkForm.saving ? 'Generowanie...' : 'Generuj'}
+	confirmDisabled={ppkForm.saving}
 >
 	<form
 		onsubmit={(event) => {
@@ -409,8 +376,8 @@
 		}}
 		class="space-y-4"
 	>
-		{#if ppkGenerateError}
-			<div class="card preset-filled-error-500 p-3 text-sm">{ppkGenerateError}</div>
+		{#if ppkForm.error}
+			<div class="card preset-filled-error-500 p-3 text-sm">{ppkForm.error}</div>
 		{/if}
 
 		<label class="label">
