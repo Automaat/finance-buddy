@@ -1693,6 +1693,10 @@
                     "bonds": {
                       "items": {
                         "properties": {
+                          "account_id": {
+                            "nullable": true,
+                            "type": "integer"
+                          },
                           "capitalize": {
                             "type": "boolean"
                           },
@@ -1773,6 +1777,10 @@
               "application/json": {
                 "schema": {
                   "properties": {
+                    "account_id": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
                     "capitalize": {
                       "type": "boolean"
                     },
@@ -2017,6 +2025,10 @@
               "application/json": {
                 "schema": {
                   "properties": {
+                    "account_id": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
                     "capitalize": {
                       "type": "boolean"
                     },
@@ -2095,6 +2107,10 @@
               "application/json": {
                 "schema": {
                   "properties": {
+                    "account_id": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
                     "capitalize": {
                       "type": "boolean"
                     },

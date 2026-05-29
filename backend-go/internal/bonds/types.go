@@ -54,12 +54,16 @@ func (t BondType) MaturityMonths() int {
 // for jointly-owned ("Shared") bonds, matching the household-shared account
 // model elsewhere in the schema.
 type TreasuryBond struct {
-	ID            int
-	Type          BondType
-	Series        string
-	FaceValue     decimal.Decimal
-	PurchaseDate  time.Time
-	OwnerUserID   *int
+	ID           int
+	Type         BondType
+	Series       string
+	FaceValue    decimal.Decimal
+	PurchaseDate time.Time
+	OwnerUserID  *int
+	AccountID    *int // optional broker/wrapper account (e.g. IKE Obligacje,
+	// Obligacje PKO). Nullable so existing bond rows pre-account aren't
+	// orphaned; new rows are encouraged to set it so the live current_value
+	// override on accounts.Handler can roll bonds into the right tile.
 	FirstYearRate decimal.Decimal // annual %, e.g. 6.80
 	Margin        decimal.Decimal // annual %, applied on top of CPI YoY from year 2+
 	Capitalize    bool            // true: interest compounds; false: paid out yearly

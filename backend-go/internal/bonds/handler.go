@@ -91,6 +91,7 @@ type response struct {
 	PurchaseDate  wire.IsoDate  `json:"purchase_date"`
 	MaturityDate  wire.IsoDate  `json:"maturity_date"`
 	OwnerUserID   *int          `json:"owner_user_id"`
+	AccountID     *int          `json:"account_id"`
 	FirstYearRate float64       `json:"first_year_rate"`
 	Margin        float64       `json:"margin"`
 	Capitalize    bool          `json:"capitalize"`
@@ -153,6 +154,7 @@ type createRequest struct {
 	FaceValue     float64      `json:"face_value"`
 	PurchaseDate  wire.IsoDate `json:"purchase_date"`
 	OwnerUserID   *int         `json:"owner_user_id"`
+	AccountID     *int         `json:"account_id"`
 	FirstYearRate float64      `json:"first_year_rate"`
 	Margin        float64      `json:"margin"`
 	Capitalize    bool         `json:"capitalize"`
@@ -174,6 +176,7 @@ func (h *Handler) toResponse(b *TreasuryBond, yoy map[int]decimal.Decimal, month
 		PurchaseDate:  wire.IsoDate(b.PurchaseDate),
 		MaturityDate:  wire.IsoDate(MaturityDate(b)),
 		OwnerUserID:   b.OwnerUserID,
+		AccountID:     b.AccountID,
 		FirstYearRate: firstYear,
 		Margin:        margin,
 		Capitalize:    b.Capitalize,
@@ -339,6 +342,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		FaceValue:     decimal.NewFromFloat(req.FaceValue),
 		PurchaseDate:  time.Time(req.PurchaseDate),
 		OwnerUserID:   req.OwnerUserID,
+		AccountID:     req.AccountID,
 		FirstYearRate: decimal.NewFromFloat(req.FirstYearRate),
 		Margin:        decimal.NewFromFloat(req.Margin),
 		Capitalize:    req.Capitalize,

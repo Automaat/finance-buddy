@@ -24,12 +24,13 @@ func NewStore(pool *pgxpool.Pool) *Store {
 	return &Store{pool: pool}
 }
 
-const selectColumns = `id, type, series, face_value, purchase_date, owner_user_id,
+const selectColumns = `id, type, series, face_value, purchase_date, owner_user_id, account_id,
 		first_year_rate, margin, capitalize, is_active, created_at`
 
-// EnsureSchema creates the treasury_bonds table if missing. Idempotent so it
-// can run on every backend start — schema.sql only seeds empty databases, so
-// existing prod installs need the additive DDL here too.
+// EnsureSchema creates the treasury_bonds table if missing and runs additive
+// migrations for columns added after the initial schema. Idempotent so it
+// can run on every backend start — schema.sql only seeds empty databases,
+// so existing prod installs need the additive DDL here too.
 func (s *Store) EnsureSchema(ctx context.Context) error {
 	if _, err := s.pool.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS treasury_bonds (
@@ -47,6 +48,15 @@ func (s *Store) EnsureSchema(ctx context.Context) error {
 			CONSTRAINT treasury_bonds_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE RESTRICT
 		)`); err != nil {
 		return fmt.Errorf("ensure treasury_bonds table: %w", err)
+	}
+	// Additive: account_id links a bond to its broker/wrapper account so the
+	// live current_value override can roll bonds into the right tile.
+	// Nullable; ON DELETE SET NULL so a deleted account doesn't cascade.
+	if _, err := s.pool.Exec(ctx, `
+		ALTER TABLE treasury_bonds
+		ADD COLUMN IF NOT EXISTS account_id integer
+		REFERENCES accounts(id) ON DELETE SET NULL`); err != nil {
+		return fmt.Errorf("add treasury_bonds.account_id: %w", err)
 	}
 	return nil
 }
@@ -80,11 +90,11 @@ func (s *Store) Get(ctx context.Context, id int) (*TreasuryBond, error) {
 func (s *Store) Create(ctx context.Context, b *TreasuryBond) (*TreasuryBond, error) {
 	row := s.pool.QueryRow(ctx, `
 		INSERT INTO treasury_bonds (
-			type, series, face_value, purchase_date, owner_user_id,
+			type, series, face_value, purchase_date, owner_user_id, account_id,
 			first_year_rate, margin, capitalize, is_active, created_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, $10)
 		RETURNING `+selectColumns,
-		string(b.Type), b.Series, b.FaceValue, b.PurchaseDate, b.OwnerUserID,
+		string(b.Type), b.Series, b.FaceValue, b.PurchaseDate, b.OwnerUserID, b.AccountID,
 		b.FirstYearRate, b.Margin, b.Capitalize, time.Now().UTC(),
 	)
 	created, err := scanBond(row)
@@ -95,8 +105,8 @@ func (s *Store) Create(ctx context.Context, b *TreasuryBond) (*TreasuryBond, err
 }
 
 // UpdatePatch is the sparse update; only set fields are applied. OwnerUserID
-// uses the explicit-null pattern (Set=true + nil) so the caller can clear
-// it.
+// and AccountID use the explicit-null pattern (Set=true + nil) so the caller
+// can clear them.
 type UpdatePatch struct {
 	Type           *BondType
 	Series         *string
@@ -104,6 +114,8 @@ type UpdatePatch struct {
 	PurchaseDate   *time.Time
 	OwnerUserIDSet bool
 	OwnerUserID    *int
+	AccountIDSet   bool
+	AccountID      *int
 	FirstYearRate  *decimal.Decimal
 	Margin         *decimal.Decimal
 	Capitalize     *bool
@@ -135,6 +147,9 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*TreasuryBon
 		if p.OwnerUserIDSet {
 			b.OwnerUserID = p.OwnerUserID
 		}
+		if p.AccountIDSet {
+			b.AccountID = p.AccountID
+		}
 		if p.FirstYearRate != nil {
 			b.FirstYearRate = *p.FirstYearRate
 		}
@@ -147,10 +162,11 @@ func (s *Store) Update(ctx context.Context, id int, p UpdatePatch) (*TreasuryBon
 		row = tx.QueryRow(ctx, `
 			UPDATE treasury_bonds SET
 				type = $1, series = $2, face_value = $3, purchase_date = $4,
-				owner_user_id = $5, first_year_rate = $6, margin = $7, capitalize = $8
-			WHERE id = $9
+				owner_user_id = $5, account_id = $6, first_year_rate = $7,
+				margin = $8, capitalize = $9
+			WHERE id = $10
 			RETURNING `+selectColumns,
-			string(b.Type), b.Series, b.FaceValue, b.PurchaseDate, b.OwnerUserID,
+			string(b.Type), b.Series, b.FaceValue, b.PurchaseDate, b.OwnerUserID, b.AccountID,
 			b.FirstYearRate, b.Margin, b.Capitalize, id,
 		)
 		loaded, err := scanBond(row)
@@ -197,7 +213,7 @@ func scanBond(row pgx.Row) (*TreasuryBond, error) {
 	var b TreasuryBond
 	var typ string
 	if err := row.Scan(
-		&b.ID, &typ, &b.Series, &b.FaceValue, &b.PurchaseDate, &b.OwnerUserID,
+		&b.ID, &typ, &b.Series, &b.FaceValue, &b.PurchaseDate, &b.OwnerUserID, &b.AccountID,
 		&b.FirstYearRate, &b.Margin, &b.Capitalize, &b.IsActive, &b.CreatedAt,
 	); err != nil {
 		return nil, err
