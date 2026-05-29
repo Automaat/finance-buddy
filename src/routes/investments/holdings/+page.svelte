@@ -6,10 +6,17 @@
 	import { confirm } from '$lib/stores/confirm.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import PIT38Report from '$lib/components/PIT38Report.svelte';
-	import { Plus, Trash2, BarChart, RefreshCw } from 'lucide-svelte';
+	import { Plus, Trash2, BarChart, RefreshCw, Coins } from 'lucide-svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
+
+	const securityLabel = (id: number): string => {
+		const s = data.securities.find((sec) => sec.id === id);
+		return s ? s.symbol : `#${id}`;
+	};
+	const accountLabel = (id: number): string =>
+		data.accounts.find((a) => a.id === id)?.name ?? `#${id}`;
 
 	const ASSET_TYPES = [
 		{ value: 'stock', label: 'Akcja' },
@@ -21,8 +28,19 @@
 	let securityModalOpen = $state(false);
 	let lotModalOpen = $state(false);
 	let quoteModalOpen = $state(false);
+	let dividendModalOpen = $state(false);
 	let saving = $state(false);
 	let refreshing = $state(false);
+
+	let dividendForm = $state(
+		untrack(() => ({
+			account_id: data.accounts[0]?.id ?? 0,
+			security_id: data.securities[0]?.id ?? 0,
+			pay_date: new Date().toISOString().slice(0, 10),
+			gross_amount: '0',
+			withholding_tax: '0'
+		}))
+	);
 
 	let securityForm = $state({
 		symbol: '',
@@ -89,6 +107,70 @@
 			price: '0'
 		};
 		quoteModalOpen = true;
+	}
+
+	function openDividendModal() {
+		if (data.accounts.length === 0) {
+			toast.error('Najpierw dodaj konto.');
+			return;
+		}
+		if (data.securities.length === 0) {
+			toast.error('Najpierw dodaj papier wartościowy.');
+			return;
+		}
+		dividendForm = {
+			account_id: data.accounts[0].id,
+			security_id: data.securities[0].id,
+			pay_date: new Date().toISOString().slice(0, 10),
+			gross_amount: '0',
+			withholding_tax: '0'
+		};
+		dividendModalOpen = true;
+	}
+
+	async function saveDividend() {
+		saving = true;
+		try {
+			const apiUrl = resolveApiUrl();
+			const res = await fetch(`${apiUrl}/api/holdings/dividends`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(dividendForm)
+			});
+			if (!res.ok) {
+				const d = await res.json().catch(() => ({ detail: res.statusText }));
+				throw new Error(d.detail ?? res.statusText);
+			}
+			dividendModalOpen = false;
+			toast.success('Dodano dywidendę');
+			await invalidateAll();
+		} catch (err) {
+			if (err instanceof Error) toast.error(err.message);
+		} finally {
+			saving = false;
+		}
+	}
+
+	async function deleteDividend(id: number) {
+		const ok = await confirm({
+			title: 'Usunąć dywidendę?',
+			message: 'Wpis dywidendy zostanie trwale usunięty.',
+			danger: true,
+			confirmText: 'Usuń'
+		});
+		if (!ok) return;
+		try {
+			const apiUrl = resolveApiUrl();
+			const res = await fetch(`${apiUrl}/api/holdings/dividends/${id}`, { method: 'DELETE' });
+			if (!res.ok) {
+				const d = await res.json().catch(() => ({ detail: res.statusText }));
+				throw new Error(d.detail ?? res.statusText);
+			}
+			toast.success('Usunięto');
+			await invalidateAll();
+		} catch (err) {
+			if (err instanceof Error) toast.error(err.message);
+		}
 	}
 
 	async function saveSecurity() {
@@ -217,6 +299,9 @@
 	);
 	const totalProfit = $derived(totalValue - totalPaid);
 	const profitPct = $derived(totalPaid > 0 ? (totalProfit / totalPaid) * 100 : 0);
+	const totalDividendsNet = $derived(
+		data.dividends.reduce((sum, d) => sum + Number(d.net_amount), 0)
+	);
 
 	function fmtPLN(n: number): string {
 		return (
@@ -284,6 +369,9 @@
 			</button>
 			<button type="button" class="btn preset-tonal-surface" onclick={openQuoteModal}>
 				<BarChart size={16} /><span>Notowanie</span>
+			</button>
+			<button type="button" class="btn preset-tonal-surface" onclick={openDividendModal}>
+				<Coins size={16} /><span>Dywidenda</span>
 			</button>
 			<button type="button" class="btn preset-filled-primary-500" onclick={openLotModal}>
 				<Plus size={16} /><span>Nowa transakcja</span>
@@ -510,6 +598,66 @@
 			</ul>
 		{/if}
 	</section>
+
+	<section class="card preset-filled-surface-100-900 p-4 space-y-3">
+		<header class="flex flex-wrap items-center justify-between gap-2">
+			<h2 class="h3 flex items-center gap-2"><Coins size={18} /> Dywidendy</h2>
+			{#if data.dividends.length > 0}
+				<span class="text-sm text-surface-700-300">
+					Netto łącznie: <span class="font-semibold text-success-500"
+						>{fmtPLN(totalDividendsNet)}</span
+					>
+				</span>
+			{/if}
+		</header>
+		{#if data.dividends.length === 0}
+			<p class="text-sm text-surface-700-300">
+				Brak zarejestrowanych dywidend. Dodaj wpłatę dywidendy, aby uwzględnić ją w zwrotach (XIRR).
+			</p>
+		{:else}
+			<div class="table-wrap">
+				<table class="table table-hover text-sm">
+					<thead>
+						<tr>
+							<th>Data wypłaty</th>
+							<th>Papier</th>
+							<th>Konto</th>
+							<th class="text-right">Brutto</th>
+							<th class="text-right">Podatek</th>
+							<th class="text-right">Netto</th>
+							<th></th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each data.dividends as d (d.id)}
+							<tr>
+								<td>{d.pay_date}</td>
+								<td class="font-semibold">{securityLabel(d.security_id)}</td>
+								<td class="text-surface-700-300">{accountLabel(d.account_id)}</td>
+								<td class="text-right">{fmt(d.gross_amount)} {d.currency}</td>
+								<td class="text-right text-surface-600-400"
+									>{fmt(d.withholding_tax)} {d.currency}</td
+								>
+								<td class="text-right font-semibold text-success-500"
+									>{fmt(d.net_amount)} {d.currency}</td
+								>
+								<td class="text-right">
+									<button
+										type="button"
+										class="btn-icon btn-icon-sm"
+										aria-label="Usuń dywidendę"
+										onclick={() => deleteDividend(d.id)}
+									>
+										<Trash2 size={14} />
+									</button>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
+	</section>
 </div>
 
 <Modal
@@ -626,6 +774,49 @@
 		</label>
 		<p class="text-xs text-surface-600-400">
 			Notowania na (papier, datę) są unikalne — kolejne wpisy dla tej samej daty nadpiszą cenę.
+		</p>
+	</div>
+</Modal>
+
+<Modal
+	open={dividendModalOpen}
+	title="Nowa dywidenda"
+	onCancel={() => (dividendModalOpen = false)}
+	onConfirm={saveDividend}
+	confirmDisabled={saving}
+	confirmText={saving ? 'Zapisywanie...' : 'Zapisz'}
+>
+	<div class="flex flex-col gap-3">
+		<label class="label">
+			<span class="text-sm font-semibold">Konto</span>
+			<select bind:value={dividendForm.account_id} class="select">
+				{#each data.accounts as a}
+					<option value={a.id}>{a.name}</option>
+				{/each}
+			</select>
+		</label>
+		<label class="label">
+			<span class="text-sm font-semibold">Papier</span>
+			<select bind:value={dividendForm.security_id} class="select">
+				{#each data.securities as s}
+					<option value={s.id}>{s.symbol} — {s.name}</option>
+				{/each}
+			</select>
+		</label>
+		<label class="label">
+			<span class="text-sm font-semibold">Data wypłaty</span>
+			<input type="date" bind:value={dividendForm.pay_date} class="input" />
+		</label>
+		<label class="label">
+			<span class="text-sm font-semibold">Kwota brutto</span>
+			<input type="text" bind:value={dividendForm.gross_amount} class="input" />
+		</label>
+		<label class="label">
+			<span class="text-sm font-semibold">Podatek u źródła</span>
+			<input type="text" bind:value={dividendForm.withholding_tax} class="input" />
+		</label>
+		<p class="text-xs text-surface-600-400">
+			Netto (brutto − podatek) liczy się jako dochód i podnosi zwrot money-weighted (XIRR).
 		</p>
 	</div>
 </Modal>

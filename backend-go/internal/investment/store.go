@@ -101,6 +101,59 @@ func (s *Store) ScopedFlows(ctx context.Context, scope ScopeFilter, w PeriodWind
 	return out, rows.Err()
 }
 
+// ScopedDividends pulls net dividend cash (gross − withholding) per pay-date
+// in scope between `since` and `asOf`, chronologically sorted. Net is reported
+// as a positive amount; the returns handler injects it as a negative XIRR flow
+// (cash returned to the investor), so dividends lift the money-weighted return
+// rather than being mistaken for new contributions.
+func (s *Store) ScopedDividends(ctx context.Context, scope ScopeFilter, w PeriodWindow) ([]TransactionDated, error) {
+	args := []any{w.AsOf}
+	clauses := []string{"a.is_active = true", "hd.pay_date <= $1"}
+	if w.Since != nil {
+		args = append(args, *w.Since)
+		clauses = append(clauses, fmt.Sprintf("hd.pay_date >= $%d", len(args)))
+	}
+	switch {
+	case scope.AccountID != nil:
+		args = append(args, *scope.AccountID)
+		clauses = append(clauses, fmt.Sprintf("a.id = $%d", len(args)))
+	case scope.Category != nil:
+		args = append(args, *scope.Category)
+		clauses = append(clauses, fmt.Sprintf("a.category = $%d", len(args)))
+	case scope.Wrapper != nil:
+		args = append(args, *scope.Wrapper)
+		clauses = append(clauses, fmt.Sprintf("a.account_wrapper = $%d", len(args)))
+	}
+	where := ""
+	for i, c := range clauses {
+		if i == 0 {
+			where = "WHERE " + c
+		} else {
+			where += " AND " + c
+		}
+	}
+	q := `
+		SELECT hd.pay_date, (hd.gross_amount - hd.withholding_tax)
+		FROM holding_dividends hd
+		JOIN accounts a ON a.id = hd.account_id
+		` + where + `
+		ORDER BY hd.pay_date ASC, hd.id ASC`
+	rows, err := s.pool.Query(ctx, q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("scoped dividends: %w", err)
+	}
+	defer rows.Close()
+	out := []TransactionDated{}
+	for rows.Next() {
+		var td TransactionDated
+		if err := rows.Scan(&td.Date, &td.Amount); err != nil {
+			return nil, fmt.Errorf("scan dividend flow: %w", err)
+		}
+		out = append(out, td)
+	}
+	return out, rows.Err()
+}
+
 // LatestValueInScope returns the sum of snapshot_values at the latest
 // snapshot date on or before `asOf` for accounts matching scope. Returns
 // (zero, false) when no qualifying snapshot exists.

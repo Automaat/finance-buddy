@@ -53,6 +53,18 @@ export interface AccountOption {
 	name: string;
 }
 
+export interface DividendRow {
+	id: number;
+	account_id: number;
+	security_id: number;
+	pay_date: string;
+	gross_amount: string;
+	withholding_tax: string;
+	net_amount: string;
+	currency: string;
+	created_at: string;
+}
+
 interface AccountRow {
 	id: number;
 	name: string;
@@ -64,10 +76,11 @@ const INVESTMENT_CATEGORIES = new Set(['stock', 'bond', 'fund', 'etf']);
 
 export const load: PageLoad = async ({ fetch }) => {
 	const apiUrl = resolveApiUrl();
-	const [holdingsRes, securitiesRes, accountsRes] = await Promise.all([
+	const [holdingsRes, securitiesRes, accountsRes, dividendsRes] = await Promise.all([
 		fetch(`${apiUrl}/api/holdings`),
 		fetch(`${apiUrl}/api/holdings/securities`),
-		fetch(`${apiUrl}/api/accounts`)
+		fetch(`${apiUrl}/api/accounts`),
+		fetch(`${apiUrl}/api/holdings/dividends`)
 	]);
 	if (!holdingsRes.ok) throw error(holdingsRes.status, 'Failed to load holdings');
 	if (!securitiesRes.ok) throw error(securitiesRes.status, 'Failed to load securities');
@@ -81,9 +94,13 @@ export const load: PageLoad = async ({ fetch }) => {
 	const accounts = (accountsPayload.assets ?? [])
 		.filter((a) => a.is_active && INVESTMENT_CATEGORIES.has(a.category))
 		.map((a) => ({ id: a.id, name: a.name }));
+	const dividends = dividendsRes.ok
+		? ((await dividendsRes.json()) as { dividends: DividendRow[] }).dividends
+		: [];
 	return {
 		holdings: holdings.holdings,
 		securities: securities.securities,
-		accounts
+		accounts,
+		dividends
 	};
 };

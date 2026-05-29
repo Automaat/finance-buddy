@@ -5625,6 +5625,133 @@
         ]
       }
     },
+    "/api/holdings/dividends": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "dividends": {
+                      "items": {
+                        "properties": {
+                          "account_id": {
+                            "type": "integer"
+                          },
+                          "created_at": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "gross_amount": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "integer"
+                          },
+                          "net_amount": {
+                            "type": "string"
+                          },
+                          "pay_date": {
+                            "type": "string"
+                          },
+                          "security_id": {
+                            "type": "integer"
+                          },
+                          "withholding_tax": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List dividends (filterable by account_id/security_id)",
+        "tags": [
+          "holdings"
+        ]
+      },
+      "post": {
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "account_id": {
+                      "type": "integer"
+                    },
+                    "created_at": {
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "gross_amount": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "net_amount": {
+                      "type": "string"
+                    },
+                    "pay_date": {
+                      "type": "string"
+                    },
+                    "security_id": {
+                      "type": "integer"
+                    },
+                    "withholding_tax": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "summary": "Record a dividend",
+        "tags": [
+          "holdings"
+        ]
+      }
+    },
+    "/api/holdings/dividends/{id}": {
+      "delete": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "summary": "Delete a dividend",
+        "tags": [
+          "holdings"
+        ]
+      }
+    },
     "/api/holdings/lots": {
       "get": {
         "responses": {
@@ -6069,6 +6196,10 @@
                       "type": "number"
                     },
                     "deposits": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "dividends_received_net": {
                       "format": "double",
                       "type": "number"
                     },

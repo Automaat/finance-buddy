@@ -172,6 +172,66 @@ func buildQuoteInput(raw map[string]json.RawMessage, securityID int) (PriceQuote
 	return q, nil
 }
 
+func buildDividendInput(raw map[string]json.RawMessage) (Dividend, *httputil.ValidationError) {
+	var d Dividend
+	d.Currency = "PLN"
+	if vErr := requireInt(raw, "account_id", &d.AccountID); vErr != nil {
+		return d, vErr
+	}
+	if d.AccountID <= 0 {
+		return d, &httputil.ValidationError{Field: "account_id", Msg: "must be positive"}
+	}
+	if vErr := requireInt(raw, "security_id", &d.SecurityID); vErr != nil {
+		return d, vErr
+	}
+	if d.SecurityID <= 0 {
+		return d, &httputil.ValidationError{Field: "security_id", Msg: "must be positive"}
+	}
+	dateStr, vErr := requireString2(raw, "pay_date")
+	if vErr != nil {
+		return d, vErr
+	}
+	parsed, derr := time.Parse("2006-01-02", dateStr)
+	if derr != nil {
+		return d, &httputil.ValidationError{Field: "pay_date", Msg: "must be YYYY-MM-DD"}
+	}
+	d.PayDate = parsed
+	gross, vErr := requireDecimal(raw, "gross_amount")
+	if vErr != nil {
+		return d, vErr
+	}
+	if gross.Sign() <= 0 {
+		return d, &httputil.ValidationError{Field: "gross_amount", Msg: "must be positive"}
+	}
+	d.GrossAmount = gross
+	if v, ok := raw["withholding_tax"]; ok && string(v) != "null" {
+		tax, terr := decimal.NewFromString(strings.Trim(string(v), `"`))
+		if terr != nil {
+			return d, &httputil.ValidationError{Field: "withholding_tax", Msg: "must be a number"}
+		}
+		if tax.Sign() < 0 {
+			return d, &httputil.ValidationError{Field: "withholding_tax", Msg: "must not be negative"}
+		}
+		if tax.GreaterThan(gross) {
+			return d, &httputil.ValidationError{Field: "withholding_tax", Msg: "must not exceed gross amount"}
+		}
+		d.WithholdingTax = tax
+	}
+	if v, ok := raw["currency"]; ok && string(v) != "null" {
+		var c string
+		if err := json.Unmarshal(v, &c); err != nil {
+			return d, &httputil.ValidationError{Field: "currency", Msg: "must be a string"}
+		}
+		if c = strings.TrimSpace(c); c != "" {
+			if len(c) != 3 {
+				return d, &httputil.ValidationError{Field: "currency", Msg: "must be 3 chars"}
+			}
+			d.Currency = strings.ToUpper(c)
+		}
+	}
+	return d, nil
+}
+
 func requireInt(raw map[string]json.RawMessage, key string, dest *int) *httputil.ValidationError {
 	v, ok := raw[key]
 	if !ok || string(v) == "null" {

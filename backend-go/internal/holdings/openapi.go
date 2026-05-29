@@ -17,6 +17,9 @@ var APISpec = []apispec.Route{
 	{Method: "GET", Path: "/api/holdings/lots", Tag: "holdings", Summary: "List lots (filterable by account_id/security_id)", Response: listLotsResponse{}},
 	{Method: "POST", Path: "/api/holdings/lots", Tag: "holdings", Summary: "Create a lot", Status: http.StatusCreated, Response: lotResponse{}},
 	{Method: "DELETE", Path: "/api/holdings/lots/{id}", Tag: "holdings", Summary: "Delete a lot", Status: http.StatusNoContent},
+	{Method: "GET", Path: "/api/holdings/dividends", Tag: "holdings", Summary: "List dividends (filterable by account_id/security_id)", Response: listDividendsResponse{}},
+	{Method: "POST", Path: "/api/holdings/dividends", Tag: "holdings", Summary: "Record a dividend", Status: http.StatusCreated, Response: dividendResponse{}},
+	{Method: "DELETE", Path: "/api/holdings/dividends/{id}", Tag: "holdings", Summary: "Delete a dividend", Status: http.StatusNoContent},
 	{Method: "POST", Path: "/api/holdings/refresh-quotes", Tag: "holdings", Summary: "Pull latest quotes from Stooq for all securities", Response: refreshQuotesResponse{}},
 }
 

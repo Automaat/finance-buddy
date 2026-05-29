@@ -1,6 +1,7 @@
 package investment
 
 import (
+	"context"
 	"log/slog"
 	"math"
 	"net/http"
@@ -47,6 +48,7 @@ type returnsResponse struct {
 	ValuationChange   wire.PyFloat  `json:"valuation_change"`
 	SimpleROIPct      wire.PyFloat  `json:"simple_roi_pct"`
 	MoneyWeightedPct  *wire.PyFloat `json:"money_weighted_pct"`
+	DividendsNet      wire.PyFloat  `json:"dividends_received_net"`
 	HasSnapshot       bool          `json:"has_snapshot"`
 	ConvergenceFailed bool          `json:"convergence_failed"`
 }
@@ -104,26 +106,16 @@ func (h *Handler) Returns(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deposits, withdrawals := 0.0, 0.0
-	xirrFlows := make([]CashFlow, 0, len(flows)+2)
-	// Windowed periods need an opening balance so XIRR reflects the return
-	// over the period rather than treating pre-window value as free money.
-	// Inject the snapshot-as-of-since as a positive cash flow at `since`.
-	var openingValue float64
-	if window.Since != nil {
-		openValDec, _, hasOpen, err := h.store.LatestValueInScope(r.Context(), scope, *window.Since)
-		if err != nil {
-			h.logger.Error("returns: opening snapshot", "err", err)
-			httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
-			return
-		}
-		if hasOpen {
-			openingValue, _ = openValDec.Float64()
-			if openingValue > 0 {
-				xirrFlows = append(xirrFlows, CashFlow{Date: *window.Since, Amount: openingValue})
-			}
-		}
+	xirrFlows := make([]CashFlow, 0, len(flows)+4)
+	openingValue, openFlows, err := h.openingFlow(r.Context(), scope, window.Since)
+	if err != nil {
+		h.logger.Error("returns: opening snapshot", "err", err)
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
 	}
+	xirrFlows = append(xirrFlows, openFlows...)
+
+	deposits, withdrawals := 0.0, 0.0
 	for _, f := range flows {
 		amt, _ := f.Amount.Float64()
 		if amt >= 0 {
@@ -134,6 +126,18 @@ func (h *Handler) Returns(w http.ResponseWriter, r *http.Request) {
 		xirrFlows = append(xirrFlows, CashFlow{Date: f.Date, Amount: amt})
 	}
 	netContrib := deposits - withdrawals
+
+	// Dividends are income, not contributions: fold net cash in as negative
+	// XIRR flows (money returned to the investor) and add to the gain side of
+	// simple ROI, so real ETF/stock returns aren't understated.
+	dividendsNet, divFlows, err := h.dividendFlows(r.Context(), scope, PeriodWindow{Since: window.Since, AsOf: flowEnd})
+	if err != nil {
+		h.logger.Error("returns: dividends", "err", err)
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	xirrFlows = append(xirrFlows, divFlows...)
+
 	currentValue, _ := value.Float64()
 	// Valuation change is the difference between current value and what was
 	// put in over the window — current value minus (opening + net flows).
@@ -152,7 +156,8 @@ func (h *Handler) Returns(w http.ResponseWriter, r *http.Request) {
 		NetContributed:  wire.PyFloat(netContrib),
 		CurrentValue:    wire.PyFloat(currentValue),
 		ValuationChange: wire.PyFloat(valuationChange),
-		SimpleROIPct:    wire.PyFloat(math.Round(SimpleROI(openingValue+netContrib, currentValue)*10000) / 100),
+		SimpleROIPct:    wire.PyFloat(math.Round(SimpleROI(openingValue+netContrib, currentValue+dividendsNet)*10000) / 100),
+		DividendsNet:    wire.PyFloat(dividendsNet),
 		HasSnapshot:     hasSnap,
 	}
 	if window.Since != nil {
@@ -171,6 +176,45 @@ func (h *Handler) Returns(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	httputil.WriteJSON(w, http.StatusOK, resp)
+}
+
+// openingFlow injects the scope's value as-of the window start as a positive
+// XIRR flow so a windowed return reflects growth over the period rather than
+// treating pre-window value as free money. Returns the opening value (0 when
+// no window or no snapshot) and the flow(s) to prepend.
+func (h *Handler) openingFlow(ctx context.Context, scope ScopeFilter, since *time.Time) (float64, []CashFlow, error) {
+	if since == nil {
+		return 0, nil, nil
+	}
+	openValDec, _, hasOpen, err := h.store.LatestValueInScope(ctx, scope, *since)
+	if err != nil {
+		return 0, nil, err
+	}
+	if !hasOpen {
+		return 0, nil, nil
+	}
+	opening, _ := openValDec.Float64()
+	if opening <= 0 {
+		return opening, nil, nil
+	}
+	return opening, []CashFlow{{Date: *since, Amount: opening}}, nil
+}
+
+// dividendFlows returns total net dividend income in scope/window and the
+// matching negative XIRR flows (cash returned to the investor).
+func (h *Handler) dividendFlows(ctx context.Context, scope ScopeFilter, w PeriodWindow) (float64, []CashFlow, error) {
+	rows, err := h.store.ScopedDividends(ctx, scope, w)
+	if err != nil {
+		return 0, nil, err
+	}
+	net := 0.0
+	out := make([]CashFlow, 0, len(rows))
+	for _, d := range rows {
+		amt, _ := d.Amount.Float64()
+		net += amt
+		out = append(out, CashFlow{Date: d.Date, Amount: -amt})
+	}
+	return net, out, nil
 }
 
 func validPeriod(p string) bool {
