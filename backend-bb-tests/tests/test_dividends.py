@@ -20,7 +20,12 @@ def _create_security(client: httpx.Client, request: pytest.FixtureRequest) -> in
     symbol = f"DIV{abs(hash(request.node.name)) % 100000}"
     response = client.post(
         "/api/holdings/securities",
-        json={"symbol": symbol, "name": "Dividend Test Co", "asset_type": "stock", "currency": "PLN"},
+        json={
+            "symbol": symbol,
+            "name": "Dividend Test Co",
+            "asset_type": "stock",
+            "currency": "PLN",
+        },
     )
     assert response.status_code == 201, response.text
     return int(response.json()["id"])
