@@ -458,6 +458,18 @@ type listDividendsResponse struct {
 	Dividends []dividendResponse `json:"dividends"`
 }
 
+// dividendCreateRequest documents the POST /api/holdings/dividends body for
+// OpenAPI generation. Decimal money fields ride as JSON strings to preserve
+// precision; withholding_tax and currency are optional (default 0 / "PLN").
+type dividendCreateRequest struct {
+	AccountID      int    `json:"account_id"`
+	SecurityID     int    `json:"security_id"`
+	PayDate        string `json:"pay_date"`
+	GrossAmount    string `json:"gross_amount"`
+	WithholdingTax string `json:"withholding_tax"`
+	Currency       string `json:"currency"`
+}
+
 func toDividend(d Dividend) dividendResponse {
 	return dividendResponse{
 		ID: d.ID, AccountID: d.AccountID, SecurityID: d.SecurityID,

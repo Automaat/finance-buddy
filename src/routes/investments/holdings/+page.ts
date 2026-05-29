@@ -85,6 +85,7 @@ export const load: PageLoad = async ({ fetch }) => {
 	if (!holdingsRes.ok) throw error(holdingsRes.status, 'Failed to load holdings');
 	if (!securitiesRes.ok) throw error(securitiesRes.status, 'Failed to load securities');
 	if (!accountsRes.ok) throw error(accountsRes.status, 'Failed to load accounts');
+	if (!dividendsRes.ok) throw error(dividendsRes.status, 'Failed to load dividends');
 	const holdings = (await holdingsRes.json()) as { holdings: HoldingRow[] };
 	const securities = (await securitiesRes.json()) as { securities: SecurityRow[] };
 	const accountsPayload = (await accountsRes.json()) as {
@@ -94,9 +95,7 @@ export const load: PageLoad = async ({ fetch }) => {
 	const accounts = (accountsPayload.assets ?? [])
 		.filter((a) => a.is_active && INVESTMENT_CATEGORIES.has(a.category))
 		.map((a) => ({ id: a.id, name: a.name }));
-	const dividends = dividendsRes.ok
-		? ((await dividendsRes.json()) as { dividends: DividendRow[] }).dividends
-		: [];
+	const dividends = ((await dividendsRes.json()) as { dividends: DividendRow[] }).dividends;
 	return {
 		holdings: holdings.holdings,
 		securities: securities.securities,

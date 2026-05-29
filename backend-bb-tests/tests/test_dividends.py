@@ -31,6 +31,7 @@ def _create_security(client: httpx.Client, request: pytest.FixtureRequest) -> in
     return int(response.json()["id"])
 
 
+@pytest.mark.mutates
 def test_dividend_crud_and_net(client: httpx.Client, request: pytest.FixtureRequest) -> None:
     account_id = _investment_account_id(client)
     security_id = _create_security(client, request)
@@ -67,6 +68,7 @@ def test_dividend_crud_and_net(client: httpx.Client, request: pytest.FixtureRequ
     assert all(d["id"] != dividend_id for d in gone.json()["dividends"])
 
 
+@pytest.mark.mutates
 def test_dividend_validation_rejects_tax_above_gross(
     client: httpx.Client, request: pytest.FixtureRequest
 ) -> None:
@@ -88,6 +90,7 @@ def test_dividend_validation_rejects_tax_above_gross(
         client.delete(f"/api/holdings/securities/{security_id}")
 
 
+@pytest.mark.mutates
 def test_returns_folds_dividend_income(
     client: httpx.Client, request: pytest.FixtureRequest
 ) -> None:

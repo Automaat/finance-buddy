@@ -3612,7 +3612,12 @@ export interface paths {
         /** List dividends (filterable by account_id/security_id) */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Filter to one account. */
+                    account_id?: number;
+                    /** @description Filter to one security. */
+                    security_id?: number;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -3651,7 +3656,18 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        account_id?: number;
+                        currency?: string;
+                        gross_amount?: string;
+                        pay_date?: string;
+                        security_id?: number;
+                        withholding_tax?: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Created */
                 201: {

@@ -5627,6 +5627,24 @@
     },
     "/api/holdings/dividends": {
       "get": {
+        "parameters": [
+          {
+            "description": "Filter to one account.",
+            "in": "query",
+            "name": "account_id",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Filter to one security.",
+            "in": "query",
+            "name": "security_id",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -5682,6 +5700,36 @@
         ]
       },
       "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "account_id": {
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "gross_amount": {
+                    "type": "string"
+                  },
+                  "pay_date": {
+                    "type": "string"
+                  },
+                  "security_id": {
+                    "type": "integer"
+                  },
+                  "withholding_tax": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "201": {
             "content": {
