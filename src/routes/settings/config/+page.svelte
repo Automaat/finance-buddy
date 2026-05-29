@@ -17,6 +17,7 @@
 	import { resolveApiUrl } from '$lib/api';
 	import { invalidateAll } from '$app/navigation';
 	import { untrack } from 'svelte';
+	import { sumsToHundred } from '$lib/utils/allocation';
 	import type { PageData } from './$types';
 
 	interface Props {
@@ -115,7 +116,7 @@
 	const marketSum = $derived(
 		allocationStocks + allocationBonds + allocationGold + allocationCommodities
 	);
-	const isValidAllocation = $derived(marketSum === 100);
+	const isValidAllocation = $derived(sumsToHundred(marketSum, 0));
 
 	const currentAge = $derived(
 		birthDate

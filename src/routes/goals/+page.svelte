@@ -5,6 +5,7 @@
 	import { api } from '$lib/apiClient';
 	import { invalidateAll } from '$app/navigation';
 	import { CrudForm } from '$lib/stores/crudForm.svelte';
+	import { CATEGORY_LABELS, categoryLabel } from '$lib/utils/categories';
 	import type { Goal, AccountOption } from './+page';
 	import type { PageData } from './$types';
 
@@ -22,22 +23,6 @@
 	const goalForm = new CrudForm<Goal>();
 	let showDeleteModal = $state(false);
 	let goalToDelete: number | null = $state(null);
-
-	const categoryLabels: Record<string, string> = {
-		bank: 'Konto bankowe',
-		saving_account: 'Konto oszczędnościowe',
-		stock: 'Akcje',
-		bond: 'Obligacje',
-		gold: 'Złoto',
-		real_estate: 'Nieruchomość',
-		ppk: 'PPK',
-		fund: 'Fundusz',
-		etf: 'ETF',
-		vehicle: 'Pojazd',
-		mortgage: 'Hipoteka',
-		installment: 'Raty',
-		other: 'Inne'
-	};
 
 	const emptyForm = () => ({
 		name: '',
@@ -246,7 +231,7 @@
 						{#if goal.category}
 							<div class="col-span-2">
 								<span class="text-surface-700-300">Kategoria</span>
-								<p class="font-semibold">{categoryLabels[goal.category] ?? goal.category}</p>
+								<p class="font-semibold">{categoryLabel(goal.category)}</p>
 							</div>
 						{/if}
 					</div>
@@ -321,7 +306,7 @@
 			<span>Kategoria (opcjonalnie)</span>
 			<select class="select" bind:value={formData.category}>
 				<option value={null}>—</option>
-				{#each Object.entries(categoryLabels) as [value, label] (value)}
+				{#each Object.entries(CATEGORY_LABELS) as [value, label] (value)}
 					<option {value}>{label}</option>
 				{/each}
 			</select>

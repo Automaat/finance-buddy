@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { formatPercent, formatSignedPercent } from '$lib/utils/format';
+	import { categoryLabel } from '$lib/utils/categories';
 
 	// Minimal shape of the /api/accounts rows this table needs. real_yield_pct
 	// is populated server-side only for interest-bearing accounts (post-Belka,
@@ -19,19 +20,6 @@
 	}
 
 	let { accounts }: Props = $props();
-
-	const CATEGORY_LABELS: Record<string, string> = {
-		bank: 'Konto bankowe',
-		saving_account: 'Oszczędności',
-		bond: 'Obligacje',
-		stock: 'Akcje',
-		ppk: 'PPK',
-		fund: 'Fundusz',
-		etf: 'ETF'
-	};
-
-	const categoryLabel = (category: string): string =>
-		CATEGORY_LABELS[category] ?? category.charAt(0).toUpperCase() + category.slice(1);
 
 	const rows = $derived(
 		accounts
