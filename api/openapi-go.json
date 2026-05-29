@@ -1835,6 +1835,39 @@
         ]
       }
     },
+    "/api/bonds/lookup": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "first_year_rate": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "margin": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "source": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Look up Y1 rate + CPI margin for an emission (obligacjeskarbowe.pl)",
+        "tags": [
+          "bonds"
+        ]
+      }
+    },
     "/api/bonds/maturity-ladder": {
       "get": {
         "responses": {
