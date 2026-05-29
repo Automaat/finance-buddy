@@ -1249,6 +1249,7 @@ export interface paths {
                     content: {
                         "application/json": {
                             bonds?: {
+                                account_id?: number | null;
                                 capitalize?: boolean;
                                 /** Format: date-time */
                                 created_at?: string;
@@ -1297,6 +1298,7 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            account_id?: number | null;
                             capitalize?: boolean;
                             /** Format: date-time */
                             created_at?: string;
@@ -1468,6 +1470,7 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            account_id?: number | null;
                             capitalize?: boolean;
                             /** Format: date-time */
                             created_at?: string;
@@ -1513,6 +1516,7 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            account_id?: number | null;
                             capitalize?: boolean;
                             /** Format: date-time */
                             created_at?: string;

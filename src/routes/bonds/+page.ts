@@ -10,12 +10,20 @@ export interface TreasuryBond {
 	purchase_date: string;
 	maturity_date: string;
 	owner_user_id: number | null;
+	account_id: number | null;
 	first_year_rate: number;
 	margin: number;
 	capitalize: boolean;
 	current_value: number;
 	current_yield: number;
 	created_at: string;
+}
+
+export interface AccountOption {
+	id: number;
+	name: string;
+	category: string;
+	owner_user_id: number | null;
 }
 
 export interface BondsResponse {
@@ -64,10 +72,11 @@ export interface MaturityLadderResponse {
 export const load: PageLoad = async ({ fetch }) => {
 	try {
 		const apiUrl = resolveApiUrl();
-		const [bondsRes, ownersRes, ladderRes] = await Promise.all([
+		const [bondsRes, ownersRes, ladderRes, accountsRes] = await Promise.all([
 			fetch(`${apiUrl}/api/bonds`),
 			fetch(`${apiUrl}/api/users`),
-			fetch(`${apiUrl}/api/bonds/maturity-ladder`)
+			fetch(`${apiUrl}/api/bonds/maturity-ladder`),
+			fetch(`${apiUrl}/api/accounts`)
 		]);
 		if (!bondsRes.ok) {
 			throw error(bondsRes.status, 'Failed to load treasury bonds');
@@ -77,7 +86,24 @@ export const load: PageLoad = async ({ fetch }) => {
 		const ladder: MaturityLadderResponse = ladderRes.ok
 			? await ladderRes.json()
 			: { events: [], next_maturity: null, tax_rate_pct: 19 };
-		return { ...bonds, owners, ladder };
+		// Filter to bond-category active accounts — those are the only valid
+		// targets for a treasury bond row. Anything else (mortgage, stock,
+		// real estate) would mis-roll into the wrong dashboard tile.
+		let accounts: AccountOption[] = [];
+		if (accountsRes.ok) {
+			const payload = await accountsRes.json();
+			accounts = [...(payload.assets ?? []), ...(payload.liabilities ?? [])]
+				.filter(
+					(a: { is_active: boolean; category: string }) => a.is_active && a.category === 'bond'
+				)
+				.map((a: { id: number; name: string; category: string; owner_user_id: number | null }) => ({
+					id: a.id,
+					name: a.name,
+					category: a.category,
+					owner_user_id: a.owner_user_id
+				}));
+		}
+		return { ...bonds, owners, ladder, accounts };
 	} catch (err) {
 		if (err instanceof Error && 'status' in err) throw err;
 		throw error(500, 'Failed to load treasury bonds');

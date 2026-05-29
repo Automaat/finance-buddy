@@ -59,6 +59,7 @@
 		face_value: number;
 		purchase_date: string;
 		owner_user_id: number | null;
+		account_id: number | null;
 		first_year_rate: number;
 		margin: number;
 		capitalize: boolean;
@@ -71,6 +72,7 @@
 		face_value: 1000,
 		purchase_date: today,
 		owner_user_id: null,
+		account_id: null,
 		...defaultsForType('EDO')
 	});
 
@@ -83,6 +85,7 @@
 			face_value: 1000,
 			purchase_date: today,
 			owner_user_id: null,
+			account_id: null,
 			...defaultsForType('EDO')
 		};
 		showForm = true;
@@ -97,6 +100,7 @@
 			face_value: bond.face_value,
 			purchase_date: bond.purchase_date,
 			owner_user_id: bond.owner_user_id,
+			account_id: bond.account_id,
 			first_year_rate: bond.first_year_rate,
 			margin: bond.margin,
 			capitalize: bond.capitalize
@@ -401,6 +405,16 @@
 					</label>
 
 					<label class="label">
+						<span class="font-semibold text-sm">Konto</span>
+						<select class="select" bind:value={formData.account_id}>
+							<option value={null}>—</option>
+							{#each data.accounts as a}
+								<option value={a.id}>{a.name}</option>
+							{/each}
+						</select>
+					</label>
+
+					<label class="label">
 						<span class="font-semibold text-sm">Stopa rok 1 (%)</span>
 						<input
 							type="number"
@@ -464,6 +478,7 @@
 							<th>Typ</th>
 							<th>Seria</th>
 							<th>Właściciel</th>
+							<th>Konto</th>
 							<th>Nominał</th>
 							<th>Wartość</th>
 							<th>Stopa roku</th>
@@ -478,6 +493,9 @@
 								<td class="font-medium">{bond.type}</td>
 								<td>{bond.series}</td>
 								<td>{ownerName(data.owners, bond.owner_user_id)}</td>
+								<td class="text-xs text-surface-700-300">
+									{data.accounts.find((a) => a.id === bond.account_id)?.name ?? '—'}
+								</td>
 								<td>{formatPLN(bond.face_value)}</td>
 								<td class="font-semibold text-primary-600-400">{formatPLN(bond.current_value)}</td>
 								<td>{bond.current_yield.toFixed(2)}%</td>

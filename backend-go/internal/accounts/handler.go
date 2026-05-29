@@ -65,16 +65,18 @@ type listResponse struct {
 
 // Handler is the HTTP boundary for /api/accounts.
 type Handler struct {
-	store    *Store
-	cpi      CPILoader
-	holdings HoldingsValuator
-	logger   *slog.Logger
+	store     *Store
+	cpi       CPILoader
+	valuators []HoldingsValuator
+	logger    *slog.Logger
 }
 
 // HoldingsValuator returns the live PLN market value per account derived
-// from the holdings ledger. Snapshot/current_value pre-fill consumes this
-// for stock/etf/bond/fund accounts so user-typed snapshots already match
-// what brokers show. Implemented by holdings.Valuator.
+// from some asset ledger. Snapshot/current_value pre-fill consumes the
+// merged result for stock/etf/bond/fund accounts so user-typed snapshots
+// already match what brokers/portals show. Implemented by both
+// holdings.Valuator (live MV from stocks/ETFs) and bonds.Valuator (live
+// compounded value from EDO/COI/…); the handler sums them per account.
 type HoldingsValuator interface {
 	AccountValuesPLN(ctx context.Context) (map[int]decimal.Decimal, error)
 }
@@ -89,15 +91,23 @@ var investmentCategories = map[string]bool{
 	"fund":  true,
 }
 
-// NewHandler wires the store + CPI loader + holdings valuator + logger.
-// cpiStore may be nil in tests (real-yield columns become null). holdings
-// may be nil — then current_value falls back to the snapshot-derived value
-// for every account.
-func NewHandler(store *Store, cpiStore CPILoader, holdings HoldingsValuator, logger *slog.Logger) *Handler {
+// NewHandler wires the store + CPI loader + zero-or-more valuators +
+// logger. cpiStore may be nil in tests (real-yield columns become null).
+// Valuators may be nil/empty — then current_value falls back to the
+// snapshot-derived value for every account.
+func NewHandler(store *Store, cpiStore CPILoader, logger *slog.Logger, valuators ...HoldingsValuator) *Handler {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &Handler{store: store, cpi: cpiStore, holdings: holdings, logger: logger}
+	// Filter out nil valuators so callers can pass nil for an absent source
+	// without making the merge logic guard each call.
+	live := valuators[:0:0]
+	for _, v := range valuators {
+		if v != nil {
+			live = append(live, v)
+		}
+	}
+	return &Handler{store: store, cpi: cpiStore, valuators: live, logger: logger}
 }
 
 // realYieldCtx carries the per-request CPI snapshot used to compute real
@@ -193,19 +203,27 @@ func toResponse(a *Account, currentValue decimal.Decimal, ry realYieldCtx) respo
 	return out
 }
 
-// loadHoldingsValues fetches live PLN market value per account from the
-// holdings ledger. Returns nil on failure (logged) so the request still
-// succeeds with snapshot-derived values. Empty when no valuator wired.
+// loadHoldingsValues fetches live PLN per account from every wired
+// valuator and sums them. A single valuator failing is logged and dropped
+// — the request still succeeds with whichever sources returned cleanly,
+// and the snapshot fallback covers accounts no valuator knows about.
+// Returns nil when no valuator is wired so the caller short-circuits.
 func (h *Handler) loadHoldingsValues(ctx context.Context) map[int]decimal.Decimal {
-	if h.holdings == nil {
+	if len(h.valuators) == 0 {
 		return nil
 	}
-	vals, err := h.holdings.AccountValuesPLN(ctx)
-	if err != nil {
-		h.logger.Warn("accounts: holdings valuation failed", "err", err)
-		return nil
+	merged := map[int]decimal.Decimal{}
+	for _, v := range h.valuators {
+		vals, err := v.AccountValuesPLN(ctx)
+		if err != nil {
+			h.logger.Warn("accounts: valuator failed", "err", err)
+			continue
+		}
+		for id, amount := range vals {
+			merged[id] = merged[id].Add(amount)
+		}
 	}
-	return vals
+	return merged
 }
 
 // realYieldCtxFor is the single-account variant of loadRealYieldCtx: when

@@ -43,6 +43,7 @@ const emptyData = {
 	total_value: 0,
 	total_count: 0,
 	owners: [{ id: 1, name: 'Marcin' }],
+	accounts: [],
 	ladder: emptyLadder
 };
 
@@ -54,6 +55,7 @@ const sampleBond = {
 	purchase_date: '2024-01-01',
 	maturity_date: '2034-01-01',
 	owner_user_id: 1,
+	account_id: null,
 	first_year_rate: 6.8,
 	margin: 2.0,
 	capitalize: true,
