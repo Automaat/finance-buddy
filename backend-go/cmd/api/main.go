@@ -144,11 +144,11 @@ func run() int {
 		logger.Warn("no DB config (DATABASE_URL or PGHOST) — DB-backed endpoints will 404")
 	}
 
-	// WriteTimeout sits above the in-handler request timeout (server's
-	// middleware.Timeout) so that middleware can write its 504 before the
-	// connection's write deadline fires; it also clears the 2-min self-bound
-	// quotes-refresh pass. ReadTimeout/IdleTimeout bound slow or idle
-	// clients so a stalled peer can't pin a connection indefinitely.
+	// WriteTimeout is the hard connection-level write deadline. It sits above
+	// the in-handler request timeout (server's middleware.Timeout) so that
+	// deadline gets the chance to cancel the context first, and it clears the
+	// 2-min self-bound quotes-refresh pass. ReadTimeout/IdleTimeout bound slow
+	// or idle clients so a stalled peer can't pin a connection indefinitely.
 	srv := &http.Server{
 		Addr:              cfg.Addr,
 		Handler:           server.New(cfg, logger, deps),

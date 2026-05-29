@@ -111,10 +111,13 @@ func New(cfg Config, logger *slog.Logger, deps Deps) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recoverer)
-	// Per-request deadline: cancels r.Context() (propagated to pgx queries and
-	// outbound scrapes) so a stuck handler can't pin a connection. Sized above
-	// the 2-min self-bound /api/holdings/refresh-quotes pass; main.go's
-	// WriteTimeout sits higher still so the 504 lands before the write deadline.
+	// Per-request deadline. middleware.Timeout cancels r.Context() after
+	// requestTimeout, which context-aware work (pgx queries, outbound scrapes)
+	// observes and unwinds; it only writes a 504 if the handler returns past the
+	// deadline without having already written. So this is a cooperative backstop,
+	// not a hard kill of work that ignores context. Sized above the 2-min
+	// self-bound /api/holdings/refresh-quotes pass, and below main.go's
+	// WriteTimeout so the connection write deadline doesn't pre-empt it.
 	r.Use(middleware.Timeout(requestTimeout))
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   splitOrigins(cfg.CORSOrigins),
