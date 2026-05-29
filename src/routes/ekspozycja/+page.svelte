@@ -1,0 +1,233 @@
+<script lang="ts">
+	import { untrack } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+	import { Globe } from 'lucide-svelte';
+	import { formatPLN } from '$lib/utils/format';
+	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
+	import type { PageData } from './$types';
+
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
+
+	const report = $derived(data.report);
+
+	// Local form state seeded from the URL-driven load; Apply pushes it back to
+	// the query string so the drift band is shareable and survives reloads.
+	let targetInput = $state<number | null>(untrack(() => data.targetPLNPct));
+	let toleranceInput = $state<number>(untrack(() => data.tolerance));
+
+	$effect(() => {
+		targetInput = data.targetPLNPct;
+		toleranceInput = data.tolerance;
+	});
+
+	const palette = [
+		'#3b82f6',
+		'#ef4444',
+		'#10b981',
+		'#f59e0b',
+		'#a855f7',
+		'#06b6d4',
+		'#84cc16',
+		'#ec4899'
+	];
+
+	const colorFor = (currency: string, index: number): string =>
+		currency === 'PLN' ? '#1e40af' : palette[index % palette.length];
+
+	let container: HTMLDivElement | undefined = $state();
+	let handle: ChartHandle | null = null;
+
+	$effect(() => {
+		if (!container || report.currencies.length === 0) {
+			handle?.dispose();
+			handle = null;
+			return;
+		}
+		if (!handle) handle = createChart(container);
+		const pieData = report.currencies.map((c, i) => ({
+			name: c.currency,
+			value: c.value_pln,
+			itemStyle: { color: colorFor(c.currency, i) }
+		}));
+		handle.chart.setOption({
+			tooltip: {
+				trigger: 'item',
+				formatter: (p: { name: string; value: number; percent: number }) =>
+					`${p.name}<br/>${formatPLN(p.value)} (${p.percent.toFixed(1)}%)`
+			},
+			legend: { bottom: 0 },
+			series: [
+				{
+					type: 'pie',
+					radius: ['45%', '70%'],
+					avoidLabelOverlap: false,
+					label: { show: true, formatter: '{b}: {d}%' },
+					data: pieData
+				}
+			]
+		});
+		return () => {
+			handle?.dispose();
+			handle = null;
+		};
+	});
+
+	function applyTarget(event: SubmitEvent) {
+		event.preventDefault();
+		const params = new URLSearchParams($page.url.searchParams);
+		if (targetInput != null && Number.isFinite(targetInput)) {
+			params.set('target_pln_pct', String(targetInput));
+			params.set('tolerance', String(toleranceInput ?? 5));
+		} else {
+			params.delete('target_pln_pct');
+			params.delete('tolerance');
+		}
+		const qs = params.toString();
+		void goto(qs ? `/ekspozycja?${qs}` : '/ekspozycja', { keepFocus: true });
+	}
+
+	function clearTarget() {
+		targetInput = null;
+		void goto('/ekspozycja', { keepFocus: true });
+	}
+</script>
+
+<svelte:head>
+	<title>Ekspozycja walutowa - Finance Buddy</title>
+</svelte:head>
+
+<div class="space-y-6">
+	<div class="flex items-center gap-2">
+		<Globe size={28} class="text-primary-500" />
+		<h1 class="h1">Ekspozycja walutowa</h1>
+	</div>
+	<p class="text-surface-700-300">
+		Udział PLN vs walut obcych w portfelu inwestycyjnym (bez mieszkania i ROR). Ustaw docelowy
+		udział PLN, aby zobaczyć dryft względem celu.
+	</p>
+
+	<form
+		class="card preset-filled-surface-100-900 p-4 flex flex-wrap items-end gap-3"
+		onsubmit={applyTarget}
+	>
+		<label class="label">
+			<span class="text-xs font-semibold">Cel PLN (%)</span>
+			<input
+				type="number"
+				min="0"
+				max="100"
+				step="1"
+				class="input w-28"
+				bind:value={targetInput}
+				placeholder="—"
+			/>
+		</label>
+		<label class="label">
+			<span class="text-xs font-semibold">Tolerancja (pp)</span>
+			<input
+				type="number"
+				min="0"
+				max="50"
+				step="1"
+				class="input w-24"
+				bind:value={toleranceInput}
+			/>
+		</label>
+		<button type="submit" class="btn preset-filled-primary-500">Zastosuj</button>
+		{#if report.drift}
+			<button type="button" class="btn preset-tonal-surface" onclick={clearTarget}>Wyczyść</button>
+		{/if}
+	</form>
+
+	{#if report.currencies.length === 0}
+		<div class="card preset-filled-surface-100-900 p-6 text-surface-700-300">
+			Brak snapshotu lub aktywnych kont — dodaj pierwszy snapshot, aby zobaczyć ekspozycję.
+		</div>
+	{:else}
+		<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+			<div class="card preset-tonal-surface p-4">
+				<div class="text-xs text-surface-600-400">Udział PLN</div>
+				<div class="text-2xl font-bold">{report.pln_pct.toFixed(1)}%</div>
+			</div>
+			<div class="card preset-tonal-surface p-4">
+				<div class="text-xs text-surface-600-400">Waluty obce</div>
+				<div class="text-2xl font-bold">{report.foreign_pct.toFixed(1)}%</div>
+			</div>
+			<div class="card preset-tonal-surface p-4">
+				<div class="text-xs text-surface-600-400">Wartość portfela</div>
+				<div class="text-2xl font-bold">{formatPLN(report.total_pln)}</div>
+			</div>
+			<div class="card preset-tonal-surface p-4">
+				<div class="text-xs text-surface-600-400">Snapshot</div>
+				<div class="text-2xl font-bold">{report.snapshot_date}</div>
+			</div>
+		</div>
+
+		{#if report.drift}
+			{@const within = report.drift.within_tolerance}
+			<div class="card {within ? 'preset-tonal-success' : 'preset-tonal-warning'} p-4">
+				<div class="text-sm font-semibold">
+					Dryft względem celu {report.drift.target_pln_pct}% PLN
+				</div>
+				<div class="text-3xl font-bold">
+					{report.drift.drift_pln_pct >= 0 ? '+' : ''}{report.drift.drift_pln_pct.toFixed(1)} pp
+				</div>
+				<div class="text-sm">
+					Aktualnie {report.drift.actual_pln_pct.toFixed(1)}% ·
+					{within
+						? `w tolerancji ±${report.drift.tolerance_pct} pp`
+						: `poza pasmem ±${report.drift.tolerance_pct} pp`}
+				</div>
+			</div>
+		{/if}
+
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+			<div class="card preset-filled-surface-100-900 p-4">
+				<div
+					bind:this={container}
+					role="img"
+					aria-label="Wykres kołowy udziału walut w portfelu"
+					class="w-full h-[320px]"
+				></div>
+			</div>
+			<div class="card preset-filled-surface-100-900 p-4 overflow-x-auto">
+				<table class="w-full text-sm">
+					<thead>
+						<tr class="text-left opacity-75 border-b border-surface-300-700">
+							<th class="py-2 pr-3">Waluta</th>
+							<th class="py-2 px-3 text-right">Wartość (PLN)</th>
+							<th class="py-2 pl-3">Udział</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each report.currencies as bucket, i (bucket.currency)}
+							<tr class="border-b border-surface-200-800 last:border-0">
+								<td class="py-2 pr-3 font-semibold">{bucket.currency}</td>
+								<td class="py-2 px-3 text-right">{formatPLN(bucket.value_pln)}</td>
+								<td class="py-2 pl-3">
+									<div class="flex items-center gap-2">
+										<div class="flex-1 h-2 rounded-full bg-surface-200-800 overflow-hidden">
+											<div
+												class="h-full rounded-full"
+												style="width: {Math.min(bucket.percent, 100)}%; background: {colorFor(
+													bucket.currency,
+													i
+												)}"
+											></div>
+										</div>
+										<span class="w-12 text-right tabular-nums">{bucket.percent.toFixed(1)}%</span>
+									</div>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	{/if}
+</div>
