@@ -200,18 +200,23 @@
 		if (id === null) return;
 		ytmLoading = true;
 		ytmError = '';
-		fetch(`${apiUrl}/api/bonds/${id}/ytm`)
+		// Abort the in-flight YTM fetch when the selected bond changes or the
+		// component unmounts, so a stale projection can't land on the chart.
+		const controller = new AbortController();
+		fetch(`${apiUrl}/api/bonds/${id}/ytm`, { signal: controller.signal })
 			.then(async (r) => {
 				if (!r.ok) throw new Error('Nie udało się załadować projekcji YTM');
 				const body = await r.json();
 				ytm = body.points as YTMPoint[];
 			})
 			.catch((err) => {
+				if (controller.signal.aborted) return;
 				ytmError = err instanceof Error ? err.message : 'Nieznany błąd';
 			})
 			.finally(() => {
-				ytmLoading = false;
+				if (!controller.signal.aborted) ytmLoading = false;
 			});
+		return () => controller.abort();
 	});
 
 	onMount(() => {

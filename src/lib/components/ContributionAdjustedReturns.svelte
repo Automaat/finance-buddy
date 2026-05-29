@@ -49,27 +49,32 @@
 		return params.toString();
 	}
 
-	async function load() {
+	async function load(signal: AbortSignal) {
 		loading = true;
 		try {
 			const apiUrl = resolveApiUrl();
-			const res = await fetch(`${apiUrl}/api/investment/returns?${buildQuery()}`);
+			const res = await fetch(`${apiUrl}/api/investment/returns?${buildQuery()}`, { signal });
 			if (!res.ok) throw new Error('Nie udało się pobrać zwrotów');
 			data = (await res.json()) as ReturnsResponse;
 		} catch (err) {
+			if (signal.aborted) return;
 			if (err instanceof Error) toast.error(err.message);
 			data = null;
 		} finally {
-			loading = false;
+			if (!signal.aborted) loading = false;
 		}
 	}
 
+	// Re-fetch on scope/period change; abort the prior request (and on destroy)
+	// so a stale response can't overwrite the current scope's data.
 	$effect(() => {
 		void period;
 		void scope.type;
 		void scope.value;
 		void scope.account_id;
-		load();
+		const controller = new AbortController();
+		void load(controller.signal);
+		return () => controller.abort();
 	});
 
 	function fmt(n: number): string {
