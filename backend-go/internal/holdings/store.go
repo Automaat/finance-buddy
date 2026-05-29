@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -392,6 +393,36 @@ func (v *Valuator) AccountValuesPLN(ctx context.Context) (map[int]decimal.Decima
 				continue
 			}
 			out[acct.AccountID] = out[acct.AccountID].Add(acct.MarketValuePLN)
+		}
+	}
+	return out, nil
+}
+
+// AccountCurrencyBreakdownPLN groups each account's open positions by their
+// security's quoted currency and returns per-currency PLN market value. Used
+// by the exposure widget to attribute a PLN-settled investment account's
+// snapshot value across the foreign currencies it's actually exposed to
+// (an IKE XTB holding USD-denominated ISAC.UK looks like PLN to
+// accounts.currency but is USD exposure economically).
+func (v *Valuator) AccountCurrencyBreakdownPLN(ctx context.Context) (map[int]map[string]decimal.Decimal, error) {
+	rows, err := v.store.Holdings(ctx, v.rates)
+	if err != nil {
+		return nil, err
+	}
+	out := map[int]map[string]decimal.Decimal{}
+	for i := range rows {
+		sec := &rows[i].Security
+		accs := rows[i].Accounts
+		for j := range accs {
+			acct := &accs[j]
+			if !acct.HasPLN {
+				continue
+			}
+			ccy := strings.ToUpper(sec.Currency)
+			if out[acct.AccountID] == nil {
+				out[acct.AccountID] = map[string]decimal.Decimal{}
+			}
+			out[acct.AccountID][ccy] = out[acct.AccountID][ccy].Add(acct.MarketValuePLN)
 		}
 	}
 	return out, nil
