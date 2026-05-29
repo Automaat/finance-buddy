@@ -11,6 +11,7 @@ services:
       - FB_ADMIN_PASSWORD=${FB_ADMIN_PASSWORD:?FB_ADMIN_PASSWORD must be set}
       - FB_COOKIE_SECURE=${FB_COOKIE_SECURE:-false}
       - FB_STOOQ_APIKEY=${FB_STOOQ_APIKEY:-}
+      - FB_FRED_API_KEY=${FB_FRED_API_KEY:-}
     ports:
       - '8000:8000'
     restart: unless-stopped

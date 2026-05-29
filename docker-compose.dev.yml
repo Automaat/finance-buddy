@@ -31,6 +31,7 @@ services:
       - FB_ADMIN_PASSWORD=${FB_ADMIN_PASSWORD:-admin}
       - FB_COOKIE_SECURE=false
       - FB_STOOQ_APIKEY=${FB_STOOQ_APIKEY:-}
+      - FB_FRED_API_KEY=${FB_FRED_API_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
