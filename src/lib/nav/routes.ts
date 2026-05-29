@@ -12,7 +12,8 @@ import {
 	Settings,
 	Target,
 	Briefcase,
-	Compass
+	Compass,
+	Globe
 } from 'lucide-svelte';
 
 export const NAV_ROUTES = [
@@ -25,6 +26,7 @@ export const NAV_ROUTES = [
 	{ href: '/transactions', label: 'Transakcje', icon: ArrowRightLeft },
 	{ href: '/assets', label: 'Majątek', icon: Home },
 	{ href: '/investments/holdings', label: 'Inwestycje', icon: Briefcase },
+	{ href: '/ekspozycja', label: 'Ekspozycja', icon: Globe },
 	{ href: '/debts', label: 'Zobowiązania', icon: ClipboardList },
 	{ href: '/goals', label: 'Cele', icon: Target },
 	{ href: '/snapshots', label: 'Snapshoty', icon: Camera },
