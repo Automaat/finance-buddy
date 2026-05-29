@@ -8,28 +8,28 @@ decision can be revisited with evidence rather than guesswork.
 
 ## Data scale (single household)
 
-| Table             | Approx rows                          | Growth          |
-| ----------------- | ------------------------------------ | --------------- |
-| `accounts`        | ~10–20 (active)                      | flat            |
-| `snapshots`       | ~12/year → dozens                    | +12/year        |
-| `snapshot_values` | accounts × snapshots → low hundreds  | +~15/month      |
-| `transactions`    | low thousands                        | slow            |
-| `lots`            | tens–hundreds                        | slow            |
+| Table             | Approx rows                         | Growth     |
+| ----------------- | ----------------------------------- | ---------- |
+| `accounts`        | ~10–20 (active)                     | flat       |
+| `snapshots`       | ~12/year → dozens                   | +12/year   |
+| `snapshot_values` | accounts × snapshots → low hundreds | +~15/month |
+| `transactions`    | low thousands                       | slow       |
+| `lots`            | tens–hundreds                       | slow       |
 
 These are tiny by Postgres standards: a seq scan of a few hundred rows is far
 cheaper than the planner would even consider an index for.
 
 ## Hot queries → index coverage
 
-| Query (file)                                                   | Filter / join / sort                         | Covering index                                  |
-| -------------------------------------------------------------- | -------------------------------------------- | ----------------------------------------------- |
-| accounts list (`accounts/store.go`)                            | `WHERE is_active ORDER BY id`                | PK on `id`; `is_active` filter on a ~15-row table — seq scan optimal |
-| transactions list / scoped flows (`transactions`, `investment`)| `account_id`, `date` range                   | `ix_transactions_account_id_date (account_id, date)` ✓ |
-| latest snapshot value in scope (`investment`, `dashboard`)     | `snapshot_values JOIN snapshots`, scope by `account_id`, `GROUP BY account_id` | `uix_snapshot_account (snapshot_id, account_id)` — serves the FK join + the post-join account filter ✓ |
-| snapshot detail (`snapshots/store.go`)                         | `snapshot_values.snapshot_id = s.id`         | `uix_snapshot_account` / `uix_snapshot_asset` (leading `snapshot_id`) ✓ |
-| aggregate recompute (`aggregates/store.go`)                    | `snapshot_values WHERE account_id = $1` / `WHERE asset_id = $1` | `asset_id`: `ix_snapshot_values_asset_id` ✓. `account_id`: see gap below |
-| lots by security / account (`holdings`)                        | `security_id, date` / `account_id`           | `ix_lots_security_date`, `ix_lots_account` ✓     |
-| dashboard hot path (`dashboard/store.go`)                      | reads pre-computed `snapshot_aggregates`     | `ix_snapshot_aggregates_month`; PK lookups ✓     |
+| Query (file)                                                    | Filter / join / sort                                                           | Covering index                                                                                         |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| accounts list (`accounts/store.go`)                             | `WHERE is_active ORDER BY id`                                                  | PK on `id`; `is_active` filter on a ~15-row table — seq scan optimal                                   |
+| transactions list / scoped flows (`transactions`, `investment`) | `account_id`, `date` range                                                     | `ix_transactions_account_id_date (account_id, date)` ✓                                                 |
+| latest snapshot value in scope (`investment`, `dashboard`)      | `snapshot_values JOIN snapshots`, scope by `account_id`, `GROUP BY account_id` | `uix_snapshot_account (snapshot_id, account_id)` — serves the FK join + the post-join account filter ✓ |
+| snapshot detail (`snapshots/store.go`)                          | `snapshot_values.snapshot_id = s.id`                                           | `uix_snapshot_account` / `uix_snapshot_asset` (leading `snapshot_id`) ✓                                |
+| aggregate recompute (`aggregates/store.go`)                     | `snapshot_values WHERE account_id = $1` / `WHERE asset_id = $1`                | `asset_id`: `ix_snapshot_values_asset_id` ✓. `account_id`: see gap below                               |
+| lots by security / account (`holdings`)                         | `security_id, date` / `account_id`                                             | `ix_lots_security_date`, `ix_lots_account` ✓                                                           |
+| dashboard hot path (`dashboard/store.go`)                       | reads pre-computed `snapshot_aggregates`                                       | `ix_snapshot_aggregates_month`; PK lookups ✓                                                           |
 
 ## The one gap (not acted on, by design)
 
