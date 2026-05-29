@@ -3,7 +3,7 @@
 	import SortableTable, { type SortableColumn } from '$lib/components/SortableTable.svelte';
 	import { formatPLN } from '$lib/utils/format';
 	import { Plus, Landmark, Search, BarChart3, Trash2 } from 'lucide-svelte';
-	import { resolveApiUrl } from '$lib/api';
+	import { api } from '$lib/apiClient';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { confirm } from '$lib/stores/confirm.svelte';
@@ -19,7 +19,6 @@
 
 	let { data }: Props = $props();
 
-	const apiUrl = resolveApiUrl();
 	const owners = $derived(data.owners as OwnerOption[]);
 	const defaultOwnerUserId = $derived(owners.length > 0 ? owners[0].id : null);
 	const defaultOwnerName = $derived(owners.length > 0 ? owners[0].name : '');
@@ -85,15 +84,7 @@
 		if (!ok) return;
 
 		try {
-			const response = await fetch(
-				`${apiUrl}/api/accounts/${accountId}/transactions/${transactionId}`,
-				{ method: 'DELETE' }
-			);
-
-			if (!response.ok) {
-				throw new Error('Failed to delete transaction');
-			}
-
+			await api.del(`/api/accounts/${accountId}/transactions/${transactionId}`);
 			await invalidateAll();
 		} catch (err) {
 			console.error('Failed to delete transaction:', err);
@@ -134,15 +125,7 @@
 			return;
 		}
 		await ppkForm.submit(async () => {
-			const response = await fetch(`${apiUrl}/api/retirement/ppk-contributions/generate`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(ppkGenerateData)
-			});
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.detail || 'Nie udało się wygenerować wpłat PPK');
-			}
+			await api.post('/api/retirement/ppk-contributions/generate', ppkGenerateData);
 			await invalidateAll();
 		});
 	}
@@ -153,22 +136,11 @@
 			return;
 		}
 		await txForm.submit(async () => {
-			const response = await fetch(
-				`${apiUrl}/api/accounts/${newTransactionData.account_id}/transactions`,
-				{
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						amount: newTransactionData.amount,
-						date: newTransactionData.date,
-						owner_user_id: newTransactionData.owner_user_id
-					})
-				}
-			);
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.detail || 'Failed to create transaction');
-			}
+			await api.post(`/api/accounts/${newTransactionData.account_id}/transactions`, {
+				amount: newTransactionData.amount,
+				date: newTransactionData.date,
+				owner_user_id: newTransactionData.owner_user_id
+			});
 			await invalidateAll();
 		});
 	}

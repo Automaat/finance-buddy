@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { resolveApiUrl } from '$lib/api';
+import { api, ApiError } from '$lib/apiClient';
 import type { PageLoad } from './$types';
 
 export interface Goal {
@@ -31,22 +31,23 @@ export interface AccountOption {
 }
 
 export const load: PageLoad = async ({ fetch }) => {
-	const apiUrl = resolveApiUrl();
-	const [goalsResponse, accountsResponse] = await Promise.all([
-		fetch(`${apiUrl}/api/goals`),
-		fetch(`${apiUrl}/api/accounts`)
-	]);
-	if (!goalsResponse.ok) {
-		throw error(goalsResponse.status, 'Failed to load goals');
+	try {
+		// Fetch in parallel; accounts are best-effort (the picker degrades to
+		// empty rather than failing the page).
+		const [goalsData, accounts] = await Promise.all([
+			api.get<GoalsListResponse>('/api/goals', { fetch }),
+			api
+				.get<{ assets: AccountOption[]; liabilities: AccountOption[] }>('/api/accounts', { fetch })
+				.then((d) => [...d.assets, ...d.liabilities])
+				.catch(() => [] as AccountOption[])
+		]);
+		return { ...goalsData, accounts };
+	} catch (err) {
+		// A backend failure maps to its status; anything else (e.g. the
+		// resolveApiUrl misconfig HttpError) rethrows with its actionable message.
+		if (err instanceof ApiError) {
+			throw error(err.status, 'Failed to load goals');
+		}
+		throw err;
 	}
-	const goalsData: GoalsListResponse = await goalsResponse.json();
-	const accounts: AccountOption[] = accountsResponse.ok
-		? await accountsResponse
-				.json()
-				.then((d: { assets: AccountOption[]; liabilities: AccountOption[] }) => [
-					...d.assets,
-					...d.liabilities
-				])
-		: [];
-	return { ...goalsData, accounts };
 };

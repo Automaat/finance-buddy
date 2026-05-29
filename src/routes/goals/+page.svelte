@@ -2,7 +2,7 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import { formatPLN, formatDate } from '$lib/utils/format';
 	import { Target, Plus, Pencil, Trash2, CheckCircle2, Calendar } from 'lucide-svelte';
-	import { resolveApiUrl } from '$lib/api';
+	import { api } from '$lib/apiClient';
 	import { invalidateAll } from '$app/navigation';
 	import { CrudForm } from '$lib/stores/crudForm.svelte';
 	import type { Goal, AccountOption } from './+page';
@@ -13,8 +13,6 @@
 	}
 
 	let { data }: Props = $props();
-
-	const apiUrl = resolveApiUrl();
 
 	const goals = $derived(data.goals as Goal[]);
 	const accounts = $derived(data.accounts as AccountOption[]);
@@ -87,16 +85,10 @@
 	async function handleSubmit() {
 		const editing = goalForm.editing;
 		await goalForm.submit(async () => {
-			const endpoint = editing ? `${apiUrl}/api/goals/${editing.id}` : `${apiUrl}/api/goals`;
-			const method = editing ? 'PUT' : 'POST';
-			const response = await fetch(endpoint, {
-				method,
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(formData)
-			});
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.detail || 'Nie udało się zapisać celu');
+			if (editing) {
+				await api.put(`/api/goals/${editing.id}`, formData);
+			} else {
+				await api.post('/api/goals', formData);
 			}
 			await invalidateAll();
 		});
@@ -115,8 +107,7 @@
 	async function confirmDelete() {
 		if (!goalToDelete) return;
 		try {
-			const response = await fetch(`${apiUrl}/api/goals/${goalToDelete}`, { method: 'DELETE' });
-			if (!response.ok) throw new Error('Nie udało się usunąć celu');
+			await api.del(`/api/goals/${goalToDelete}`);
 			await invalidateAll();
 		} catch (err) {
 			if (err instanceof Error) goalForm.error = err.message;
