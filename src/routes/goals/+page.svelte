@@ -4,6 +4,7 @@
 	import { Target, Plus, Pencil, Trash2, CheckCircle2, Calendar } from 'lucide-svelte';
 	import { resolveApiUrl } from '$lib/api';
 	import { invalidateAll } from '$app/navigation';
+	import { CrudForm } from '$lib/stores/crudForm.svelte';
 	import type { Goal, AccountOption } from './+page';
 	import type { PageData } from './$types';
 
@@ -20,12 +21,9 @@
 	const totalCount = $derived(data.total_count as number);
 	const completedCount = $derived(data.completed_count as number);
 
-	let showForm = $state(false);
-	let editingGoal: Goal | null = $state(null);
+	const goalForm = new CrudForm<Goal>();
 	let showDeleteModal = $state(false);
 	let goalToDelete: number | null = $state(null);
-	let error = $state('');
-	let saving = $state(false);
 
 	const categoryLabels: Record<string, string> = {
 		bank: 'Konto bankowe',
@@ -57,46 +55,40 @@
 	let formData = $state(emptyForm());
 
 	$effect(() => {
-		if (editingGoal) {
+		const editing = goalForm.editing;
+		if (editing) {
 			formData = {
-				name: editingGoal.name,
-				target_amount: editingGoal.target_amount,
-				target_date: editingGoal.target_date,
-				current_amount: editingGoal.current_amount,
-				monthly_contribution: editingGoal.monthly_contribution,
-				is_completed: editingGoal.is_completed,
-				account_id: editingGoal.account_id,
-				category: editingGoal.category
+				name: editing.name,
+				target_amount: editing.target_amount,
+				target_date: editing.target_date,
+				current_amount: editing.current_amount,
+				monthly_contribution: editing.monthly_contribution,
+				is_completed: editing.is_completed,
+				account_id: editing.account_id,
+				category: editing.category
 			};
-		} else if (showForm) {
+		} else if (goalForm.open) {
 			formData = emptyForm();
 		}
 	});
 
 	function startCreate() {
-		editingGoal = null;
-		showForm = true;
+		goalForm.openCreate();
 	}
 
 	function startEdit(goal: Goal) {
-		editingGoal = goal;
-		showForm = true;
+		goalForm.openEdit(goal);
 	}
 
 	function cancelForm() {
-		showForm = false;
-		editingGoal = null;
-		error = '';
+		goalForm.close();
 	}
 
 	async function handleSubmit() {
-		error = '';
-		saving = true;
-		try {
-			const endpoint = editingGoal
-				? `${apiUrl}/api/goals/${editingGoal.id}`
-				: `${apiUrl}/api/goals`;
-			const method = editingGoal ? 'PUT' : 'POST';
+		const editing = goalForm.editing;
+		await goalForm.submit(async () => {
+			const endpoint = editing ? `${apiUrl}/api/goals/${editing.id}` : `${apiUrl}/api/goals`;
+			const method = editing ? 'PUT' : 'POST';
 			const response = await fetch(endpoint, {
 				method,
 				headers: { 'Content-Type': 'application/json' },
@@ -107,12 +99,7 @@
 				throw new Error(errorData.detail || 'Nie udało się zapisać celu');
 			}
 			await invalidateAll();
-			cancelForm();
-		} catch (err) {
-			if (err instanceof Error) error = err.message;
-		} finally {
-			saving = false;
-		}
+		});
 	}
 
 	function handleDelete(goalId: number) {
@@ -132,7 +119,7 @@
 			if (!response.ok) throw new Error('Nie udało się usunąć celu');
 			await invalidateAll();
 		} catch (err) {
-			if (err instanceof Error) error = err.message;
+			if (err instanceof Error) goalForm.error = err.message;
 		} finally {
 			showDeleteModal = false;
 			goalToDelete = null;
@@ -177,8 +164,8 @@
 		</button>
 	</header>
 
-	{#if error}
-		<div class="card preset-tonal-error-500 p-3 text-sm" role="alert">{error}</div>
+	{#if goalForm.error}
+		<div class="card preset-tonal-error-500 p-3 text-sm" role="alert">{goalForm.error}</div>
 	{/if}
 
 	{#if goals.length === 0}
@@ -279,10 +266,10 @@
 </div>
 
 <Modal
-	open={showForm}
-	title={editingGoal ? 'Edytuj cel' : 'Nowy cel'}
-	confirmText={saving ? 'Zapisywanie...' : 'Zapisz'}
-	confirmDisabled={saving || !formData.name || formData.target_amount <= 0}
+	open={goalForm.open}
+	title={goalForm.isEditing ? 'Edytuj cel' : 'Nowy cel'}
+	confirmText={goalForm.saving ? 'Zapisywanie...' : 'Zapisz'}
+	confirmDisabled={goalForm.saving || !formData.name || formData.target_amount <= 0}
 	onConfirm={handleSubmit}
 	onCancel={cancelForm}
 >
@@ -352,8 +339,8 @@
 			<input type="checkbox" class="checkbox" bind:checked={formData.is_completed} />
 			<span>Cel ukończony</span>
 		</label>
-		{#if error}
-			<div class="card preset-tonal-error-500 p-2 text-sm" role="alert">{error}</div>
+		{#if goalForm.error}
+			<div class="card preset-tonal-error-500 p-2 text-sm" role="alert">{goalForm.error}</div>
 		{/if}
 	</form>
 </Modal>

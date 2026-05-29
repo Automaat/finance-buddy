@@ -10,6 +10,7 @@
 	import { Banknote, Pencil, Plus, Trash2, TrendingUp } from 'lucide-svelte';
 	import { resolveApiUrl } from '$lib/api';
 	import { invalidateAll } from '$app/navigation';
+	import { CrudForm } from '$lib/stores/crudForm.svelte';
 	import { ownerName } from '$lib/types/owners';
 	import type { TreasuryBond } from './+page';
 	import type { PageData } from './$types';
@@ -45,10 +46,7 @@
 		}
 	}
 
-	let showForm = $state(false);
-	let editingBond: TreasuryBond | null = $state(null);
-	let saving = $state(false);
-	let formError = $state('');
+	const bondForm = new CrudForm<TreasuryBond>();
 	let lookingUp = $state(false);
 	let showDeleteModal = $state(false);
 	let bondToDelete: number | null = $state(null);
@@ -77,8 +75,6 @@
 	});
 
 	function startCreate() {
-		editingBond = null;
-		formError = '';
 		formData = {
 			type: 'EDO',
 			series: '',
@@ -88,12 +84,10 @@
 			account_id: null,
 			...defaultsForType('EDO')
 		};
-		showForm = true;
+		bondForm.openCreate();
 	}
 
 	function startEdit(bond: TreasuryBond) {
-		editingBond = bond;
-		formError = '';
 		formData = {
 			type: bond.type,
 			series: bond.series,
@@ -105,25 +99,23 @@
 			margin: bond.margin,
 			capitalize: bond.capitalize
 		};
-		showForm = true;
+		bondForm.openEdit(bond);
 	}
 
 	function cancelForm() {
-		showForm = false;
-		editingBond = null;
-		formError = '';
+		bondForm.close();
 	}
 
 	function applyTypeDefaults() {
 		// Only refresh rate defaults when creating; editing preserves the
 		// user-entered values that match the bond's actual coupon.
-		if (editingBond) return;
+		if (bondForm.isEditing) return;
 		const d = defaultsForType(formData.type);
 		formData = { ...formData, ...d };
 	}
 
 	async function lookupRate() {
-		formError = '';
+		bondForm.error = '';
 		lookingUp = true;
 		try {
 			const params = new URLSearchParams({ type: formData.type, series: formData.series });
@@ -139,20 +131,17 @@
 				margin: body.margin
 			};
 		} catch (err) {
-			if (err instanceof Error) formError = `Pobieranie stopy: ${err.message}`;
+			if (err instanceof Error) bondForm.error = `Pobieranie stopy: ${err.message}`;
 		} finally {
 			lookingUp = false;
 		}
 	}
 
 	async function handleSubmit() {
-		formError = '';
-		saving = true;
-		try {
-			const endpoint = editingBond
-				? `${apiUrl}/api/bonds/${editingBond.id}`
-				: `${apiUrl}/api/bonds`;
-			const method = editingBond ? 'PUT' : 'POST';
+		const editing = bondForm.editing;
+		await bondForm.submit(async () => {
+			const endpoint = editing ? `${apiUrl}/api/bonds/${editing.id}` : `${apiUrl}/api/bonds`;
+			const method = editing ? 'PUT' : 'POST';
 			const response = await fetch(endpoint, {
 				method,
 				headers: { 'Content-Type': 'application/json' },
@@ -166,12 +155,7 @@
 				throw new Error(detail);
 			}
 			await invalidateAll();
-			cancelForm();
-		} catch (err) {
-			if (err instanceof Error) formError = err.message;
-		} finally {
-			saving = false;
-		}
+		});
 	}
 
 	function handleDelete(bondId: number) {
@@ -189,7 +173,7 @@
 			if (!response.ok) throw new Error('Nie udało się usunąć obligacji');
 			await invalidateAll();
 		} catch (err) {
-			if (err instanceof Error) formError = err.message;
+			if (err instanceof Error) bondForm.error = err.message;
 		} finally {
 			showDeleteModal = false;
 			bondToDelete = null;
@@ -342,11 +326,11 @@
 </div>
 
 <div class="space-y-4">
-	{#if showForm}
+	{#if bondForm.open}
 		<div class="card preset-filled-surface-100-900 p-4 space-y-4">
 			<header>
 				<h3 class="h3 flex items-center gap-2">
-					{#if editingBond}
+					{#if bondForm.isEditing}
 						<Pencil size={20} /> Edytuj obligację
 					{:else}
 						<Plus size={20} /> Nowa obligacja
@@ -360,8 +344,8 @@
 					handleSubmit();
 				}}
 			>
-				{#if formError}
-					<div class="card preset-filled-error-500 p-3 text-sm">{formError}</div>
+				{#if bondForm.error}
+					<div class="card preset-filled-error-500 p-3 text-sm">{bondForm.error}</div>
 				{/if}
 
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -470,10 +454,14 @@
 						type="button"
 						class="btn preset-tonal-surface"
 						onclick={cancelForm}
-						disabled={saving}>Anuluj</button
+						disabled={bondForm.saving}>Anuluj</button
 					>
-					<button type="submit" class="btn preset-filled-primary-500" disabled={saving}>
-						{saving ? 'Zapisywanie...' : editingBond ? 'Zapisz zmiany' : 'Dodaj obligację'}
+					<button type="submit" class="btn preset-filled-primary-500" disabled={bondForm.saving}>
+						{bondForm.saving
+							? 'Zapisywanie...'
+							: bondForm.isEditing
+								? 'Zapisz zmiany'
+								: 'Dodaj obligację'}
 					</button>
 				</div>
 			</form>
