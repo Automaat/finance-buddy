@@ -271,6 +271,9 @@ func registerHoldingsRoutes(r chi.Router, stooqAPIKey string, pool *pgxpool.Pool
 	r.Get("/api/holdings/lots", hHandler.ListLots)
 	r.Post("/api/holdings/lots", hHandler.CreateLot)
 	r.Delete("/api/holdings/lots/{id}", hHandler.DeleteLot)
+	r.Get("/api/holdings/dividends", hHandler.ListDividends)
+	r.Post("/api/holdings/dividends", hHandler.CreateDividend)
+	r.Delete("/api/holdings/dividends/{id}", hHandler.DeleteDividend)
 
 	stooq := quotes.NewStooqFetcher(stooqAPIKey)
 	refresh := quotes.NewRefreshHandler(hStore, stooq, logger)

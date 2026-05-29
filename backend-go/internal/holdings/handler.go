@@ -440,6 +440,123 @@ func toAccountPosition(p *AccountPosition) accountPositionResponse {
 	return resp
 }
 
+// --- dividend wire types ---
+
+type dividendResponse struct {
+	ID             int    `json:"id"`
+	AccountID      int    `json:"account_id"`
+	SecurityID     int    `json:"security_id"`
+	PayDate        string `json:"pay_date"`
+	GrossAmount    string `json:"gross_amount"`
+	WithholdingTax string `json:"withholding_tax"`
+	NetAmount      string `json:"net_amount"`
+	Currency       string `json:"currency"`
+	CreatedAt      string `json:"created_at"`
+}
+
+type listDividendsResponse struct {
+	Dividends []dividendResponse `json:"dividends"`
+}
+
+// dividendCreateRequest documents the POST /api/holdings/dividends body for
+// OpenAPI generation. Decimal money fields ride as JSON strings to preserve
+// precision; withholding_tax and currency are optional (default 0 / "PLN").
+type dividendCreateRequest struct {
+	AccountID      int    `json:"account_id"`
+	SecurityID     int    `json:"security_id"`
+	PayDate        string `json:"pay_date"`
+	GrossAmount    string `json:"gross_amount"`
+	WithholdingTax string `json:"withholding_tax"`
+	Currency       string `json:"currency"`
+}
+
+func toDividend(d Dividend) dividendResponse {
+	return dividendResponse{
+		ID: d.ID, AccountID: d.AccountID, SecurityID: d.SecurityID,
+		PayDate:        d.PayDate.UTC().Format("2006-01-02"),
+		GrossAmount:    d.GrossAmount.StringFixed(2),
+		WithholdingTax: d.WithholdingTax.StringFixed(2),
+		NetAmount:      d.Net().StringFixed(2),
+		Currency:       d.Currency,
+		CreatedAt:      d.CreatedAt.UTC().Format("2006-01-02T15:04:05.999999"),
+	}
+}
+
+// ListDividends serves GET /api/holdings/dividends?account_id=&security_id=.
+func (h *Handler) ListDividends(w http.ResponseWriter, r *http.Request) {
+	var accountID, securityID *int
+	if v := r.URL.Query().Get("account_id"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			httputil.WriteBodyValidationError(w, "account_id", "must be a positive integer", "")
+			return
+		}
+		accountID = &n
+	}
+	if v := r.URL.Query().Get("security_id"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			httputil.WriteBodyValidationError(w, "security_id", "must be a positive integer", "")
+			return
+		}
+		securityID = &n
+	}
+	rows, err := h.store.ListDividends(r.Context(), accountID, securityID)
+	if err != nil {
+		h.logger.Error("list dividends", "err", err)
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	out := make([]dividendResponse, 0, len(rows))
+	for _, d := range rows {
+		out = append(out, toDividend(d))
+	}
+	httputil.WriteJSON(w, http.StatusOK, listDividendsResponse{Dividends: out})
+}
+
+// CreateDividend serves POST /api/holdings/dividends.
+func (h *Handler) CreateDividend(w http.ResponseWriter, r *http.Request) {
+	raw, err := readBody(r)
+	if err != nil {
+		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", "")
+		return
+	}
+	div, vErr := buildDividendInput(raw)
+	if vErr != nil {
+		httputil.WriteBodyValidationError(w, vErr.Field, vErr.Msg, "")
+		return
+	}
+	created, err := h.store.CreateDividend(r.Context(), div)
+	if err != nil {
+		if pgErrorCode(err) == pgForeignKeyViolation {
+			httputil.WriteDetailError(w, http.StatusNotFound, "Referenced account or security not found")
+			return
+		}
+		h.logger.Error("create dividend", "err", err)
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	httputil.WriteJSON(w, http.StatusCreated, toDividend(created))
+}
+
+// DeleteDividend serves DELETE /api/holdings/dividends/{id}.
+func (h *Handler) DeleteDividend(w http.ResponseWriter, r *http.Request) {
+	id, ok := parseID(w, r)
+	if !ok {
+		return
+	}
+	if err := h.store.DeleteDividend(r.Context(), id); err != nil {
+		if errors.Is(err, ErrDividendNotFound) {
+			httputil.WriteDetailError(w, http.StatusNotFound, "Dividend not found")
+			return
+		}
+		h.logger.Error("delete dividend", "err", err)
+		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // --- shared helpers ---
 
 func parseID(w http.ResponseWriter, r *http.Request) (int, bool) {

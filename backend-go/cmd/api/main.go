@@ -235,6 +235,11 @@ func initDB(ctx context.Context, dsn string, logger *slog.Logger, adminUsername,
 		pool.Close()
 		return nil, 2
 	}
+	if err := holdings.NewStore(pool).EnsureDividendsSchema(ctx); err != nil {
+		logger.Error("ensure holding_dividends schema", "err", err)
+		pool.Close()
+		return nil, 2
+	}
 	return pool, 0
 }
 

@@ -3602,6 +3602,136 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/holdings/dividends": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List dividends (filterable by account_id/security_id) */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Filter to one account. */
+                    account_id?: number;
+                    /** @description Filter to one security. */
+                    security_id?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            dividends?: {
+                                account_id?: number;
+                                created_at?: string;
+                                currency?: string;
+                                gross_amount?: string;
+                                id?: number;
+                                net_amount?: string;
+                                pay_date?: string;
+                                security_id?: number;
+                                withholding_tax?: string;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Record a dividend */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        account_id?: number;
+                        currency?: string;
+                        gross_amount?: string;
+                        pay_date?: string;
+                        security_id?: number;
+                        withholding_tax?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            account_id?: number;
+                            created_at?: string;
+                            currency?: string;
+                            gross_amount?: string;
+                            id?: number;
+                            net_amount?: string;
+                            pay_date?: string;
+                            security_id?: number;
+                            withholding_tax?: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/holdings/dividends/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a dividend */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/holdings/lots": {
         parameters: {
             query?: never;
@@ -4019,6 +4149,8 @@ export interface paths {
                             current_value?: number;
                             /** Format: double */
                             deposits?: number;
+                            /** Format: double */
+                            dividends_received_net?: number;
                             has_snapshot?: boolean;
                             /** Format: double */
                             money_weighted_pct?: number | null;
