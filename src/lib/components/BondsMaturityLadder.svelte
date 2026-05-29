@@ -6,7 +6,7 @@
 		MaturityLadderEvent,
 		NextMaturityWarning,
 		LadderEventKind
-	} from '../../routes/bonds/+page';
+	} from '../../routes/investments/bonds/+page';
 
 	interface Props {
 		events: MaturityLadderEvent[];
