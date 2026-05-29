@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sync"
 
 	"github.com/shopspring/decimal"
 
@@ -123,15 +124,29 @@ type realYieldCtx struct {
 // earned outside an IKE/IKZE wrapper, expressed as a percentage (e.g.
 // 19.0). Sourced from the centralized rules table (issue #545) as a
 // decimal — going through float64 here would inject rounding drift into a
-// financial calculation, so we read the rule's Value directly.
-var belkaRatePct = mustBelkaRatePct()
+// financial calculation, so we read the rule's Value directly. If the lookup
+// ever fails (rules table edited out from under us) we fall back to the
+// statutory 19% and log, mirroring bonds.getBelkaRate — degrading a yield
+// indicator beats crashing the accounts API.
+var (
+	belkaPctOnce     sync.Once
+	belkaPctVal      decimal.Decimal
+	belkaPctFallback = decimal.NewFromInt(19)
+	belkaPctRuleKey  = "capital_gains_tax_2026"
+)
 
-func mustBelkaRatePct() decimal.Decimal {
-	r, ok := rules.Get("capital_gains_tax_2026")
-	if !ok {
-		panic("accounts: rules table missing capital_gains_tax_2026")
-	}
-	return r.Value.Mul(decimal.NewFromInt(100))
+func belkaRatePct() decimal.Decimal {
+	belkaPctOnce.Do(func() {
+		r, ok := rules.Get(belkaPctRuleKey)
+		if !ok {
+			slog.Default().Warn("accounts: belka rule missing, using statutory fallback",
+				"key", belkaPctRuleKey, "fallback", belkaPctFallback.String())
+			belkaPctVal = belkaPctFallback
+			return
+		}
+		belkaPctVal = r.Value.Mul(decimal.NewFromInt(100))
+	})
+	return belkaPctVal
 }
 
 // isShieldedFromBelka reports whether interest in this wrapper is exempt
@@ -157,7 +172,7 @@ func isShieldedFromBelka(wrapper *string) bool {
 func computeRealYieldPct(nominalPct, cpiYoYPct decimal.Decimal, shielded bool) decimal.Decimal {
 	net := nominalPct
 	if !shielded {
-		net = nominalPct.Mul(decimal.NewFromInt(100).Sub(belkaRatePct)).Div(decimal.NewFromInt(100))
+		net = nominalPct.Mul(decimal.NewFromInt(100).Sub(belkaRatePct())).Div(decimal.NewFromInt(100))
 	}
 	return net.Sub(cpiYoYPct)
 }

@@ -31,9 +31,9 @@ const (
 )
 
 var (
-	cap30x2026    = rules.MustFloat64("zus_cap_30x_2026")
-	pitRate       = rules.MustFloat64("pit_rate_first_2026")
-	annualFreeThr = rules.MustFloat64("pit_free_amount_2026")
+	cap30x2026    = rules.Float64Or("zus_cap_30x_2026", 282600)
+	pitRate       = rules.Float64Or("pit_rate_first_2026", 0.12)
+	annualFreeThr = rules.Float64Or("pit_free_amount_2026", 30000)
 )
 
 // lifeExpectancyMonths — GUS 2025 dalsze trwanie życia at retirement age.

@@ -7,12 +7,12 @@ import "github.com/Automaat/finance-buddy/backend-go/internal/rules"
 // centralized rules table (#545) — the wrapping vars exist so callers
 // keep using local Go identifiers.
 var (
-	pitFreeAmount       = rules.MustFloat64("pit_free_amount_2026")
-	pitThresholdAnnual  = rules.MustFloat64("pit_threshold_first_2026")
-	pitLowRate          = rules.MustFloat64("pit_rate_first_2026")
-	pitHighRate         = rules.MustFloat64("pit_rate_second_2026")
-	solidarityThreshold = rules.MustFloat64("pit_solidarity_threshold_2026")
-	solidarityRate      = rules.MustFloat64("pit_solidarity_rate_2026")
+	pitFreeAmount       = rules.Float64Or("pit_free_amount_2026", 30000)
+	pitThresholdAnnual  = rules.Float64Or("pit_threshold_first_2026", 120000)
+	pitLowRate          = rules.Float64Or("pit_rate_first_2026", 0.12)
+	pitHighRate         = rules.Float64Or("pit_rate_second_2026", 0.32)
+	solidarityThreshold = rules.Float64Or("pit_solidarity_threshold_2026", 1000000)
+	solidarityRate      = rules.Float64Or("pit_solidarity_rate_2026", 0.04)
 )
 
 // MarginalPITRate returns the applicable marginal rate for the next zloty
