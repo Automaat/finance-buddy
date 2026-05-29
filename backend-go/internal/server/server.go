@@ -6,10 +6,12 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -111,7 +113,13 @@ func New(cfg Config, logger *slog.Logger, deps Deps) http.Handler {
 		AllowCredentials: true,
 	}))
 
-	r.Get("/health", healthHandler(logger))
+	// Pass a nil pinger (not a typed-nil *pgxpool.Pool) when there's no pool,
+	// so the health probe's nil check works and avoids a panic on Ping.
+	var healthPool pinger
+	if deps.Pool != nil {
+		healthPool = deps.Pool
+	}
+	r.Get("/health", healthHandler(logger, healthPool))
 
 	if deps.Pool != nil {
 		registerRoutes(r, cfg, deps.Pool, logger)
@@ -392,9 +400,30 @@ func registerPortfolioRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logg
 	})
 }
 
-func healthHandler(logger *slog.Logger) http.HandlerFunc {
-	return func(w http.ResponseWriter, _ *http.Request) {
+// pinger is the subset of *pgxpool.Pool the health probe needs. Narrowed to an
+// interface so /health-only tests can pass a nil pool (skips the DB probe).
+type pinger interface {
+	Ping(ctx context.Context) error
+}
+
+func healthHandler(logger *slog.Logger, pool pinger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+		// A nil pool means the router was built without DB deps (health-only
+		// tests); report ok so those keep passing. With a real pool, a failed
+		// ping means Traefik/Docker should treat the backend as unready.
+		if pool != nil {
+			ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+			defer cancel()
+			if err := pool.Ping(ctx); err != nil {
+				logger.Error("health ping failed", "err", err)
+				w.WriteHeader(http.StatusServiceUnavailable)
+				if encErr := json.NewEncoder(w).Encode(map[string]string{"status": "unavailable"}); encErr != nil {
+					logger.Error("encode health response", "err", encErr)
+				}
+				return
+			}
+		}
 		if err := json.NewEncoder(w).Encode(map[string]string{"status": "ok"}); err != nil {
 			logger.Error("encode health response", "err", err)
 		}
