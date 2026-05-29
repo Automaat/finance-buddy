@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/cpi"
+	"github.com/Automaat/finance-buddy/backend-go/internal/metrics"
 )
 
 // monthlyBackfillStart is how far back the scheduler asks Eurostat for
@@ -96,13 +97,16 @@ func (s *MonthlyCPIScheduler) refresh(ctx context.Context) {
 	rows, err := s.fetcher.FetchSince(ctx, monthlyBackfillStart)
 	if err != nil {
 		s.logger.Warn("scheduler: Eurostat fetch failed", "err", err)
+		metrics.SchedulerRun("cpi_monthly", "error")
 		return
 	}
 	written, err := s.store.UpsertMonthly(ctx, cpi.EurostatMonthlySource, rows)
 	if err != nil {
 		s.logger.Warn("scheduler: monthly CPI upsert failed", "err", err)
+		metrics.SchedulerRun("cpi_monthly", "error")
 		return
 	}
 	s.logger.Info("scheduler: monthly CPI refresh complete",
 		"rows_written", written, "rows_seen", len(rows))
+	metrics.SchedulerRun("cpi_monthly", "success")
 }

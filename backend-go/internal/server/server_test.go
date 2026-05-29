@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -73,6 +75,39 @@ func TestHealthHandlerDBProbe(t *testing.T) {
 				t.Fatalf("status field = %q, want %q", got, tc.wantField)
 			}
 		})
+	}
+}
+
+func TestMetricsEndpointServesPrometheus(t *testing.T) {
+	srv := httptest.NewServer(New(Config{CORSOrigins: "*"}, slog.New(slog.DiscardHandler), Deps{}))
+	defer srv.Close()
+
+	// Hit /health first so the request observer records at least one request.
+	healthReq, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL+"/health", http.NoBody)
+	healthResp, err := http.DefaultClient.Do(healthReq)
+	if err != nil {
+		t.Fatalf("get /health: %v", err)
+	}
+	healthResp.Body.Close()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL+"/metrics", http.NoBody)
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("get /metrics: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+	if !strings.Contains(string(body), "fb_http_requests_total") {
+		t.Fatalf("expected fb_http_requests_total in /metrics output")
 	}
 }
 

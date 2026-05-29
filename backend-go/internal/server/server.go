@@ -38,6 +38,7 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/goals"
 	"github.com/Automaat/finance-buddy/backend-go/internal/holdings"
 	"github.com/Automaat/finance-buddy/backend-go/internal/investment"
+	"github.com/Automaat/finance-buddy/backend-go/internal/metrics"
 	"github.com/Automaat/finance-buddy/backend-go/internal/pit38"
 	"github.com/Automaat/finance-buddy/backend-go/internal/quotes"
 	"github.com/Automaat/finance-buddy/backend-go/internal/recurring"
@@ -50,6 +51,36 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/transactions"
 	"github.com/Automaat/finance-buddy/backend-go/internal/zus"
 )
+
+// requestObserver logs every request (id, method, path, status, latency) via
+// slog and records it into the Prometheus collectors. Sits just inside
+// RequestID so the correlation id is available, and outside Recoverer so a
+// panic still surfaces as a logged 500.
+func requestObserver(logger *slog.Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
+			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+			next.ServeHTTP(ww, r)
+			dur := time.Since(start)
+			route := chi.RouteContext(r.Context()).RoutePattern()
+			status := ww.Status()
+			if status == 0 {
+				status = http.StatusOK
+			}
+			metrics.ObserveRequest(r.Method, route, status, dur)
+			logger.Info("request",
+				"request_id", middleware.GetReqID(r.Context()),
+				"method", r.Method,
+				"path", r.URL.Path,
+				"route", route,
+				"status", status,
+				"bytes", ww.BytesWritten(),
+				"latency_ms", float64(dur.Microseconds())/1000.0,
+			)
+		})
+	}
+}
 
 // requestTimeout bounds every request via middleware.Timeout. Set above the
 // longest legitimate handler (the 2-min quotes-refresh self-bound) so it acts
@@ -110,6 +141,7 @@ func New(cfg Config, logger *slog.Logger, deps Deps) http.Handler {
 	}
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
+	r.Use(requestObserver(logger))
 	r.Use(middleware.Recoverer)
 	// Per-request deadline. middleware.Timeout cancels r.Context() after
 	// requestTimeout, which context-aware work (pgx queries, outbound scrapes)
@@ -133,6 +165,7 @@ func New(cfg Config, logger *slog.Logger, deps Deps) http.Handler {
 		healthPool = deps.Pool
 	}
 	r.Get("/health", healthHandler(logger, healthPool))
+	r.Handle("/metrics", metrics.Handler())
 
 	if deps.Pool != nil {
 		registerRoutes(r, cfg, deps.Pool, logger)
