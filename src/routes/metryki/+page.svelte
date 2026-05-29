@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { EChartsOption } from 'echarts';
+	import { onMount } from 'svelte';
 	import MetricCard from '$lib/components/MetricCard.svelte';
 	import DateRangePicker from '$lib/components/DateRangePicker.svelte';
 	import { TrendingUp, CheckCircle2, Lightbulb } from 'lucide-svelte';
@@ -45,40 +45,78 @@
 	let bondChart: HTMLDivElement;
 	let yearlyRoiChart: HTMLDivElement;
 
-	$effect(() => {
-		// Re-mount every chart whenever the underlying series change (e.g.
-		// after the date-range picker triggers a load() refresh).
-		const handles: ChartHandle[] = [];
+	// Chart instances are created once (the divs are always rendered) and kept;
+	// a date-range refresh only re-applies options via setOption, so ECharts
+	// reflows the existing canvas instead of disposing + recreating the fleet.
+	let handles: Record<string, ChartHandle> = {};
+	let chartsReady = $state(false);
+	let inflationHandle: ChartHandle | undefined;
 
-		const mount = (el: HTMLDivElement, option: EChartsOption) => {
-			const handle = createChart(el);
-			handle.chart.setOption(option);
-			handles.push(handle);
+	onMount(() => {
+		handles = {
+			allocation: createChart(allocationChart),
+			wrapper: createChart(wrapperChart),
+			investmentTrend: createChart(investmentTrendChart),
+			ike: createChart(ikeChart),
+			ikze: createChart(ikzeChart),
+			ppk: createChart(ppkChart),
+			stock: createChart(stockChart),
+			bond: createChart(bondChart),
+			yearlyRoi: createChart(yearlyRoiChart)
 		};
+		chartsReady = true;
+		return () => {
+			for (const handle of Object.values(handles)) handle.dispose();
+			handles = {};
+			chartsReady = false;
+			// The inflation chart has its own effect-driven lifecycle, but its
+			// ref doesn't reliably flip to undefined on whole-component teardown,
+			// so dispose it here too to avoid leaking the instance + observer.
+			inflationHandle?.dispose();
+			inflationHandle = undefined;
+		};
+	});
 
-		mount(allocationChart, buildAllocationChartOption(allocationAnalysis.by_category));
-		mount(wrapperChart, buildWrapperChartOption(allocationAnalysis.by_wrapper));
-		mount(investmentTrendChart, buildInvestmentTrendChartOption(investmentTimeSeries));
-		mount(ikeChart, buildWrapperTrendChartOption('IKE w czasie', wrapperTimeSeries.ike));
-		mount(ikzeChart, buildWrapperTrendChartOption('IKZE w czasie', wrapperTimeSeries.ikze));
-		mount(ppkChart, buildWrapperTrendChartOption('PPK w czasie', wrapperTimeSeries.ppk));
-		mount(stockChart, buildWrapperTrendChartOption('Akcje w czasie', categoryTimeSeries.stock));
-		mount(bondChart, buildWrapperTrendChartOption('Obligacje w czasie', categoryTimeSeries.bond));
-		mount(
-			yearlyRoiChart,
+	// Re-apply options whenever the underlying series change (reflow, no remount).
+	$effect(() => {
+		if (!chartsReady) return;
+		handles.allocation.chart.setOption(buildAllocationChartOption(allocationAnalysis.by_category));
+		handles.wrapper.chart.setOption(buildWrapperChartOption(allocationAnalysis.by_wrapper));
+		handles.investmentTrend.chart.setOption(buildInvestmentTrendChartOption(investmentTimeSeries));
+		handles.ike.chart.setOption(
+			buildWrapperTrendChartOption('IKE w czasie', wrapperTimeSeries.ike)
+		);
+		handles.ikze.chart.setOption(
+			buildWrapperTrendChartOption('IKZE w czasie', wrapperTimeSeries.ikze)
+		);
+		handles.ppk.chart.setOption(
+			buildWrapperTrendChartOption('PPK w czasie', wrapperTimeSeries.ppk)
+		);
+		handles.stock.chart.setOption(
+			buildWrapperTrendChartOption('Akcje w czasie', categoryTimeSeries.stock)
+		);
+		handles.bond.chart.setOption(
+			buildWrapperTrendChartOption('Obligacje w czasie', categoryTimeSeries.bond)
+		);
+		handles.yearlyRoi.chart.setOption(
 			buildYearlyRoiChartOption(
 				categoryTimeSeries.stock,
 				categoryTimeSeries.bond,
 				wrapperTimeSeries.ppk
 			)
 		);
-		if (hasCpiSeries && inflationChart) {
-			mount(inflationChart, buildCumulativeInflationChartOption(cpiSeries));
-		}
+	});
 
-		return () => {
-			for (const handle of handles) handle.dispose();
-		};
+	// The inflation chart's container is conditional, so it has its own
+	// create-once / dispose-when-gone lifecycle keyed on the ref + data.
+	$effect(() => {
+		if (!hasCpiSeries || !inflationChart) {
+			inflationHandle?.dispose();
+			inflationHandle = undefined;
+			return;
+		}
+		if (!inflationHandle) inflationHandle = createChart(inflationChart);
+		inflationHandle.chart.setOption(buildCumulativeInflationChartOption(cpiSeries));
 	});
 </script>
 

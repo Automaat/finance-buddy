@@ -35,8 +35,14 @@
 	let error = $state('');
 	let container: HTMLDivElement | undefined = $state();
 	let handle: ChartHandle | null = null;
+	// Cancels an in-flight request when a new one starts or the component is
+	// destroyed, so a late response can't write state onto an unmounted widget.
+	let inFlight: AbortController | null = null;
 
 	async function load() {
+		inFlight?.abort();
+		const controller = new AbortController();
+		inFlight = controller;
 		loading = true;
 		error = '';
 		try {
@@ -48,17 +54,21 @@
 			}
 			const qs = params.toString();
 			const url = `${apiUrl}/api/exposure/currency${qs ? `?${qs}` : ''}`;
-			const res = await fetch(url);
+			const res = await fetch(url, { signal: controller.signal });
 			if (!res.ok) throw new Error(`Pobranie ekspozycji nieudane: ${res.statusText}`);
 			report = await res.json();
 		} catch (err) {
+			if (controller.signal.aborted) return;
 			if (err instanceof Error) error = err.message;
 		} finally {
-			loading = false;
+			if (!controller.signal.aborted) loading = false;
 		}
 	}
 
-	onMount(load);
+	onMount(() => {
+		void load();
+		return () => inFlight?.abort();
+	});
 
 	const palette = [
 		'#3b82f6',

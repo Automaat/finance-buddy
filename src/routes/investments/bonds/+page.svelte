@@ -197,21 +197,32 @@
 
 	$effect(() => {
 		const id = selectedBondId;
-		if (id === null) return;
+		if (id === null) {
+			// No bond selected (e.g. the last one was deleted): clear the loading
+			// flag so the prior request's aborted finally — which skips it —
+			// can't leave the YTM panel stuck on "loading".
+			ytmLoading = false;
+			return;
+		}
 		ytmLoading = true;
 		ytmError = '';
-		fetch(`${apiUrl}/api/bonds/${id}/ytm`)
+		// Abort the in-flight YTM fetch when the selected bond changes or the
+		// component unmounts, so a stale projection can't land on the chart.
+		const controller = new AbortController();
+		fetch(`${apiUrl}/api/bonds/${id}/ytm`, { signal: controller.signal })
 			.then(async (r) => {
 				if (!r.ok) throw new Error('Nie udało się załadować projekcji YTM');
 				const body = await r.json();
 				ytm = body.points as YTMPoint[];
 			})
 			.catch((err) => {
+				if (controller.signal.aborted) return;
 				ytmError = err instanceof Error ? err.message : 'Nieznany błąd';
 			})
 			.finally(() => {
-				ytmLoading = false;
+				if (!controller.signal.aborted) ytmLoading = false;
 			});
+		return () => controller.abort();
 	});
 
 	onMount(() => {
