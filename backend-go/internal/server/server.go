@@ -212,7 +212,8 @@ func registerDashboardRoutes(r chi.Router, pool *pgxpool.Pool, logger *slog.Logg
 	dashHandler := dashboard.NewHandler(dashboard.NewStore(pool), logger)
 	r.Get("/api/dashboard", dashHandler.Get)
 
-	expHandler := exposure.NewHandler(exposure.NewStore(pool), logger)
+	expValuator := holdings.NewValuator(holdings.NewStore(pool), fx.NewService(pool, logger))
+	expHandler := exposure.NewHandler(exposure.NewStore(pool), expValuator, logger)
 	r.Get("/api/exposure/currency", expHandler.Currency)
 }
 

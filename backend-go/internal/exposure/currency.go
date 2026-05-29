@@ -57,16 +57,31 @@ type Store struct {
 // NewStore wraps a pool.
 func NewStore(pool *pgxpool.Pool) *Store { return &Store{pool: pool} }
 
-// row mirrors one (currency, sum(value)) pair.
+// row mirrors one (currency, sum(value)) pair. Used internally by the
+// handler after the per-account snapshot values have been allocated across
+// security currencies via the holdings breakdown.
 type row struct {
 	currency string
 	valuePLN decimal.Decimal
 }
 
-// LatestByCurrency returns total PLN value per account currency from the
-// most recent snapshot. Active accounts only — soft-deleted ones are
-// excluded so the chart matches what the user can actually invest from.
-func (s *Store) LatestByCurrency(ctx context.Context) ([]row, string, error) {
+// accountValue is one row's slice of the latest snapshot: which account,
+// what category, what nominal currency, what PLN value. The handler walks
+// these and decides per row whether to bucket as accounts.currency (cash
+// accounts, real estate, …) or to fan out across the security currencies
+// the account actually holds (stock/etf/bond/fund accounts).
+type accountValue struct {
+	accountID int
+	category  string
+	currency  string
+	valuePLN  decimal.Decimal
+}
+
+// LatestByAccount returns one row per (active account, latest snapshot
+// value). Used by the handler to decide per-row whether the value should
+// bucket as accounts.currency or fan out by underlying holdings currency.
+// Returns ("") snapshotDate when there are no snapshots yet.
+func (s *Store) LatestByAccount(ctx context.Context) ([]accountValue, string, error) {
 	var (
 		latestID   int
 		latestDate string
@@ -75,34 +90,97 @@ func (s *Store) LatestByCurrency(ctx context.Context) ([]row, string, error) {
 		SELECT id, to_char(date, 'YYYY-MM-DD')
 		FROM snapshots ORDER BY date DESC, id DESC LIMIT 1`).Scan(&latestID, &latestDate)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return []row{}, "", nil
+		return []accountValue{}, "", nil
 	}
 	if err != nil {
 		return nil, "", fmt.Errorf("latest snapshot: %w", err)
 	}
 	rows, err := s.pool.Query(ctx, `
-		SELECT UPPER(a.currency) AS currency, SUM(sv.value)
+		SELECT sv.account_id, a.category, UPPER(a.currency), sv.value
 		FROM snapshot_values sv
 		JOIN accounts a ON a.id = sv.account_id
 		WHERE sv.snapshot_id = $1 AND a.is_active = true
-		GROUP BY UPPER(a.currency)
 	`, latestID)
 	if err != nil {
-		return nil, "", fmt.Errorf("query currency totals: %w", err)
+		return nil, "", fmt.Errorf("query per-account values: %w", err)
 	}
 	defer rows.Close()
-	out := []row{}
+	out := []accountValue{}
 	for rows.Next() {
-		var r row
-		if err := rows.Scan(&r.currency, &r.valuePLN); err != nil {
-			return nil, "", fmt.Errorf("scan currency total: %w", err)
+		var v accountValue
+		if err := rows.Scan(&v.accountID, &v.category, &v.currency, &v.valuePLN); err != nil {
+			return nil, "", fmt.Errorf("scan per-account value: %w", err)
 		}
-		out = append(out, r)
+		out = append(out, v)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, "", fmt.Errorf("iterate currency totals: %w", err)
+		return nil, "", fmt.Errorf("iterate per-account values: %w", err)
 	}
 	return out, latestDate, nil
+}
+
+// investmentCategories names the account categories whose snapshot value
+// should fan out across underlying holdings currencies. Bank/cash/real-estate
+// accounts keep the accounts.currency attribution.
+var investmentCategories = map[string]bool{
+	"stock": true,
+	"etf":   true,
+	"bond":  true,
+	"fund":  true,
+}
+
+// HoldingsBreakdown returns per-account per-currency live MV PLN. Mirrors
+// holdings.Valuator.AccountCurrencyBreakdownPLN; declared here as an
+// interface so tests can stub the holdings dep without spinning up a real
+// Postgres-backed Valuator.
+type HoldingsBreakdown interface {
+	AccountCurrencyBreakdownPLN(ctx context.Context) (map[int]map[string]decimal.Decimal, error)
+}
+
+// bucketByCurrency walks the latest snapshot values and bucketizes them
+// into per-currency PLN totals. For accounts in investmentCategories that
+// have a live holdings breakdown, the snapshot value is split across
+// currencies in proportion to the live MV ratio — so an IKE XTB account
+// whose snapshot value is 53 495 PLN and whose holdings are 100% USD
+// attributes the full 53 495 PLN to USD instead of PLN. Falls back to
+// accounts.currency when no breakdown exists (empty holdings, bank/cash
+// accounts, etc.).
+func bucketByCurrency(values []accountValue, breakdown map[int]map[string]decimal.Decimal) []row {
+	totals := map[string]decimal.Decimal{}
+	for i := range values {
+		v := &values[i]
+		buckets, ok := breakdown[v.accountID]
+		if ok && investmentCategories[v.category] && len(buckets) > 0 {
+			addProportional(totals, v.valuePLN, buckets)
+			continue
+		}
+		totals[v.currency] = totals[v.currency].Add(v.valuePLN)
+	}
+	out := make([]row, 0, len(totals))
+	for ccy, val := range totals {
+		out = append(out, row{currency: ccy, valuePLN: val})
+	}
+	return out
+}
+
+// addProportional splits `total` across the keys of `weights` in proportion
+// to the weight values and adds each share into `dst`. When weights sum to
+// zero (all positions valued at zero), `total` falls through to a single
+// "PLN" bucket — same fallback as a cash account, since a zero-value
+// holdings ratio carries no currency signal.
+func addProportional(dst map[string]decimal.Decimal, total decimal.Decimal, weights map[string]decimal.Decimal) {
+	sum := decimal.Zero
+	for _, w := range weights {
+		sum = sum.Add(w)
+	}
+	if sum.IsZero() {
+		dst["PLN"] = dst["PLN"].Add(total)
+		return
+	}
+	for ccy, w := range weights {
+		share := total.Mul(w).Div(sum)
+		dst[ccy] = dst[ccy].Add(share)
+	}
 }
 
 // BuildReport collapses raw per-currency values into percentages and the
@@ -164,16 +242,19 @@ func abs(v float64) float64 {
 
 // Handler is the HTTP boundary for /api/exposure.
 type Handler struct {
-	store  *Store
-	logger *slog.Logger
+	store    *Store
+	holdings HoldingsBreakdown
+	logger   *slog.Logger
 }
 
-// NewHandler wires the store + logger.
-func NewHandler(store *Store, logger *slog.Logger) *Handler {
+// NewHandler wires the store + holdings breakdown + logger. holdings may
+// be nil in tests; the report then attributes every investment account by
+// accounts.currency (the pre-#662 behavior).
+func NewHandler(store *Store, holdings HoldingsBreakdown, logger *slog.Logger) *Handler {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &Handler{store: store, logger: logger}
+	return &Handler{store: store, holdings: holdings, logger: logger}
 }
 
 // Currency serves GET /api/exposure/currency[?target_pln_pct=X&tolerance=Y].
@@ -185,12 +266,23 @@ func (h *Handler) Currency(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteQueryValidationError(w, vErr.field, vErr.msg)
 		return
 	}
-	rows, snapshotDate, err := h.store.LatestByCurrency(r.Context())
+	values, snapshotDate, err := h.store.LatestByAccount(r.Context())
 	if err != nil {
 		h.logger.Error("exposure currency", "err", err)
 		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
+	breakdown := map[int]map[string]decimal.Decimal{}
+	if h.holdings != nil {
+		b, err := h.holdings.AccountCurrencyBreakdownPLN(r.Context())
+		if err != nil {
+			h.logger.Warn("exposure: holdings breakdown failed, falling back to account.currency",
+				"err", err)
+		} else {
+			breakdown = b
+		}
+	}
+	rows := bucketByCurrency(values, breakdown)
 	rep := BuildReport(rows, snapshotDate, target, tolerance)
 	httputil.WriteJSON(w, http.StatusOK, rep)
 }
