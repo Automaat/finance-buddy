@@ -116,13 +116,23 @@ func run() int {
 		sched := scheduler.NewCPIScheduler(cpiStore, cpi.NewGUSFetcher(), logger)
 		go sched.Run(ctx)
 
-		// Monthly HICP YoY refresh — feeds the period-aware bond rate engine.
+		// Monthly CPI YoY refresh — feeds the period-aware bond rate engine.
 		// EnsureMonthlySchema is idempotent and cheap; safe to run every boot.
 		if err := cpiStore.EnsureMonthlySchema(ctx); err != nil {
 			logger.Error("ensure cpi_monthly_index schema", "err", err)
 			return 2
 		}
-		monthlySched := scheduler.NewMonthlyCPIScheduler(cpiStore, cpi.NewEurostatHICPFetcher(), logger)
+		// FRED (OECD-sourced GUS CPI) is the canonical input; fall back to
+		// Eurostat HICP when no FRED key is configured. Both expose the
+		// MonthlyCPIFetcher interface, so the scheduler doesn't care which.
+		var monthlyFetcher scheduler.MonthlyCPIFetcher = cpi.NewEurostatHICPFetcher()
+		if fred := cpi.NewFREDFetcher(os.Getenv("FB_FRED_API_KEY")); fred != nil {
+			monthlyFetcher = fred
+			logger.Info("cpi: monthly source = FRED (GUS-sourced)")
+		} else {
+			logger.Info("cpi: monthly source = Eurostat HICP (FB_FRED_API_KEY unset)")
+		}
+		monthlySched := scheduler.NewMonthlyCPIScheduler(cpiStore, monthlyFetcher, logger)
 		go monthlySched.Run(ctx)
 
 		// Daily recurring-transaction generator (issue #384).
