@@ -95,11 +95,16 @@ func (s *Store) LatestByAccount(ctx context.Context) ([]accountValue, string, er
 	if err != nil {
 		return nil, "", fmt.Errorf("latest snapshot: %w", err)
 	}
+	// Skip excluded_from_fire accounts (primary residence, daily-spend ROR,
+	// …) — those are net-worth assets but not portfolio exposure. Matches
+	// the dashboard's fire_net_worth bucket.
 	rows, err := s.pool.Query(ctx, `
 		SELECT sv.account_id, a.category, UPPER(a.currency), sv.value
 		FROM snapshot_values sv
 		JOIN accounts a ON a.id = sv.account_id
-		WHERE sv.snapshot_id = $1 AND a.is_active = true
+		WHERE sv.snapshot_id = $1
+		  AND a.is_active = true
+		  AND a.excluded_from_fire = false
 	`, latestID)
 	if err != nil {
 		return nil, "", fmt.Errorf("query per-account values: %w", err)
