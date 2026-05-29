@@ -3,6 +3,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { ownerName, type OwnerOption } from '$lib/types/owners';
+	import { sumsToHundred } from '$lib/utils/allocation';
 	import type { PageData } from './$types';
 
 	interface Target {
@@ -51,7 +52,7 @@
 	});
 
 	const draftSum = $derived(draft.reduce((acc, row) => acc + (Number(row.target_pct) || 0), 0));
-	const sumOk = $derived(Math.abs(draftSum - 100) < 0.01 || draft.length === 0);
+	const sumOk = $derived(draft.length === 0 || sumsToHundred(draftSum));
 
 	function addRow(): void {
 		const used = new Set(draft.map((d) => d.category));

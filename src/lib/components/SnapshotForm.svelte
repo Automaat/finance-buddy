@@ -5,6 +5,7 @@
 	import { Wallet, Umbrella, TrendingUp, Home, CreditCard } from 'lucide-svelte';
 	import type { Account, Asset, SnapshotResponse } from '$lib/types';
 	import type { OwnerOption } from '$lib/types/owners';
+	import { categoryLabel } from '$lib/utils/categories';
 	import NewAccountModal from './snapshot/NewAccountModal.svelte';
 	import NewAssetModal from './snapshot/NewAssetModal.svelte';
 	import ValueRow from './snapshot/ValueRow.svelte';
@@ -381,28 +382,12 @@
 		}
 	}
 
-	const categoryLabels: Record<string, string> = {
-		bank: 'Konto bankowe',
-		saving_account: 'Konto oszczędnościowe',
-		stock: 'Akcje',
-		bond: 'Obligacje',
-		fund: 'Fundusz',
-		etf: 'ETF',
-		gold: 'Złoto',
-		ppk: 'PPK',
-		real_estate: 'Nieruchomości',
-		vehicle: 'Pojazd',
-		other: 'Inne',
-		mortgage: 'Hipoteka',
-		installment: 'Raty'
-	};
-
 	function accountMeta(account: Account): string {
-		return `(${categoryLabels[account.category] || account.category})`;
+		return `(${categoryLabel(account.category)})`;
 	}
 
 	function liabilityMeta(account: Account): string {
-		return `(${categoryLabels[account.category]})`;
+		return `(${categoryLabel(account.category)})`;
 	}
 
 	function closeNewAccountModal() {
@@ -472,7 +457,7 @@
 								>
 									{account.name}
 									<span class="text-surface-600-400 font-normal ml-1"
-										>({categoryLabels[account.category] || account.category})</span
+										>({categoryLabel(account.category)})</span
 									>
 								</button>
 							{/each}
@@ -583,7 +568,7 @@
 								>
 									{account.name}
 									<span class="text-surface-600-400 font-normal ml-1"
-										>({categoryLabels[account.category] || account.category})</span
+										>({categoryLabel(account.category)})</span
 									>
 								</button>
 							{/each}
@@ -643,7 +628,7 @@
 								>
 									{account.name}
 									<span class="text-surface-600-400 font-normal ml-1"
-										>({categoryLabels[account.category] || account.category})</span
+										>({categoryLabel(account.category)})</span
 									>
 								</button>
 							{/each}
@@ -711,7 +696,7 @@
 									>
 										{account.name}
 										<span class="text-surface-600-400 font-normal ml-1"
-											>({categoryLabels[account.category]})</span
+											>({categoryLabel(account.category)})</span
 										>
 									</button>
 								{/each}
