@@ -19,10 +19,10 @@ export default defineConfig({
 			// target — raise them as coverage improves so regressions can't
 			// slip past CI while the codebase already covers more.
 			thresholds: {
-				statements: 78,
-				branches: 57,
-				functions: 81,
-				lines: 79
+				statements: 79,
+				branches: 60,
+				functions: 82,
+				lines: 81
 			}
 		}
 	}
