@@ -202,6 +202,28 @@
 		return n.toLocaleString('pl-PL', { maximumFractionDigits: 6 });
 	}
 
+	// Aggregate paid + current + profit across positions whose PLN values
+	// are known. Skipping a row without an FX rate (rather than summing its
+	// native USD/EUR figure into a PLN total) keeps the tiles honest at
+	// the cost of under-counting a partially-priced portfolio. The skipped
+	// count is surfaced under the tiles so an under-count isn't silent.
+	const pricedHoldings = $derived(
+		data.holdings.filter((h) => h.cost_basis_pln !== null && h.market_value_pln !== null)
+	);
+	const skippedCount = $derived(data.holdings.length - pricedHoldings.length);
+	const totalPaid = $derived(pricedHoldings.reduce((sum, h) => sum + Number(h.cost_basis_pln), 0));
+	const totalValue = $derived(
+		pricedHoldings.reduce((sum, h) => sum + Number(h.market_value_pln), 0)
+	);
+	const totalProfit = $derived(totalValue - totalPaid);
+	const profitPct = $derived(totalPaid > 0 ? (totalProfit / totalPaid) * 100 : 0);
+
+	function fmtPLN(n: number): string {
+		return (
+			n.toLocaleString('pl-PL', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' zł'
+		);
+	}
+
 	async function refreshQuotes() {
 		refreshing = true;
 		try {
@@ -268,6 +290,41 @@
 			</button>
 		</div>
 	</div>
+
+	{#if data.holdings.length > 0}
+		<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+			<div class="card preset-filled-surface-100-900 p-4 space-y-1">
+				<header class="text-sm text-surface-700-300">Wpłacono</header>
+				<div class="text-2xl font-bold">{fmtPLN(totalPaid)}</div>
+			</div>
+			<div class="card preset-filled-surface-100-900 p-4 space-y-1">
+				<header class="text-sm text-surface-700-300">Wartość bieżąca</header>
+				<div class="text-2xl font-bold text-primary-600-400">{fmtPLN(totalValue)}</div>
+			</div>
+			<div class="card preset-filled-surface-100-900 p-4 space-y-1">
+				<header class="text-sm text-surface-700-300">Zysk</header>
+				<div class="text-2xl font-bold {totalProfit >= 0 ? 'text-success-500' : 'text-error-500'}">
+					{totalProfit >= 0 ? '+' : ''}{fmtPLN(totalProfit)}
+				</div>
+				<div class="text-xs text-surface-600-400">
+					{totalProfit >= 0 ? '+' : ''}{profitPct.toFixed(2)}%
+				</div>
+			</div>
+			<div class="card preset-filled-surface-100-900 p-4 space-y-1">
+				<header class="text-sm text-surface-700-300">Pozycji</header>
+				<div class="text-2xl font-bold">{data.holdings.length}</div>
+				<div class="text-xs text-surface-600-400">
+					{data.holdings.map((h) => h.security.symbol).join(', ')}
+				</div>
+			</div>
+		</div>
+		{#if skippedCount > 0}
+			<p class="text-xs text-warning-500">
+				Sumy pomijają {skippedCount}
+				{skippedCount === 1 ? 'pozycję' : 'pozycje'} bez kursu PLN.
+			</p>
+		{/if}
+	{/if}
 
 	{#if data.holdings.length === 0}
 		<div class="card preset-tonal-surface p-6 text-center text-sm text-surface-700-300">
