@@ -61,3 +61,21 @@ func TestObserveRequestEmptyRouteFallsBack(t *testing.T) {
 		t.Fatalf("empty route should be recorded as unmatched")
 	}
 }
+
+func TestPoolCollectorExposesStats(t *testing.T) {
+	RegisterPoolCollector(func() PoolStats {
+		return PoolStats{Total: 4, Idle: 3, Acquired: 1, Max: 10, AcquireCount: 42, EmptyAcquireCount: 7}
+	})
+	body := scrape(t)
+	for _, want := range []string{
+		"fb_db_pool_max_conns 10",
+		"fb_db_pool_total_conns 4",
+		"fb_db_pool_acquired_conns 1",
+		"fb_db_pool_empty_acquire_total 7",
+		"fb_db_pool_acquire_total 42",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected %q in /metrics output:\n%s", want, body)
+		}
+	}
+}

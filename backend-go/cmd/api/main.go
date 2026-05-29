@@ -25,6 +25,7 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/cpi"
 	"github.com/Automaat/finance-buddy/backend-go/internal/db"
 	"github.com/Automaat/finance-buddy/backend-go/internal/holdings"
+	"github.com/Automaat/finance-buddy/backend-go/internal/metrics"
 	"github.com/Automaat/finance-buddy/backend-go/internal/quotes"
 	"github.com/Automaat/finance-buddy/backend-go/internal/recurring"
 	"github.com/Automaat/finance-buddy/backend-go/internal/scheduler"
@@ -112,6 +113,10 @@ func run() int {
 		defer pool.Close()
 		deps.Pool = pool
 
+		// Expose pgx pool health on /metrics so connection-pool waits
+		// (fb_db_pool_empty_acquire_total) are measurable before tuning MaxConns.
+		registerPoolMetrics(pool)
+
 		// CPI monthly-refresh scheduler — replaces the Python APScheduler job.
 		cpiStore := cpi.NewStore(pool)
 		sched := scheduler.NewCPIScheduler(cpiStore, cpi.NewGUSFetcher(), logger)
@@ -179,6 +184,22 @@ func run() int {
 		}
 	}
 	return 0
+}
+
+// registerPoolMetrics wires the pgx pool's live stats into /metrics so pool
+// saturation and waits (fb_db_pool_empty_acquire_total) are observable.
+func registerPoolMetrics(pool *pgxpool.Pool) {
+	metrics.RegisterPoolCollector(func() metrics.PoolStats {
+		s := pool.Stat()
+		return metrics.PoolStats{
+			Total:             s.TotalConns(),
+			Idle:              s.IdleConns(),
+			Acquired:          s.AcquiredConns(),
+			Max:               s.MaxConns(),
+			AcquireCount:      s.AcquireCount(),
+			EmptyAcquireCount: s.EmptyAcquireCount(),
+		}
+	})
 }
 
 // initDB opens the pool, applies the baseline schema, runs additive DDL

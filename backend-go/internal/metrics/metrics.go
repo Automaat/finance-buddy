@@ -51,6 +51,59 @@ func Handler() http.Handler {
 	return promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
 }
 
+// PoolStats is the snapshot of pgx pool health the collector exposes. Kept as
+// a plain struct so this package doesn't import pgx — the caller adapts
+// pool.Stat() into it.
+type PoolStats struct {
+	Total             int32
+	Idle              int32
+	Acquired          int32
+	Max               int32
+	AcquireCount      int64
+	EmptyAcquireCount int64
+}
+
+// RegisterPoolCollector wires a pgx pool's live stats into /metrics. snapshot
+// is called on each scrape (pool.Stat() is cheap). EmptyAcquire is the "pool
+// waits" signal: a growing value is the evidence needed before raising
+// MaxConns. Call once at startup when a pool exists.
+func RegisterPoolCollector(snapshot func() PoolStats) {
+	registry.MustRegister(&poolCollector{snapshot: snapshot})
+}
+
+type poolCollector struct {
+	snapshot func() PoolStats
+}
+
+var (
+	poolTotalDesc = prometheus.NewDesc("fb_db_pool_total_conns", "Open connections in the pgx pool.", nil, nil)
+	poolIdleDesc  = prometheus.NewDesc("fb_db_pool_idle_conns", "Idle connections in the pgx pool.", nil, nil)
+	poolAcqDesc   = prometheus.NewDesc("fb_db_pool_acquired_conns", "Currently in-use connections.", nil, nil)
+	poolMaxDesc   = prometheus.NewDesc("fb_db_pool_max_conns", "Configured max connections.", nil, nil)
+	poolAcqTotal  = prometheus.NewDesc("fb_db_pool_acquire_total", "Cumulative successful acquires.", nil, nil)
+	poolEmptyDesc = prometheus.NewDesc("fb_db_pool_empty_acquire_total",
+		"Cumulative acquires that had to wait for a connection (pool was empty).", nil, nil)
+)
+
+func (c *poolCollector) Describe(ch chan<- *prometheus.Desc) {
+	ch <- poolTotalDesc
+	ch <- poolIdleDesc
+	ch <- poolAcqDesc
+	ch <- poolMaxDesc
+	ch <- poolAcqTotal
+	ch <- poolEmptyDesc
+}
+
+func (c *poolCollector) Collect(ch chan<- prometheus.Metric) {
+	s := c.snapshot()
+	ch <- prometheus.MustNewConstMetric(poolTotalDesc, prometheus.GaugeValue, float64(s.Total))
+	ch <- prometheus.MustNewConstMetric(poolIdleDesc, prometheus.GaugeValue, float64(s.Idle))
+	ch <- prometheus.MustNewConstMetric(poolAcqDesc, prometheus.GaugeValue, float64(s.Acquired))
+	ch <- prometheus.MustNewConstMetric(poolMaxDesc, prometheus.GaugeValue, float64(s.Max))
+	ch <- prometheus.MustNewConstMetric(poolAcqTotal, prometheus.CounterValue, float64(s.AcquireCount))
+	ch <- prometheus.MustNewConstMetric(poolEmptyDesc, prometheus.CounterValue, float64(s.EmptyAcquireCount))
+}
+
 // ObserveRequest records one served request. route is the chi route pattern
 // (not the raw path) so cardinality stays bounded.
 func ObserveRequest(method, route string, status int, dur time.Duration) {
