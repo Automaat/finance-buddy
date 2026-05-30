@@ -285,6 +285,24 @@ func (s *Store) CurrentSalaryFor(ctx context.Context, ownerUserID *int, asOfDate
 	return v, nil
 }
 
+// CurrentSalaryRecordFor returns the latest active gross_amount and its
+// contract_type on/before asOfDate for one owner_user_id. PPK generation uses
+// it to gate on UOP (employment) contracts.
+func (s *Store) CurrentSalaryRecordFor(ctx context.Context, ownerUserID *int, asOfDate time.Time) (decimal.Decimal, string, error) {
+	row := s.pool.QueryRow(ctx, `
+		SELECT gross_amount, contract_type FROM salary_records
+		WHERE owner_user_id IS NOT DISTINCT FROM $1 AND is_active = true AND date <= $2
+		ORDER BY date DESC LIMIT 1`,
+		ownerUserID, asOfDate,
+	)
+	var v decimal.Decimal
+	var contractType string
+	if err := row.Scan(&v, &contractType); err != nil {
+		return decimal.Zero, "", dbutil.MapErr(err, ErrNoSalary, "current salary")
+	}
+	return v, contractType, nil
+}
+
 // UserPPKRates returns (employee_rate, employer_rate) percentages from the
 // users table or ErrUserNotFound. A user with NULL PPK rates yields zero
 // rates (treated as "configured but not contributing").

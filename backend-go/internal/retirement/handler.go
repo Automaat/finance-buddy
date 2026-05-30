@@ -303,68 +303,42 @@ func (h *Handler) GeneratePPKContributions(w http.ResponseWriter, r *http.Reques
 		httputil.WritePydanticError(w, vErr)
 		return
 	}
-	firstDay := time.Date(req.Year, time.Month(req.Month), 1, 0, 0, 0, 0, time.UTC)
-	gross, err := h.store.CurrentSalaryFor(r.Context(), req.OwnerUserID, firstDay)
+	outcome, err := GeneratePPK(r.Context(), h.store, req.OwnerUserID, req.Month, req.Year,
+		GenerateOptions{IncludeWelcome: req.IncludeWelcome, IncludeAnnual: req.IncludeAnnual})
 	if err != nil {
-		if errors.Is(err, ErrNoSalary) {
-			httputil.WriteDetailError(w, http.StatusBadRequest,
-				fmt.Sprintf("No salary record found for user %s in %d/%d",
-					ownerLabel(req.OwnerUserID), req.Month, req.Year))
-			return
-		}
-		h.logger.Error("ppk salary", "err", err)
-		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
+		h.writeGenerateError(w, req, err)
 		return
 	}
-	employeeRate, employerRate, err := h.store.UserPPKRates(r.Context(), req.OwnerUserID)
-	if err != nil {
-		if errors.Is(err, ErrUserNotFound) {
-			httputil.WriteDetailError(w, http.StatusNotFound,
-				fmt.Sprintf("User %s not found", ownerLabel(req.OwnerUserID)))
-			return
-		}
-		h.logger.Error("ppk rates", "err", err)
+	httputil.WriteJSON(w, http.StatusOK, computePPKGenerateResponse(
+		req, outcome.Gross, outcome.EmployeeAmt, outcome.EmployerAmt, outcome.Subsidy, outcome.Result))
+}
+
+// writeGenerateError maps GeneratePPK sentinel errors to HTTP responses.
+func (h *Handler) writeGenerateError(w http.ResponseWriter, req generateRequest, err error) {
+	switch {
+	case errors.Is(err, ErrNoSalary):
+		httputil.WriteDetailError(w, http.StatusBadRequest,
+			fmt.Sprintf("No salary record found for user %s in %d/%d",
+				ownerLabel(req.OwnerUserID), req.Month, req.Year))
+	case errors.Is(err, ErrNotUOP):
+		httputil.WriteDetailError(w, http.StatusBadRequest,
+			fmt.Sprintf("PPK contributions require a UOP (employment) salary for user %s",
+				ownerLabel(req.OwnerUserID)))
+	case errors.Is(err, ErrUserNotFound):
+		httputil.WriteDetailError(w, http.StatusNotFound,
+			fmt.Sprintf("User %s not found", ownerLabel(req.OwnerUserID)))
+	case errors.Is(err, ErrNoPPKAccount):
+		httputil.WriteDetailError(w, http.StatusNotFound,
+			fmt.Sprintf("No active PPK account found for user %s. "+
+				"Mark one PPK account as receiving contributions.",
+				ownerLabel(req.OwnerUserID)))
+	case errors.Is(err, ErrContributionsExist):
+		httputil.WriteDetailError(w, http.StatusConflict,
+			fmt.Sprintf("Contributions already exist for %d/%d", req.Month, req.Year))
+	default:
+		h.logger.Error("generate ppk contributions", "err", err)
 		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
-		return
 	}
-	employeeAmt, employerAmt := computePPKContributionAmounts(gross, employeeRate, employerRate)
-	accountID, err := h.store.ActivePPKAccountForOwner(r.Context(), req.OwnerUserID)
-	if err != nil {
-		if errors.Is(err, ErrNoPPKAccount) {
-			httputil.WriteDetailError(w, http.StatusNotFound,
-				fmt.Sprintf("No active PPK account found for user %s. "+
-					"Mark one PPK account as receiving contributions.",
-					ownerLabel(req.OwnerUserID)))
-			return
-		}
-		h.logger.Error("ppk account", "err", err)
-		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
-		return
-	}
-	lastDay := time.Date(req.Year, time.Month(req.Month)+1, 0, 0, 0, 0, 0, time.UTC)
-	subsidy := SubsidyFor(req.Year)
-	contrib := PPKContribution{
-		AccountID: accountID, EmployeeAmt: employeeAmt, EmployerAmt: employerAmt,
-		Date: lastDay, OwnerUserID: req.OwnerUserID,
-	}
-	if req.IncludeWelcome {
-		contrib.WelcomeAmt = subsidy.WelcomeAmount
-	}
-	if req.IncludeAnnual {
-		contrib.AnnualAmt = subsidy.AnnualAmount
-	}
-	result, err := h.store.InsertPPKContributions(r.Context(), contrib)
-	if err != nil {
-		if errors.Is(err, ErrContributionsExist) {
-			httputil.WriteDetailError(w, http.StatusConflict,
-				fmt.Sprintf("Contributions already exist for %d/%d", req.Month, req.Year))
-			return
-		}
-		h.logger.Error("insert ppk contributions", "err", err)
-		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
-		return
-	}
-	httputil.WriteJSON(w, http.StatusOK, computePPKGenerateResponse(req, gross, employeeAmt, employerAmt, subsidy, result))
 }
 
 // errBadOwnerParam marks a non-integer owner_user_id query value.
