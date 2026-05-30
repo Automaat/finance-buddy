@@ -157,7 +157,7 @@
 		</form>
 	</div>
 
-	<div class="card preset-filled-surface-50-950 p-5">
+	<div class="card preset-filled-surface-50-950 p-5 table-cards">
 		<table class="table">
 			<thead>
 				<tr>
@@ -172,17 +172,19 @@
 			<tbody>
 				{#each users as appUser (appUser.id)}
 					<tr>
-						<td>{appUser.username}</td>
-						<td>{fullName(appUser)}</td>
-						<td>{appUser.ppk_employee_rate ?? '—'} / {appUser.ppk_employer_rate ?? '—'}</td>
-						<td>
+						<td data-label="Użytkownik">{appUser.username}</td>
+						<td data-label="Imię i nazwisko">{fullName(appUser)}</td>
+						<td data-label="PPK">
+							{appUser.ppk_employee_rate ?? '—'} / {appUser.ppk_employer_rate ?? '—'}
+						</td>
+						<td data-label="Rola">
 							{#if appUser.is_admin}
 								<span class="badge preset-filled-primary-500">Administrator</span>
 							{:else}
 								<span class="badge preset-tonal-surface">Użytkownik</span>
 							{/if}
 						</td>
-						<td>{appUser.created_at.slice(0, 10)}</td>
+						<td data-label="Utworzono">{appUser.created_at.slice(0, 10)}</td>
 						<td>
 							<button
 								type="button"

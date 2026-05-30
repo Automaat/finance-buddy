@@ -76,3 +76,61 @@ body {
 	--nord14: #a3be8c;
 	--nord15: #b48ead;
 }
+
+/* Mobile card-stack for tables. Add the .table-cards class to a table's
+   wrapper; on narrow screens each row collapses into a label/value card so
+   wide tables stay readable without horizontal scrolling. Cells opt into a
+   label by setting data-label="…" on the <td>. */
+@media (max-width: 767px) {
+	.table-cards :is(table, tbody, tr, td) {
+		display: block;
+	}
+
+	.table-cards thead {
+		display: none;
+	}
+
+	.table-cards tr {
+		border: 1px solid var(--color-surface-300);
+		border-radius: var(--radius-3);
+		padding: var(--size-2) var(--size-3);
+		margin-block-end: var(--size-3);
+	}
+
+	.table-cards tr:last-child {
+		margin-block-end: 0;
+	}
+
+	.table-cards td {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		gap: var(--size-4);
+		padding: var(--size-1) 0;
+		text-align: right;
+		white-space: normal;
+		border: 0;
+	}
+
+	.table-cards td[data-label]::before {
+		content: attr(data-label);
+		flex: 0 0 auto;
+		font-weight: var(--font-weight-6);
+		color: var(--color-text-2);
+		text-align: left;
+	}
+
+	/* Cells without a label (e.g. action buttons) group to the right edge
+	   instead of spreading across the card. */
+	.table-cards td:not([data-label]) {
+		justify-content: flex-end;
+		gap: var(--size-2);
+	}
+
+	/* Opt-in horizontal scroll for wide tables, mobile only — keeps desktop's
+	   page-level sticky header, which a permanent overflow container would
+	   capture. */
+	.table-scroll-mobile {
+		overflow-x: auto;
+	}
+}

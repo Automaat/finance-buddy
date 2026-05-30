@@ -68,6 +68,7 @@ function formatMonth(dateISO: string): string {
 
 export interface WaterfallChartOptions {
 	maxMonths?: number; // crop to the most recent N steps (mobile = 6)
+	isMobile?: boolean; // shrink the in-canvas title so it doesn't clip on phones
 }
 
 // buildWaterfallOption renders a grouped bar chart: per month, an Asset Δ
@@ -110,7 +111,10 @@ export function buildWaterfallOption(
 	};
 
 	return {
-		title: { text: 'Wartość netto — wkład miesięczny' },
+		title: {
+			text: 'Wartość netto — wkład miesięczny',
+			textStyle: { fontSize: options.isMobile ? 13 : 16 }
+		},
 		tooltip: {
 			trigger: 'axis',
 			formatter: (params: TopLevelFormatterParams) => {

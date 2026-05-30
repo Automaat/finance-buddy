@@ -34,7 +34,10 @@ export interface TimeSeriesPoint {
 const formatPLN = (val: number): string =>
 	val.toLocaleString('pl-PL', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-export function buildAllocationChartOption(byCategory: AllocationCategory[]): EChartsOption {
+export function buildAllocationChartOption(
+	byCategory: AllocationCategory[],
+	isMobile = false
+): EChartsOption {
 	const categories = byCategory.map((item) => item.category);
 	const currentValues = byCategory.map((item) => parseFloat(item.current_percentage.toFixed(1)));
 	const targetValues = byCategory.map((item) => parseFloat(item.target_percentage.toFixed(1)));
@@ -45,7 +48,7 @@ export function buildAllocationChartOption(byCategory: AllocationCategory[]): EC
 			text: 'Alokacja inwestycyjna: Obecna vs Docelowa',
 			left: 'center',
 			top: 10,
-			textStyle: { color: '#2e3440', fontSize: 16, fontWeight: 'bold' }
+			textStyle: { color: '#2e3440', fontSize: isMobile ? 13 : 16, fontWeight: 'bold' }
 		},
 		tooltip: {
 			trigger: 'axis',
@@ -58,7 +61,7 @@ export function buildAllocationChartOption(byCategory: AllocationCategory[]): EC
 		legend: {
 			data: ['Obecna', 'Docelowa'],
 			bottom: 10,
-			textStyle: { color: '#2e3440', fontSize: 14 }
+			textStyle: { color: '#2e3440', fontSize: isMobile ? 11 : 14 }
 		},
 		grid: {
 			left: 60,
@@ -72,7 +75,7 @@ export function buildAllocationChartOption(byCategory: AllocationCategory[]): EC
 			data: categories,
 			axisLabel: {
 				color: '#2e3440',
-				fontSize: 14,
+				fontSize: isMobile ? 12 : 14,
 				fontWeight: 'bold',
 				formatter: function (value: string) {
 					return value.charAt(0).toUpperCase() + value.slice(1);
@@ -110,7 +113,7 @@ export function buildAllocationChartOption(byCategory: AllocationCategory[]): EC
 					distance: 5,
 					formatter: '{c}%',
 					color: '#2e3440',
-					fontSize: 14,
+					fontSize: isMobile ? 10 : 14,
 					fontWeight: 'bold'
 				}
 			},
@@ -126,7 +129,7 @@ export function buildAllocationChartOption(byCategory: AllocationCategory[]): EC
 					distance: 5,
 					formatter: '{c}%',
 					color: '#2e3440',
-					fontSize: 14,
+					fontSize: isMobile ? 10 : 14,
 					fontWeight: 'bold'
 				}
 			}
@@ -134,7 +137,10 @@ export function buildAllocationChartOption(byCategory: AllocationCategory[]): EC
 	};
 }
 
-export function buildWrapperChartOption(byWrapper: AllocationWrapper[]): EChartsOption {
+export function buildWrapperChartOption(
+	byWrapper: AllocationWrapper[],
+	isMobile = false
+): EChartsOption {
 	const wrapperData = byWrapper.map((item) => ({
 		name: item.wrapper,
 		value: item.value
@@ -146,7 +152,7 @@ export function buildWrapperChartOption(byWrapper: AllocationWrapper[]): ECharts
 			text: 'Podział według kont (IKE/IKZE/PPK)',
 			left: 'center',
 			top: 10,
-			textStyle: { color: '#2e3440', fontSize: 16, fontWeight: 'bold' }
+			textStyle: { color: '#2e3440', fontSize: isMobile ? 13 : 16, fontWeight: 'bold' }
 		},
 		tooltip: {
 			trigger: 'item',
@@ -162,18 +168,25 @@ export function buildWrapperChartOption(byWrapper: AllocationWrapper[]): ECharts
 				return `${single.name}: ${value} PLN (${(single.percent ?? 0).toFixed(1)}%)`;
 			}
 		},
-		legend: {
-			orient: 'vertical',
-			left: 20,
-			top: 'middle',
-			textStyle: { color: '#2e3440', fontSize: 14, fontWeight: 'bold' },
-			itemGap: 15
-		},
+		legend: isMobile
+			? {
+					type: 'scroll',
+					bottom: 0,
+					left: 'center',
+					textStyle: { color: '#2e3440', fontSize: 11, fontWeight: 'bold' }
+				}
+			: {
+					orient: 'vertical',
+					left: 20,
+					top: 'middle',
+					textStyle: { color: '#2e3440', fontSize: 14, fontWeight: 'bold' },
+					itemGap: 15
+				},
 		series: [
 			{
 				type: 'pie',
 				radius: ['40%', '65%'],
-				center: ['50%', '50%'],
+				center: isMobile ? ['50%', '42%'] : ['50%', '50%'],
 				avoidLabelOverlap: true,
 				minShowLabelAngle: 1,
 				data: wrapperData,
@@ -191,7 +204,7 @@ export function buildWrapperChartOption(byWrapper: AllocationWrapper[]): ECharts
 					}
 				},
 				label: {
-					show: true,
+					show: !isMobile,
 					position: 'outside',
 					alignTo: 'edge',
 					margin: 20,
@@ -205,7 +218,7 @@ export function buildWrapperChartOption(byWrapper: AllocationWrapper[]): ECharts
 					overflow: 'none'
 				},
 				labelLine: {
-					show: true,
+					show: !isMobile,
 					length: 25,
 					length2: 20,
 					smooth: 0.2,

@@ -258,12 +258,14 @@
 				<p>Brak transakcji</p>
 			</div>
 		{:else}
-			<SortableTable
-				columns={transactionColumns}
-				items={data.transactions.transactions}
-				row={transactionRow}
-				getKey={(t) => t.id}
-			/>
+			<div class="table-scroll-mobile">
+				<SortableTable
+					columns={transactionColumns}
+					items={data.transactions.transactions}
+					row={transactionRow}
+					getKey={(t) => t.id}
+				/>
+			</div>
 		{/if}
 	</div>
 </div>

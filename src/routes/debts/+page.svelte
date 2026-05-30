@@ -309,7 +309,7 @@
 				<p>Brak zobowiązań</p>
 			</div>
 		{:else}
-			<div class="table-wrap">
+			<div class="table-wrap table-cards">
 				<table class="table table-hover">
 					<thead>
 						<tr>
@@ -328,10 +328,12 @@
 					<tbody>
 						{#each data.debts as debt}
 							<tr>
-								<td>{debt.name}</td>
-								<td>{debtTypeLabels[debt.debt_type] || debt.debt_type}</td>
-								<td class="font-semibold">{formatPLN(debt.initial_amount)}</td>
-								<td class="font-semibold text-error-600-400">
+								<td data-label="Nazwa">{debt.name}</td>
+								<td data-label="Typ">{debtTypeLabels[debt.debt_type] || debt.debt_type}</td>
+								<td class="font-semibold" data-label="Kwota początkowa"
+									>{formatPLN(debt.initial_amount)}</td
+								>
+								<td class="font-semibold text-error-600-400" data-label="Pozostało">
 									{#if debt.latest_balance !== null}
 										<div>{formatPLN(debt.latest_balance)}</div>
 										{#if debt.latest_balance_date}
@@ -343,11 +345,13 @@
 										<span class="text-surface-700-300 italic">brak danych</span>
 									{/if}
 								</td>
-								<td class="font-semibold">{formatPLN(debt.total_paid)}</td>
-								<td class="font-semibold text-error-600-400">{formatPLN(debt.interest_paid)}</td>
-								<td>{debt.interest_rate}%</td>
-								<td>{formatDate(debt.start_date)}</td>
-								<td>{ownerName(owners, debt.account_owner_user_id)}</td>
+								<td class="font-semibold" data-label="Wpłacono">{formatPLN(debt.total_paid)}</td>
+								<td class="font-semibold text-error-600-400" data-label="Odsetki"
+									>{formatPLN(debt.interest_paid)}</td
+								>
+								<td data-label="Oprocentowanie">{debt.interest_rate}%</td>
+								<td data-label="Data">{formatDate(debt.start_date)}</td>
+								<td data-label="Właściciel">{ownerName(owners, debt.account_owner_user_id)}</td>
 								<td class="text-right whitespace-nowrap">
 									<button
 										type="button"
