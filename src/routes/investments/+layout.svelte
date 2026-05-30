@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Briefcase, Coins, TrendingUp } from 'lucide-svelte';
+	import { Briefcase, Coins, PiggyBank, TrendingUp } from 'lucide-svelte';
 
 	let { children } = $props();
 
 	const tabs = [
 		{ href: '/investments/holdings', label: 'Akcje / ETF', icon: Briefcase },
 		{ href: '/investments/bonds', label: 'Obligacje', icon: Coins },
+		{ href: '/investments/ppk', label: 'PPK', icon: PiggyBank },
 		{ href: '/investments/returns', label: 'Zwroty', icon: TrendingUp }
 	];
 

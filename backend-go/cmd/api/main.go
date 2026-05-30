@@ -28,6 +28,7 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/metrics"
 	"github.com/Automaat/finance-buddy/backend-go/internal/quotes"
 	"github.com/Automaat/finance-buddy/backend-go/internal/recurring"
+	"github.com/Automaat/finance-buddy/backend-go/internal/retirement"
 	"github.com/Automaat/finance-buddy/backend-go/internal/scheduler"
 	"github.com/Automaat/finance-buddy/backend-go/internal/server"
 )
@@ -145,6 +146,11 @@ func run() int {
 		stooq := quotes.NewStooqFetcher(cfg.StooqAPIKey)
 		quotesSched := quotes.NewScheduler(hStore, stooq, logger)
 		go quotesSched.Run(ctx)
+
+		// Monthly PPK contribution generator — fires on the 13th for every
+		// owner with a UOP salary + configured PPK rates + active PPK account.
+		ppkSched := retirement.NewPPKScheduler(retirement.NewStore(pool), logger)
+		go ppkSched.Run(ctx)
 	} else {
 		logger.Warn("no DB config (DATABASE_URL or PGHOST) — DB-backed endpoints will 404")
 	}
