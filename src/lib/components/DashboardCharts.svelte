@@ -76,11 +76,19 @@
 				return `${date}<br/>Wartość: ${value}`;
 			}
 		},
-		xAxis: { type: 'time' },
+		xAxis: {
+			type: 'time',
+			// hideOverlap drops colliding tick labels instead of smearing them
+			// together — critical on a narrow phone axis, especially with sparse
+			// data where ECharts otherwise stacks day/month labels on top of
+			// each other.
+			axisLabel: { hideOverlap: true }
+		},
 		yAxis: {
 			type: 'value',
 			axisLabel: { formatter: (value: number) => formatPLN(value) }
 		},
+		grid: { ...gridConfig, containLabel: true },
 		series: [
 			{
 				data: netWorthHistory.map((h) => [h.date, h.value]),
@@ -94,8 +102,7 @@
 				},
 				lineStyle: { color: chartAccent, width: 2 }
 			}
-		],
-		grid: gridConfig
+		]
 	});
 
 	const pieOption = $derived<EChartsOption>({
@@ -105,11 +112,20 @@
 			textStyle: { fontSize: titleFontSize }
 		},
 		tooltip: { trigger: 'item', formatter: '{b}: {c} PLN ({d}%)' },
+		// On a phone the radial callout labels collide and get clipped at the
+		// card edges, so swap them for a scrollable legend along the bottom.
+		legend: $isMobile
+			? { type: 'scroll', bottom: 0, left: 'center', textStyle: { fontSize: 11 } }
+			: undefined,
 		color: [...chartPalette],
 		series: [
 			{
 				type: 'pie',
 				radius: ['40%', '70%'],
+				center: $isMobile ? ['50%', '42%'] : ['50%', '50%'],
+				avoidLabelOverlap: true,
+				label: { show: !$isMobile },
+				labelLine: { show: !$isMobile },
 				data: allocation.map((a) => ({
 					name: `${a.category} (${ownerName(owners, a.owner_user_id)})`,
 					value: a.value
@@ -174,7 +190,7 @@
 				goto(`/snapshots/${step.snapshotId}/edit`);
 			}
 		});
-		waterfallChart.setOption(buildWaterfallOption(waterfallSliced));
+		waterfallChart.setOption(buildWaterfallOption(waterfallSliced, { isMobile: $isMobile }));
 	});
 </script>
 

@@ -439,7 +439,7 @@
 
 {#snippet assetRow(account: Account)}
 	<tr>
-		<td class="font-medium">
+		<td class="font-medium" data-label="Nazwa">
 			{account.name}
 			{#if account.excluded_from_fire}
 				<span
@@ -450,10 +450,12 @@
 				</span>
 			{/if}
 		</td>
-		<td>{categoryLabels[account.category] || account.category}</td>
-		<td>{ownerName(owners, account.owner_user_id)}</td>
-		<td class="font-semibold text-primary-600-400">{formatPLN(account.current_value)}</td>
-		<td class="whitespace-nowrap">
+		<td data-label="Kategoria">{categoryLabels[account.category] || account.category}</td>
+		<td data-label="Właściciel">{ownerName(owners, account.owner_user_id)}</td>
+		<td class="font-semibold text-primary-600-400" data-label="Wartość">
+			{formatPLN(account.current_value)}
+		</td>
+		<td class="whitespace-nowrap" data-label="Realne %">
 			{#if account.real_yield_pct != null}
 				<span
 					class="font-semibold {realYieldColorClass(account.real_yield_pct)}"
@@ -503,10 +505,12 @@
 
 {#snippet liabilityRow(account: Account)}
 	<tr>
-		<td class="font-medium">{account.name}</td>
-		<td>{categoryLabels[account.category] || account.category}</td>
-		<td>{ownerName(owners, account.owner_user_id)}</td>
-		<td class="font-semibold text-error-600-400">{formatPLN(account.current_value)}</td>
+		<td class="font-medium" data-label="Nazwa">{account.name}</td>
+		<td data-label="Kategoria">{categoryLabels[account.category] || account.category}</td>
+		<td data-label="Właściciel">{ownerName(owners, account.owner_user_id)}</td>
+		<td class="font-semibold text-error-600-400" data-label="Wartość">
+			{formatPLN(account.current_value)}
+		</td>
 		<td class="text-right whitespace-nowrap">
 			<button
 				type="button"
@@ -600,13 +604,15 @@
 			{#if accounts.assets.length === 0}
 				<div class="text-center py-12 text-surface-700-300"><p>Brak aktywów</p></div>
 			{:else}
-				<SortableTable
-					columns={accountColumns}
-					items={accounts.assets}
-					row={assetRow}
-					paramName="sortA"
-					getKey={(a) => a.id}
-				/>
+				<div class="table-cards">
+					<SortableTable
+						columns={accountColumns}
+						items={accounts.assets}
+						row={assetRow}
+						paramName="sortA"
+						getKey={(a) => a.id}
+					/>
+				</div>
 			{/if}
 		</div>
 
@@ -617,13 +623,15 @@
 			{#if accounts.liabilities.length === 0}
 				<div class="text-center py-12 text-surface-700-300"><p>Brak pasywów</p></div>
 			{:else}
-				<SortableTable
-					columns={liabilityColumns}
-					items={accounts.liabilities}
-					row={liabilityRow}
-					paramName="sortL"
-					getKey={(a) => a.id}
-				/>
+				<div class="table-cards">
+					<SortableTable
+						columns={liabilityColumns}
+						items={accounts.liabilities}
+						row={liabilityRow}
+						paramName="sortL"
+						getKey={(a) => a.id}
+					/>
+				</div>
 			{/if}
 		</div>
 	</div>

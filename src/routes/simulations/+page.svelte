@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
 	import { resolveApiUrl } from '$lib/api';
+	import { applyMobileChartTweaks } from '$lib/utils/charts/responsive';
+	import { isMobile } from '$lib/utils/viewport';
 	import * as echarts from 'echarts';
 	import type { PageData } from './$types';
 	import {
@@ -410,7 +412,9 @@
 			return;
 		}
 
-		chart?.setOption(buildRetirementProjectionOption(results.simulations));
+		chart?.setOption(
+			applyMobileChartTweaks(buildRetirementProjectionOption(results.simulations), $isMobile)
+		);
 	});
 
 	// Render the wrapper-aggregate chart reactively: it only mounts after the
@@ -438,7 +442,12 @@
 			return;
 		}
 
-		wrapperChart?.setOption(buildRetirementByWrapperOption(results.simulations, MILESTONE_AGES));
+		wrapperChart?.setOption(
+			applyMobileChartTweaks(
+				buildRetirementByWrapperOption(results.simulations, MILESTONE_AGES),
+				$isMobile
+			)
+		);
 	});
 
 	onMount(() => {

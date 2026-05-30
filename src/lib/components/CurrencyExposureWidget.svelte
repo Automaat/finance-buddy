@@ -3,6 +3,8 @@
 	import { resolveApiUrl } from '$lib/api';
 	import { formatPLN } from '$lib/utils/format';
 	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
+	import { applyMobileChartTweaks } from '$lib/utils/charts/responsive';
+	import { isMobile } from '$lib/utils/viewport';
 	import { Globe } from 'lucide-svelte';
 
 	interface CurrencyBucket {
@@ -94,23 +96,31 @@
 			value: c.value_pln,
 			itemStyle: { color: c.currency === 'PLN' ? '#1e40af' : palette[i % palette.length] }
 		}));
-		handle.chart.setOption({
-			tooltip: {
-				trigger: 'item',
-				formatter: (p: { name: string; value: number; percent: number }) =>
-					`${p.name}<br/>${formatPLN(p.value)} (${p.percent.toFixed(1)}%)`
-			},
-			legend: { bottom: 0 },
-			series: [
+		handle.chart.setOption(
+			applyMobileChartTweaks(
 				{
-					type: 'pie',
-					radius: ['45%', '70%'],
-					avoidLabelOverlap: false,
-					label: { show: true, formatter: '{b}: {d}%' },
-					data
-				}
-			]
-		});
+					tooltip: {
+						trigger: 'item',
+						formatter: (params) => {
+							const p = Array.isArray(params) ? params[0] : params;
+							const pct = (p as { percent?: number }).percent ?? 0;
+							return `${p.name}<br/>${formatPLN(p.value as number)} (${pct.toFixed(1)}%)`;
+						}
+					},
+					legend: { bottom: 0 },
+					series: [
+						{
+							type: 'pie',
+							radius: ['45%', '70%'],
+							avoidLabelOverlap: false,
+							label: { show: true, formatter: '{b}: {d}%' },
+							data
+						}
+					]
+				},
+				$isMobile
+			)
+		);
 	});
 
 	function applyTarget() {

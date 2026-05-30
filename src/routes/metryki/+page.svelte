@@ -12,6 +12,8 @@
 	} from '$lib/utils/charts/metryki';
 	import { buildCumulativeInflationChartOption } from '$lib/utils/charts/inflation';
 	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
+	import { applyMobileChartTweaks } from '$lib/utils/charts/responsive';
+	import { isMobile } from '$lib/utils/viewport';
 	import { ownerName, type OwnerOption } from '$lib/types/owners';
 	import ContributionAdjustedReturns from '$lib/components/ContributionAdjustedReturns.svelte';
 	import CurrencyExposureWidget from '$lib/components/CurrencyExposureWidget.svelte';
@@ -80,8 +82,12 @@
 	// Re-apply options whenever the underlying series change (reflow, no remount).
 	$effect(() => {
 		if (!chartsReady) return;
-		handles.allocation.chart.setOption(buildAllocationChartOption(allocationAnalysis.by_category));
-		handles.wrapper.chart.setOption(buildWrapperChartOption(allocationAnalysis.by_wrapper));
+		handles.allocation.chart.setOption(
+			buildAllocationChartOption(allocationAnalysis.by_category, $isMobile)
+		);
+		handles.wrapper.chart.setOption(
+			buildWrapperChartOption(allocationAnalysis.by_wrapper, $isMobile)
+		);
 		handles.investmentTrend.chart.setOption(buildInvestmentTrendChartOption(investmentTimeSeries));
 		handles.ike.chart.setOption(
 			buildWrapperTrendChartOption('IKE w czasie', wrapperTimeSeries.ike)
@@ -116,7 +122,9 @@
 			return;
 		}
 		if (!inflationHandle) inflationHandle = createChart(inflationChart);
-		inflationHandle.chart.setOption(buildCumulativeInflationChartOption(cpiSeries));
+		inflationHandle.chart.setOption(
+			applyMobileChartTweaks(buildCumulativeInflationChartOption(cpiSeries), $isMobile)
+		);
 	});
 </script>
 

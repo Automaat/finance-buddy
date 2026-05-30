@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { resolveApiUrl } from '$lib/api';
+	import { applyMobileChartTweaks } from '$lib/utils/charts/responsive';
+	import { isMobile } from '$lib/utils/viewport';
 	import * as echarts from 'echarts';
 	import type { EChartsOption } from 'echarts';
 	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
@@ -123,7 +125,7 @@
 			},
 			series
 		};
-		chart?.setOption(option);
+		chart?.setOption(applyMobileChartTweaks(option, $isMobile));
 	}
 
 	function formatCurrency(value: number): string {
@@ -165,7 +167,7 @@
 				<Info size={20} />
 			</summary>
 			<div
-				class="absolute left-0 z-20 mt-2 w-80 sm:w-96 card preset-filled-surface-100-900 p-3 text-sm shadow-xl"
+				class="fixed inset-x-3 z-20 mt-2 card preset-filled-surface-100-900 p-3 text-sm shadow-xl sm:absolute sm:inset-x-auto sm:left-0 sm:w-96"
 			>
 				<p>
 					<strong>WIBOR</strong> (Warsaw Interbank Offered Rate) to średnia stawka, po jakiej banki pożyczają

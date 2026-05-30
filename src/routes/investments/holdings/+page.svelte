@@ -356,7 +356,7 @@
 				na podstawie ręcznych notowań.
 			</p>
 		</div>
-		<div class="flex gap-2">
+		<div class="flex flex-wrap gap-2">
 			<button
 				type="button"
 				class="btn preset-tonal-surface"

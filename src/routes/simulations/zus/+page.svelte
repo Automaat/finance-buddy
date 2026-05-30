@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount, tick, untrack } from 'svelte';
 	import { resolveApiUrl } from '$lib/api';
+	import { applyMobileChartTweaks } from '$lib/utils/charts/responsive';
+	import { isMobile } from '$lib/utils/viewport';
 	import * as echarts from 'echarts';
 	import type { EChartsOption } from 'echarts';
 	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
@@ -192,7 +194,7 @@
 			]
 		};
 
-		chart?.setOption(option);
+		chart?.setOption(applyMobileChartTweaks(option, $isMobile));
 	}
 
 	onMount(() => {

@@ -129,7 +129,7 @@
 			{#each ranked as r, idx (r.option)}
 				<li class="card preset-tonal-surface p-4 space-y-2 {r.available ? '' : 'opacity-60'}">
 					<header class="flex flex-wrap items-baseline justify-between gap-2">
-						<div class="flex items-baseline gap-3">
+						<div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
 							<span class="text-2xl font-bold">{idx + 1}.</span>
 							<span class="text-lg font-semibold">{r.name}</span>
 							{#if !r.available}
