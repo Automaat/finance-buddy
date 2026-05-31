@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { formatPctSigned, formatPlnSigned, isNonNegative, isoDateLocal } from './salaries';
+import {
+	formatPctSigned,
+	formatPlnSigned,
+	groupSalariesByCompany,
+	isNonNegative,
+	isoDateLocal
+} from './salaries';
 
 describe('isNonNegative', () => {
 	it('treats null as zero', () => {
@@ -69,5 +75,58 @@ describe('isoDateLocal', () => {
 	});
 	it('survives end-of-month rollover', () => {
 		expect(isoDateLocal(new Date(2025, 1, 28, 23, 59, 0))).toBe('2025-02-28');
+	});
+});
+
+describe('groupSalariesByCompany', () => {
+	const today = '2026-05-31';
+
+	it('extends only the current company to today', () => {
+		const map = groupSalariesByCompany(
+			[
+				{ company: 'Old Co', date: '2022-01-01', amount: 8000 },
+				{ company: 'Old Co', date: '2023-01-01', amount: 9000 },
+				{ company: 'Current Co', date: '2024-06-01', amount: 20000 },
+				{ company: 'Current Co', date: '2025-06-01', amount: 25000 }
+			],
+			today
+		);
+		expect(map.get('Old Co')).toEqual([
+			['2022-01-01', 8000],
+			['2023-01-01', 9000]
+		]);
+		expect(map.get('Current Co')).toEqual([
+			['2024-06-01', 20000],
+			['2025-06-01', 25000],
+			[today, 25000]
+		]);
+	});
+
+	it('sorts each company ascending by date before carry-forward', () => {
+		const map = groupSalariesByCompany(
+			[
+				{ company: 'Acme', date: '2025-06-01', amount: 12000 },
+				{ company: 'Acme', date: '2024-06-01', amount: 10000 }
+			],
+			today
+		);
+		expect(map.get('Acme')).toEqual([
+			['2024-06-01', 10000],
+			['2025-06-01', 12000],
+			[today, 12000]
+		]);
+	});
+
+	it('labels blank company names', () => {
+		const map = groupSalariesByCompany(
+			[{ company: '  ', date: '2025-01-01', amount: 5000 }],
+			today
+		);
+		expect([...map.keys()]).toEqual(['Nieokreślona firma']);
+	});
+
+	it('does not duplicate the today point when last record is already today', () => {
+		const map = groupSalariesByCompany([{ company: 'Acme', date: today, amount: 5000 }], today);
+		expect(map.get('Acme')).toEqual([[today, 5000]]);
 	});
 });

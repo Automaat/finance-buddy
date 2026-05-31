@@ -11,6 +11,7 @@
 	import {
 		formatPctSigned,
 		formatPlnSigned,
+		groupSalariesByCompany,
 		isNonNegative,
 		isoDateLocal
 	} from '$lib/utils/salaries';
@@ -1096,40 +1097,20 @@
 	};
 
 	function buildSeries(): LineSeries[] {
-		const companyMap = new Map<string, Array<[string, number]>>();
-
-		visibleSalaryRecords.forEach((r) => {
-			const companyName = (r.company ?? '').trim() || 'Nieokreślona firma';
-			if (!companyMap.has(companyName)) companyMap.set(companyName, []);
-			companyMap.get(companyName)!.push([r.date, r.gross_amount]);
-		});
-
 		const colors = ['#5E81AC', '#88C0D0', '#A3BE8C', '#EBCB8B', '#D08770', '#B48EAD', '#BF616A'];
 		// Date-only `today` matches the backend (which is also date-only).
 		const now = new Date();
 		const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 		const todayIso = isoDateLocal(todayDate);
 
-		// The current company is the one holding the globally most recent
-		// salary record. Only its line extends to today — old employers stay
-		// anchored to their last known salary date.
-		let currentCompany: string | null = null;
-		let currentCompanyLastDate = '';
-		companyMap.forEach((rows, company) => {
-			rows.sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime());
-			const lastDate = rows[rows.length - 1]?.[0] ?? '';
-			if (lastDate > currentCompanyLastDate) {
-				currentCompanyLastDate = lastDate;
-				currentCompany = company;
-			}
-		});
-		if (currentCompany !== null) {
-			const rows = companyMap.get(currentCompany)!;
-			// Carry the most recent salary forward to today so the current
-			// company renders as a flat line up to now instead of a lone dot.
-			const last = rows[rows.length - 1];
-			if (last && last[0] < todayIso) rows.push([todayIso, last[1]]);
-		}
+		const companyMap = groupSalariesByCompany(
+			visibleSalaryRecords.map((r) => ({
+				company: r.company,
+				date: r.date,
+				amount: r.gross_amount
+			})),
+			todayIso
+		);
 		const cpiLookup = buildCpiLookup(cpiSeries);
 		const hasCpi = cpiLookup !== null;
 
