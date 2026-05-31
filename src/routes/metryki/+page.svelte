@@ -386,7 +386,7 @@
 
 				<MetricCard
 					label="IKZE - Krańcowa stawka PIT"
-					value={(pit.marginal_tax_rate ?? 0) * 100}
+					value={pit.marginal_tax_rate == null ? null : pit.marginal_tax_rate * 100}
 					decimals={0}
 					suffix="%"
 					color="blue"
