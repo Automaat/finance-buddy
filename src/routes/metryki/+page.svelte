@@ -160,11 +160,11 @@
 	<h1 class="h1">Metryki</h1>
 
 	<nav
-		class="sticky top-14 md:top-0 z-10 -mx-2 px-2 py-2 flex flex-wrap gap-2 bg-surface-50-950/80 backdrop-blur"
+		class="sticky top-14 md:top-0 z-10 -mx-2 px-2 py-2 flex gap-2 overflow-x-auto whitespace-nowrap bg-surface-50-950/80 backdrop-blur"
 		aria-label="Sekcje strony"
 	>
 		{#each sections as section}
-			<a href="#{section.id}" class="btn btn-sm preset-tonal-surface">{section.label}</a>
+			<a href="#{section.id}" class="btn btn-sm preset-tonal-surface shrink-0">{section.label}</a>
 		{/each}
 	</nav>
 
