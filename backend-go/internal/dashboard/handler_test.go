@@ -121,6 +121,41 @@ func TestApplyDateRangeFiltersTimeSeries(t *testing.T) {
 	}
 }
 
+func TestApplyDateRangePreservesLatestSnapshotDate(t *testing.T) {
+	t.Parallel()
+
+	d := date("2025-01-01")
+	res := result{
+		LatestSnapshotDate: &d,
+		NetWorthHistory: []netWorthPoint{
+			{Date: date("2024-01-01"), Value: 10},
+			{Date: date("2025-01-01"), Value: 30},
+		},
+	}
+	applyDateRange(&res, dateRange{from: date("2030-01-01"), to: date("2030-12-31")})
+
+	if res.LatestSnapshotDate == nil || !res.LatestSnapshotDate.Equal(d) {
+		t.Errorf("latest snapshot date was mutated by date-range filter: %v", res.LatestSnapshotDate)
+	}
+}
+
+func TestToWireSerializesLatestSnapshotDate(t *testing.T) {
+	t.Parallel()
+
+	d := date("2025-03-09")
+	withDate := toWire(result{LatestSnapshotDate: &d})
+	if withDate.LatestSnapshotDate == nil {
+		t.Fatal("expected latest_snapshot_date to be serialized")
+	}
+	if got := time.Time(*withDate.LatestSnapshotDate); !got.Equal(d) {
+		t.Errorf("latest_snapshot_date=%v want=%v", got, d)
+	}
+
+	if got := toWire(result{}); got.LatestSnapshotDate != nil {
+		t.Errorf("expected nil latest_snapshot_date when unset, got %v", got.LatestSnapshotDate)
+	}
+}
+
 func TestApplyDateRangeNoBoundsIsNoop(t *testing.T) {
 	t.Parallel()
 

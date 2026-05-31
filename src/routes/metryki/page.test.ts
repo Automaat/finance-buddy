@@ -338,7 +338,8 @@ describe('metryki load', () => {
 		},
 		investment_time_series: [],
 		wrapper_time_series: { ike: [], ikze: [], ppk: [] },
-		category_time_series: { stock: [], bond: [] }
+		category_time_series: { stock: [], bond: [] },
+		latest_snapshot_date: '2026-05-24'
 	};
 
 	const happyRoutes = (): Record<string, Response | Error> => ({
@@ -384,10 +385,6 @@ describe('metryki load', () => {
 				marginal_tax_rate: null,
 				pit_savings: null
 			}
-		]),
-		'/api/snapshots': jsonResponse([
-			{ id: 9, date: '2026-05-24' },
-			{ id: 8, date: '2026-04-24' }
 		])
 	});
 
@@ -414,15 +411,15 @@ describe('metryki load', () => {
 				pit_savings: 2880
 			}
 		]);
-		// the most recent snapshot's date drives the "stan na" label
+		// the dashboard's latest_snapshot_date drives the "stan na" label
 		expect(result.snapshotDate).toBe('2026-05-24');
 	});
 
-	it('dispatches all nine requests before any response resolves', async () => {
+	it('dispatches all eight requests before any response resolves', async () => {
 		// Gate every response behind a manually-released promise. A serial
 		// loader would dispatch request N+1 only after response N resolved, so
 		// it would have issued just one fetch while the gate is shut. The
-		// concurrent loader fires all nine up front — assert that before
+		// concurrent loader fires all eight up front — assert that before
 		// releasing the gate.
 		const { fetchFn } = routedFetch(happyRoutes());
 		const respond = fetchFn.getMockImplementation();
@@ -441,7 +438,7 @@ describe('metryki load', () => {
 		// Flush the synchronous dispatch microtasks without resolving the gate.
 		await Promise.resolve();
 		await Promise.resolve();
-		expect(dispatched).toBe(9);
+		expect(dispatched).toBe(8);
 
 		release();
 		await pending;
@@ -456,7 +453,6 @@ describe('metryki load', () => {
 		routes['/api/accounts'] = new Error('network down');
 		routes['/api/cpi/series'] = jsonResponse(null, 503);
 		routes['/api/retirement/stats'] = jsonResponse(null, 500);
-		routes['/api/snapshots'] = new Error('network down');
 
 		const { fetchFn } = routedFetch(routes);
 		const result = await load(loadEvent(fetchFn as unknown as typeof fetch));
@@ -467,15 +463,25 @@ describe('metryki load', () => {
 		expect(result.owners).toEqual([]);
 		expect(result.realYieldAccounts).toEqual([]);
 		expect(result.ikzePitStats).toEqual([]);
-		expect(result.snapshotDate).toBeNull();
 		expect(result.cpiSeries).toEqual({
 			points: [],
 			base_year: null,
 			latest_year: null,
 			source: ''
 		});
-		// the dashboard still loaded fine
+		// the dashboard still loaded fine, including its snapshot date
 		expect(result.metricCards).toEqual(metricCards);
+		expect(result.snapshotDate).toBe('2026-05-24');
+	});
+
+	it('yields a null snapshot date when the dashboard omits it', async () => {
+		const routes = happyRoutes();
+		const { latest_snapshot_date: _omit, ...noDate } = dashboardBody;
+		routes['/api/dashboard'] = jsonResponse(noDate);
+
+		const { fetchFn } = routedFetch(routes);
+		const result = await load(loadEvent(fetchFn as unknown as typeof fetch));
+		expect(result.snapshotDate).toBeNull();
 	});
 
 	it('throws the dashboard status when the dashboard request fails', async () => {

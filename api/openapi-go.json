@@ -3466,6 +3466,11 @@
                       },
                       "type": "array"
                     },
+                    "latest_snapshot_date": {
+                      "format": "date",
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "metric_cards": {
                       "properties": {
                         "annual_expenses": {
