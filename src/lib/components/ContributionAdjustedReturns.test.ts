@@ -22,6 +22,7 @@ const successPayload = {
 	valuation_change: 2000,
 	simple_roi_pct: 20,
 	money_weighted_pct: 15.5,
+	dividends_received_net: 0,
 	has_snapshot: true,
 	convergence_failed: false
 };
@@ -95,6 +96,23 @@ describe('ContributionAdjustedReturns', () => {
 		await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
 		const lastCall = fetchSpy.mock.calls[fetchSpy.mock.calls.length - 1][0] as string;
 		expect(lastCall).toContain('period=1m');
+	});
+
+	it('hides the dividends row when none were received in the period', async () => {
+		render(ContributionAdjustedReturns, { props: { scope: { type: 'all' } } });
+		await waitFor(() => expect(screen.getByText('Wartość obecna')).toBeTruthy());
+		expect(screen.queryByText('Dywidendy (netto)')).toBeNull();
+	});
+
+	it('renders the net dividends row when the period paid dividends', async () => {
+		fetchSpy.mockImplementation(
+			async () => new Response(JSON.stringify({ ...successPayload, dividends_received_net: 150.5 }))
+		);
+		render(ContributionAdjustedReturns, { props: { scope: { type: 'all' } } });
+		await waitFor(() => {
+			expect(screen.getByText('Dywidendy (netto)')).toBeTruthy();
+			expect(screen.getByText((t) => /\+150,50\s*PLN/.test(t))).toBeTruthy();
+		});
 	});
 
 	it('shows convergence-failed copy when API reports it', async () => {

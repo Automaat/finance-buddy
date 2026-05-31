@@ -27,6 +27,17 @@ interface CategoryStat {
 	roi_percentage: number;
 }
 
+// YearlyStat mirrors a GET /api/retirement/stats row. Only IKZE rows carry the
+// PIT fields; the page renders those to surface the tax benefit of IKZE.
+export interface YearlyStat {
+	year: number;
+	account_wrapper: string;
+	owner_user_id: number | null;
+	total_contributed: number;
+	marginal_tax_rate: number | null;
+	pit_savings: number | null;
+}
+
 // fetchJson GETs a URL and returns its parsed body, or `fallback` on any
 // failure (non-OK status, network error, malformed JSON). Lets the page run
 // every best-effort request inside one Promise.all without a rejection from
@@ -67,22 +78,40 @@ export async function load({ fetch, url }) {
 			source: ''
 		};
 
-		const [dashboardRes, ppkStats, stockStats, bondStats, owners, realYieldAccounts, cpiSeries] =
-			await Promise.all([
-				fetch(dashboardURL),
-				fetchJson<PpkStat[]>(fetch, `${apiUrl}/api/retirement/ppk-stats`, []),
-				fetchJson<CategoryStat | null>(fetch, `${apiUrl}/api/investment/stock-stats`, null),
-				fetchJson<CategoryStat | null>(fetch, `${apiUrl}/api/investment/bond-stats`, null),
-				fetchJson<OwnerOption[]>(fetch, `${apiUrl}/api/users`, []),
-				// Accounts carry per-account real_yield_pct (post-Belka, post-CPI);
-				// the CPI series feeds the cumulative-inflation chart — both power
-				// the real-return section and degrade to empty on failure without
-				// taking down the page.
-				fetchJson<{ assets?: RealYieldAccount[] }>(fetch, `${apiUrl}/api/accounts`, {}).then(
-					(data) => (data.assets ?? []).filter((a: RealYieldAccount) => a.interest_rate_pct != null)
-				),
-				fetchJson<CpiSeries>(fetch, `${apiUrl}/api/cpi/series`, cpiDefault)
-			]);
+		const [
+			dashboardRes,
+			ppkStats,
+			stockStats,
+			bondStats,
+			owners,
+			realYieldAccounts,
+			cpiSeries,
+			retirementStats
+		] = await Promise.all([
+			fetch(dashboardURL),
+			fetchJson<PpkStat[]>(fetch, `${apiUrl}/api/retirement/ppk-stats`, []),
+			fetchJson<CategoryStat | null>(fetch, `${apiUrl}/api/investment/stock-stats`, null),
+			fetchJson<CategoryStat | null>(fetch, `${apiUrl}/api/investment/bond-stats`, null),
+			fetchJson<OwnerOption[]>(fetch, `${apiUrl}/api/users`, []),
+			// Accounts carry per-account real_yield_pct (post-Belka, post-CPI);
+			// the CPI series feeds the cumulative-inflation chart — both power
+			// the real-return section and degrade to empty on failure without
+			// taking down the page.
+			fetchJson<{ assets?: RealYieldAccount[] }>(fetch, `${apiUrl}/api/accounts`, {}).then((data) =>
+				(data.assets ?? []).filter((a: RealYieldAccount) => a.interest_rate_pct != null)
+			),
+			fetchJson<CpiSeries>(fetch, `${apiUrl}/api/cpi/series`, cpiDefault),
+			// Yearly retirement stats (current year, all owners) — only the IKZE
+			// rows with a computed PIT benefit are surfaced below.
+			fetchJson<YearlyStat[]>(fetch, `${apiUrl}/api/retirement/stats`, [])
+		]);
+
+		// IKZE is the only Polish wrapper with an up-front PIT deduction; the
+		// backend fills pit_savings on those rows when the owner has a salary on
+		// record. Surface just those so the tax benefit is visible.
+		const ikzePitStats = retirementStats.filter(
+			(s) => s.account_wrapper === 'IKZE' && s.pit_savings != null
+		);
 
 		if (!dashboardRes.ok) {
 			throw error(dashboardRes.status, 'Failed to load dashboard data');
@@ -102,6 +131,7 @@ export async function load({ fetch, url }) {
 			owners,
 			realYieldAccounts,
 			cpiSeries,
+			ikzePitStats,
 			range,
 			dateFrom,
 			dateTo
