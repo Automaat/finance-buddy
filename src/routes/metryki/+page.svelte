@@ -35,6 +35,7 @@
 	const realYieldAccounts = $derived(data.realYieldAccounts ?? []);
 	const cpiSeries = $derived(data.cpiSeries);
 	const hasCpiSeries = $derived((cpiSeries?.points?.length ?? 0) > 0);
+	const ikzePitStats = $derived(data.ikzePitStats ?? []);
 
 	let allocationChart: HTMLDivElement;
 	let inflationChart = $state<HTMLDivElement | undefined>(undefined);
@@ -363,6 +364,45 @@
 		{/each}
 	{/if}
 
+	<!-- IKZE PIT Savings Section -->
+	{#if ikzePitStats.length > 0}
+		<h2 class="h2">Korzyść podatkowa IKZE ({ikzePitStats[0].year})</h2>
+		<p class="text-sm text-surface-600-400">
+			Wpłaty na IKZE odliczasz od podstawy opodatkowania. Szacunek na podstawie krańcowej stawki PIT
+			z ostatniej pensji.
+		</p>
+		{#each ikzePitStats as pit}
+			<h3 class="h4 font-semibold mt-4 mb-3">
+				{ownerName((data.owners ?? []) as OwnerOption[], pit.owner_user_id)}
+			</h3>
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+				<MetricCard
+					label="IKZE - Wpłacono w tym roku"
+					value={pit.total_contributed}
+					decimals={0}
+					suffix=" PLN"
+					color="blue"
+				/>
+
+				<MetricCard
+					label="IKZE - Krańcowa stawka PIT"
+					value={pit.marginal_tax_rate == null ? null : pit.marginal_tax_rate * 100}
+					decimals={0}
+					suffix="%"
+					color="blue"
+				/>
+
+				<MetricCard
+					label="IKZE - Szacowana ulga PIT"
+					value={pit.pit_savings}
+					decimals={0}
+					suffix=" PLN"
+					color="green"
+				/>
+			</div>
+		{/each}
+	{/if}
+
 	<!-- Stock Stats Section -->
 	{#if data.stockStats}
 		<h2 class="h2">Podsumowanie Akcji</h2>
@@ -444,6 +484,9 @@
 		<ContributionAdjustedReturns scope={{ type: 'all' }} title="Gospodarstwo" />
 		<ContributionAdjustedReturns scope={{ type: 'category', value: 'stock' }} title="Akcje" />
 		<ContributionAdjustedReturns scope={{ type: 'category', value: 'bond' }} title="Obligacje" />
+		<ContributionAdjustedReturns scope={{ type: 'wrapper', value: 'IKE' }} title="IKE" />
+		<ContributionAdjustedReturns scope={{ type: 'wrapper', value: 'IKZE' }} title="IKZE" />
+		<ContributionAdjustedReturns scope={{ type: 'wrapper', value: 'PPK' }} title="PPK" />
 	</div>
 
 	<h2 class="h2">Realne zwroty (po inflacji)</h2>

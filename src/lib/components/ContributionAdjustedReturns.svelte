@@ -20,6 +20,8 @@
 		valuation_change: number;
 		simple_roi_pct: number;
 		money_weighted_pct: number | null;
+		// Optional: older snapshots / other callers may omit it; treat missing as 0.
+		dividends_received_net?: number | null;
 		has_snapshot: boolean;
 		convergence_failed: boolean;
 	}
@@ -160,6 +162,17 @@
 					{data.valuation_change >= 0 ? '+' : ''}{fmt(data.valuation_change)} PLN
 				</dd>
 			</div>
+			{#if (data.dividends_received_net ?? 0) !== 0}
+				<div class="flex items-baseline justify-between gap-3 py-2">
+					<dt class="text-xs text-surface-600-400 shrink-0">
+						Dywidendy (netto)
+						<span class="block text-[10px] opacity-70">w okresie, po podatku</span>
+					</dt>
+					<dd class="text-base font-semibold text-right tabular-nums text-success-500">
+						+{fmt(data.dividends_received_net ?? 0)} PLN
+					</dd>
+				</div>
+			{/if}
 			<div class="flex items-baseline justify-between gap-3 py-2">
 				<dt class="text-xs text-surface-600-400 shrink-0">
 					Zwrot (XIRR)

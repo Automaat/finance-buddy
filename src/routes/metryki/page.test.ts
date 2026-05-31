@@ -78,6 +78,7 @@ const mockData = {
 	owners: [],
 	realYieldAccounts: [],
 	cpiSeries: { points: [], base_year: null, latest_year: null, source: '' },
+	ikzePitStats: [],
 	range: 'all' as const,
 	dateFrom: null,
 	dateTo: null
@@ -123,6 +124,11 @@ describe('Metryki Page', () => {
 		expect(screen.queryByRole('heading', { name: 'Podsumowanie PPK' })).toBeNull();
 		expect(screen.queryByRole('heading', { name: 'Podsumowanie Akcji' })).toBeNull();
 		expect(screen.queryByRole('heading', { name: 'Podsumowanie Obligacji' })).toBeNull();
+	});
+
+	it('omits the IKZE tax-benefit section when there are no PIT stats', () => {
+		render(Page, { props: { data: mockData } });
+		expect(screen.queryByRole('heading', { name: /Korzyść podatkowa IKZE/ })).toBeNull();
 	});
 });
 
@@ -205,6 +211,16 @@ describe('Metryki Page with populated data', () => {
 			latest_year: 2024,
 			source: 'GUS'
 		},
+		ikzePitStats: [
+			{
+				year: 2024,
+				account_wrapper: 'IKZE',
+				owner_user_id: 1,
+				total_contributed: 9000,
+				marginal_tax_rate: 0.32,
+				pit_savings: 2880
+			}
+		],
 		range: 'all' as const,
 		dateFrom: null,
 		dateTo: null
@@ -228,9 +244,19 @@ describe('Metryki Page with populated data', () => {
 	it('renders the PPK, stock and bond summary sections', () => {
 		render(Page, { props: { data: populatedData } });
 		expect(screen.getByRole('heading', { name: 'Podsumowanie PPK' })).toBeTruthy();
-		expect(screen.getByRole('heading', { name: 'Marcin', level: 3 })).toBeTruthy();
+		// "Marcin" heads both the PPK and IKZE owner sub-sections.
+		expect(screen.getAllByRole('heading', { name: 'Marcin', level: 3 }).length).toBeGreaterThan(0);
 		expect(screen.getByRole('heading', { name: 'Podsumowanie Akcji' })).toBeTruthy();
 		expect(screen.getByRole('heading', { name: 'Podsumowanie Obligacji' })).toBeTruthy();
+	});
+
+	it('renders the IKZE tax-benefit section with its estimated PIT saving', () => {
+		render(Page, { props: { data: populatedData } });
+		expect(screen.getByRole('heading', { name: /Korzyść podatkowa IKZE/ })).toBeTruthy();
+		expect(screen.getByText('IKZE - Szacowana ulga PIT')).toBeTruthy();
+		// pit_savings 2880 → pl-PL formats with a narrow no-break space; match on
+		// the digits regardless of which whitespace separates the thousands.
+		expect(screen.getByText((text) => /2\s*880\s*PLN/.test(text))).toBeTruthy();
 	});
 });
 
@@ -298,7 +324,33 @@ describe('metryki load', () => {
 			base_year: 2022,
 			latest_year: 2024,
 			source: 'GUS'
-		})
+		}),
+		'/api/retirement/stats': jsonResponse([
+			{
+				year: 2024,
+				account_wrapper: 'IKE',
+				owner_user_id: 1,
+				total_contributed: 5000,
+				marginal_tax_rate: null,
+				pit_savings: null
+			},
+			{
+				year: 2024,
+				account_wrapper: 'IKZE',
+				owner_user_id: 1,
+				total_contributed: 9000,
+				marginal_tax_rate: 0.32,
+				pit_savings: 2880
+			},
+			{
+				year: 2024,
+				account_wrapper: 'IKZE',
+				owner_user_id: 2,
+				total_contributed: 0,
+				marginal_tax_rate: null,
+				pit_savings: null
+			}
+		])
 	});
 
 	it('maps every endpoint into the returned data shape', async () => {
@@ -313,13 +365,24 @@ describe('metryki load', () => {
 		// accounts without interest_rate_pct are filtered out
 		expect(result.realYieldAccounts).toEqual([{ id: 1, interest_rate_pct: 5 }]);
 		expect(result.cpiSeries.source).toBe('GUS');
+		// only IKZE rows with a non-null pit_savings survive the filter
+		expect(result.ikzePitStats).toEqual([
+			{
+				year: 2024,
+				account_wrapper: 'IKZE',
+				owner_user_id: 1,
+				total_contributed: 9000,
+				marginal_tax_rate: 0.32,
+				pit_savings: 2880
+			}
+		]);
 	});
 
-	it('dispatches all seven requests before any response resolves', async () => {
+	it('dispatches all eight requests before any response resolves', async () => {
 		// Gate every response behind a manually-released promise. A serial
 		// loader would dispatch request N+1 only after response N resolved, so
 		// it would have issued just one fetch while the gate is shut. The
-		// concurrent loader fires all seven up front — assert that before
+		// concurrent loader fires all eight up front — assert that before
 		// releasing the gate.
 		const { fetchFn } = routedFetch(happyRoutes());
 		const respond = fetchFn.getMockImplementation();
@@ -338,7 +401,7 @@ describe('metryki load', () => {
 		// Flush the synchronous dispatch microtasks without resolving the gate.
 		await Promise.resolve();
 		await Promise.resolve();
-		expect(dispatched).toBe(7);
+		expect(dispatched).toBe(8);
 
 		release();
 		await pending;
@@ -352,6 +415,7 @@ describe('metryki load', () => {
 		routes['/api/users'] = new Error('network down');
 		routes['/api/accounts'] = new Error('network down');
 		routes['/api/cpi/series'] = jsonResponse(null, 503);
+		routes['/api/retirement/stats'] = jsonResponse(null, 500);
 
 		const { fetchFn } = routedFetch(routes);
 		const result = await load(loadEvent(fetchFn as unknown as typeof fetch));
@@ -361,6 +425,7 @@ describe('metryki load', () => {
 		expect(result.bondStats).toBeNull();
 		expect(result.owners).toEqual([]);
 		expect(result.realYieldAccounts).toEqual([]);
+		expect(result.ikzePitStats).toEqual([]);
 		expect(result.cpiSeries).toEqual({
 			points: [],
 			base_year: null,
