@@ -39,3 +39,38 @@ function pad2(n: number): string {
 export function isoDateLocal(d: Date): string {
 	return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
+
+// Groups [date, amount] salary points by company, sorted ascending by date.
+// Only the current company — the one holding the globally most recent record —
+// gets its last salary carried forward to `todayIso`, so it renders as a flat
+// line up to now. Old employers stay anchored to their last known date instead
+// of misleadingly extending to today.
+export function groupSalariesByCompany(
+	records: Array<{ company: string | null; date: string; amount: number }>,
+	todayIso: string
+): Map<string, Array<[string, number]>> {
+	const companyMap = new Map<string, Array<[string, number]>>();
+	for (const r of records) {
+		const companyName = (r.company ?? '').trim() || 'Nieokreślona firma';
+		if (!companyMap.has(companyName)) companyMap.set(companyName, []);
+		companyMap.get(companyName)!.push([r.date, r.amount]);
+	}
+
+	let currentCompany: string | null = null;
+	let currentCompanyLastDate = '';
+	companyMap.forEach((rows, company) => {
+		rows.sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime());
+		const lastDate = rows[rows.length - 1]?.[0] ?? '';
+		if (lastDate > currentCompanyLastDate) {
+			currentCompanyLastDate = lastDate;
+			currentCompany = company;
+		}
+	});
+	if (currentCompany !== null) {
+		const rows = companyMap.get(currentCompany)!;
+		const last = rows[rows.length - 1];
+		if (last && last[0] < todayIso) rows.push([todayIso, last[1]]);
+	}
+
+	return companyMap;
+}
