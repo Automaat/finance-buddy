@@ -1,13 +1,15 @@
 import type { EChartsOption } from 'echarts';
 import type { CallbackDataParams, TopLevelFormatterParams } from 'echarts/types/dist/shared';
 import type { CpiSeries } from '$lib/types/cpi';
+import { chartInk, chartContribution, chartValue } from '$lib/utils/theme';
+import { baseChartOption, chartTooltip, axisLine, splitLine } from './chartBase';
 
 type AxisTooltipItem = CallbackDataParams & { axisValue: string };
 
 // buildCumulativeInflationChartOption renders the CPI series as a cumulative
 // price-level line (fixed-base index, left axis) plus year-over-year inflation
-// bars (right axis). Mirrors the Nord palette and styling used across the
-// metryki charts so the inflation section blends in.
+// bars (right axis). Shares the metryki base option + theme tokens so the
+// inflation section blends in.
 export function buildCumulativeInflationChartOption(series: CpiSeries): EChartsOption {
 	const sorted = [...series.points].sort((a, b) => a.year - b.year);
 	const years = sorted.map((p) => String(p.year));
@@ -15,19 +17,10 @@ export function buildCumulativeInflationChartOption(series: CpiSeries): EChartsO
 	const yoy = sorted.map((p) => parseFloat(p.yoy_rate.toFixed(1)));
 
 	return {
-		backgroundColor: 'transparent',
-		title: {
-			text: 'Skumulowana inflacja (CPI)',
-			left: 'center',
-			top: 10,
-			textStyle: { color: '#2e3440', fontSize: 16, fontWeight: 'bold' }
-		},
+		...baseChartOption('Skumulowana inflacja (CPI)'),
 		tooltip: {
-			trigger: 'axis',
+			...chartTooltip(),
 			axisPointer: { type: 'shadow' },
-			backgroundColor: 'rgba(255, 255, 255, 0.95)',
-			borderColor: '#d8dee9',
-			textStyle: { color: '#2e3440' },
 			formatter: function (params: TopLevelFormatterParams) {
 				const items = (Array.isArray(params) ? params : [params]) as AxisTooltipItem[];
 				const year = items[0]?.axisValue ?? '';
@@ -45,30 +38,30 @@ export function buildCumulativeInflationChartOption(series: CpiSeries): EChartsO
 		legend: {
 			data: ['Indeks cen (baza 100)', 'Inflacja r/r'],
 			bottom: 10,
-			textStyle: { color: '#2e3440', fontSize: 14 }
+			textStyle: { color: chartInk, fontSize: 14 }
 		},
 		grid: { left: 70, right: 60, bottom: 70, top: 70, containLabel: false },
 		xAxis: {
 			type: 'category',
 			data: years,
-			axisLabel: { color: '#2e3440', fontSize: 12 },
-			axisLine: { lineStyle: { color: '#d8dee9', width: 2 } },
+			axisLabel: { color: chartInk, fontSize: 12 },
+			axisLine: axisLine(),
 			boundaryGap: true
 		},
 		yAxis: [
 			{
 				type: 'value',
 				name: 'Indeks',
-				nameTextStyle: { color: '#2e3440', fontSize: 12, fontWeight: 'bold' },
-				axisLabel: { color: '#2e3440', fontSize: 12 },
-				axisLine: { lineStyle: { color: '#d8dee9', width: 2 } },
-				splitLine: { lineStyle: { color: '#e5e9f0', type: 'dashed' } }
+				nameTextStyle: { color: chartInk, fontSize: 12, fontWeight: 'bold' },
+				axisLabel: { color: chartInk, fontSize: 12 },
+				axisLine: axisLine(),
+				splitLine: splitLine()
 			},
 			{
 				type: 'value',
 				name: 'r/r %',
-				nameTextStyle: { color: '#2e3440', fontSize: 12, fontWeight: 'bold' },
-				axisLabel: { color: '#2e3440', fontSize: 12, formatter: '{value}%' },
+				nameTextStyle: { color: chartInk, fontSize: 12, fontWeight: 'bold' },
+				axisLabel: { color: chartInk, fontSize: 12, formatter: '{value}%' },
 				axisLine: { show: false },
 				splitLine: { show: false }
 			}
@@ -80,7 +73,7 @@ export function buildCumulativeInflationChartOption(series: CpiSeries): EChartsO
 				yAxisIndex: 1,
 				data: yoy,
 				barWidth: '45%',
-				itemStyle: { color: '#88c0d0', borderRadius: [4, 4, 0, 0] }
+				itemStyle: { color: chartContribution, borderRadius: [4, 4, 0, 0] }
 			},
 			{
 				name: 'Indeks cen (baza 100)',
@@ -90,8 +83,8 @@ export function buildCumulativeInflationChartOption(series: CpiSeries): EChartsO
 				smooth: true,
 				symbol: 'circle',
 				symbolSize: 6,
-				lineStyle: { width: 3, color: '#5e81ac' },
-				itemStyle: { color: '#5e81ac' }
+				lineStyle: { width: 3, color: chartValue },
+				itemStyle: { color: chartValue }
 			}
 		]
 	};

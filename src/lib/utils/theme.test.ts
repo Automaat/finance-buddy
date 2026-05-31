@@ -1,5 +1,16 @@
 import { describe, it, expect } from 'vitest';
-import { chartPalette, chartAccent, chartAccentGradient } from './theme';
+import {
+	chartPalette,
+	chartAccent,
+	chartAccentGradient,
+	chartInk,
+	chartInkMuted,
+	chartAxisLine,
+	chartSplitLine,
+	chartContribution,
+	chartValue,
+	chartPositive
+} from './theme';
 
 describe('theme', () => {
 	it('exposes 8 distinct palette colors', () => {
@@ -22,5 +33,23 @@ describe('theme', () => {
 		for (const stop of chartAccentGradient) {
 			expect(stop).toMatch(/^rgba\(225, 29, 72, /);
 		}
+	});
+
+	it('exposes hex chrome + semantic tokens (no leftover Nord palette)', () => {
+		const tokens = [
+			chartInk,
+			chartInkMuted,
+			chartAxisLine,
+			chartSplitLine,
+			chartContribution,
+			chartValue,
+			chartPositive
+		];
+		for (const token of tokens) {
+			expect(token).toMatch(/^#[0-9a-f]{6}$/);
+		}
+		// the rose value color is the accent; contribution is a lighter rose tint
+		expect(chartValue).toBe(chartAccent);
+		expect(chartContribution).toBe(chartPalette[2]);
 	});
 });
