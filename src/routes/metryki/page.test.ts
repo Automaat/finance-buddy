@@ -101,6 +101,26 @@ describe('Metryki Page', () => {
 		expect(screen.getByRole('heading', { name: 'Jak inwestować nowe pieniądze' })).toBeTruthy();
 	});
 
+	it('renders the sticky section navigation with anchor links', () => {
+		render(Page, { props: { data: mockData } });
+		const nav = screen.getByRole('navigation', { name: 'Sekcje strony' });
+		expect(nav).toBeTruthy();
+		const links = ['Działania', 'Przegląd', 'Konta', 'Zwroty', 'Wzrost'].map((label) =>
+			screen.getByRole('link', { name: label })
+		);
+		expect(links.map((l) => l.getAttribute('href'))).toEqual([
+			'#dzialania',
+			'#przeglad',
+			'#konta',
+			'#zwroty',
+			'#wzrost'
+		]);
+		// every nav target must exist so the anchors actually scroll somewhere
+		for (const id of ['dzialania', 'przeglad', 'konta', 'zwroty', 'wzrost']) {
+			expect(document.getElementById(id)).toBeTruthy();
+		}
+	});
+
 	it('renders the emergency fund metric card with its formatted value', () => {
 		render(Page, { props: { data: mockData } });
 		expect(screen.getByText('Ile miesięcy bez pracy')).toBeTruthy();
