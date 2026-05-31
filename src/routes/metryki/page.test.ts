@@ -1,6 +1,7 @@
 import { describe, expect, it, beforeAll, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import Page from './+page.svelte';
+import { load } from './+page';
 
 beforeAll(() => {
 	Object.defineProperty(window, 'matchMedia', {
@@ -230,5 +231,153 @@ describe('Metryki Page with populated data', () => {
 		expect(screen.getByRole('heading', { name: 'Marcin', level: 3 })).toBeTruthy();
 		expect(screen.getByRole('heading', { name: 'Podsumowanie Akcji' })).toBeTruthy();
 		expect(screen.getByRole('heading', { name: 'Podsumowanie Obligacji' })).toBeTruthy();
+	});
+});
+
+// jsonResponse fakes the slice of the Fetch Response that the loader reads:
+// `ok`, `status`, and `json()`. `ok` derives from status like the platform.
+function jsonResponse(body: unknown, status = 200): Response {
+	return {
+		ok: status >= 200 && status < 300,
+		status,
+		json: async () => body
+	} as Response;
+}
+
+// routedFetch returns a fetch stub that answers each endpoint from `routes`,
+// recording call order so concurrency can be asserted. A route value may be a
+// Response or a thrown error (to simulate a network failure).
+function routedFetch(routes: Record<string, Response | Error>) {
+	const calls: string[] = [];
+	const fetchFn = vi.fn(async (input: string | URL | Request) => {
+		const url = typeof input === 'string' ? input : input.toString();
+		calls.push(url);
+		const key = Object.keys(routes).find((k) => url.includes(k));
+		const route = key ? routes[key] : undefined;
+		if (route instanceof Error) throw route;
+		if (route) return route;
+		return jsonResponse({}, 404);
+	});
+	return { fetchFn, calls };
+}
+
+const loadEvent = (fetchFn: typeof fetch) =>
+	({
+		fetch: fetchFn,
+		url: new URL('http://localhost/metryki')
+	}) as unknown as Parameters<typeof load>[0];
+
+describe('metryki load', () => {
+	const dashboardBody = {
+		metric_cards: metricCards,
+		allocation_analysis: {
+			by_category: [],
+			by_wrapper: [],
+			rebalancing: [],
+			total_investment_value: 0
+		},
+		investment_time_series: [],
+		wrapper_time_series: { ike: [], ikze: [], ppk: [] },
+		category_time_series: { stock: [], bond: [] }
+	};
+
+	const happyRoutes = (): Record<string, Response | Error> => ({
+		'/api/dashboard': jsonResponse(dashboardBody),
+		'/api/retirement/ppk-stats': jsonResponse([{ owner_user_id: 1 }]),
+		'/api/investment/stock-stats': jsonResponse({ total_value: 1 }),
+		'/api/investment/bond-stats': jsonResponse({ total_value: 2 }),
+		'/api/users': jsonResponse([{ id: 1, name: 'Marcin' }]),
+		'/api/accounts': jsonResponse({
+			assets: [
+				{ id: 1, interest_rate_pct: 5 },
+				{ id: 2, interest_rate_pct: null }
+			]
+		}),
+		'/api/cpi/series': jsonResponse({
+			points: [{ year: 2024 }],
+			base_year: 2022,
+			latest_year: 2024,
+			source: 'GUS'
+		})
+	});
+
+	it('maps every endpoint into the returned data shape', async () => {
+		const { fetchFn } = routedFetch(happyRoutes());
+		const result = await load(loadEvent(fetchFn as unknown as typeof fetch));
+
+		expect(result.metricCards).toEqual(metricCards);
+		expect(result.ppkStats).toEqual([{ owner_user_id: 1 }]);
+		expect(result.stockStats).toEqual({ total_value: 1 });
+		expect(result.bondStats).toEqual({ total_value: 2 });
+		expect(result.owners).toEqual([{ id: 1, name: 'Marcin' }]);
+		// accounts without interest_rate_pct are filtered out
+		expect(result.realYieldAccounts).toEqual([{ id: 1, interest_rate_pct: 5 }]);
+		expect(result.cpiSeries.source).toBe('GUS');
+	});
+
+	it('dispatches all seven requests before any response resolves', async () => {
+		// Gate every response behind a manually-released promise. A serial
+		// loader would dispatch request N+1 only after response N resolved, so
+		// it would have issued just one fetch while the gate is shut. The
+		// concurrent loader fires all seven up front — assert that before
+		// releasing the gate.
+		const { fetchFn } = routedFetch(happyRoutes());
+		const respond = fetchFn.getMockImplementation();
+		if (!respond) throw new Error('expected a mock implementation');
+		let release!: () => void;
+		const gate = new Promise<void>((resolve) => (release = resolve));
+		// Count dispatches in the wrapper, BEFORE the gate, so the tally reflects
+		// requests issued — not responses delivered (which the gate withholds).
+		let dispatched = 0;
+		fetchFn.mockImplementation((input: string | URL | Request) => {
+			dispatched += 1;
+			return gate.then(() => respond(input));
+		});
+
+		const pending = load(loadEvent(fetchFn as unknown as typeof fetch));
+		// Flush the synchronous dispatch microtasks without resolving the gate.
+		await Promise.resolve();
+		await Promise.resolve();
+		expect(dispatched).toBe(7);
+
+		release();
+		await pending;
+	});
+
+	it('degrades every best-effort source to its default without failing the page', async () => {
+		const routes = happyRoutes();
+		routes['/api/retirement/ppk-stats'] = jsonResponse(null, 500);
+		routes['/api/investment/stock-stats'] = new Error('network down');
+		routes['/api/investment/bond-stats'] = jsonResponse(null, 500);
+		routes['/api/users'] = new Error('network down');
+		routes['/api/accounts'] = new Error('network down');
+		routes['/api/cpi/series'] = jsonResponse(null, 503);
+
+		const { fetchFn } = routedFetch(routes);
+		const result = await load(loadEvent(fetchFn as unknown as typeof fetch));
+
+		expect(result.ppkStats).toEqual([]);
+		expect(result.stockStats).toBeNull();
+		expect(result.bondStats).toBeNull();
+		expect(result.owners).toEqual([]);
+		expect(result.realYieldAccounts).toEqual([]);
+		expect(result.cpiSeries).toEqual({
+			points: [],
+			base_year: null,
+			latest_year: null,
+			source: ''
+		});
+		// the dashboard still loaded fine
+		expect(result.metricCards).toEqual(metricCards);
+	});
+
+	it('throws the dashboard status when the dashboard request fails', async () => {
+		const routes = happyRoutes();
+		routes['/api/dashboard'] = jsonResponse(null, 502);
+
+		const { fetchFn } = routedFetch(routes);
+		await expect(load(loadEvent(fetchFn as unknown as typeof fetch))).rejects.toMatchObject({
+			status: 502
+		});
 	});
 });

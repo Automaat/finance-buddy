@@ -1,8 +1,46 @@
-import { error } from '@sveltejs/kit';
+import { error, isHttpError } from '@sveltejs/kit';
 import { resolveApiUrl } from '$lib/api';
 import { resolveRangeParams } from '$lib/utils/dateRange';
 import type { CpiSeries } from '$lib/types/cpi';
+import type { OwnerOption } from '$lib/types/owners';
 import type { RealYieldAccount } from '$lib/components/RealYieldsTable.svelte';
+
+// PpkStat / CategoryStat mirror GET /api/retirement/ppk-stats and
+// /api/investment/{stock,bond}-stats — the subset the page renders. Declared
+// here (not reused from $lib/types/retirement, whose PPKStats keys on a legacy
+// `owner` string) so PageData keeps the owner_user_id shape +page.svelte reads.
+interface PpkStat {
+	owner_user_id: number | null;
+	total_value: number;
+	employee_contributed: number;
+	employer_contributed: number;
+	government_contributed: number;
+	total_contributed: number;
+	returns: number;
+	roi_percentage: number;
+}
+
+interface CategoryStat {
+	total_value: number;
+	total_contributed: number;
+	returns: number;
+	roi_percentage: number;
+}
+
+// fetchJson GETs a URL and returns its parsed body, or `fallback` on any
+// failure (non-OK status, network error, malformed JSON). Lets the page run
+// every best-effort request inside one Promise.all without a rejection from
+// one source tearing down the batch. The explicit return type keeps the
+// fallback from narrowing T to `never[]`/`null` at each call site.
+async function fetchJson<T>(fetchFn: typeof fetch, url: string, fallback: T): Promise<T> {
+	try {
+		const res = await fetchFn(url);
+		if (!res.ok) return fallback;
+		return (await res.json()) as T;
+	} catch {
+		return fallback;
+	}
+}
 
 export async function load({ fetch, url }) {
 	try {
@@ -16,65 +54,41 @@ export async function load({ fetch, url }) {
 			? `${apiUrl}/api/dashboard?${dashboardQS.toString()}`
 			: `${apiUrl}/api/dashboard`;
 
-		const dashboardRes = await fetch(dashboardURL);
+		// Fire every request concurrently — only the dashboard fetch gates the
+		// page, so there's no reason to serialize the rest. Wall-clock load
+		// collapses from the sum of 7 round-trips to the slowest single one.
+		// Each fetch is wrapped so a network rejection can't reject the batch:
+		// the dashboard's HTTP-status check is enforced explicitly below, and
+		// every other source keeps its current degrade-to-default semantics.
+		const cpiDefault: CpiSeries = {
+			points: [],
+			base_year: null,
+			latest_year: null,
+			source: ''
+		};
+
+		const [dashboardRes, ppkStats, stockStats, bondStats, owners, realYieldAccounts, cpiSeries] =
+			await Promise.all([
+				fetch(dashboardURL),
+				fetchJson<PpkStat[]>(fetch, `${apiUrl}/api/retirement/ppk-stats`, []),
+				fetchJson<CategoryStat | null>(fetch, `${apiUrl}/api/investment/stock-stats`, null),
+				fetchJson<CategoryStat | null>(fetch, `${apiUrl}/api/investment/bond-stats`, null),
+				fetchJson<OwnerOption[]>(fetch, `${apiUrl}/api/users`, []),
+				// Accounts carry per-account real_yield_pct (post-Belka, post-CPI);
+				// the CPI series feeds the cumulative-inflation chart — both power
+				// the real-return section and degrade to empty on failure without
+				// taking down the page.
+				fetchJson<{ assets?: RealYieldAccount[] }>(fetch, `${apiUrl}/api/accounts`, {}).then(
+					(data) => (data.assets ?? []).filter((a: RealYieldAccount) => a.interest_rate_pct != null)
+				),
+				fetchJson<CpiSeries>(fetch, `${apiUrl}/api/cpi/series`, cpiDefault)
+			]);
 
 		if (!dashboardRes.ok) {
 			throw error(dashboardRes.status, 'Failed to load dashboard data');
 		}
 
 		const dashboard = await dashboardRes.json();
-
-		// Fetch PPK stats
-		const ppkStatsRes = await fetch(`${apiUrl}/api/retirement/ppk-stats`);
-		let ppkStats = [];
-		if (ppkStatsRes.ok) {
-			ppkStats = await ppkStatsRes.json();
-		}
-
-		// Fetch stock stats
-		const stockStatsRes = await fetch(`${apiUrl}/api/investment/stock-stats`);
-		let stockStats = null;
-		if (stockStatsRes.ok) {
-			stockStats = await stockStatsRes.json();
-		}
-
-		// Fetch bond stats
-		const bondStatsRes = await fetch(`${apiUrl}/api/investment/bond-stats`);
-		let bondStats = null;
-		if (bondStatsRes.ok) {
-			bondStats = await bondStatsRes.json();
-		}
-
-		// Fetch owners for owner_user_id resolution
-		const ownersRes = await fetch(`${apiUrl}/api/users`);
-		const owners = ownersRes.ok ? await ownersRes.json() : [];
-
-		// Accounts carry per-account real_yield_pct (post-Belka, post-CPI) and
-		// the CPI series feeds the cumulative-inflation chart — both power the
-		// real-return section. These are best-effort: a failure (network or
-		// malformed JSON) degrades only that section to empty, never the whole
-		// metrics page, so they get their own try/catch.
-		let realYieldAccounts: RealYieldAccount[] = [];
-		let cpiSeries: CpiSeries = { points: [], base_year: null, latest_year: null, source: '' };
-		try {
-			const accountsRes = await fetch(`${apiUrl}/api/accounts`);
-			if (accountsRes.ok) {
-				const accountsData = await accountsRes.json();
-				realYieldAccounts = (accountsData.assets ?? []).filter(
-					(a: RealYieldAccount) => a.interest_rate_pct != null
-				);
-			}
-		} catch {
-			realYieldAccounts = [];
-		}
-		try {
-			const cpiSeriesRes = await fetch(`${apiUrl}/api/cpi/series`);
-			if (cpiSeriesRes.ok) {
-				cpiSeries = await cpiSeriesRes.json();
-			}
-		} catch {
-			// keep the empty default
-		}
 
 		return {
 			metricCards: dashboard.metric_cards,
@@ -93,7 +107,7 @@ export async function load({ fetch, url }) {
 			dateTo
 		};
 	} catch (err) {
-		if (err instanceof Error && 'status' in err) {
+		if (isHttpError(err)) {
 			throw err;
 		}
 		throw error(500, 'Failed to load metrics data');
