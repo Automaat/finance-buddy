@@ -86,7 +86,8 @@ export async function load({ fetch, url }) {
 			owners,
 			realYieldAccounts,
 			cpiSeries,
-			retirementStats
+			retirementStats,
+			snapshotDate
 		] = await Promise.all([
 			fetch(dashboardURL),
 			fetchJson<PpkStat[]>(fetch, `${apiUrl}/api/retirement/ppk-stats`, []),
@@ -103,7 +104,13 @@ export async function load({ fetch, url }) {
 			fetchJson<CpiSeries>(fetch, `${apiUrl}/api/cpi/series`, cpiDefault),
 			// Yearly retirement stats (current year, all owners) — only the IKZE
 			// rows with a computed PIT benefit are surfaced below.
-			fetchJson<YearlyStat[]>(fetch, `${apiUrl}/api/retirement/stats`, [])
+			fetchJson<YearlyStat[]>(fetch, `${apiUrl}/api/retirement/stats`, []),
+			// Snapshots are ordered date-desc; the first row's date is the "as of"
+			// for the always-latest metric cards (which the dashboard date range
+			// never filters). Best-effort: missing → no date label.
+			fetchJson<{ date?: string }[]>(fetch, `${apiUrl}/api/snapshots`, []).then(
+				(rows) => rows[0]?.date ?? null
+			)
 		]);
 
 		// IKZE is the only Polish wrapper with an up-front PIT deduction; the
@@ -132,6 +139,7 @@ export async function load({ fetch, url }) {
 			realYieldAccounts,
 			cpiSeries,
 			ikzePitStats,
+			snapshotDate,
 			range,
 			dateFrom,
 			dateTo

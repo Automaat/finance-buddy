@@ -36,6 +36,17 @@
 	const cpiSeries = $derived(data.cpiSeries);
 	const hasCpiSeries = $derived((cpiSeries?.points?.length ?? 0) > 0);
 	const ikzePitStats = $derived(data.ikzePitStats ?? []);
+	const snapshotDate = $derived(data.snapshotDate ?? null);
+
+	// Secondary line for the consolidated mortgage card: "X mies. · Y lat do
+	// spłaty". Empty when there's no mortgage so the card shows just the em-dash.
+	const mortgagePayoffLabel = $derived.by(() => {
+		const months = metricCards.mortgage_months_left;
+		const years = metricCards.mortgage_years_left;
+		if (!months || months <= 0) return undefined;
+		const yearsText = years != null ? ` · ${years.toFixed(1)} lat` : '';
+		return `${months} mies.${yearsText} do spłaty`;
+	});
 
 	let allocationChart: HTMLDivElement;
 	let inflationChart = $state<HTMLDivElement | undefined>(undefined);
@@ -180,7 +191,12 @@
 		</div>
 	{/if}
 
-	<h2 class="h2">Przegląd finansowy</h2>
+	<div class="flex flex-wrap items-baseline justify-between gap-2">
+		<h2 class="h2">Przegląd finansowy</h2>
+		{#if snapshotDate}
+			<span class="text-sm text-surface-600-400">stan na {snapshotDate}</span>
+		{/if}
+	</div>
 
 	<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 		<MetricCard
@@ -196,6 +212,7 @@
 			value={metricCards.emergency_fund_months}
 			decimals={2}
 			color="green"
+			tooltip="Aktywa płynne (bank + konta oszczędnościowe) ÷ miesięczne wydatki."
 		/>
 
 		<MetricCard
@@ -204,28 +221,17 @@
 			decimals={2}
 			suffix=" PLN"
 			color="blue"
+			tooltip="Miesięczny dochód, jaki dałyby oszczędności emerytalne przy bezpiecznej stopie wypłaty."
 		/>
 
 		<MetricCard
-			label="Ile zostało do spłaty hipoteki"
+			label="Hipoteka do spłaty"
 			value={metricCards.mortgage_remaining}
 			decimals={0}
 			suffix=" PLN"
 			color="red"
-		/>
-
-		<MetricCard
-			label="Ile miesięcy do spłaty hipoteki"
-			value={metricCards.mortgage_months_left}
-			decimals={0}
-			color="red"
-		/>
-
-		<MetricCard
-			label="Ile lat do spłaty hipoteki"
-			value={metricCards.mortgage_years_left}
-			decimals={2}
-			color="red"
+			secondary={mortgagePayoffLabel}
+			tooltip="Pozostały kapitał do spłaty oraz szacowany czas przy obecnym tempie."
 		/>
 
 		<MetricCard
@@ -252,49 +258,55 @@
 			color="green"
 		/>
 
-		{#if metricCards.savings_rate !== null}
-			<MetricCard
-				label="Ile oszczędzamy miesięcznie"
-				value={metricCards.savings_rate}
-				decimals={1}
-				suffix="%"
-				color="green"
-			/>
-		{/if}
+		<MetricCard
+			label="Ile oszczędzamy miesięcznie"
+			value={metricCards.savings_rate}
+			decimals={1}
+			suffix="%"
+			color="green"
+			tooltip="Średnia z 3 ostatnich miesięcznych zmian wartości netto ÷ średnia z 3 ostatnich pensji."
+			emptyHint="Dodaj pensje i snapshoty, by policzyć"
+			emptyHref="/salaries"
+		/>
 
-		{#if metricCards.debt_to_income_ratio !== null}
-			<MetricCard
-				label="Stosunek długu do dochodu"
-				value={metricCards.debt_to_income_ratio}
-				decimals={1}
-				suffix="%"
-				color={metricCards.debt_to_income_ratio < 30
+		<MetricCard
+			label="Stosunek długu do dochodu"
+			value={metricCards.debt_to_income_ratio}
+			decimals={1}
+			suffix="%"
+			color={metricCards.debt_to_income_ratio == null
+				? 'neutral'
+				: metricCards.debt_to_income_ratio < 30
 					? 'green'
 					: metricCards.debt_to_income_ratio <= 36
 						? 'blue'
 						: 'red'}
-			/>
-		{/if}
+			tooltip="Miesięczne zobowiązania ÷ miesięczny dochód. <30% dobrze, >36% wysoko."
+			emptyHint="Uzupełnij konfigurację"
+			emptyHref="/settings/config"
+		/>
 
-		{#if metricCards.hour_of_work_cost !== null}
-			<MetricCard
-				label="Koszt godziny pracy"
-				value={metricCards.hour_of_work_cost}
-				decimals={2}
-				suffix=" PLN"
-				color="blue"
-			/>
-		{/if}
+		<MetricCard
+			label="Koszt godziny pracy"
+			value={metricCards.hour_of_work_cost}
+			decimals={2}
+			suffix=" PLN"
+			color="blue"
+			tooltip="Ile kosztuje Cię godzina pracy (dojazdy, przygotowania) względem pensji netto."
+			emptyHint="Uzupełnij konfigurację"
+			emptyHref="/settings/config"
+		/>
 
-		{#if metricCards.hour_of_life_cost !== null}
-			<MetricCard
-				label="Koszt godziny życia"
-				value={metricCards.hour_of_life_cost}
-				decimals={2}
-				suffix=" PLN"
-				color="green"
-			/>
-		{/if}
+		<MetricCard
+			label="Koszt godziny życia"
+			value={metricCards.hour_of_life_cost}
+			decimals={2}
+			suffix=" PLN"
+			color="green"
+			tooltip="Miesięczne wydatki rozłożone na wszystkie godziny doby — ile kosztuje godzina życia."
+			emptyHint="Uzupełnij konfigurację"
+			emptyHref="/settings/config"
+		/>
 	</div>
 
 	<!-- PPK Stats Section -->

@@ -79,6 +79,7 @@ const mockData = {
 	realYieldAccounts: [],
 	cpiSeries: { points: [], base_year: null, latest_year: null, source: '' },
 	ikzePitStats: [],
+	snapshotDate: null,
 	range: 'all' as const,
 	dateFrom: null,
 	dateTo: null
@@ -111,12 +112,32 @@ describe('Metryki Page', () => {
 		expect(screen.getByText(/Portfel jest zgodny z docelową alokacją/)).toBeTruthy();
 	});
 
-	it('hides optional metric cards when their values are null', () => {
+	it('keeps optional metric cards visible with a config hint when null', () => {
 		render(Page, { props: { data: mockData } });
-		expect(screen.queryByText('Ile oszczędzamy miesięcznie')).toBeNull();
-		expect(screen.queryByText('Stosunek długu do dochodu')).toBeNull();
-		expect(screen.queryByText('Koszt godziny pracy')).toBeNull();
-		expect(screen.queryByText('Koszt godziny życia')).toBeNull();
+		// Labels stay on the page instead of vanishing…
+		expect(screen.getByText('Stosunek długu do dochodu')).toBeTruthy();
+		expect(screen.getByText('Koszt godziny pracy')).toBeTruthy();
+		expect(screen.getByText('Koszt godziny życia')).toBeTruthy();
+		// …and point the user at where to fill the gap.
+		const hints = screen.getAllByRole('link', { name: 'Uzupełnij konfigurację' });
+		expect(hints.length).toBeGreaterThan(0);
+		expect(hints[0].getAttribute('href')).toBe('/settings/config');
+		// savings_rate has its own bespoke hint pointing at /salaries.
+		const savingsHint = screen.getByRole('link', { name: 'Dodaj pensje i snapshoty, by policzyć' });
+		expect(savingsHint.getAttribute('href')).toBe('/salaries');
+	});
+
+	it('omits the mortgage payoff line when there is nothing left to pay', () => {
+		render(Page, { props: { data: mockData } });
+		// mockData has mortgage_months_left: 0 → no "X mies. … do spłaty" line.
+		// (The card's tooltip mentions "do spłaty"; the secondary line is the
+		// one that also carries "mies.".)
+		expect(screen.queryByText(/mies\..*do spłaty/)).toBeNull();
+	});
+
+	it('does not show a snapshot date when none is available', () => {
+		render(Page, { props: { data: mockData } });
+		expect(screen.queryByText(/stan na/)).toBeNull();
 	});
 
 	it('omits PPK, stock and bond summary sections when no data', () => {
@@ -221,6 +242,7 @@ describe('Metryki Page with populated data', () => {
 				pit_savings: 2880
 			}
 		],
+		snapshotDate: '2026-05-24',
 		range: 'all' as const,
 		dateFrom: null,
 		dateTo: null
@@ -239,6 +261,18 @@ describe('Metryki Page with populated data', () => {
 		expect(screen.getByText('Stosunek długu do dochodu')).toBeTruthy();
 		expect(screen.getByText('Koszt godziny pracy')).toBeTruthy();
 		expect(screen.getByText('Koszt godziny życia')).toBeTruthy();
+		// values present → no config hint links
+		expect(screen.queryByRole('link', { name: 'Uzupełnij konfigurację' })).toBeNull();
+	});
+
+	it('shows the snapshot date and one consolidated mortgage card', () => {
+		render(Page, { props: { data: populatedData } });
+		expect(screen.getByText('stan na 2026-05-24')).toBeTruthy();
+		// the three legacy mortgage cards collapse into one with a payoff line
+		expect(screen.getByText('Hipoteka do spłaty')).toBeTruthy();
+		expect(screen.queryByText('Ile miesięcy do spłaty hipoteki')).toBeNull();
+		expect(screen.queryByText('Ile lat do spłaty hipoteki')).toBeNull();
+		expect(screen.getByText(/240 mies\..*do spłaty/)).toBeTruthy();
 	});
 
 	it('renders the PPK, stock and bond summary sections', () => {
@@ -350,6 +384,10 @@ describe('metryki load', () => {
 				marginal_tax_rate: null,
 				pit_savings: null
 			}
+		]),
+		'/api/snapshots': jsonResponse([
+			{ id: 9, date: '2026-05-24' },
+			{ id: 8, date: '2026-04-24' }
 		])
 	});
 
@@ -376,13 +414,15 @@ describe('metryki load', () => {
 				pit_savings: 2880
 			}
 		]);
+		// the most recent snapshot's date drives the "stan na" label
+		expect(result.snapshotDate).toBe('2026-05-24');
 	});
 
-	it('dispatches all eight requests before any response resolves', async () => {
+	it('dispatches all nine requests before any response resolves', async () => {
 		// Gate every response behind a manually-released promise. A serial
 		// loader would dispatch request N+1 only after response N resolved, so
 		// it would have issued just one fetch while the gate is shut. The
-		// concurrent loader fires all eight up front — assert that before
+		// concurrent loader fires all nine up front — assert that before
 		// releasing the gate.
 		const { fetchFn } = routedFetch(happyRoutes());
 		const respond = fetchFn.getMockImplementation();
@@ -401,7 +441,7 @@ describe('metryki load', () => {
 		// Flush the synchronous dispatch microtasks without resolving the gate.
 		await Promise.resolve();
 		await Promise.resolve();
-		expect(dispatched).toBe(8);
+		expect(dispatched).toBe(9);
 
 		release();
 		await pending;
@@ -416,6 +456,7 @@ describe('metryki load', () => {
 		routes['/api/accounts'] = new Error('network down');
 		routes['/api/cpi/series'] = jsonResponse(null, 503);
 		routes['/api/retirement/stats'] = jsonResponse(null, 500);
+		routes['/api/snapshots'] = new Error('network down');
 
 		const { fetchFn } = routedFetch(routes);
 		const result = await load(loadEvent(fetchFn as unknown as typeof fetch));
@@ -426,6 +467,7 @@ describe('metryki load', () => {
 		expect(result.owners).toEqual([]);
 		expect(result.realYieldAccounts).toEqual([]);
 		expect(result.ikzePitStats).toEqual([]);
+		expect(result.snapshotDate).toBeNull();
 		expect(result.cpiSeries).toEqual({
 			points: [],
 			base_year: null,
