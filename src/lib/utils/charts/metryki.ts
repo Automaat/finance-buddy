@@ -455,9 +455,9 @@ export function buildYearlyRoiChartOption(
 		yAxis: {
 			type: 'value',
 			axisLabel: { formatter: '{value}%', color: chartInkMuted },
-			// Solid split line here (unlike the dashed default elsewhere) — reuse
-			// only the token color, not splitLine()'s dashed `type`.
-			splitLine: { lineStyle: { color: splitLine().lineStyle.color } }
+			// Solid split line here (unlike the dashed default elsewhere): keep the
+			// shared token styling, override only the line type.
+			splitLine: { lineStyle: { ...splitLine().lineStyle, type: 'solid' } }
 		},
 		series: roiSeries as unknown as BarSeriesOption[]
 	};
