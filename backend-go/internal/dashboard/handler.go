@@ -259,6 +259,7 @@ type dashboardWire struct {
 	WrapperTimeSeries      wrapperTimeSeriesWire  `json:"wrapper_time_series"`
 	CategoryTimeSeries     categoryTimeSeriesWire `json:"category_time_series"`
 	TileDeltas             tileDeltasWire         `json:"tile_deltas"`
+	LatestSnapshotDate     *wire.IsoDate          `json:"latest_snapshot_date"`
 }
 
 func toWire(res result) dashboardWire {
@@ -297,6 +298,10 @@ func toWire(res result) dashboardWire {
 	w.CategoryTimeSeries = categoryTimeSeriesWire{
 		Stock: seriesToWire(res.CategoryTimeSeries["stock"]),
 		Bond:  seriesToWire(res.CategoryTimeSeries["bond"]),
+	}
+	if res.LatestSnapshotDate != nil {
+		d := wire.IsoDate(*res.LatestSnapshotDate)
+		w.LatestSnapshotDate = &d
 	}
 	return w
 }

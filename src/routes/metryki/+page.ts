@@ -118,6 +118,10 @@ export async function load({ fetch, url }) {
 		}
 
 		const dashboard = await dashboardRes.json();
+		// The always-latest tiles/metric cards reflect this snapshot regardless
+		// of the date-range filter; the dashboard exposes it so we don't pay for
+		// a full /api/snapshots list just to read one date.
+		const snapshotDate: string | null = dashboard.latest_snapshot_date ?? null;
 
 		return {
 			metricCards: dashboard.metric_cards,
@@ -132,6 +136,7 @@ export async function load({ fetch, url }) {
 			realYieldAccounts,
 			cpiSeries,
 			ikzePitStats,
+			snapshotDate,
 			range,
 			dateFrom,
 			dateTo

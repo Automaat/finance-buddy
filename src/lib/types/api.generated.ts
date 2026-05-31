@@ -2438,6 +2438,8 @@ export interface paths {
                                 /** Format: double */
                                 value?: number;
                             }[];
+                            /** Format: date */
+                            latest_snapshot_date?: string | null;
                             metric_cards?: {
                                 /** Format: double */
                                 annual_expenses?: number | null;

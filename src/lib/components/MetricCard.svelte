@@ -5,9 +5,28 @@
 		decimals?: number;
 		suffix?: string;
 		color?: 'green' | 'blue' | 'red' | 'yellow' | 'neutral';
+		// Optional explanation shown as a native tooltip on the label (and a
+		// subtle dotted underline as the affordance), for cryptic metrics.
+		tooltip?: string;
+		// Optional muted line beneath the value (e.g. a mortgage's months/years).
+		secondary?: string;
+		// When value is null/undefined, render this hint + optional link instead
+		// of a bare em-dash, so a missing metric points the user at how to fill it.
+		emptyHint?: string;
+		emptyHref?: string;
 	}
 
-	let { label, value, decimals = 0, suffix = '', color = 'neutral' }: Props = $props();
+	let {
+		label,
+		value,
+		decimals = 0,
+		suffix = '',
+		color = 'neutral',
+		tooltip,
+		secondary,
+		emptyHint,
+		emptyHref
+	}: Props = $props();
 
 	const formatter = $derived(
 		new Intl.NumberFormat('pl-PL', {
@@ -16,9 +35,9 @@
 		})
 	);
 
-	const displayValue = $derived(
-		value == null || Number.isNaN(value) ? '—' : formatter.format(value) + suffix
-	);
+	const isEmpty = $derived(value == null || Number.isNaN(value));
+	const displayValue = $derived(isEmpty ? '—' : formatter.format(value as number) + suffix);
+	const showHint = $derived(isEmpty && emptyHint != null);
 
 	const valueClass = $derived(
 		{
@@ -32,6 +51,26 @@
 </script>
 
 <div class="card preset-filled-surface-100-900 p-4 space-y-1">
-	<div class="text-sm opacity-75">{label}</div>
-	<div class="text-2xl font-bold {valueClass}">{displayValue}</div>
+	{#if tooltip}
+		<div class="text-sm opacity-75 cursor-help underline decoration-dotted" title={tooltip}>
+			{label}
+		</div>
+	{:else}
+		<div class="text-sm opacity-75">{label}</div>
+	{/if}
+
+	{#if showHint}
+		<div class="text-sm text-surface-600-400">
+			{#if emptyHref}
+				<a href={emptyHref} class="underline">{emptyHint}</a>
+			{:else}
+				{emptyHint}
+			{/if}
+		</div>
+	{:else}
+		<div class="text-2xl font-bold {valueClass}">{displayValue}</div>
+		{#if secondary}
+			<div class="text-xs text-surface-600-400">{secondary}</div>
+		{/if}
+	{/if}
 </div>

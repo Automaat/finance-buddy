@@ -64,6 +64,9 @@ func computeFromAggregates(ctx context.Context, s *Store, aggRows []AggregateRow
 	}
 	latestRows := buildMergedRows(latestValues, shared.snapshotDate, shared.accounts, shared.assetIDs)
 	res.RetirementAccountValue = retirementValueOf(latestRows)
+	if d, ok := shared.snapshotDate[latestSID]; ok {
+		res.LatestSnapshotDate = &d
+	}
 
 	if shared.hasConfig && len(latestRows) > 0 {
 		latestDate := shared.snapshotDate[latestSID]
@@ -166,6 +169,8 @@ func computeRaw(ctx context.Context, s *Store) (result, error) {
 
 	latestSID, latestDate, found := latestSnapshotByDate(rows)
 	if found {
+		ld := latestDate
+		res.LatestSnapshotDate = &ld
 		var latestRows []mergedRow
 		for _, r := range rows {
 			if r.SnapshotID == latestSID {

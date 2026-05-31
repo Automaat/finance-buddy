@@ -111,6 +111,10 @@ type result struct {
 	WrapperTimeSeries      map[string][]timeSeriesPoint
 	CategoryTimeSeries     map[string][]timeSeriesPoint
 	TileDeltas             tileDeltas
+	// LatestSnapshotDate is the date of the snapshot backing the always-latest
+	// tiles + metric cards. nil when there are no snapshots. Independent of the
+	// date-range filter, which only trims the time series.
+	LatestSnapshotDate *time.Time
 }
 
 // Compute runs the dashboard. Aggregate-backed when snapshot_aggregates has
