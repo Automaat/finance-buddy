@@ -1,5 +1,14 @@
 import type { BarSeriesOption, EChartsOption } from 'echarts';
 import type { CallbackDataParams, TopLevelFormatterParams } from 'echarts/types/dist/shared';
+import {
+	chartInk,
+	chartInkMuted,
+	chartContribution,
+	chartValue,
+	chartPositive,
+	chartPalette
+} from '$lib/utils/theme';
+import { baseChartOption, chartTooltip, axisLine, splitLine } from './chartBase';
 
 type AxisTooltipItem = CallbackDataParams & { axisValue: string };
 
@@ -42,26 +51,27 @@ export function buildAllocationChartOption(
 	const currentValues = byCategory.map((item) => parseFloat(item.current_percentage.toFixed(1)));
 	const targetValues = byCategory.map((item) => parseFloat(item.target_percentage.toFixed(1)));
 
+	const barLabel = {
+		show: true,
+		position: 'top' as const,
+		distance: 5,
+		formatter: '{c}%',
+		color: chartInk,
+		fontSize: isMobile ? 10 : 14,
+		fontWeight: 'bold' as const
+	};
+
 	return {
-		backgroundColor: 'transparent',
-		title: {
-			text: 'Alokacja inwestycyjna: Obecna vs Docelowa',
-			left: 'center',
-			top: 10,
-			textStyle: { color: '#2e3440', fontSize: isMobile ? 13 : 16, fontWeight: 'bold' }
-		},
+		...baseChartOption('Alokacja inwestycyjna: Obecna vs Docelowa', isMobile),
 		tooltip: {
-			trigger: 'axis',
+			...chartTooltip(),
 			axisPointer: { type: 'shadow' },
-			backgroundColor: 'rgba(255, 255, 255, 0.95)',
-			borderColor: '#d8dee9',
-			textStyle: { color: '#2e3440' },
 			formatter: '{b}<br/>{a0}: {c0}%<br/>{a1}: {c1}%'
 		},
 		legend: {
 			data: ['Obecna', 'Docelowa'],
 			bottom: 10,
-			textStyle: { color: '#2e3440', fontSize: isMobile ? 11 : 14 }
+			textStyle: { color: chartInk, fontSize: isMobile ? 11 : 14 }
 		},
 		grid: {
 			left: 60,
@@ -74,14 +84,14 @@ export function buildAllocationChartOption(
 			type: 'category',
 			data: categories,
 			axisLabel: {
-				color: '#2e3440',
+				color: chartInk,
 				fontSize: isMobile ? 12 : 14,
 				fontWeight: 'bold',
 				formatter: function (value: string) {
 					return value.charAt(0).toUpperCase() + value.slice(1);
 				}
 			},
-			axisLine: { lineStyle: { color: '#d8dee9', width: 2 } },
+			axisLine: axisLine(),
 			axisTick: { show: false }
 		},
 		yAxis: {
@@ -89,16 +99,16 @@ export function buildAllocationChartOption(
 			name: 'Procent (%)',
 			nameLocation: 'middle',
 			nameGap: 50,
-			nameTextStyle: { color: '#2e3440', fontSize: 14, fontWeight: 'bold' },
+			nameTextStyle: { color: chartInk, fontSize: 14, fontWeight: 'bold' },
 			max: 100,
 			axisLabel: {
-				color: '#2e3440',
+				color: chartInk,
 				fontSize: 13,
 				fontWeight: 'bold',
 				formatter: '{value}%'
 			},
-			axisLine: { lineStyle: { color: '#d8dee9', width: 2 } },
-			splitLine: { lineStyle: { color: '#e5e9f0', type: 'dashed' } }
+			axisLine: axisLine(),
+			splitLine: splitLine()
 		},
 		series: [
 			{
@@ -106,32 +116,16 @@ export function buildAllocationChartOption(
 				type: 'bar',
 				data: currentValues,
 				barWidth: '35%',
-				itemStyle: { color: '#88c0d0', borderRadius: [4, 4, 0, 0] },
-				label: {
-					show: true,
-					position: 'top',
-					distance: 5,
-					formatter: '{c}%',
-					color: '#2e3440',
-					fontSize: isMobile ? 10 : 14,
-					fontWeight: 'bold'
-				}
+				itemStyle: { color: chartPalette[2], borderRadius: [4, 4, 0, 0] },
+				label: barLabel
 			},
 			{
 				name: 'Docelowa',
 				type: 'bar',
 				data: targetValues,
 				barWidth: '35%',
-				itemStyle: { color: '#81a1c1', borderRadius: [4, 4, 0, 0] },
-				label: {
-					show: true,
-					position: 'top',
-					distance: 5,
-					formatter: '{c}%',
-					color: '#2e3440',
-					fontSize: isMobile ? 10 : 14,
-					fontWeight: 'bold'
-				}
+				itemStyle: { color: chartPalette[0], borderRadius: [4, 4, 0, 0] },
+				label: barLabel
 			}
 		]
 	};
@@ -147,18 +141,9 @@ export function buildWrapperChartOption(
 	}));
 
 	return {
-		backgroundColor: 'transparent',
-		title: {
-			text: 'Podział według kont (IKE/IKZE/PPK)',
-			left: 'center',
-			top: 10,
-			textStyle: { color: '#2e3440', fontSize: isMobile ? 13 : 16, fontWeight: 'bold' }
-		},
+		...baseChartOption('Podział według kont (IKE/IKZE/PPK)', isMobile),
 		tooltip: {
-			trigger: 'item',
-			backgroundColor: 'rgba(255, 255, 255, 0.95)',
-			borderColor: '#d8dee9',
-			textStyle: { color: '#2e3440' },
+			...chartTooltip('item'),
 			formatter: function (params) {
 				const single = Array.isArray(params) ? params[0] : params;
 				const value = (single.value as number).toLocaleString('pl-PL', {
@@ -173,13 +158,13 @@ export function buildWrapperChartOption(
 					type: 'scroll',
 					bottom: 0,
 					left: 'center',
-					textStyle: { color: '#2e3440', fontSize: 11, fontWeight: 'bold' }
+					textStyle: { color: chartInk, fontSize: 11, fontWeight: 'bold' }
 				}
 			: {
 					orient: 'vertical',
 					left: 20,
 					top: 'middle',
-					textStyle: { color: '#2e3440', fontSize: 14, fontWeight: 'bold' },
+					textStyle: { color: chartInk, fontSize: 14, fontWeight: 'bold' },
 					itemGap: 15
 				},
 		series: [
@@ -190,7 +175,7 @@ export function buildWrapperChartOption(
 				avoidLabelOverlap: true,
 				minShowLabelAngle: 1,
 				data: wrapperData,
-				color: ['#88c0d0', '#81a1c1', '#5e81ac', '#b48ead'],
+				color: [...chartPalette],
 				emphasis: {
 					itemStyle: {
 						shadowBlur: 10,
@@ -209,7 +194,7 @@ export function buildWrapperChartOption(
 					alignTo: 'edge',
 					margin: 20,
 					edgeDistance: '15%',
-					color: '#000000',
+					color: chartInk,
 					fontSize: 15,
 					fontWeight: 'bold',
 					formatter: function (params) {
@@ -223,7 +208,7 @@ export function buildWrapperChartOption(
 					length2: 20,
 					smooth: 0.2,
 					lineStyle: {
-						color: '#2e3440',
+						color: chartInk,
 						width: 2
 					}
 				},
@@ -236,24 +221,26 @@ export function buildWrapperChartOption(
 	};
 }
 
-export function buildInvestmentTrendChartOption(series: TimeSeriesPoint[]): EChartsOption {
+// buildTrendChartOption is the shared contributions-vs-value line chart behind
+// both the all-investments trend and each per-wrapper trend. `valueLabel` is
+// the word the tooltip uses for the value line ("Wartość portfela" vs the
+// shorter "Wartość"); `axisFontSize` is the only other cosmetic difference
+// between the two original copies.
+function buildTrendChartOption(
+	title: string,
+	series: TimeSeriesPoint[],
+	valueLabel: string,
+	axisFontSize: number,
+	isMobile = false
+): EChartsOption {
 	const dates = series.map((item) => item.date);
 	const values = series.map((item) => item.value ?? 0);
 	const contributions = series.map((item) => item.contributions ?? 0);
 
 	return {
-		backgroundColor: 'transparent',
-		title: {
-			text: 'Inwestycje w czasie',
-			left: 'center',
-			top: 10,
-			textStyle: { color: '#2e3440', fontSize: 16, fontWeight: 'bold' }
-		},
+		...baseChartOption(title, isMobile),
 		tooltip: {
-			trigger: 'axis',
-			backgroundColor: 'rgba(255, 255, 255, 0.95)',
-			borderColor: '#d8dee9',
-			textStyle: { color: '#2e3440' },
+			...chartTooltip(),
 			formatter: function (params: TopLevelFormatterParams) {
 				const items = (Array.isArray(params) ? params : [params]) as AxisTooltipItem[];
 				const date = items[0].axisValue;
@@ -262,15 +249,15 @@ export function buildInvestmentTrendChartOption(series: TimeSeriesPoint[]): ECha
 				const returns = value - contributed;
 
 				return `${date}<br/>
-					<span style="color:#5e81ac">●</span> Wartość portfela: <b>${formatPLN(value)} PLN</b><br/>
-					<span style="color:#88c0d0">■</span> Wpłaty: ${formatPLN(contributed)} PLN<br/>
-					<span style="color:#a3be8c">■</span> Zyski: ${formatPLN(returns)} PLN`;
+					<span style="color:${chartValue}">●</span> ${valueLabel}: <b>${formatPLN(value)} PLN</b><br/>
+					<span style="color:${chartContribution}">■</span> Wpłaty: ${formatPLN(contributed)} PLN<br/>
+					<span style="color:${chartPositive}">■</span> Zyski: ${formatPLN(returns)} PLN`;
 			}
 		},
 		legend: {
 			data: ['Wpłaty', 'Wartość portfela'],
 			bottom: 10,
-			textStyle: { color: '#2e3440', fontSize: 14 }
+			textStyle: { color: chartInk, fontSize: 14 }
 		},
 		grid: {
 			left: 80,
@@ -283,11 +270,11 @@ export function buildInvestmentTrendChartOption(series: TimeSeriesPoint[]): ECha
 			type: 'category',
 			data: dates,
 			axisLabel: {
-				color: '#2e3440',
-				fontSize: 12,
+				color: chartInk,
+				fontSize: axisFontSize,
 				rotate: 45
 			},
-			axisLine: { lineStyle: { color: '#d8dee9', width: 2 } },
+			axisLine: axisLine(),
 			boundaryGap: false
 		},
 		yAxis: {
@@ -295,16 +282,16 @@ export function buildInvestmentTrendChartOption(series: TimeSeriesPoint[]): ECha
 			name: 'Wartość (PLN)',
 			nameLocation: 'middle',
 			nameGap: 60,
-			nameTextStyle: { color: '#2e3440', fontSize: 14, fontWeight: 'bold' },
+			nameTextStyle: { color: chartInk, fontSize: 14, fontWeight: 'bold' },
 			axisLabel: {
-				color: '#2e3440',
-				fontSize: 12,
+				color: chartInk,
+				fontSize: axisFontSize,
 				formatter: function (value: number) {
 					return (value / 1000).toFixed(0) + 'k';
 				}
 			},
-			axisLine: { lineStyle: { color: '#d8dee9', width: 2 } },
-			splitLine: { lineStyle: { color: '#e5e9f0', type: 'dashed' } }
+			axisLine: axisLine(),
+			splitLine: splitLine()
 		},
 		series: [
 			{
@@ -315,7 +302,7 @@ export function buildInvestmentTrendChartOption(series: TimeSeriesPoint[]): ECha
 				lineStyle: { width: 0 },
 				showSymbol: false,
 				areaStyle: {
-					color: '#88c0d0',
+					color: chartContribution,
 					opacity: 0.8
 				},
 				emphasis: {
@@ -327,7 +314,7 @@ export function buildInvestmentTrendChartOption(series: TimeSeriesPoint[]): ECha
 				type: 'line',
 				data: values,
 				smooth: true,
-				lineStyle: { width: 3, color: '#5e81ac' },
+				lineStyle: { width: 3, color: chartValue },
 				showSymbol: false,
 				emphasis: {
 					focus: 'series'
@@ -337,108 +324,15 @@ export function buildInvestmentTrendChartOption(series: TimeSeriesPoint[]): ECha
 	};
 }
 
+export function buildInvestmentTrendChartOption(series: TimeSeriesPoint[]): EChartsOption {
+	return buildTrendChartOption('Inwestycje w czasie', series, 'Wartość portfela', 12);
+}
+
 export function buildWrapperTrendChartOption(
 	title: string,
 	series: TimeSeriesPoint[]
 ): EChartsOption {
-	const dates = series.map((item) => item.date);
-	const contributions = series.map((item) => item.contributions ?? 0);
-	const values = series.map((item) => item.value ?? 0);
-
-	return {
-		backgroundColor: 'transparent',
-		title: {
-			text: title,
-			left: 'center',
-			top: 10,
-			textStyle: { color: '#2e3440', fontSize: 16, fontWeight: 'bold' }
-		},
-		tooltip: {
-			trigger: 'axis',
-			backgroundColor: 'rgba(255, 255, 255, 0.95)',
-			borderColor: '#d8dee9',
-			textStyle: { color: '#2e3440' },
-			formatter: function (params: TopLevelFormatterParams) {
-				const items = (Array.isArray(params) ? params : [params]) as AxisTooltipItem[];
-				const date = items[0].axisValue;
-				const contributed = items[0].value as number;
-				const value = items[1].value as number;
-				const returns = value - contributed;
-
-				return `${date}<br/>
-					<span style="color:#5e81ac">●</span> Wartość: <b>${formatPLN(value)} PLN</b><br/>
-					<span style="color:#88c0d0">■</span> Wpłaty: ${formatPLN(contributed)} PLN<br/>
-					<span style="color:#a3be8c">■</span> Zyski: ${formatPLN(returns)} PLN`;
-			}
-		},
-		legend: {
-			data: ['Wpłaty', 'Wartość portfela'],
-			bottom: 10,
-			textStyle: { color: '#2e3440', fontSize: 14 }
-		},
-		grid: {
-			left: 80,
-			right: 40,
-			bottom: 80,
-			top: 80,
-			containLabel: false
-		},
-		xAxis: {
-			type: 'category',
-			data: dates,
-			axisLabel: {
-				color: '#2e3440',
-				fontSize: 11,
-				rotate: 45
-			},
-			axisLine: { lineStyle: { color: '#d8dee9', width: 2 } },
-			boundaryGap: false
-		},
-		yAxis: {
-			type: 'value',
-			name: 'Wartość (PLN)',
-			nameLocation: 'middle',
-			nameGap: 60,
-			nameTextStyle: { color: '#2e3440', fontSize: 14, fontWeight: 'bold' },
-			axisLabel: {
-				color: '#2e3440',
-				fontSize: 11,
-				formatter: function (value: number) {
-					return (value / 1000).toFixed(0) + 'k';
-				}
-			},
-			axisLine: { lineStyle: { color: '#d8dee9', width: 2 } },
-			splitLine: { lineStyle: { color: '#e5e9f0', type: 'dashed' } }
-		},
-		series: [
-			{
-				name: 'Wpłaty',
-				type: 'line',
-				data: contributions,
-				smooth: true,
-				lineStyle: { width: 0 },
-				showSymbol: false,
-				areaStyle: {
-					color: '#88c0d0',
-					opacity: 0.8
-				},
-				emphasis: {
-					focus: 'series'
-				}
-			},
-			{
-				name: 'Wartość portfela',
-				type: 'line',
-				data: values,
-				smooth: true,
-				lineStyle: { width: 3, color: '#5e81ac' },
-				showSymbol: false,
-				emphasis: {
-					focus: 'series'
-				}
-			}
-		]
-	};
+	return buildTrendChartOption(title, series, 'Wartość', 11);
 }
 
 // Computes year-over-year ROI using the modified Dietz method: the
@@ -495,25 +389,27 @@ export function buildYearlyRoiChartOption(
 	const labelPosition = (params: { value: unknown }): 'top' | 'bottom' =>
 		Number(params.value) >= 0 ? 'top' : 'bottom';
 
+	const roiLabel = {
+		show: true,
+		position: labelPosition,
+		formatter: '{c}%',
+		color: chartInk,
+		fontSize: 11
+	};
+
 	const roiSeries: RoiBarSeries[] = [
 		{
 			name: 'Akcje',
 			type: 'bar',
 			barWidth: '25%',
 			data: allYears.map((y) => stockRoi.get(y) ?? null),
-			itemStyle: { color: '#a3be8c' },
-			label: {
-				show: true,
-				position: labelPosition,
-				formatter: '{c}%',
-				color: '#2e3440',
-				fontSize: 11
-			},
+			itemStyle: { color: chartValue },
+			label: roiLabel,
 			markLine: {
 				silent: true,
 				symbol: 'none',
 				data: [{ yAxis: 0 }],
-				lineStyle: { color: '#4c566a', type: 'solid', width: 1 }
+				lineStyle: { color: chartInkMuted, type: 'solid', width: 1 }
 			}
 		},
 		{
@@ -521,45 +417,24 @@ export function buildYearlyRoiChartOption(
 			type: 'bar',
 			barWidth: '25%',
 			data: allYears.map((y) => bondRoi.get(y) ?? null),
-			itemStyle: { color: '#d08770' },
-			label: {
-				show: true,
-				position: labelPosition,
-				formatter: '{c}%',
-				color: '#2e3440',
-				fontSize: 11
-			}
+			itemStyle: { color: chartPalette[2] },
+			label: roiLabel
 		},
 		{
 			name: 'PPK',
 			type: 'bar',
 			barWidth: '25%',
 			data: allYears.map((y) => ppkRoi.get(y) ?? null),
-			itemStyle: { color: '#88c0d0' },
-			label: {
-				show: true,
-				position: labelPosition,
-				formatter: '{c}%',
-				color: '#2e3440',
-				fontSize: 11
-			}
+			itemStyle: { color: chartPositive },
+			label: roiLabel
 		}
 	];
 
 	return {
-		backgroundColor: 'transparent',
-		title: {
-			text: 'Roczny ROI: Akcje, Obligacje, PPK',
-			left: 'center',
-			top: 10,
-			textStyle: { color: '#2e3440', fontSize: 16, fontWeight: 'bold' }
-		},
+		...baseChartOption('Roczny ROI: Akcje, Obligacje, PPK'),
 		tooltip: {
-			trigger: 'axis',
+			...chartTooltip(),
 			axisPointer: { type: 'shadow' },
-			backgroundColor: 'rgba(255, 255, 255, 0.95)',
-			borderColor: '#d8dee9',
-			textStyle: { color: '#2e3440' },
 			formatter: function (params: TopLevelFormatterParams) {
 				const items = (Array.isArray(params) ? params : [params]) as CallbackDataParams[];
 				return items
@@ -569,18 +444,20 @@ export function buildYearlyRoiChartOption(
 		},
 		legend: {
 			top: 40,
-			textStyle: { color: '#2e3440' }
+			textStyle: { color: chartInk }
 		},
 		grid: { top: 80, left: 60, right: 30, bottom: 60 },
 		xAxis: {
 			type: 'category',
 			data: allYears.map(String),
-			axisLabel: { color: '#4c566a' }
+			axisLabel: { color: chartInkMuted }
 		},
 		yAxis: {
 			type: 'value',
-			axisLabel: { formatter: '{value}%', color: '#4c566a' },
-			splitLine: { lineStyle: { color: '#e5e9f0' } }
+			axisLabel: { formatter: '{value}%', color: chartInkMuted },
+			// Solid split line here (unlike the dashed default elsewhere): keep the
+			// shared token styling, override only the line type.
+			splitLine: { lineStyle: { ...splitLine().lineStyle, type: 'solid' } }
 		},
 		series: roiSeries as unknown as BarSeriesOption[]
 	};
