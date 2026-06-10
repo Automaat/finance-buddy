@@ -30,7 +30,7 @@
 		"openapi-typescript": "^7.13.0",
 		"oxlint": "1.69.0",
 		"postcss": "^8.4.41",
-		"prettier": "3.8.3",
+		"prettier": "3.8.4",
 		"prettier-plugin-svelte": "4.1.0",
 		"svelte": "5.56.3",
 		"svelte-check": "4.6.0",
