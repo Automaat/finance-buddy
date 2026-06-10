@@ -2,7 +2,7 @@
 node = "24"
 python = "3.14.5"
 uv = "latest"
-go = "1.26.3"
+go = "1.26.4"
 "go:github.com/golangci/golangci-lint/v2/cmd/golangci-lint" = "2.12.2"
 # nilaway has no tagged releases. It's installed via `go install` in CI and
 # the scripts/run-nilaway.sh helper using a pinned pseudo-version (see the
