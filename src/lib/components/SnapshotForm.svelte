@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { resolveApiUrl } from '$lib/api';
 	import { Wallet, Umbrella, TrendingUp, Home, CreditCard } from 'lucide-svelte';
 	import type { Account, Asset, SnapshotResponse } from '$lib/types';
 	import type { OwnerOption } from '$lib/types/owners';
 	import { categoryLabel } from '$lib/utils/categories';
+	import { round2, staleQuotes, type HoldingQuote } from '$lib/utils/quoteFreshness';
 	import NewAccountModal from './snapshot/NewAccountModal.svelte';
 	import NewAssetModal from './snapshot/NewAssetModal.svelte';
 	import ValueRow from './snapshot/ValueRow.svelte';
@@ -16,6 +17,7 @@
 		liabilities: Account[];
 		physicalAssets: Asset[];
 		owners?: OwnerOption[];
+		holdings?: HoldingQuote[];
 	}
 
 	let {
@@ -23,8 +25,47 @@
 		assets: assetsProp,
 		liabilities: liabilitiesProp,
 		physicalAssets: physicalAssetsProp,
-		owners = []
+		owners = [],
+		holdings = []
 	}: Props = $props();
+
+	// Quote-freshness: investment autocalc uses the latest stored price quote.
+	// Flag held positions whose quote is missing or older than this many days
+	// so the user can refresh before snapshotting.
+	const STALE_QUOTE_DAYS = 2;
+
+	const staleHoldings = $derived(
+		editingSnapshot ? [] : staleQuotes(holdings, Date.now(), STALE_QUOTE_DAYS)
+	);
+
+	let refreshingPrices = $state(false);
+
+	async function refreshPrices() {
+		refreshingPrices = true;
+		error = '';
+		try {
+			const response = await fetch(`${resolveApiUrl()}/api/holdings/refresh-quotes`, {
+				method: 'POST'
+			});
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => null);
+				const message =
+					(errorData &&
+						typeof errorData === 'object' &&
+						'detail' in errorData &&
+						errorData.detail) ||
+					'Nie udało się zaktualizować cen';
+				throw new Error(String(message));
+			}
+			// Re-run load(): re-fetches accounts (live values recomputed with the
+			// fresh quotes) and holdings; the populate effect re-fills the form.
+			await invalidateAll();
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Błąd aktualizacji cen';
+		} finally {
+			refreshingPrices = false;
+		}
+	}
 
 	// Accounts/assets created in-component, merged with the prop-provided ones
 	let addedAccounts = $state<Account[]>([]);
@@ -96,13 +137,16 @@
 				}
 			});
 		} else {
-			// Create mode - initialize from current values
+			// Create mode - initialize from current values. Auto-calculated
+			// investment values carry many decimals (qty × price × FX); round
+			// to 2 places to match the numeric(15,2) column and the input's
+			// step="0.01" so the form passes native number validation.
 			[...assets, ...liabilities].forEach((account) => {
-				nextAccountValues[account.id] = account.current_value;
+				nextAccountValues[account.id] = round2(account.current_value);
 				if (account.current_value > 0) nextVisibleAccountIds.add(account.id);
 			});
 			physicalAssets.forEach((asset) => {
-				nextAssetValues[asset.id] = asset.current_value;
+				nextAssetValues[asset.id] = round2(asset.current_value);
 				if (asset.current_value > 0) nextVisibleAssetIds.add(asset.id);
 			});
 		}
@@ -400,6 +444,33 @@
 </script>
 
 <form onsubmit={handleSubmit} class="max-w-[800px] flex flex-col gap-6">
+	<!-- Quote freshness warning -->
+	{#if staleHoldings.length > 0}
+		<div class="card preset-filled-warning-500 p-4 space-y-2">
+			<p class="text-sm font-semibold">⚠️ Notowania inwestycji mogą być nieaktualne</p>
+			<ul class="text-sm list-disc list-inside space-y-0.5">
+				{#each staleHoldings as q}
+					<li>
+						{q.name}:
+						{#if q.date}
+							{q.date} ({q.daysOld} dni temu)
+						{:else}
+							brak notowania
+						{/if}
+					</li>
+				{/each}
+			</ul>
+			<button
+				type="button"
+				class="btn btn-sm preset-filled-surface-50-950"
+				onclick={refreshPrices}
+				disabled={refreshingPrices}
+			>
+				{refreshingPrices ? 'Aktualizowanie...' : '🔄 Aktualizuj ceny'}
+			</button>
+		</div>
+	{/if}
+
 	<!-- Date & Notes -->
 	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
 		<header class="space-y-1">

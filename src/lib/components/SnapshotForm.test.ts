@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
-import { goto } from '$app/navigation';
+import { goto, invalidateAll } from '$app/navigation';
 import SnapshotForm from './SnapshotForm.svelte';
 import type { Account, Asset, SnapshotResponse, SnapshotValueResponse } from '$lib/types';
 
@@ -12,7 +12,8 @@ vi.mock('$env/dynamic/public', () => ({
 }));
 
 vi.mock('$app/navigation', () => ({
-	goto: vi.fn()
+	goto: vi.fn(),
+	invalidateAll: vi.fn()
 }));
 
 function makeAccount(overrides: Partial<Account>): Account {
@@ -526,5 +527,68 @@ describe('SnapshotForm — sections, hide/show, modals', () => {
 		});
 		await fireEvent.click(screen.getByRole('button', { name: 'Anuluj' }));
 		expect(goto).toHaveBeenCalledWith('/');
+	});
+
+	describe('quote freshness banner', () => {
+		// A far-past quote date is stale regardless of the current clock.
+		const staleHolding = {
+			security: { name: 'VWCE' },
+			quantity: '10',
+			latest_quote_date: '2020-01-01'
+		};
+
+		afterEach(() => {
+			vi.unstubAllGlobals();
+		});
+
+		it('shows the stale-quote banner in create mode', () => {
+			render(SnapshotForm, {
+				props: {
+					assets: [bankAccount],
+					liabilities: [],
+					physicalAssets: [],
+					holdings: [staleHolding]
+				}
+			});
+			expect(screen.getByText(/Notowania inwestycji mogą być nieaktualne/)).toBeTruthy();
+			expect(screen.getByText(/VWCE/)).toBeTruthy();
+		});
+
+		it('suppresses the banner when editing an existing snapshot', () => {
+			const editingSnapshot: SnapshotResponse = {
+				id: 1,
+				date: '2024-03-31',
+				notes: null,
+				values: []
+			};
+			render(SnapshotForm, {
+				props: {
+					editingSnapshot,
+					assets: [bankAccount],
+					liabilities: [],
+					physicalAssets: [],
+					holdings: [staleHolding]
+				}
+			});
+			expect(screen.queryByText(/Notowania inwestycji mogą być nieaktualne/)).toBeNull();
+		});
+
+		it('refresh button POSTs to refresh-quotes and re-runs load', async () => {
+			const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+			vi.stubGlobal('fetch', fetchMock);
+			render(SnapshotForm, {
+				props: {
+					assets: [bankAccount],
+					liabilities: [],
+					physicalAssets: [],
+					holdings: [staleHolding]
+				}
+			});
+			await fireEvent.click(screen.getByRole('button', { name: /Aktualizuj ceny/ }));
+			await waitFor(() => expect(invalidateAll).toHaveBeenCalled());
+			const [url, init] = fetchMock.mock.calls[0];
+			expect(url).toBe('http://localhost:8000/api/holdings/refresh-quotes');
+			expect(init.method).toBe('POST');
+		});
 	});
 });

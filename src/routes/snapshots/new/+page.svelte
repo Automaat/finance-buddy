@@ -24,4 +24,5 @@
 	liabilities={data.liabilities}
 	physicalAssets={data.physicalAssets}
 	owners={data.owners}
+	holdings={data.holdings}
 />
