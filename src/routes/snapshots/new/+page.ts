@@ -5,11 +5,13 @@ export async function load({ fetch }) {
 	try {
 		const apiUrl = resolveApiUrl();
 
-		// Fetch accounts, assets, and owners in parallel
-		const [accountsResponse, assetsResponse, ownersResponse] = await Promise.all([
+		// Fetch accounts, assets, owners, and holdings in parallel. Holdings
+		// feed the quote-freshness check; their failure is non-fatal.
+		const [accountsResponse, assetsResponse, ownersResponse, holdingsResponse] = await Promise.all([
 			fetch(`${apiUrl}/api/accounts`),
 			fetch(`${apiUrl}/api/assets`),
-			fetch(`${apiUrl}/api/users`)
+			fetch(`${apiUrl}/api/users`),
+			fetch(`${apiUrl}/api/holdings`)
 		]);
 
 		if (!accountsResponse.ok) {
@@ -25,11 +27,13 @@ export async function load({ fetch }) {
 		const accountsData = await accountsResponse.json();
 		const assetsData = await assetsResponse.json();
 		const owners = await ownersResponse.json();
+		const holdings = holdingsResponse.ok ? (await holdingsResponse.json()).holdings : [];
 
 		return {
 			...accountsData,
 			physicalAssets: assetsData.assets,
-			owners
+			owners,
+			holdings
 		};
 	} catch (err) {
 		if (err instanceof Error && 'status' in err) {
