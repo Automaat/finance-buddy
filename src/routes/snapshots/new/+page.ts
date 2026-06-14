@@ -6,12 +6,13 @@ export async function load({ fetch }) {
 		const apiUrl = resolveApiUrl();
 
 		// Fetch accounts, assets, owners, and holdings in parallel. Holdings
-		// feed the quote-freshness check; their failure is non-fatal.
+		// feed the quote-freshness check only; a network failure there must not
+		// fail the whole load, so swallow its rejection to null.
 		const [accountsResponse, assetsResponse, ownersResponse, holdingsResponse] = await Promise.all([
 			fetch(`${apiUrl}/api/accounts`),
 			fetch(`${apiUrl}/api/assets`),
 			fetch(`${apiUrl}/api/users`),
-			fetch(`${apiUrl}/api/holdings`)
+			fetch(`${apiUrl}/api/holdings`).catch(() => null)
 		]);
 
 		if (!accountsResponse.ok) {
@@ -27,7 +28,13 @@ export async function load({ fetch }) {
 		const accountsData = await accountsResponse.json();
 		const assetsData = await assetsResponse.json();
 		const owners = await ownersResponse.json();
-		const holdings = holdingsResponse.ok ? (await holdingsResponse.json()).holdings : [];
+		const holdings =
+			holdingsResponse && holdingsResponse.ok
+				? await holdingsResponse.json().then(
+						(d) => d.holdings ?? [],
+						() => []
+					)
+				: [];
 
 		return {
 			...accountsData,

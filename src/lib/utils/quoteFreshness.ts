@@ -16,7 +16,12 @@ export interface StaleQuote {
 
 // round2 matches the snapshot value's numeric(15,2) column and the value
 // input's step="0.01", so auto-calculated values pass native validation.
-export const round2 = (n: number): number => Math.round(n * 100) / 100;
+// The 1e-8 nudge on the scaled value absorbs IEEE-754 error so exact-half
+// cents round away from zero (e.g. 1.005 -> 1.01, not 1.00).
+export const round2 = (n: number): number => {
+	const scaled = n * 100;
+	return Math.round(scaled + Math.sign(scaled) * 1e-8) / 100;
+};
 
 export function daysSince(date: string | null, nowMs: number): number {
 	if (!date) return Number.POSITIVE_INFINITY;

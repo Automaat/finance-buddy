@@ -13,7 +13,13 @@ describe('round2', () => {
 
 	it('handles zero and negatives', () => {
 		expect(round2(0)).toBe(0);
-		expect(round2(-1.005)).toBe(-1); // banker's edge: -1.005 → -1
+		expect(round2(-12.34)).toBe(-12.34);
+	});
+
+	it('rounds exact-half cents away from zero despite float error', () => {
+		expect(round2(1.005)).toBe(1.01);
+		expect(round2(2.675)).toBe(2.68);
+		expect(round2(-1.005)).toBe(-1.01);
 	});
 });
 
