@@ -6,16 +6,10 @@
 	import type { Account, Asset, SnapshotResponse } from '$lib/types';
 	import type { OwnerOption } from '$lib/types/owners';
 	import { categoryLabel } from '$lib/utils/categories';
+	import { round2, staleQuotes, type HoldingQuote } from '$lib/utils/quoteFreshness';
 	import NewAccountModal from './snapshot/NewAccountModal.svelte';
 	import NewAssetModal from './snapshot/NewAssetModal.svelte';
 	import ValueRow from './snapshot/ValueRow.svelte';
-
-	// Minimal shape consumed from GET /api/holdings for quote-freshness check.
-	interface HoldingQuote {
-		security: { name: string };
-		quantity: string;
-		latest_quote_date: string | null;
-	}
 
 	interface Props {
 		editingSnapshot?: SnapshotResponse | null;
@@ -35,30 +29,13 @@
 		holdings = []
 	}: Props = $props();
 
-	const round2 = (n: number): number => Math.round(n * 100) / 100;
-
 	// Quote-freshness: investment autocalc uses the latest stored price quote.
 	// Flag held positions whose quote is missing or older than this many days
 	// so the user can refresh before snapshotting.
 	const STALE_QUOTE_DAYS = 2;
 
-	function daysSince(date: string | null): number {
-		if (!date) return Number.POSITIVE_INFINITY;
-		const then = new Date(`${date}T00:00:00Z`).getTime();
-		return Math.floor((Date.now() - then) / 86_400_000);
-	}
-
-	const staleQuotes = $derived(
-		editingSnapshot
-			? []
-			: holdings
-					.filter((h) => parseFloat(h.quantity) > 0)
-					.map((h) => ({
-						name: h.security.name,
-						date: h.latest_quote_date,
-						daysOld: daysSince(h.latest_quote_date)
-					}))
-					.filter((h) => h.daysOld > STALE_QUOTE_DAYS)
+	const staleHoldings = $derived(
+		editingSnapshot ? [] : staleQuotes(holdings, Date.now(), STALE_QUOTE_DAYS)
 	);
 
 	let refreshingPrices = $state(false);
@@ -468,11 +445,11 @@
 
 <form onsubmit={handleSubmit} class="max-w-[800px] flex flex-col gap-6">
 	<!-- Quote freshness warning -->
-	{#if staleQuotes.length > 0}
+	{#if staleHoldings.length > 0}
 		<div class="card preset-filled-warning-500 p-4 space-y-2">
 			<p class="text-sm font-semibold">⚠️ Notowania inwestycji mogą być nieaktualne</p>
 			<ul class="text-sm list-disc list-inside space-y-0.5">
-				{#each staleQuotes as q}
+				{#each staleHoldings as q}
 					<li>
 						{q.name}:
 						{#if q.date}
