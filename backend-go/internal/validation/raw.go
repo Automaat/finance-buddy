@@ -67,11 +67,20 @@ func RawInt(v json.RawMessage) (int, error) {
 	return n, nil
 }
 
-// RawDecimal decodes a JSON *number* as a decimal.Decimal. Quoted
-// strings ("123.45") are rejected on purpose — callers map the error
-// into a "must be a number" validation message, matching the Python
-// pydantic behavior the bb-tests pin. Numeric values stay exact —
-// never round-trip through float64.
+// RawDecimal decodes a JSON number as a decimal.Decimal. Quoted strings are
+// rejected on purpose. Numeric values stay exact — never round-trip through
+// float64.
 func RawDecimal(v json.RawMessage) (decimal.Decimal, error) {
 	return decimal.NewFromString(string(bytes.TrimSpace(v)))
+}
+
+// RawDecimalStringOrNumber decodes either a JSON number or a quoted numeric
+// string as a decimal.Decimal. Use this only for endpoints whose existing API
+// contract accepts form-bound frontend values as strings.
+func RawDecimalStringOrNumber(v json.RawMessage) (decimal.Decimal, error) {
+	s, err := RawString(v)
+	if err == nil {
+		return decimal.NewFromString(strings.TrimSpace(s))
+	}
+	return RawDecimal(v)
 }

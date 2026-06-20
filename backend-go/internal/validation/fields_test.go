@@ -153,6 +153,51 @@ func TestOptionalDecimal(t *testing.T) {
 	requireValidation(t, vErr, "fee", "must be a number")
 }
 
+func TestRequiredDecimalStringOrNumber(t *testing.T) {
+	got, vErr := RequiredDecimalStringOrNumber(
+		map[string]json.RawMessage{"amount": json.RawMessage(`"123.45"`)},
+		"amount",
+		"required",
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if !got.Equal(decimal.RequireFromString("123.45")) {
+		t.Fatalf("got = %s", got)
+	}
+
+	_, vErr = RequiredDecimalStringOrNumber(map[string]json.RawMessage{}, "amount", "required")
+	requireValidation(t, vErr, "amount", "required")
+
+	_, vErr = RequiredDecimalStringOrNumber(
+		map[string]json.RawMessage{"amount": json.RawMessage(`"abc"`)},
+		"amount",
+		"required",
+	)
+	requireValidation(t, vErr, "amount", "must be a number")
+}
+
+func TestOptionalDecimalStringOrNumber(t *testing.T) {
+	got, vErr := OptionalDecimalStringOrNumber(
+		map[string]json.RawMessage{"fee": json.RawMessage(`"1.25"`)},
+		"fee",
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got == nil || !got.Equal(decimal.RequireFromString("1.25")) {
+		t.Fatalf("got = %v", got)
+	}
+
+	got, vErr = OptionalDecimalStringOrNumber(map[string]json.RawMessage{}, "fee")
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	_, vErr = OptionalDecimalStringOrNumber(map[string]json.RawMessage{"fee": json.RawMessage(`"abc"`)}, "fee")
+	requireValidation(t, vErr, "fee", "must be a number")
+}
+
 func requireValidation(t *testing.T, got *httputil.ValidationError, field, msg string) {
 	t.Helper()
 	if got == nil {

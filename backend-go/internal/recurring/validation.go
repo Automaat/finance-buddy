@@ -157,7 +157,7 @@ func requireString(raw map[string]json.RawMessage, key string, dest *string) *ht
 }
 
 func requireDecimal(raw map[string]json.RawMessage, key string) (decimal.Decimal, *httputil.ValidationError) {
-	return validation.RequiredDecimal(raw, key, "required")
+	return validation.RequiredDecimalStringOrNumber(raw, key, "required")
 }
 
 func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {

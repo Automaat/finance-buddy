@@ -120,3 +120,39 @@ func OptionalDecimal(
 	}
 	return &d, nil
 }
+
+// RequiredDecimalStringOrNumber reads a required decimal field that may arrive
+// as a JSON number or quoted numeric string. This preserves compatibility for
+// endpoints backed by string-valued frontend form controls.
+func RequiredDecimalStringOrNumber(
+	raw map[string]json.RawMessage,
+	key string,
+	missingMsg string,
+) (decimal.Decimal, *httputil.ValidationError) {
+	v, ok := raw[key]
+	if !ok || IsNull(v) {
+		return decimal.Zero, &httputil.ValidationError{Field: key, Msg: missingMsg}
+	}
+	d, err := RawDecimalStringOrNumber(v)
+	if err != nil {
+		return decimal.Zero, &httputil.ValidationError{Field: key, Msg: "must be a number"}
+	}
+	return d, nil
+}
+
+// OptionalDecimalStringOrNumber reads an optional decimal field that may
+// arrive as a JSON number or quoted numeric string.
+func OptionalDecimalStringOrNumber(
+	raw map[string]json.RawMessage,
+	key string,
+) (*decimal.Decimal, *httputil.ValidationError) {
+	v, ok := raw[key]
+	if !ok || IsNull(v) {
+		return nil, nil
+	}
+	d, err := RawDecimalStringOrNumber(v)
+	if err != nil {
+		return nil, &httputil.ValidationError{Field: key, Msg: "must be a number"}
+	}
+	return &d, nil
+}

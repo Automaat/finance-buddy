@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/shopspring/decimal"
+
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 )
 
-func TestBuildInputRejectsQuotedAmount(t *testing.T) {
+func TestBuildInputAcceptsQuotedAmount(t *testing.T) {
 	raw := map[string]json.RawMessage{
 		"account_id": json.RawMessage(`1`),
 		"amount":     json.RawMessage(`"1000.00"`),
@@ -15,8 +17,14 @@ func TestBuildInputRejectsQuotedAmount(t *testing.T) {
 		"start_date": json.RawMessage(`"2026-01-01"`),
 	}
 
-	_, vErr := buildInput(raw)
-	assertValidation(t, vErr, "amount", "must be a number")
+	got, vErr := buildInput(raw)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	want := decimal.RequireFromString("1000.00")
+	if !got.Amount.Equal(want) {
+		t.Fatalf("got = %s, want %s", got.Amount, want)
+	}
 }
 
 func assertValidation(t *testing.T, got *httputil.ValidationError, field, msg string) {

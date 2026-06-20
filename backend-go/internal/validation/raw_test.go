@@ -96,9 +96,35 @@ func TestRawDecimal(t *testing.T) {
 }
 
 func TestRawDecimalRejectsQuotedString(t *testing.T) {
-	// Quoted strings are NOT accepted — callers translate the error
-	// into "must be a number" to match pydantic's behavior.
 	if _, err := RawDecimal(json.RawMessage(`"123.45"`)); err == nil {
 		t.Fatal("expected error for quoted decimal")
+	}
+}
+
+func TestRawDecimalStringOrNumber(t *testing.T) {
+	cases := []struct {
+		name string
+		raw  json.RawMessage
+		want decimal.Decimal
+	}{
+		{name: "number", raw: json.RawMessage(`123.45`), want: decimal.RequireFromString("123.45")},
+		{name: "string", raw: json.RawMessage(`"123.45"`), want: decimal.RequireFromString("123.45")},
+		{name: "trimmed string", raw: json.RawMessage(`"  1.5  "`), want: decimal.RequireFromString("1.5")},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := RawDecimalStringOrNumber(tc.raw)
+			if err != nil {
+				t.Fatalf("err: %v", err)
+			}
+			if !got.Equal(tc.want) {
+				t.Fatalf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+
+	if _, err := RawDecimalStringOrNumber(json.RawMessage(`"abc"`)); err == nil {
+		t.Fatal("expected error for non-numeric string")
 	}
 }

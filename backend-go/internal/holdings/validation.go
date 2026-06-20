@@ -117,7 +117,7 @@ func buildLotInput(raw map[string]json.RawMessage) (Lot, *httputil.ValidationErr
 		return l, &httputil.ValidationError{Field: "price", Msg: "must not be negative"}
 	}
 	l.Price = price
-	if fee, vErr := validation.OptionalDecimal(raw, "fee"); vErr != nil {
+	if fee, vErr := validation.OptionalDecimalStringOrNumber(raw, "fee"); vErr != nil {
 		return l, vErr
 	} else if fee != nil {
 		if fee.Sign() < 0 {
@@ -203,7 +203,7 @@ func buildDividendInput(raw map[string]json.RawMessage) (Dividend, *httputil.Val
 		return d, &httputil.ValidationError{Field: "gross_amount", Msg: "must be positive"}
 	}
 	d.GrossAmount = gross
-	if tax, vErr := validation.OptionalDecimal(raw, "withholding_tax"); vErr != nil {
+	if tax, vErr := validation.OptionalDecimalStringOrNumber(raw, "withholding_tax"); vErr != nil {
 		return d, vErr
 	} else if tax != nil {
 		if tax.Sign() < 0 {
@@ -263,5 +263,5 @@ func requireString2(raw map[string]json.RawMessage, key string) (string, *httput
 }
 
 func requireDecimal(raw map[string]json.RawMessage, key string) (decimal.Decimal, *httputil.ValidationError) {
-	return validation.RequiredDecimal(raw, key, "required")
+	return validation.RequiredDecimalStringOrNumber(raw, key, "required")
 }
