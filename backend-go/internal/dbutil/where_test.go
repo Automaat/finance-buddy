@@ -19,6 +19,33 @@ func TestWhereBuilder(t *testing.T) {
 	}
 }
 
+func TestWhereBuilderRejectsInvalidConditionFormat(t *testing.T) {
+	for _, format := range []string{"owner_user_id = $1", "range BETWEEN $%d AND $%d"} {
+		t.Run(format, func(t *testing.T) {
+			defer func() {
+				if recover() == nil {
+					t.Fatal("expected panic")
+				}
+			}()
+
+			NewWhereBuilder().Add(format, 7)
+		})
+	}
+}
+
+func TestWhereBuilderArgsReturnsCopy(t *testing.T) {
+	where := NewWhereBuilder()
+	where.Add("owner_user_id = $%d", 7)
+
+	args := where.Args()
+	args[0] = 42
+	args = append(args, "extra")
+
+	if got, want := where.Args(), []any{7}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("Args() = %#v, want %#v", got, want)
+	}
+}
+
 func TestWhereBuilderCopiesInitialConditions(t *testing.T) {
 	conditions := []string{"is_active = true"}
 	where := NewWhereBuilder(conditions...)

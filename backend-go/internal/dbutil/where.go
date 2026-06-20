@@ -21,6 +21,9 @@ func NewWhereBuilder(conditions ...string) *WhereBuilder {
 // Add appends value as the next positional argument and adds the matching
 // condition, for example Add("owner_user_id = $%d", ownerID).
 func (b *WhereBuilder) Add(conditionFormat string, value any) {
+	if strings.Count(conditionFormat, "%d") != 1 {
+		panic(fmt.Sprintf("dbutil.WhereBuilder.Add condition format must contain exactly one %%d placeholder: %q", conditionFormat))
+	}
 	b.args = append(b.args, value)
 	b.conditions = append(b.conditions, fmt.Sprintf(conditionFormat, len(b.args)))
 }
@@ -32,5 +35,5 @@ func (b *WhereBuilder) SQL() string {
 
 // Args returns the positional query arguments.
 func (b *WhereBuilder) Args() []any {
-	return b.args
+	return append([]any(nil), b.args...)
 }
