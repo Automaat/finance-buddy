@@ -10,7 +10,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -65,27 +64,22 @@ const selectColumns = `
 // List returns active rows ordered by date desc + the distinct active-company
 // list (unfiltered, so the dropdown stays usable across filters).
 func (s *Store) List(ctx context.Context, f ListFilter) ([]SalaryRecord, []string, error) {
-	conds := []string{"is_active = true"}
-	args := []any{}
+	where := dbutil.NewWhereBuilder("is_active = true")
 	if f.OwnerUserID != nil {
-		args = append(args, *f.OwnerUserID)
-		conds = append(conds, fmt.Sprintf("owner_user_id = $%d", len(args)))
+		where.Add("owner_user_id = $%d", *f.OwnerUserID)
 	}
 	if f.DateFrom != nil {
-		args = append(args, *f.DateFrom)
-		conds = append(conds, fmt.Sprintf("date >= $%d", len(args)))
+		where.Add("date >= $%d", *f.DateFrom)
 	}
 	if f.DateTo != nil {
-		args = append(args, *f.DateTo)
-		conds = append(conds, fmt.Sprintf("date <= $%d", len(args)))
+		where.Add("date <= $%d", *f.DateTo)
 	}
 	if f.Company != nil {
-		args = append(args, *f.Company)
-		conds = append(conds, fmt.Sprintf("company = $%d", len(args)))
+		where.Add("company = $%d", *f.Company)
 	}
 	query := `SELECT ` + selectColumns + ` FROM salary_records WHERE ` +
-		strings.Join(conds, " AND ") + ` ORDER BY date DESC`
-	rows, err := s.pool.Query(ctx, query, args...)
+		where.SQL() + ` ORDER BY date DESC`
+	rows, err := s.pool.Query(ctx, query, where.Args()...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("select salary_records: %w", err)
 	}

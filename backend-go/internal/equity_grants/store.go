@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -79,20 +78,17 @@ const selectColumns = `
 
 // List returns active grants ordered by grant_date desc + distinct active companies.
 func (s *Store) List(ctx context.Context, f ListFilter) ([]EquityGrant, []string, error) {
-	conds := []string{"is_active = true"}
-	args := []any{}
+	where := dbutil.NewWhereBuilder("is_active = true")
 	if f.OwnerUserID != nil {
-		args = append(args, *f.OwnerUserID)
-		conds = append(conds, fmt.Sprintf("owner_user_id = $%d", len(args)))
+		where.Add("owner_user_id = $%d", *f.OwnerUserID)
 	}
 	if f.Company != nil {
-		args = append(args, *f.Company)
-		conds = append(conds, fmt.Sprintf("company = $%d", len(args)))
+		where.Add("company = $%d", *f.Company)
 	}
 	query := `SELECT ` + selectColumns + ` FROM equity_grants WHERE ` +
-		strings.Join(conds, " AND ") + ` ORDER BY grant_date DESC`
+		where.SQL() + ` ORDER BY grant_date DESC`
 
-	rows, err := s.pool.Query(ctx, query, args...)
+	rows, err := s.pool.Query(ctx, query, where.Args()...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("select equity grants: %w", err)
 	}
