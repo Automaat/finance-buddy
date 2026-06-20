@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/cpi"
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
+	"github.com/Automaat/finance-buddy/backend-go/internal/validation"
 	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
 
@@ -324,40 +324,16 @@ func salariesToFloatMap(
 }
 
 func parseListFilter(q map[string][]string) (ListFilter, *httputil.ValidationError) {
-	f := ListFilter{}
-	if v := first(q["owner_user_id"]); v != "" {
-		n, err := strconv.Atoi(v)
-		if err != nil {
-			return f, &httputil.ValidationError{Field: "owner_user_id", Msg: "must be an integer"}
-		}
-		f.OwnerUserID = &n
+	parsed, vErr := validation.ParseOwnerCompanyDateFilter(q)
+	if vErr != nil {
+		return ListFilter{}, vErr
 	}
-	if v := first(q["company"]); v != "" {
-		s := v
-		f.Company = &s
-	}
-	if v := first(q["date_from"]); v != "" {
-		t, err := time.Parse("2006-01-02", v)
-		if err != nil {
-			return f, &httputil.ValidationError{Field: "date_from", Msg: "must be YYYY-MM-DD"}
-		}
-		f.DateFrom = &t
-	}
-	if v := first(q["date_to"]); v != "" {
-		t, err := time.Parse("2006-01-02", v)
-		if err != nil {
-			return f, &httputil.ValidationError{Field: "date_to", Msg: "must be YYYY-MM-DD"}
-		}
-		f.DateTo = &t
-	}
-	return f, nil
-}
-
-func first(values []string) string {
-	if len(values) == 0 {
-		return ""
-	}
-	return strings.TrimSpace(values[0])
+	return ListFilter{
+		OwnerUserID: parsed.OwnerUserID,
+		DateFrom:    parsed.DateFrom,
+		DateTo:      parsed.DateTo,
+		Company:     parsed.Company,
+	}, nil
 }
 
 func parseIDParam(w http.ResponseWriter, r *http.Request) (int, bool) {
