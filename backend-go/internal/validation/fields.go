@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/shopspring/decimal"
+
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 )
 
@@ -82,4 +84,39 @@ func RequiredIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httpu
 		return nil, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
 	}
 	return &n, nil
+}
+
+// RequiredDecimal reads a required JSON number field. Quoted numeric strings
+// are rejected to preserve the backend's pydantic-compatible wire contract.
+func RequiredDecimal(
+	raw map[string]json.RawMessage,
+	key string,
+	missingMsg string,
+) (decimal.Decimal, *httputil.ValidationError) {
+	v, ok := raw[key]
+	if !ok || IsNull(v) {
+		return decimal.Zero, &httputil.ValidationError{Field: key, Msg: missingMsg}
+	}
+	d, err := RawDecimal(v)
+	if err != nil {
+		return decimal.Zero, &httputil.ValidationError{Field: key, Msg: "must be a number"}
+	}
+	return d, nil
+}
+
+// OptionalDecimal reads an optional JSON number field. Missing and explicit
+// null are treated the same; quoted numeric strings are rejected.
+func OptionalDecimal(
+	raw map[string]json.RawMessage,
+	key string,
+) (*decimal.Decimal, *httputil.ValidationError) {
+	v, ok := raw[key]
+	if !ok || IsNull(v) {
+		return nil, nil
+	}
+	d, err := RawDecimal(v)
+	if err != nil {
+		return nil, &httputil.ValidationError{Field: key, Msg: "must be a number"}
+	}
+	return &d, nil
 }
