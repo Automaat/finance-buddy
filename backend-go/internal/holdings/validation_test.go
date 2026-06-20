@@ -5,8 +5,6 @@ import (
 	"testing"
 
 	"github.com/shopspring/decimal"
-
-	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 )
 
 func TestBuildLotInputAcceptsQuotedDecimals(t *testing.T) {
@@ -45,16 +43,6 @@ func TestBuildDividendInputAcceptsQuotedDecimals(t *testing.T) {
 	assertDecimal(t, got.GrossAmount, "100")
 	assertDecimal(t, got.WithholdingTax, "15")
 	assertDecimal(t, got.Net(), "85")
-}
-
-func assertValidation(t *testing.T, got *httputil.ValidationError, field, msg string) {
-	t.Helper()
-	if got == nil {
-		t.Fatal("vErr is nil")
-	}
-	if got.Field != field || got.Msg != msg {
-		t.Fatalf("vErr = %#v, want field=%q msg=%q", got, field, msg)
-	}
 }
 
 func assertDecimal(t *testing.T, got decimal.Decimal, want string) {
