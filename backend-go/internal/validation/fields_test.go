@@ -3,6 +3,7 @@ package validation
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/shopspring/decimal"
 
@@ -85,6 +86,36 @@ func TestRequiredDate(t *testing.T) {
 	requireValidation(t, vErr, "date", "must be a string")
 }
 
+func TestRequiredDateNotFuture(t *testing.T) {
+	now := func() time.Time { return time.Date(2026, 6, 20, 12, 0, 0, 0, time.UTC) }
+
+	got, vErr := RequiredDateNotFuture(
+		map[string]json.RawMessage{"date": json.RawMessage(`"2026-06-20"`)},
+		"date",
+		now,
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got.Format("2006-01-02") != "2026-06-20" {
+		t.Fatalf("got = %s", got.Format("2006-01-02"))
+	}
+
+	_, vErr = RequiredDateNotFuture(
+		map[string]json.RawMessage{"date": json.RawMessage(`"2026-06-21"`)},
+		"date",
+		now,
+	)
+	requireValidation(t, vErr, "date", "Date cannot be in the future")
+
+	_, vErr = RequiredDateNotFuture(
+		map[string]json.RawMessage{"date": json.RawMessage(`"06/20/2026"`)},
+		"date",
+		now,
+	)
+	requireValidation(t, vErr, "date", "must be YYYY-MM-DD")
+}
+
 func TestRequiredIntOrNull(t *testing.T) {
 	got, vErr := RequiredIntOrNull(map[string]json.RawMessage{"owner_user_id": json.RawMessage(`7`)}, "owner_user_id")
 	if vErr != nil {
@@ -125,6 +156,37 @@ func TestRequiredDecimal(t *testing.T) {
 		"required",
 	)
 	requireValidation(t, vErr, "amount", "must be a number")
+}
+
+func TestRequiredPositiveDecimal(t *testing.T) {
+	got, vErr := RequiredPositiveDecimal(
+		map[string]json.RawMessage{"amount": json.RawMessage(`123.45`)},
+		"amount",
+		"Field required",
+		"Amount must be greater than 0",
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if !got.Equal(decimal.RequireFromString("123.45")) {
+		t.Fatalf("got = %s", got)
+	}
+
+	_, vErr = RequiredPositiveDecimal(
+		map[string]json.RawMessage{},
+		"amount",
+		"Field required",
+		"Amount must be greater than 0",
+	)
+	requireValidation(t, vErr, "amount", "Field required")
+
+	_, vErr = RequiredPositiveDecimal(
+		map[string]json.RawMessage{"amount": json.RawMessage(`0`)},
+		"amount",
+		"Field required",
+		"Amount must be greater than 0",
+	)
+	requireValidation(t, vErr, "amount", "Amount must be greater than 0")
 }
 
 func TestOptionalDecimal(t *testing.T) {

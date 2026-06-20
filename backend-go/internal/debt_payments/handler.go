@@ -243,80 +243,27 @@ type createRequest struct {
 
 func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputil.ValidationError) {
 	var r createRequest
-	amount, vErr := requireAmount(raw)
+	amount, vErr := validation.RequiredPositiveDecimal(
+		raw,
+		"amount",
+		"Field required",
+		"Amount must be greater than 0",
+	)
 	if vErr != nil {
 		return r, vErr
 	}
 	r.Amount = amount
 
-	t, vErr := requireDateNotFuture(raw)
+	t, vErr := validation.RequiredDateNotFuture(raw, "date", time.Now)
 	if vErr != nil {
 		return r, vErr
 	}
 	r.Date = t
 
-	ownerID, vErr := requireOwnerUserID(raw)
+	ownerID, vErr := validation.RequiredIntOrNull(raw, "owner_user_id")
 	if vErr != nil {
 		return r, vErr
 	}
 	r.OwnerUserID = ownerID
 	return r, nil
-}
-
-// requireOwnerUserID reads the owner_user_id key: present and integer, or
-// explicit null (the "Shared" owner).
-func requireOwnerUserID(raw map[string]json.RawMessage) (*int, *httputil.ValidationError) {
-	const key = "owner_user_id"
-	v, ok := raw[key]
-	if !ok {
-		return nil, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	if validation.IsNull(v) {
-		return nil, nil
-	}
-	n, err := validation.RawInt(v)
-	if err != nil {
-		return nil, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	return &n, nil
-}
-
-func requireDateNotFuture(raw map[string]json.RawMessage) (time.Time, *httputil.ValidationError) {
-	const key = "date"
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	t, err := validation.RawDate(v)
-	if err != nil {
-		if validation.IsRawDateFormatError(err) {
-			return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be YYYY-MM-DD"}
-		}
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	today := time.Now().UTC()
-	today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.UTC)
-	if t.After(today) {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Date cannot be in the future"}
-	}
-	return t, nil
-}
-
-func requireAmount(raw map[string]json.RawMessage) (decimal.Decimal, *httputil.ValidationError) {
-	const (
-		key = "amount"
-		msg = "Amount must be greater than 0"
-	)
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	d, err := validation.RawDecimal(v)
-	if err != nil {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "must be a number"}
-	}
-	if !d.IsPositive() {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: msg}
-	}
-	return d, nil
 }

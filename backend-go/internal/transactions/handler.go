@@ -279,19 +279,19 @@ type createRequest struct {
 
 func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputil.ValidationError) {
 	var r createRequest
-	amount, vErr := requirePositiveDecimal(raw, "amount", "Amount must be greater than 0")
+	amount, vErr := validation.RequiredPositiveDecimal(raw, "amount", "Field required", "Amount must be greater than 0")
 	if vErr != nil {
 		return r, vErr
 	}
 	r.Amount = amount
 
-	t, vErr := requireDateNotFuture(raw, "date")
+	t, vErr := validation.RequiredDateNotFuture(raw, "date", time.Now)
 	if vErr != nil {
 		return r, vErr
 	}
 	r.Date = t
 
-	ownerID, vErr := requireIntOrNull(raw, "owner_user_id")
+	ownerID, vErr := validation.RequiredIntOrNull(raw, "owner_user_id")
 	if vErr != nil {
 		return r, vErr
 	}
@@ -308,56 +308,4 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 		r.TransactionType = &s
 	}
 	return r, nil
-}
-
-// requireIntOrNull reads an integer key that must be present; an explicit
-// null is allowed and yields nil (the "Shared" owner).
-func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok {
-		return nil, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	if validation.IsNull(v) {
-		return nil, nil
-	}
-	n, err := validation.RawInt(v)
-	if err != nil {
-		return nil, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	return &n, nil
-}
-
-func requireDateNotFuture(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	t, err := validation.RawDate(v)
-	if err != nil {
-		if validation.IsRawDateFormatError(err) {
-			return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be YYYY-MM-DD"}
-		}
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	today := time.Now().UTC()
-	today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.UTC)
-	if t.After(today) {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Date cannot be in the future"}
-	}
-	return t, nil
-}
-
-func requirePositiveDecimal(raw map[string]json.RawMessage, key, msg string) (decimal.Decimal, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	d, err := validation.RawDecimal(v)
-	if err != nil {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "must be a number"}
-	}
-	if !d.IsPositive() {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: msg}
-	}
-	return d, nil
 }

@@ -69,6 +69,28 @@ func RequiredDate(raw map[string]json.RawMessage, key string) (time.Time, *httpu
 	return t, nil
 }
 
+// RequiredDateNotFuture reads a required YYYY-MM-DD field and rejects dates
+// after the current UTC day returned by now.
+func RequiredDateNotFuture(
+	raw map[string]json.RawMessage,
+	key string,
+	now func() time.Time,
+) (time.Time, *httputil.ValidationError) {
+	t, vErr := RequiredDate(raw, key)
+	if vErr != nil {
+		return time.Time{}, vErr
+	}
+	if now == nil {
+		now = time.Now
+	}
+	today := now().UTC()
+	today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.UTC)
+	if t.After(today) {
+		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Date cannot be in the future"}
+	}
+	return t, nil
+}
+
 // RequiredIntOrNull reads a required integer field where explicit null is
 // allowed and maps to nil.
 func RequiredIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httputil.ValidationError) {
@@ -100,6 +122,24 @@ func RequiredDecimal(
 	d, err := RawDecimal(v)
 	if err != nil {
 		return decimal.Zero, &httputil.ValidationError{Field: key, Msg: "must be a number"}
+	}
+	return d, nil
+}
+
+// RequiredPositiveDecimal reads a required JSON number field and rejects zero
+// or negative values with the supplied positiveMsg.
+func RequiredPositiveDecimal(
+	raw map[string]json.RawMessage,
+	key string,
+	missingMsg string,
+	positiveMsg string,
+) (decimal.Decimal, *httputil.ValidationError) {
+	d, vErr := RequiredDecimal(raw, key, missingMsg)
+	if vErr != nil {
+		return decimal.Zero, vErr
+	}
+	if !d.IsPositive() {
+		return decimal.Zero, &httputil.ValidationError{Field: key, Msg: positiveMsg}
 	}
 	return d, nil
 }
