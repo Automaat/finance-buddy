@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -127,8 +126,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 // Create serves POST /api/allocation/targets.
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createRequest
-	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&req); err != nil {
-		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
+	if !httputil.DecodeJSON(w, r, 1<<16, &req) {
 		return
 	}
 	if vErr := validateCreate(&req); vErr != nil {
@@ -156,8 +154,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	raw := map[string]json.RawMessage{}
-	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
-		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
+	if !httputil.DecodeJSON(w, r, 1<<16, &raw) {
 		return
 	}
 	patch, vErr := buildUpdatePatch(raw)
@@ -190,8 +187,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 // every target for one owner scope. The payload's targets must sum to 100.
 func (h *Handler) Replace(w http.ResponseWriter, r *http.Request) {
 	var req replaceRequest
-	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&req); err != nil {
-		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
+	if !httputil.DecodeJSON(w, r, 1<<16, &req) {
 		return
 	}
 	if vErr := validateReplaceBatch(req.Targets); vErr != nil {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -328,8 +327,7 @@ func floatFromDecimal(d decimal.Decimal) float64 {
 // Create serves POST /api/bonds.
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createRequest
-	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&req); err != nil {
-		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
+	if !httputil.DecodeJSON(w, r, 1<<16, &req) {
 		return
 	}
 	if vErr := validateCreate(&req); vErr != nil {
@@ -368,8 +366,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	raw := map[string]json.RawMessage{}
-	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
-		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
+	if !httputil.DecodeJSON(w, r, 1<<16, &raw) {
 		return
 	}
 	patch, vErr := buildUpdatePatch(raw)

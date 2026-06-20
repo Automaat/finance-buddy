@@ -2,7 +2,6 @@ package zus
 
 import (
 	"encoding/json"
-	"io"
 	"log/slog"
 	"net/http"
 	"sort"
@@ -100,8 +99,7 @@ type prefillResponse struct {
 // Calculate serves POST /api/zus/calculate.
 func (h *Handler) Calculate(w http.ResponseWriter, r *http.Request) {
 	raw := map[string]json.RawMessage{}
-	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
-		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
+	if !httputil.DecodeJSON(w, r, 1<<16, &raw) {
 		return
 	}
 	req, vErr := buildInputs(raw, h.now)

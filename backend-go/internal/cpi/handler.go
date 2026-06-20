@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"time"
@@ -115,8 +114,7 @@ func (h *Handler) GetSeries(w http.ResponseWriter, r *http.Request) {
 // Adjust serves POST /api/cpi/adjust.
 func (h *Handler) Adjust(w http.ResponseWriter, r *http.Request) {
 	raw := map[string]json.RawMessage{}
-	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
-		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
+	if !httputil.DecodeJSON(w, r, 1<<16, &raw) {
 		return
 	}
 	amount, vErr := requireFloat(raw, "amount")
