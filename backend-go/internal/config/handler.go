@@ -1,9 +1,7 @@
 package config
 
 import (
-	"encoding/json"
 	"errors"
-	"io"
 	"log/slog"
 	"net/http"
 	"time"
@@ -130,8 +128,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 // Put serves PUT /api/config.
 func (h *Handler) Put(w http.ResponseWriter, r *http.Request) {
 	var req request
-	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&req); err != nil {
-		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
+	if !httputil.DecodeJSON(w, r, 1<<16, &req) {
 		return
 	}
 	if vErr := req.validate(); vErr != nil {

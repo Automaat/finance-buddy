@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -269,8 +268,7 @@ func (h *Handler) UpsertLimit(w http.ResponseWriter, r *http.Request) {
 		ownerUserID = &n
 	}
 	raw := map[string]json.RawMessage{}
-	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
-		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
+	if !httputil.DecodeJSON(w, r, 1<<16, &raw) {
 		return
 	}
 	req, vErr := buildLimitRequest(raw, h.now)
@@ -294,8 +292,7 @@ func (h *Handler) UpsertLimit(w http.ResponseWriter, r *http.Request) {
 // GeneratePPKContributions serves POST /api/retirement/ppk-contributions/generate.
 func (h *Handler) GeneratePPKContributions(w http.ResponseWriter, r *http.Request) {
 	raw := map[string]json.RawMessage{}
-	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
-		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
+	if !httputil.DecodeJSON(w, r, 1<<16, &raw) {
 		return
 	}
 	req, vErr := buildGenerateRequest(raw, h.now)

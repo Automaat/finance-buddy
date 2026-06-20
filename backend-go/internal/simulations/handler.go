@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"math"
 	"math/rand/v2"
@@ -89,8 +88,7 @@ type mortgageResponse struct {
 // MortgageVsInvest serves POST /api/simulations/mortgage-vs-invest.
 func (h *Handler) MortgageVsInvest(w http.ResponseWriter, r *http.Request) {
 	raw := map[string]json.RawMessage{}
-	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
-		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
+	if !httputil.DecodeJSON(w, r, 1<<16, &raw) {
 		return
 	}
 	in, vErr := buildMortgageInputs(raw)
@@ -187,8 +185,7 @@ type wiborResponse struct {
 // WiborScenarios serves POST /api/simulations/wibor.
 func (h *Handler) WiborScenarios(w http.ResponseWriter, r *http.Request) {
 	raw := map[string]json.RawMessage{}
-	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&raw); err != nil {
-		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
+	if !httputil.DecodeJSON(w, r, 1<<16, &raw) {
 		return
 	}
 	in, vErr := buildWiborInputs(raw)
@@ -269,8 +266,7 @@ func (h *Handler) Prefill(w http.ResponseWriter, r *http.Request) {
 // Retirement serves POST /api/simulations/retirement.
 func (h *Handler) Retirement(w http.ResponseWriter, r *http.Request) {
 	raw := map[string]json.RawMessage{}
-	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<18)).Decode(&raw); err != nil {
-		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
+	if !httputil.DecodeJSON(w, r, 1<<18, &raw) {
 		return
 	}
 	in, vErr := buildSimulationInputs(raw)
@@ -323,8 +319,7 @@ type monteCarloAccountMixWire struct {
 // returns and reports the success rate plus 5/50/95 percentile bands.
 func (h *Handler) MonteCarlo(w http.ResponseWriter, r *http.Request) {
 	var in monteCarloInputsWire
-	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<18)).Decode(&in); err != nil {
-		httputil.WriteBodyValidationError(w, "body", "Invalid JSON body", err.Error())
+	if !httputil.DecodeJSON(w, r, 1<<18, &in) {
 		return
 	}
 	if in.CurrentAge <= 0 || in.LifeExpectancy <= in.CurrentAge {
