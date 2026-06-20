@@ -8,6 +8,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
+	"github.com/Automaat/finance-buddy/backend-go/internal/validation"
 )
 
 func buildInput(raw map[string]json.RawMessage) (CreateInput, *httputil.ValidationError) {
@@ -156,17 +157,7 @@ func requireString(raw map[string]json.RawMessage, key string, dest *string) *ht
 }
 
 func requireDecimal(raw map[string]json.RawMessage, key string) (decimal.Decimal, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || string(v) == "null" {
-		return decimal.Zero, &httputil.ValidationError{Field: key, Msg: "required"}
-	}
-	// Parse from JSON bytes to preserve precision per CLAUDE.md guidance.
-	s := strings.Trim(string(v), `"`)
-	d, err := decimal.NewFromString(s)
-	if err != nil {
-		return decimal.Zero, &httputil.ValidationError{Field: key, Msg: "must be a number"}
-	}
-	return d, nil
+	return validation.RequiredDecimalStringOrNumber(raw, key, "required")
 }
 
 func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {

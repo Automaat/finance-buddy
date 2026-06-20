@@ -8,6 +8,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
+	"github.com/Automaat/finance-buddy/backend-go/internal/validation"
 )
 
 func buildSecurityInput(raw map[string]json.RawMessage) (Security, *httputil.ValidationError) {
@@ -116,15 +117,13 @@ func buildLotInput(raw map[string]json.RawMessage) (Lot, *httputil.ValidationErr
 		return l, &httputil.ValidationError{Field: "price", Msg: "must not be negative"}
 	}
 	l.Price = price
-	if v, ok := raw["fee"]; ok && string(v) != "null" {
-		fee, ferr := decimal.NewFromString(strings.Trim(string(v), `"`))
-		if ferr != nil {
-			return l, &httputil.ValidationError{Field: "fee", Msg: "must be a number"}
-		}
+	if fee, vErr := validation.OptionalDecimalStringOrNumber(raw, "fee"); vErr != nil {
+		return l, vErr
+	} else if fee != nil {
 		if fee.Sign() < 0 {
 			return l, &httputil.ValidationError{Field: "fee", Msg: "must not be negative"}
 		}
-		l.Fee = fee
+		l.Fee = *fee
 	}
 	dateStr, vErr := requireString2(raw, "date")
 	if vErr != nil {
@@ -204,18 +203,16 @@ func buildDividendInput(raw map[string]json.RawMessage) (Dividend, *httputil.Val
 		return d, &httputil.ValidationError{Field: "gross_amount", Msg: "must be positive"}
 	}
 	d.GrossAmount = gross
-	if v, ok := raw["withholding_tax"]; ok && string(v) != "null" {
-		tax, terr := decimal.NewFromString(strings.Trim(string(v), `"`))
-		if terr != nil {
-			return d, &httputil.ValidationError{Field: "withholding_tax", Msg: "must be a number"}
-		}
+	if tax, vErr := validation.OptionalDecimalStringOrNumber(raw, "withholding_tax"); vErr != nil {
+		return d, vErr
+	} else if tax != nil {
 		if tax.Sign() < 0 {
 			return d, &httputil.ValidationError{Field: "withholding_tax", Msg: "must not be negative"}
 		}
 		if tax.GreaterThan(gross) {
 			return d, &httputil.ValidationError{Field: "withholding_tax", Msg: "must not exceed gross amount"}
 		}
-		d.WithholdingTax = tax
+		d.WithholdingTax = *tax
 	}
 	if v, ok := raw["currency"]; ok && string(v) != "null" {
 		var c string
@@ -266,13 +263,5 @@ func requireString2(raw map[string]json.RawMessage, key string) (string, *httput
 }
 
 func requireDecimal(raw map[string]json.RawMessage, key string) (decimal.Decimal, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || string(v) == "null" {
-		return decimal.Zero, &httputil.ValidationError{Field: key, Msg: "required"}
-	}
-	d, err := decimal.NewFromString(strings.Trim(string(v), `"`))
-	if err != nil {
-		return decimal.Zero, &httputil.ValidationError{Field: key, Msg: "must be a number"}
-	}
-	return d, nil
+	return validation.RequiredDecimalStringOrNumber(raw, key, "required")
 }
