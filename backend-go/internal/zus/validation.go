@@ -90,7 +90,7 @@ func readMisc(raw map[string]json.RawMessage, in *Inputs) *httputil.ValidationEr
 		return err
 	}
 	in.KapitalPoczatkowy = kapital
-	work, err := requireIntRange(raw, "work_start_year", 1970, 2030, "Work start year must be between 1970 and 2030")
+	work, err := validation.RequiredIntRange(raw, "work_start_year", 1970, 2030, "Work start year must be between 1970 and 2030")
 	if err != nil {
 		return err
 	}
@@ -208,21 +208,6 @@ func optionalIntRange(raw map[string]json.RawMessage, key string, fallback, lo, 
 	}
 	if validation.IsNull(v) {
 		return 0, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return 0, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	if n < lo || n > hi {
-		return 0, &httputil.ValidationError{Field: key, Msg: msg}
-	}
-	return n, nil
-}
-
-func requireIntRange(raw map[string]json.RawMessage, key string, lo, hi int, msg string) (int, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return 0, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var n int
 	if err := json.Unmarshal(v, &n); err != nil {

@@ -109,6 +109,29 @@ func RequiredIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httpu
 	return &n, nil
 }
 
+// RequiredIntRange reads a required integer field and validates it falls
+// within the inclusive [lo, hi] range.
+func RequiredIntRange(
+	raw map[string]json.RawMessage,
+	key string,
+	lo int,
+	hi int,
+	rangeMsg string,
+) (int, *httputil.ValidationError) {
+	v, ok := raw[key]
+	if !ok || IsNull(v) {
+		return 0, &httputil.ValidationError{Field: key, Msg: "Field required"}
+	}
+	n, err := RawInt(v)
+	if err != nil {
+		return 0, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
+	}
+	if n < lo || n > hi {
+		return 0, &httputil.ValidationError{Field: key, Msg: rangeMsg}
+	}
+	return n, nil
+}
+
 // RequiredEnumString reads a required string field and checks it belongs to
 // the provided allowed set.
 func RequiredEnumString(
