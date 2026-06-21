@@ -28,7 +28,7 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 	}
 	r.Company = company
 
-	t, vErr := requireDate(raw, "date")
+	t, vErr := validation.RequiredDate(raw, "date")
 	if vErr != nil {
 		return r, vErr
 	}
@@ -184,10 +184,6 @@ func patchNumbers(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Vali
 
 func requireString(raw map[string]json.RawMessage, key, missingMsg, emptyMsg string) (string, *httputil.ValidationError) {
 	return validation.RequiredTrimmedString(raw, key, missingMsg, emptyMsg)
-}
-
-func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {
-	return validation.RequiredDate(raw, key)
 }
 
 func optionalCurrency(raw map[string]json.RawMessage) (string, *httputil.ValidationError) {

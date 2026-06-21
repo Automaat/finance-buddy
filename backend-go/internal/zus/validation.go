@@ -24,7 +24,7 @@ func buildInputs(raw map[string]json.RawMessage, now func() time.Time) (calculat
 	if err != nil {
 		return c, err
 	}
-	c.BirthDate, err = requireDate(raw, "birth_date")
+	c.BirthDate, err = validation.RequiredDate(raw, "birth_date")
 	if err != nil {
 		return c, err
 	}
@@ -147,22 +147,6 @@ func validateAgeRelationship(birth time.Time, retirementAge int, now func() time
 }
 
 // --- helpers ---
-
-func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	t, err := time.Parse("2006-01-02", s)
-	if err != nil {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be YYYY-MM-DD"}
-	}
-	return t, nil
-}
 
 func requireNonNegativeFloat(raw map[string]json.RawMessage, key, msg string) (float64, *httputil.ValidationError) {
 	v, ok := raw[key]

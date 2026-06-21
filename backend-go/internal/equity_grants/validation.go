@@ -84,7 +84,7 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 }
 
 func requireGrantBasics(raw map[string]json.RawMessage, r *createRequest) *httputil.ValidationError {
-	t, vErr := requireDate(raw, "grant_date")
+	t, vErr := validation.RequiredDate(raw, "grant_date")
 	if vErr != nil {
 		return vErr
 	}
@@ -129,7 +129,7 @@ func requireGrantBasics(raw map[string]json.RawMessage, r *createRequest) *httpu
 }
 
 func requireGrantVesting(raw map[string]json.RawMessage, r *createRequest) *httputil.ValidationError {
-	vsd, vErr := requireDate(raw, "vest_start_date")
+	vsd, vErr := validation.RequiredDate(raw, "vest_start_date")
 	if vErr != nil {
 		return vErr
 	}
@@ -337,22 +337,6 @@ func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string
 		return "", &httputil.ValidationError{Field: key, Msg: emptyMsg}
 	}
 	return s, nil
-}
-
-func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	t, err := time.Parse("2006-01-02", s)
-	if err != nil {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be YYYY-MM-DD"}
-	}
-	return t, nil
 }
 
 func requirePositiveInt(raw map[string]json.RawMessage, key, msg string) (int, *httputil.ValidationError) {
