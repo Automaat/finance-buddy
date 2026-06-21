@@ -77,19 +77,58 @@ func RequiredDateNotFuture(
 	key string,
 	now func() time.Time,
 ) (time.Time, *httputil.ValidationError) {
+	return RequiredDateNotFutureWithMessage(raw, key, now, "Date cannot be in the future")
+}
+
+// RequiredDateNotFutureWithMessage reads a required YYYY-MM-DD field and
+// rejects dates after the current UTC day returned by now with futureMsg.
+func RequiredDateNotFutureWithMessage(
+	raw map[string]json.RawMessage,
+	key string,
+	now func() time.Time,
+	futureMsg string,
+) (time.Time, *httputil.ValidationError) {
 	t, vErr := RequiredDate(raw, key)
 	if vErr != nil {
 		return time.Time{}, vErr
 	}
+	if t.After(todayUTC(now)) {
+		return time.Time{}, &httputil.ValidationError{Field: key, Msg: futureMsg}
+	}
+	return t, nil
+}
+
+// OptionalDateNotFuture reads an optional YYYY-MM-DD field and rejects dates
+// after the current UTC day returned by now with futureMsg.
+func OptionalDateNotFuture(
+	raw map[string]json.RawMessage,
+	key string,
+	now func() time.Time,
+	futureMsg string,
+) (*time.Time, *httputil.ValidationError) {
+	v, ok := raw[key]
+	if !ok || IsNull(v) {
+		return nil, nil
+	}
+	t, err := RawDate(v)
+	if err != nil {
+		if IsRawDateFormatError(err) {
+			return nil, &httputil.ValidationError{Field: key, Msg: "must be YYYY-MM-DD"}
+		}
+		return nil, &httputil.ValidationError{Field: key, Msg: "must be a string"}
+	}
+	if t.After(todayUTC(now)) {
+		return nil, &httputil.ValidationError{Field: key, Msg: futureMsg}
+	}
+	return &t, nil
+}
+
+func todayUTC(now func() time.Time) time.Time {
 	if now == nil {
 		now = time.Now
 	}
 	today := now().UTC()
-	today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.UTC)
-	if t.After(today) {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Date cannot be in the future"}
-	}
-	return t, nil
+	return time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.UTC)
 }
 
 // RequiredIntOrNull reads a required integer field where explicit null is

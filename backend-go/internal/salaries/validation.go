@@ -26,12 +26,9 @@ type createRequest struct {
 // fields surface "Field required" on missing.
 func buildCreateRequest(raw map[string]json.RawMessage, now func() time.Time) (createRequest, *httputil.ValidationError) {
 	var r createRequest
-	t, vErr := validation.RequiredDate(raw, "date")
+	t, vErr := validation.RequiredDateNotFuture(raw, "date", now)
 	if vErr != nil {
 		return r, vErr
-	}
-	if t.After(truncateDay(now().UTC())) {
-		return r, &httputil.ValidationError{Field: "date", Msg: "Date cannot be in the future"}
 	}
 	r.Date = t
 
@@ -64,18 +61,10 @@ func buildCreateRequest(raw map[string]json.RawMessage, now func() time.Time) (c
 // buildUpdatePatch reads the PATCH body. Null = no-op (Pydantic semantics).
 func buildUpdatePatch(raw map[string]json.RawMessage, now func() time.Time) (UpdatePatch, *httputil.ValidationError) {
 	var p UpdatePatch
-	if v, ok := raw["date"]; ok && !validation.IsNull(v) {
-		t, err := validation.RawDate(v)
-		if err != nil {
-			if validation.IsRawDateFormatError(err) {
-				return p, &httputil.ValidationError{Field: "date", Msg: "must be YYYY-MM-DD"}
-			}
-			return p, &httputil.ValidationError{Field: "date", Msg: "must be a string"}
-		}
-		if t.After(truncateDay(now().UTC())) {
-			return p, &httputil.ValidationError{Field: "date", Msg: "Date cannot be in the future"}
-		}
-		p.Date = &t
+	if t, vErr := validation.OptionalDateNotFuture(raw, "date", now, "Date cannot be in the future"); vErr != nil {
+		return p, vErr
+	} else if t != nil {
+		p.Date = t
 	}
 	if v, ok := raw["gross_amount"]; ok && !validation.IsNull(v) {
 		d, err := validation.RawDecimal(v)

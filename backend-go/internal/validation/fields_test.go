@@ -116,6 +116,74 @@ func TestRequiredDateNotFuture(t *testing.T) {
 	requireValidation(t, vErr, "date", "must be YYYY-MM-DD")
 }
 
+func TestRequiredDateNotFutureWithMessage(t *testing.T) {
+	now := func() time.Time { return time.Date(2026, 6, 20, 12, 0, 0, 0, time.UTC) }
+
+	_, vErr := RequiredDateNotFutureWithMessage(
+		map[string]json.RawMessage{"start_date": json.RawMessage(`"2026-06-21"`)},
+		"start_date",
+		now,
+		"Start date cannot be in the future",
+	)
+	requireValidation(t, vErr, "start_date", "Start date cannot be in the future")
+}
+
+func TestOptionalDateNotFuture(t *testing.T) {
+	now := func() time.Time { return time.Date(2026, 6, 20, 12, 0, 0, 0, time.UTC) }
+
+	got, vErr := OptionalDateNotFuture(
+		map[string]json.RawMessage{"date": json.RawMessage(`"2026-06-20"`)},
+		"date",
+		now,
+		"Date cannot be in the future",
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got == nil || got.Format("2006-01-02") != "2026-06-20" {
+		t.Fatalf("got = %v", got)
+	}
+
+	got, vErr = OptionalDateNotFuture(map[string]json.RawMessage{}, "date", now, "Date cannot be in the future")
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	got, vErr = OptionalDateNotFuture(
+		map[string]json.RawMessage{"date": json.RawMessage(`null`)},
+		"date",
+		now,
+		"Date cannot be in the future",
+	)
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	_, vErr = OptionalDateNotFuture(
+		map[string]json.RawMessage{"date": json.RawMessage(`"2026-06-21"`)},
+		"date",
+		now,
+		"Date cannot be in the future",
+	)
+	requireValidation(t, vErr, "date", "Date cannot be in the future")
+
+	_, vErr = OptionalDateNotFuture(
+		map[string]json.RawMessage{"date": json.RawMessage(`"06/20/2026"`)},
+		"date",
+		now,
+		"Date cannot be in the future",
+	)
+	requireValidation(t, vErr, "date", "must be YYYY-MM-DD")
+
+	_, vErr = OptionalDateNotFuture(
+		map[string]json.RawMessage{"date": json.RawMessage(`20260620`)},
+		"date",
+		now,
+		"Date cannot be in the future",
+	)
+	requireValidation(t, vErr, "date", "must be a string")
+}
+
 func TestRequiredIntOrNull(t *testing.T) {
 	got, vErr := RequiredIntOrNull(map[string]json.RawMessage{"owner_user_id": json.RawMessage(`7`)}, "owner_user_id")
 	if vErr != nil {
