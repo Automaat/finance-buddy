@@ -408,9 +408,6 @@
             "med": 0.973
         }
     },
-    "setup_data": {
-        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOjEsInVzZXJuYW1lIjoiYWRtaW4iLCJuYW1lIjoiIiwiaXNfYWRtaW4iOnRydWUsImV4cCI6MTc4MjQ2MTQ4MywiaWF0IjoxNzgyMDI5NDgzfQ.eQZaL8qpQTpOmeXxjn0RvgTvRN06GgJSmBiDR70t7KY"
-    },
     "root_group": {
         "name": "",
         "path": "",

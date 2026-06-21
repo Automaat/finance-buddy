@@ -977,8 +977,5 @@
             "avg": 1.7437145997435475,
             "min": 0.489
         }
-    },
-    "setup_data": {
-        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOjEsInVzZXJuYW1lIjoiYWRtaW4iLCJuYW1lIjoiIiwiaXNfYWRtaW4iOnRydWUsImV4cCI6MTc4MjQxNjk1NSwiaWF0IjoxNzgxOTg0OTU1fQ.fTNRTupTFzEW-L-pDhJGXaITJBjURTsvALkiwTfDZKc"
     }
 }

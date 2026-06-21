@@ -977,8 +977,5 @@
             "med": 0.824,
             "p(95)": 1.413
         }
-    },
-    "setup_data": {
-        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOjEsInVzZXJuYW1lIjoiYWRtaW4iLCJuYW1lIjoiIiwiaXNfYWRtaW4iOnRydWUsImV4cCI6MTc4MjQ2MTcyMSwiaWF0IjoxNzgyMDI5NzIxfQ.4FHTli8SsrRKCbqh1a2qRtQXPCdHm3AGH3epFSY2ha4"
     }
 }

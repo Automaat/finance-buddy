@@ -408,9 +408,6 @@
             "avg": 1.3219449796865925
         }
     },
-    "setup_data": {
-        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOjEsInVzZXJuYW1lIjoiYWRtaW4iLCJuYW1lIjoiIiwiaXNfYWRtaW4iOnRydWUsImV4cCI6MTc4MjQ2MTIzOSwiaWF0IjoxNzgyMDI5MjM5fQ.S1Z20ifugHePUxr2_-m_LbqcFvUJq3TLl6e9V7KiaII"
-    },
     "root_group": {
         "name": "",
         "path": "",

@@ -977,8 +977,5 @@
             "min": 0,
             "med": 0
         }
-    },
-    "setup_data": {
-        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOjEsInVzZXJuYW1lIjoiYWRtaW4iLCJuYW1lIjoiIiwiaXNfYWRtaW4iOnRydWUsImV4cCI6MTc4MjQxNjM0NiwiaWF0IjoxNzgxOTg0MzQ2fQ.JM-KE2yTe6c98I6pXL_A4kvL1L8Gv5o8TB005T9U-Xk"
     }
 }

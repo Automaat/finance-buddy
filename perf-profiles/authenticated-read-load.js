@@ -96,3 +96,10 @@ export default function (data) {
 		group(path, () => hit(path, data.token));
 	}
 }
+
+export function handleSummary(data) {
+	// k6 includes setup() return values in --summary-export output; do not
+	// persist bearer tokens in committed perf artifacts.
+	delete data.setup_data;
+	return { stdout: '' };
+}
