@@ -68,8 +68,10 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 		}
 		p.Series = &s
 	}
-	if vErr := patchPositiveAmount(raw, "face_value", &p.FaceValue, "Face value must be greater than 0"); vErr != nil {
+	if d, vErr := validation.OptionalPositiveDecimal(raw, "face_value", "Face value must be greater than 0"); vErr != nil {
 		return p, vErr
+	} else if d != nil {
+		p.FaceValue = d
 	}
 	if t, vErr := validation.OptionalDate(raw, "purchase_date"); vErr != nil {
 		return p, vErr
@@ -106,23 +108,6 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 		p.Capitalize = &b
 	}
 	return p, nil
-}
-
-func patchPositiveAmount(raw map[string]json.RawMessage, field string, dest **decimal.Decimal, msg string) *httputil.ValidationError {
-	v, ok := raw[field]
-	if !ok || validation.IsNull(v) {
-		return nil
-	}
-	var f float64
-	if err := json.Unmarshal(v, &f); err != nil {
-		return &httputil.ValidationError{Field: field, Msg: "must be a number"}
-	}
-	if f <= 0 {
-		return &httputil.ValidationError{Field: field, Msg: msg}
-	}
-	d := decimal.NewFromFloat(f)
-	*dest = &d
-	return nil
 }
 
 func patchRatePercent(raw map[string]json.RawMessage, field string, dest **decimal.Decimal) *httputil.ValidationError {

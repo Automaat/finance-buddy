@@ -88,15 +88,10 @@ func patchScalars(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Vali
 	} else if t != nil {
 		p.Date = t
 	}
-	if v, ok := raw["amount"]; ok && !validation.IsNull(v) {
-		d, err := validation.RawDecimal(v)
-		if err != nil {
-			return &httputil.ValidationError{Field: "amount", Msg: "must be a number"}
-		}
-		if !d.IsPositive() {
-			return &httputil.ValidationError{Field: "amount", Msg: "Amount must be greater than 0"}
-		}
-		p.Amount = &d
+	if d, vErr := validation.OptionalPositiveDecimal(raw, "amount", "Amount must be greater than 0"); vErr != nil {
+		return vErr
+	} else if d != nil {
+		p.Amount = d
 	}
 	if v, ok := raw["currency"]; ok && !validation.IsNull(v) {
 		var s string

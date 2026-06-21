@@ -309,6 +309,23 @@ func OptionalDecimal(
 	return &d, nil
 }
 
+// OptionalPositiveDecimal reads an optional JSON number field and rejects zero
+// or negative values with the supplied positiveMsg.
+func OptionalPositiveDecimal(
+	raw map[string]json.RawMessage,
+	key string,
+	positiveMsg string,
+) (*decimal.Decimal, *httputil.ValidationError) {
+	d, vErr := OptionalDecimal(raw, key)
+	if vErr != nil {
+		return nil, vErr
+	}
+	if d != nil && !d.IsPositive() {
+		return nil, &httputil.ValidationError{Field: key, Msg: positiveMsg}
+	}
+	return d, nil
+}
+
 // OptionalNonNegativeDecimal reads an optional JSON number field and rejects
 // negative values with the supplied nonNegativeMsg.
 func OptionalNonNegativeDecimal(
