@@ -119,17 +119,13 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 	if vErr := patchEnumString(raw, "category", validCategories, &p.Category); vErr != nil {
 		return p, vErr
 	}
-	if v, ok := raw["owner_user_id"]; ok {
+	if _, ok := raw["owner_user_id"]; ok {
 		p.OwnerUserIDSet = true
-		if validation.IsNull(v) {
-			p.OwnerUserID = nil
-		} else {
-			var n int
-			if err := json.Unmarshal(v, &n); err != nil {
-				return p, &httputil.ValidationError{Field: "owner_user_id", Msg: "must be an integer"}
-			}
-			p.OwnerUserID = &n
+		ownerID, vErr := validation.OptionalInt(raw, "owner_user_id", "must be an integer")
+		if vErr != nil {
+			return p, vErr
 		}
+		p.OwnerUserID = ownerID
 	}
 	if vErr := patchPlainString(raw, "currency", &p.Currency); vErr != nil {
 		return p, vErr

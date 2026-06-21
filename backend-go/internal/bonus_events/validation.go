@@ -120,17 +120,13 @@ func patchScalars(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Vali
 		}
 		p.Company = &s
 	}
-	if v, ok := raw["owner_user_id"]; ok {
+	if _, ok := raw["owner_user_id"]; ok {
 		p.OwnerUserIDSet = true
-		if validation.IsNull(v) {
-			p.OwnerUserID = nil
-		} else {
-			var n int
-			if err := json.Unmarshal(v, &n); err != nil {
-				return &httputil.ValidationError{Field: "owner_user_id", Msg: "must be an integer"}
-			}
-			p.OwnerUserID = &n
+		ownerID, vErr := validation.OptionalInt(raw, "owner_user_id", "must be an integer")
+		if vErr != nil {
+			return vErr
 		}
+		p.OwnerUserID = ownerID
 	}
 	if v, ok := raw["notes"]; ok && !validation.IsNull(v) {
 		var s string

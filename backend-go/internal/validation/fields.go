@@ -144,6 +144,24 @@ func todayUTC(now func() time.Time) time.Time {
 	return time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.UTC)
 }
 
+// OptionalInt reads an optional integer field. Missing or explicit null
+// returns nil.
+func OptionalInt(
+	raw map[string]json.RawMessage,
+	key string,
+	typeMsg string,
+) (*int, *httputil.ValidationError) {
+	v, ok := raw[key]
+	if !ok || IsNull(v) {
+		return nil, nil
+	}
+	n, err := RawInt(v)
+	if err != nil {
+		return nil, &httputil.ValidationError{Field: key, Msg: typeMsg}
+	}
+	return &n, nil
+}
+
 // RequiredIntOrNull reads a required integer field where explicit null is
 // allowed and maps to nil.
 func RequiredIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httputil.ValidationError) {

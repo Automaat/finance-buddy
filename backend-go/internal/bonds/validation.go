@@ -82,25 +82,21 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 		}
 		p.PurchaseDate = &t
 	}
-	if v, ok := raw["owner_user_id"]; ok {
+	if _, ok := raw["owner_user_id"]; ok {
 		p.OwnerUserIDSet = true
-		if !validation.IsNull(v) {
-			var id int
-			if err := json.Unmarshal(v, &id); err != nil {
-				return p, &httputil.ValidationError{Field: "owner_user_id", Msg: "must be an integer"}
-			}
-			p.OwnerUserID = &id
+		ownerID, vErr := validation.OptionalInt(raw, "owner_user_id", "must be an integer")
+		if vErr != nil {
+			return p, vErr
 		}
+		p.OwnerUserID = ownerID
 	}
-	if v, ok := raw["account_id"]; ok {
+	if _, ok := raw["account_id"]; ok {
 		p.AccountIDSet = true
-		if !validation.IsNull(v) {
-			var id int
-			if err := json.Unmarshal(v, &id); err != nil {
-				return p, &httputil.ValidationError{Field: "account_id", Msg: "must be an integer"}
-			}
-			p.AccountID = &id
+		accountID, vErr := validation.OptionalInt(raw, "account_id", "must be an integer")
+		if vErr != nil {
+			return p, vErr
 		}
+		p.AccountID = accountID
 	}
 	if vErr := patchRatePercent(raw, "first_year_rate", &p.FirstYearRate); vErr != nil {
 		return p, vErr

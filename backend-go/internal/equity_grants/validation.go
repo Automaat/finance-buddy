@@ -322,18 +322,17 @@ func requirePositiveInt(raw map[string]json.RawMessage, key, msg string) (int, *
 }
 
 func optionalNonNegativeInt(raw map[string]json.RawMessage, key, msg string, fallback int) (int, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
+	n, vErr := validation.OptionalInt(raw, key, "must be an integer")
+	if vErr != nil {
+		return 0, vErr
+	}
+	if n == nil {
 		return fallback, nil
 	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return 0, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	if n < 0 {
+	if *n < 0 {
 		return 0, &httputil.ValidationError{Field: key, Msg: msg}
 	}
-	return n, nil
+	return *n, nil
 }
 
 func optionalEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}, fallback string) (string, *httputil.ValidationError) {
@@ -420,53 +419,47 @@ func patchCurrency(raw map[string]json.RawMessage, dest **string) *httputil.Vali
 }
 
 func patchPositiveInt(raw map[string]json.RawMessage, key, msg string, dest **int) *httputil.ValidationError {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
+	n, vErr := validation.OptionalInt(raw, key, "must be an integer")
+	if vErr != nil {
+		return vErr
+	}
+	if n == nil {
 		return nil
 	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	if n <= 0 {
+	if *n <= 0 {
 		return &httputil.ValidationError{Field: key, Msg: msg}
 	}
-	*dest = &n
+	*dest = n
 	return nil
 }
 
 func patchNonNegativeIntPtr(raw map[string]json.RawMessage, key, msg string, dest **int) *httputil.ValidationError {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
+	n, vErr := validation.OptionalInt(raw, key, "must be an integer")
+	if vErr != nil {
+		return vErr
+	}
+	if n == nil {
 		return nil
 	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	if n < 0 {
+	if *n < 0 {
 		return &httputil.ValidationError{Field: key, Msg: msg}
 	}
-	*dest = &n
+	*dest = n
 	return nil
 }
 
 // patchOwnerUserID reads owner_user_id from a PATCH body: present marks the
 // field set; explicit null clears it (jointly owned).
 func patchOwnerUserID(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.ValidationError {
-	v, ok := raw["owner_user_id"]
+	_, ok := raw["owner_user_id"]
 	if !ok {
 		return nil
 	}
 	p.OwnerUserIDSet = true
-	if validation.IsNull(v) {
-		p.OwnerUserID = nil
-		return nil
+	ownerID, vErr := validation.OptionalInt(raw, "owner_user_id", "must be an integer")
+	if vErr != nil {
+		return vErr
 	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return &httputil.ValidationError{Field: "owner_user_id", Msg: "must be an integer"}
-	}
-	p.OwnerUserID = &n
+	p.OwnerUserID = ownerID
 	return nil
 }

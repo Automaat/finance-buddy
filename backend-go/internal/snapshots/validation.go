@@ -2,7 +2,6 @@ package snapshots
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
@@ -130,13 +129,5 @@ func parseValueEntry(e map[string]json.RawMessage) (ValueInput, *httputil.Valida
 }
 
 func optionalInt(raw map[string]json.RawMessage, key string) (*int, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return nil, nil
-	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return nil, &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("%s must be an integer", key)}
-	}
-	return &n, nil
+	return validation.OptionalInt(raw, key, key+" must be an integer")
 }
