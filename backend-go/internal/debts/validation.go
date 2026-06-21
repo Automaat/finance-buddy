@@ -34,7 +34,7 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 	}
 	r.Name = name
 
-	dt, vErr := requireEnumString(raw, "debt_type", validDebtTypes)
+	dt, vErr := validation.RequiredEnumString(raw, "debt_type", validDebtTypes)
 	if vErr != nil {
 		return r, vErr
 	}
@@ -158,21 +158,6 @@ func requireOwnerUserID(raw map[string]json.RawMessage) (*int, *httputil.Validat
 
 func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string, *httputil.ValidationError) {
 	return validation.RequiredTrimmedString(raw, key, "Field required", emptyMsg)
-}
-
-func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	if _, ok := allowed[s]; !ok {
-		return "", &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
-	}
-	return s, nil
 }
 
 func requireDateNotFuture(raw map[string]json.RawMessage, key, msg string) (time.Time, *httputil.ValidationError) {

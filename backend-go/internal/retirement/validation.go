@@ -33,7 +33,7 @@ func buildLimitRequest(raw map[string]json.RawMessage, now func() time.Time) (li
 	}
 	r.Year = year
 
-	wrap, vErr := requireEnumString(raw, "account_wrapper", validWrappers)
+	wrap, vErr := validation.RequiredEnumString(raw, "account_wrapper", validWrappers)
 	if vErr != nil {
 		return r, vErr
 	}
@@ -150,21 +150,6 @@ func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httput
 		return nil, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
 	}
 	return &n, nil
-}
-
-func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	if _, ok := allowed[s]; !ok {
-		return "", &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
-	}
-	return s, nil
 }
 
 func requireIntRange(raw map[string]json.RawMessage, key string, lo, hi int, msg string) (int, *httputil.ValidationError) {

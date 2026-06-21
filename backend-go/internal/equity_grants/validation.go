@@ -90,7 +90,7 @@ func requireGrantBasics(raw map[string]json.RawMessage, r *createRequest) *httpu
 	}
 	r.GrantDate = t
 
-	grantType, vErr := requireEnumString(raw, "type", validGrantTypes)
+	grantType, vErr := validation.RequiredEnumString(raw, "type", validGrantTypes)
 	if vErr != nil {
 		return vErr
 	}
@@ -147,7 +147,7 @@ func requireGrantVesting(raw map[string]json.RawMessage, r *createRequest) *http
 	}
 	r.VestTotalMonths = total
 
-	freq, vErr := requireEnumString(raw, "vest_frequency", validFrequencies)
+	freq, vErr := validation.RequiredEnumString(raw, "vest_frequency", validFrequencies)
 	if vErr != nil {
 		return vErr
 	}
@@ -383,21 +383,6 @@ func optionalNonNegativeInt(raw map[string]json.RawMessage, key, msg string, fal
 		return 0, &httputil.ValidationError{Field: key, Msg: msg}
 	}
 	return n, nil
-}
-
-func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	if _, ok := allowed[s]; !ok {
-		return "", &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
-	}
-	return s, nil
 }
 
 func optionalEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}, fallback string) (string, *httputil.ValidationError) {

@@ -2,6 +2,7 @@ package validation
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -106,6 +107,27 @@ func RequiredIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httpu
 		return nil, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
 	}
 	return &n, nil
+}
+
+// RequiredEnumString reads a required string field and checks it belongs to
+// the provided allowed set.
+func RequiredEnumString(
+	raw map[string]json.RawMessage,
+	key string,
+	allowed map[string]struct{},
+) (string, *httputil.ValidationError) {
+	v, ok := raw[key]
+	if !ok || IsNull(v) {
+		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
+	}
+	s, err := RawString(v)
+	if err != nil {
+		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
+	}
+	if _, ok := allowed[s]; !ok {
+		return "", &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
+	}
+	return s, nil
 }
 
 // RequiredDecimal reads a required JSON number field. Quoted numeric strings
