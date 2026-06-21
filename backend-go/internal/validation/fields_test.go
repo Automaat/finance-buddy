@@ -134,6 +134,52 @@ func TestRequiredIntOrNull(t *testing.T) {
 	requireValidation(t, vErr, "owner_user_id", "must be an integer")
 }
 
+func TestRequiredIntRange(t *testing.T) {
+	got, vErr := RequiredIntRange(
+		map[string]json.RawMessage{"year": json.RawMessage(`2026`)},
+		"year",
+		2000,
+		2030,
+		"Year must be between 2000 and 2030",
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got != 2026 {
+		t.Fatalf("got = %d", got)
+	}
+
+	_, vErr = RequiredIntRange(map[string]json.RawMessage{}, "year", 2000, 2030, "Year must be between 2000 and 2030")
+	requireValidation(t, vErr, "year", "Field required")
+
+	_, vErr = RequiredIntRange(
+		map[string]json.RawMessage{"year": json.RawMessage(`null`)},
+		"year",
+		2000,
+		2030,
+		"Year must be between 2000 and 2030",
+	)
+	requireValidation(t, vErr, "year", "Field required")
+
+	_, vErr = RequiredIntRange(
+		map[string]json.RawMessage{"year": json.RawMessage(`"2026"`)},
+		"year",
+		2000,
+		2030,
+		"Year must be between 2000 and 2030",
+	)
+	requireValidation(t, vErr, "year", "must be an integer")
+
+	_, vErr = RequiredIntRange(
+		map[string]json.RawMessage{"year": json.RawMessage(`1999`)},
+		"year",
+		2000,
+		2030,
+		"Year must be between 2000 and 2030",
+	)
+	requireValidation(t, vErr, "year", "Year must be between 2000 and 2030")
+}
+
 func TestRequiredEnumString(t *testing.T) {
 	allowed := map[string]struct{}{"employment": {}, "b2b": {}}
 

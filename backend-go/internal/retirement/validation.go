@@ -26,7 +26,7 @@ var validWrappers = map[string]struct{}{
 func buildLimitRequest(raw map[string]json.RawMessage, now func() time.Time) (limitRequest, *httputil.ValidationError) {
 	var r limitRequest
 	currentYear := now().UTC().Year()
-	year, vErr := requireIntRange(raw, "year", 2000, currentYear+10,
+	year, vErr := validation.RequiredIntRange(raw, "year", 2000, currentYear+10,
 		fmt.Sprintf("Year must be between 2000 and %d", currentYear+10))
 	if vErr != nil {
 		return r, vErr
@@ -80,14 +80,14 @@ func buildGenerateRequest(raw map[string]json.RawMessage, now func() time.Time) 
 	}
 	r.OwnerUserID = &owner
 
-	month, vErr := requireIntRange(raw, "month", 1, 12, "Month must be between 1 and 12")
+	month, vErr := validation.RequiredIntRange(raw, "month", 1, 12, "Month must be between 1 and 12")
 	if vErr != nil {
 		return r, vErr
 	}
 	r.Month = month
 
 	currentYear := now().UTC().Year()
-	year, vErr := requireIntRange(raw, "year", 2019, currentYear+1,
+	year, vErr := validation.RequiredIntRange(raw, "year", 2019, currentYear+1,
 		fmt.Sprintf("Year must be between 2019 and %d", currentYear+1))
 	if vErr != nil {
 		return r, vErr
@@ -131,21 +131,6 @@ func requireInt(raw map[string]json.RawMessage, key string) (int, *httputil.Vali
 	var n int
 	if err := json.Unmarshal(v, &n); err != nil {
 		return 0, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	return n, nil
-}
-
-func requireIntRange(raw map[string]json.RawMessage, key string, lo, hi int, msg string) (int, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return 0, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return 0, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	if n < lo || n > hi {
-		return 0, &httputil.ValidationError{Field: key, Msg: msg}
 	}
 	return n, nil
 }
