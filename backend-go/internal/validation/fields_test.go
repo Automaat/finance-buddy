@@ -210,6 +210,48 @@ func TestOptionalDateNotFuture(t *testing.T) {
 	requireValidation(t, vErr, "date", "must be a string")
 }
 
+func TestOptionalInt(t *testing.T) {
+	got, vErr := OptionalInt(
+		map[string]json.RawMessage{"owner_user_id": json.RawMessage(`7`)},
+		"owner_user_id",
+		"must be an integer",
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got == nil || *got != 7 {
+		t.Fatalf("got = %v", got)
+	}
+
+	got, vErr = OptionalInt(map[string]json.RawMessage{}, "owner_user_id", "must be an integer")
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	got, vErr = OptionalInt(
+		map[string]json.RawMessage{"owner_user_id": json.RawMessage(`null`)},
+		"owner_user_id",
+		"must be an integer",
+	)
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	_, vErr = OptionalInt(
+		map[string]json.RawMessage{"owner_user_id": json.RawMessage(`"7"`)},
+		"owner_user_id",
+		"must be an integer",
+	)
+	requireValidation(t, vErr, "owner_user_id", "must be an integer")
+
+	_, vErr = OptionalInt(
+		map[string]json.RawMessage{"owner_user_id": json.RawMessage(`"7"`)},
+		"owner_user_id",
+		"must be integer or null",
+	)
+	requireValidation(t, vErr, "owner_user_id", "must be integer or null")
+}
+
 func TestRequiredIntOrNull(t *testing.T) {
 	got, vErr := RequiredIntOrNull(map[string]json.RawMessage{"owner_user_id": json.RawMessage(`7`)}, "owner_user_id")
 	if vErr != nil {

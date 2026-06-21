@@ -96,17 +96,13 @@ func buildUpdatePatch(raw map[string]json.RawMessage, now func() time.Time) (Upd
 		}
 		p.Company = &s
 	}
-	if v, ok := raw["owner_user_id"]; ok {
+	if _, ok := raw["owner_user_id"]; ok {
 		p.OwnerUserIDSet = true
-		if validation.IsNull(v) {
-			p.OwnerUserID = nil
-		} else {
-			n, err := validation.RawInt(v)
-			if err != nil {
-				return p, &httputil.ValidationError{Field: "owner_user_id", Msg: "must be an integer"}
-			}
-			p.OwnerUserID = &n
+		ownerID, vErr := validation.OptionalInt(raw, "owner_user_id", "must be an integer")
+		if vErr != nil {
+			return p, vErr
 		}
+		p.OwnerUserID = ownerID
 	}
 	return p, nil
 }

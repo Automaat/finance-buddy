@@ -39,12 +39,12 @@ func readAccountAndAmount(raw map[string]json.RawMessage, in *CreateInput) *http
 		return err
 	}
 	in.Amount = amount
-	if v, ok := raw["owner_user_id"]; ok && string(v) != "null" {
-		var n int
-		if jerr := json.Unmarshal(v, &n); jerr != nil {
-			return &httputil.ValidationError{Field: "owner_user_id", Msg: "must be integer or null"}
-		}
-		in.OwnerUserID = &n
+	ownerID, vErr := validation.OptionalInt(raw, "owner_user_id", "must be integer or null")
+	if vErr != nil {
+		return vErr
+	}
+	if ownerID != nil {
+		in.OwnerUserID = ownerID
 	}
 	return nil
 }
