@@ -7,9 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strconv"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
@@ -272,13 +270,7 @@ func (h *Handler) writeStoreError(w http.ResponseWriter, err error) {
 }
 
 func parseIDParam(w http.ResponseWriter, r *http.Request) (int, bool) {
-	raw := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(raw)
-	if err != nil {
-		httputil.WriteBodyValidationError(w, "target_id", "must be an integer", raw)
-		return 0, false
-	}
-	return id, true
+	return httputil.PathIntField(w, r, "id", "target_id")
 }
 
 // HoldingsFromSnapshots is a default HoldingsProvider — pulls the latest

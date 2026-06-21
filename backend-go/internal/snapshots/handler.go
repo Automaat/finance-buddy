@@ -10,8 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
 )
@@ -194,11 +192,5 @@ func setLiteral(ids []int) string {
 }
 
 func parseIDParam(w http.ResponseWriter, r *http.Request) (int, bool) {
-	raw := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(raw)
-	if err != nil {
-		httputil.WriteBodyValidationError(w, "snapshot_id", "must be an integer", raw)
-		return 0, false
-	}
-	return id, true
+	return httputil.PathIntField(w, r, "id", "snapshot_id")
 }

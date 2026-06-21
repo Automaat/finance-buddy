@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/shopspring/decimal"
 
 	companyvaluations "github.com/Automaat/finance-buddy/backend-go/internal/company_valuations"
@@ -360,11 +359,5 @@ func (h *Handler) writeStoreError(w http.ResponseWriter, err error, id int) {
 }
 
 func parseIDParam(w http.ResponseWriter, r *http.Request) (int, bool) {
-	raw := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(raw)
-	if err != nil {
-		httputil.WriteBodyValidationError(w, "grant_id", "must be an integer", raw)
-		return 0, false
-	}
-	return id, true
+	return httputil.PathIntField(w, r, "id", "grant_id")
 }
