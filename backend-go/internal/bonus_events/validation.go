@@ -6,8 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shopspring/decimal"
-
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 	"github.com/Automaat/finance-buddy/backend-go/internal/validation"
 )
@@ -31,7 +29,7 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 	}
 	r.Date = t
 
-	amount, vErr := requirePositiveDecimal(raw, "amount", "Amount must be greater than 0")
+	amount, vErr := validation.RequiredPositiveDecimal(raw, "amount", "Field required", "Amount must be greater than 0")
 	if vErr != nil {
 		return r, vErr
 	}
@@ -185,21 +183,6 @@ func patchEnums(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Valida
 
 func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string, *httputil.ValidationError) {
 	return validation.RequiredTrimmedString(raw, key, "Field required", emptyMsg)
-}
-
-func requirePositiveDecimal(raw map[string]json.RawMessage, key, msg string) (decimal.Decimal, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	d, err := validation.RawDecimal(v)
-	if err != nil {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "must be a number"}
-	}
-	if !d.IsPositive() {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: msg}
-	}
-	return d, nil
 }
 
 func optionalCurrency(raw map[string]json.RawMessage, fallback string) (string, *httputil.ValidationError) {

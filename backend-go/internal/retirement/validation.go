@@ -45,7 +45,7 @@ func buildLimitRequest(raw map[string]json.RawMessage, now func() time.Time) (li
 	}
 	r.OwnerUserID = owner
 
-	amt, vErr := requirePositiveDecimal(raw, "limit_amount", "Limit amount must be greater than 0")
+	amt, vErr := validation.RequiredPositiveDecimal(raw, "limit_amount", "Field required", "Limit amount must be greater than 0")
 	if vErr != nil {
 		return r, vErr
 	}
@@ -148,19 +148,4 @@ func requireIntRange(raw map[string]json.RawMessage, key string, lo, hi int, msg
 		return 0, &httputil.ValidationError{Field: key, Msg: msg}
 	}
 	return n, nil
-}
-
-func requirePositiveDecimal(raw map[string]json.RawMessage, key, msg string) (decimal.Decimal, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	d, err := validation.RawDecimal(v)
-	if err != nil {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "must be a number"}
-	}
-	if !d.IsPositive() {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: msg}
-	}
-	return d, nil
 }

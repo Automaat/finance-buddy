@@ -46,7 +46,7 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 	}
 	r.StartDate = sd
 
-	ia, vErr := requirePositiveDecimal(raw, "initial_amount", "Initial amount must be greater than 0")
+	ia, vErr := validation.RequiredPositiveDecimal(raw, "initial_amount", "Field required", "Initial amount must be greater than 0")
 	if vErr != nil {
 		return r, vErr
 	}
@@ -169,21 +169,6 @@ func requireDateNotFuture(raw map[string]json.RawMessage, key, msg string) (time
 		return time.Time{}, &httputil.ValidationError{Field: key, Msg: msg}
 	}
 	return t, nil
-}
-
-func requirePositiveDecimal(raw map[string]json.RawMessage, key, msg string) (decimal.Decimal, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	d, err := validation.RawDecimal(v)
-	if err != nil {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "must be a number"}
-	}
-	if !d.IsPositive() {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: msg}
-	}
-	return d, nil
 }
 
 func requireNonNegativeDecimal(raw map[string]json.RawMessage, key, msg string) (decimal.Decimal, *httputil.ValidationError) {
