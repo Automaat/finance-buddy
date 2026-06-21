@@ -22,7 +22,7 @@ import (
 func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputil.ValidationError) {
 	var r createRequest
 
-	company, vErr := requireString(raw, "company", "Field required", "Company cannot be empty")
+	company, vErr := validation.RequiredTrimmedString(raw, "company", "Field required", "Company cannot be empty")
 	if vErr != nil {
 		return r, vErr
 	}
@@ -66,7 +66,7 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 		return r, vErr
 	}
 
-	source, vErr := requireString(raw, "source", "Field required", "Source cannot be empty")
+	source, vErr := validation.RequiredTrimmedString(raw, "source", "Field required", "Source cannot be empty")
 	if vErr != nil {
 		return r, vErr
 	}
@@ -181,10 +181,6 @@ func patchNumbers(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Vali
 }
 
 // --- shared decoders ---
-
-func requireString(raw map[string]json.RawMessage, key, missingMsg, emptyMsg string) (string, *httputil.ValidationError) {
-	return validation.RequiredTrimmedString(raw, key, missingMsg, emptyMsg)
-}
 
 func optionalCurrency(raw map[string]json.RawMessage) (string, *httputil.ValidationError) {
 	v, ok := raw["currency"]

@@ -47,7 +47,7 @@ func buildCreateRequest(raw map[string]json.RawMessage, now func() time.Time) (c
 	}
 	r.ContractType = contract
 
-	company, vErr := requireString(raw, "company", "Company cannot be empty")
+	company, vErr := validation.RequiredTrimmedString(raw, "company", "Field required", "Company cannot be empty")
 	if vErr != nil {
 		return r, vErr
 	}
@@ -120,19 +120,4 @@ func buildUpdatePatch(raw map[string]json.RawMessage, now func() time.Time) (Upd
 		}
 	}
 	return p, nil
-}
-
-func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	s, err := validation.RawTrimmedString(v)
-	if err != nil {
-		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	if s == "" {
-		return "", &httputil.ValidationError{Field: key, Msg: emptyMsg}
-	}
-	return s, nil
 }
