@@ -40,7 +40,7 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 	}
 	r.DebtType = dt
 
-	sd, vErr := requireDateNotFuture(raw, "start_date", "Start date cannot be in the future")
+	sd, vErr := validation.RequiredDateNotFutureWithMessage(raw, "start_date", time.Now, "Start date cannot be in the future")
 	if vErr != nil {
 		return r, vErr
 	}
@@ -102,19 +102,15 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 		}
 		p.DebtType = &s
 	}
-	if v, ok := raw["start_date"]; ok && !validation.IsNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return p, &httputil.ValidationError{Field: "start_date", Msg: "must be a string"}
-		}
-		t, err := time.Parse("2006-01-02", s)
-		if err != nil {
-			return p, &httputil.ValidationError{Field: "start_date", Msg: "must be YYYY-MM-DD"}
-		}
-		if t.After(today()) {
-			return p, &httputil.ValidationError{Field: "start_date", Msg: "Start date cannot be in the future"}
-		}
-		p.StartDate = &t
+	if t, vErr := validation.OptionalDateNotFuture(
+		raw,
+		"start_date",
+		time.Now,
+		"Start date cannot be in the future",
+	); vErr != nil {
+		return p, vErr
+	} else if t != nil {
+		p.StartDate = t
 	}
 	if v, ok := raw["initial_amount"]; ok && !validation.IsNull(v) {
 		d, err := validation.RawDecimal(v)
@@ -160,17 +156,6 @@ func requireOwnerUserID(raw map[string]json.RawMessage) (*int, *httputil.Validat
 	return validation.RequiredIntOrNull(raw, "owner_user_id")
 }
 
-func requireDateNotFuture(raw map[string]json.RawMessage, key, msg string) (time.Time, *httputil.ValidationError) {
-	t, vErr := validation.RequiredDate(raw, key)
-	if vErr != nil {
-		return time.Time{}, vErr
-	}
-	if t.After(today()) {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: msg}
-	}
-	return t, nil
-}
-
 func optionalCurrencyPLN(raw map[string]json.RawMessage) (string, *httputil.ValidationError) {
 	v, ok := raw["currency"]
 	if !ok || validation.IsNull(v) {
@@ -184,9 +169,4 @@ func optionalCurrencyPLN(raw map[string]json.RawMessage) (string, *httputil.Vali
 		return "", &httputil.ValidationError{Field: "currency", Msg: "Currency must be 'PLN'"}
 	}
 	return s, nil
-}
-
-func today() time.Time {
-	t := time.Now().UTC()
-	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
 }

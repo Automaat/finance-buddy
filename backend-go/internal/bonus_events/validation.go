@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 	"github.com/Automaat/finance-buddy/backend-go/internal/validation"
@@ -20,12 +19,9 @@ import (
 func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputil.ValidationError) {
 	var r createRequest
 
-	t, vErr := validation.RequiredDate(raw, "date")
+	t, vErr := validation.RequiredDateNotFuture(raw, "date", nil)
 	if vErr != nil {
 		return r, vErr
-	}
-	if t.After(today()) {
-		return r, &httputil.ValidationError{Field: "date", Msg: "Date cannot be in the future"}
 	}
 	r.Date = t
 
@@ -87,19 +83,10 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 }
 
 func patchScalars(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.ValidationError {
-	if v, ok := raw["date"]; ok && !validation.IsNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return &httputil.ValidationError{Field: "date", Msg: "must be a string"}
-		}
-		t, err := time.Parse("2006-01-02", s)
-		if err != nil {
-			return &httputil.ValidationError{Field: "date", Msg: "must be YYYY-MM-DD"}
-		}
-		if t.After(today()) {
-			return &httputil.ValidationError{Field: "date", Msg: "Date cannot be in the future"}
-		}
-		p.Date = &t
+	if t, vErr := validation.OptionalDateNotFuture(raw, "date", nil, "Date cannot be in the future"); vErr != nil {
+		return vErr
+	} else if t != nil {
+		p.Date = t
 	}
 	if v, ok := raw["amount"]; ok && !validation.IsNull(v) {
 		d, err := validation.RawDecimal(v)
@@ -195,9 +182,4 @@ func optionalCurrency(raw map[string]json.RawMessage, fallback string) (string, 
 		return "", &httputil.ValidationError{Field: "currency", Msg: "Currency must be one of [CHF, EUR, GBP, PLN, USD]"}
 	}
 	return s, nil
-}
-
-func today() time.Time {
-	now := time.Now().UTC()
-	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 }
