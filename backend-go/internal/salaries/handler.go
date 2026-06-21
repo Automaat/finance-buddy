@@ -7,10 +7,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/shopspring/decimal"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/cpi"
@@ -337,13 +335,7 @@ func parseListFilter(q map[string][]string) (ListFilter, *httputil.ValidationErr
 }
 
 func parseIDParam(w http.ResponseWriter, r *http.Request) (int, bool) {
-	raw := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(raw)
-	if err != nil {
-		httputil.WriteBodyValidationError(w, "salary_id", "must be an integer", raw)
-		return 0, false
-	}
-	return id, true
+	return httputil.PathIntField(w, r, "id", "salary_id")
 }
 
 func truncateDay(t time.Time) time.Time {
