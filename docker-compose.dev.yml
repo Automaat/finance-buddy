@@ -30,6 +30,7 @@ services:
       - FB_ADMIN_USERNAME=${FB_ADMIN_USERNAME:-admin}
       - FB_ADMIN_PASSWORD=${FB_ADMIN_PASSWORD:-admin}
       - FB_COOKIE_SECURE=false
+      - FB_ACCESS_LOG=${FB_ACCESS_LOG:-false}
       - FB_STOOQ_APIKEY=${FB_STOOQ_APIKEY:-}
       - FB_FRED_API_KEY=${FB_FRED_API_KEY:-}
     depends_on:

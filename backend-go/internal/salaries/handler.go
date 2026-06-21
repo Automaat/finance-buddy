@@ -110,13 +110,14 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	currentSalaries, err := h.store.CurrentSalaryByUser(r.Context(), userIDs, today)
+	recentSalaries, err := h.store.RecentTwoByUser(r.Context(), userIDs, today)
 	if err != nil {
-		h.logger.Error("current salaries", "err", err)
+		h.logger.Error("recent salaries", "err", err)
 		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	inflationCtx, err := h.buildInflationContext(r.Context(), userIDs, today)
+	currentSalaries := currentSalaryFromRecent(recentSalaries)
+	inflationCtx, err := h.buildInflationContext(r.Context(), recentSalaries, today)
 	if err != nil {
 		h.logger.Error("inflation context", "err", err)
 		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
@@ -247,9 +248,9 @@ func (h *Handler) writeStoreError(w http.ResponseWriter, err error, id int) {
 // persona with at least two recent records, compute previous_salary_in_today_pln
 // via the CPI index, then derive real_change_pln / pct.
 func (h *Handler) buildInflationContext(
-	ctx context.Context, userIDs []int, today time.Time,
+	ctx context.Context, recent map[int][]SalaryRecord, today time.Time,
 ) (map[int]inflationContext, error) {
-	if len(userIDs) == 0 {
+	if !hasPreviousSalary(recent) {
 		return map[int]inflationContext{}, nil
 	}
 	asOfYear, hasYear, err := h.cpiStore.LatestKnownYear(ctx)
@@ -264,10 +265,6 @@ func (h *Handler) buildInflationContext(
 		return map[int]inflationContext{}, nil
 	}
 	indexMap := cpi.CumulativeIndex(yoyMap)
-	recent, err := h.store.RecentTwoByUser(ctx, userIDs, today)
-	if err != nil {
-		return nil, err
-	}
 	out := map[int]inflationContext{}
 	for ownerID, recs := range recent {
 		if len(recs) < 2 {
@@ -304,6 +301,26 @@ func (h *Handler) buildInflationContext(
 		}
 	}
 	return out, nil
+}
+
+func currentSalaryFromRecent(recent map[int][]SalaryRecord) map[int]decimal.Decimal {
+	out := map[int]decimal.Decimal{}
+	for ownerID, recs := range recent {
+		if len(recs) == 0 {
+			continue
+		}
+		out[ownerID] = recs[0].GrossAmount
+	}
+	return out
+}
+
+func hasPreviousSalary(recent map[int][]SalaryRecord) bool {
+	for _, recs := range recent {
+		if len(recs) >= 2 {
+			return true
+		}
+	}
+	return false
 }
 
 func salariesToFloatMap(

@@ -52,11 +52,11 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/zus"
 )
 
-// requestObserver logs every request (id, method, path, status, latency) via
-// slog and records it into the Prometheus collectors. Sits just inside
-// RequestID so the correlation id is available, and outside Recoverer so a
-// panic still surfaces as a logged 500.
-func requestObserver(logger *slog.Logger) func(http.Handler) http.Handler {
+// requestObserver records every request into the Prometheus collectors and,
+// when enabled, logs request details via slog. Sits just inside RequestID so
+// the correlation id is available, and outside Recoverer so a panic still
+// surfaces as a logged 500.
+func requestObserver(logger *slog.Logger, accessLog bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
@@ -69,6 +69,9 @@ func requestObserver(logger *slog.Logger) func(http.Handler) http.Handler {
 				status = http.StatusOK
 			}
 			metrics.ObserveRequest(r.Method, route, status, dur)
+			if !accessLog {
+				return
+			}
 			logger.Info("request",
 				"request_id", middleware.GetReqID(r.Context()),
 				"method", r.Method,
@@ -105,6 +108,10 @@ type Config struct {
 	// CookieSecure marks the session cookie Secure (FB_COOKIE_SECURE).
 	// Off by default so plain-HTTP local/LAN deploys work.
 	CookieSecure bool
+	// AccessLog enables one structured info log per HTTP request
+	// (FB_ACCESS_LOG). Disabled by default; Prometheus metrics are always
+	// recorded by requestObserver.
+	AccessLog bool
 	// StooqAPIKey unlocks the Stooq daily-history endpoint (FB_STOOQ_APIKEY).
 	// Empty means the scheduler/refresh handler falls back to the keyless
 	// "latest" snapshot — daily backfill is then unavailable.
@@ -141,7 +148,7 @@ func New(cfg Config, logger *slog.Logger, deps Deps) http.Handler {
 	}
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
-	r.Use(requestObserver(logger))
+	r.Use(requestObserver(logger, cfg.AccessLog))
 	r.Use(middleware.Recoverer)
 	// Per-request deadline. middleware.Timeout cancels r.Context() after
 	// requestTimeout, which context-aware work (pgx queries, outbound scrapes)

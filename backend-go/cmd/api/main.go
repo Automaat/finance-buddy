@@ -97,6 +97,7 @@ func run() int {
 		CORSOrigins:  envOrPresent("CORS_ORIGINS", "http://localhost:3000"),
 		JWTSecret:    jwtSecret,
 		CookieSecure: envOr("FB_COOKIE_SECURE", "false") == "true",
+		AccessLog:    envOr("FB_ACCESS_LOG", "false") == "true",
 		StooqAPIKey:  os.Getenv("FB_STOOQ_APIKEY"),
 		FREDAPIKey:   os.Getenv("FB_FRED_API_KEY"),
 	}
