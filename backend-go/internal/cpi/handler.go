@@ -122,12 +122,12 @@ func (h *Handler) Adjust(w http.ResponseWriter, r *http.Request) {
 		httputil.WritePydanticError(w, vErr)
 		return
 	}
-	from, vErr := requireDate(raw, "from_date")
+	from, vErr := validation.RequiredDate(raw, "from_date")
 	if vErr != nil {
 		httputil.WritePydanticError(w, vErr)
 		return
 	}
-	to, vErr := requireDate(raw, "to_date")
+	to, vErr := validation.RequiredDate(raw, "to_date")
 	if vErr != nil {
 		httputil.WritePydanticError(w, vErr)
 		return
@@ -252,20 +252,4 @@ func requireFloat(raw map[string]json.RawMessage, key string) (float64, *httputi
 		return 0, &httputil.ValidationError{Field: key, Msg: "must be a number"}
 	}
 	return f, nil
-}
-
-func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	t, err := time.Parse("2006-01-02", s)
-	if err != nil {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be YYYY-MM-DD"}
-	}
-	return t, nil
 }

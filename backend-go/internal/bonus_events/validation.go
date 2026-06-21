@@ -22,7 +22,7 @@ import (
 func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputil.ValidationError) {
 	var r createRequest
 
-	t, vErr := requireDate(raw, "date")
+	t, vErr := validation.RequiredDate(raw, "date")
 	if vErr != nil {
 		return r, vErr
 	}
@@ -185,10 +185,6 @@ func patchEnums(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Valida
 
 func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string, *httputil.ValidationError) {
 	return validation.RequiredTrimmedString(raw, key, "Field required", emptyMsg)
-}
-
-func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {
-	return validation.RequiredDate(raw, key)
 }
 
 func requirePositiveDecimal(raw map[string]json.RawMessage, key, msg string) (decimal.Decimal, *httputil.ValidationError) {

@@ -26,7 +26,7 @@ type createRequest struct {
 // fields surface "Field required" on missing.
 func buildCreateRequest(raw map[string]json.RawMessage, now func() time.Time) (createRequest, *httputil.ValidationError) {
 	var r createRequest
-	t, vErr := requireDate(raw, "date")
+	t, vErr := validation.RequiredDate(raw, "date")
 	if vErr != nil {
 		return r, vErr
 	}
@@ -135,21 +135,6 @@ func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string
 		return "", &httputil.ValidationError{Field: key, Msg: emptyMsg}
 	}
 	return s, nil
-}
-
-func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	t, err := validation.RawDate(v)
-	if err != nil {
-		if validation.IsRawDateFormatError(err) {
-			return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be YYYY-MM-DD"}
-		}
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	return t, nil
 }
 
 func requirePositiveDecimal(raw map[string]json.RawMessage, key, msg string) (decimal.Decimal, *httputil.ValidationError) {

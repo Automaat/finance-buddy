@@ -167,9 +167,16 @@ func TestBuildUpdatePatchBlankCompany(t *testing.T) {
 	}
 }
 
-func TestRequireDateInvalid(t *testing.T) {
-	_, vErr := requireDate(rawJSON(t, map[string]any{"d": "31-01-2026"}), "d")
-	if vErr == nil || vErr.Field != "d" {
+func TestBuildCreateRequestInvalidDate(t *testing.T) {
+	raw := rawJSON(t, map[string]any{
+		"date":          "31-01-2026",
+		"gross_amount":  1000,
+		"contract_type": "UOP",
+		"company":       "Acme",
+		"owner_user_id": nil,
+	})
+	_, vErr := buildCreateRequest(raw, testNow)
+	if vErr == nil || vErr.Field != "date" {
 		t.Fatalf("expected error, got %+v", vErr)
 	}
 }
