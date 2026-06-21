@@ -134,6 +134,46 @@ func TestRequiredIntOrNull(t *testing.T) {
 	requireValidation(t, vErr, "owner_user_id", "must be an integer")
 }
 
+func TestRequiredEnumString(t *testing.T) {
+	allowed := map[string]struct{}{"employment": {}, "b2b": {}}
+
+	got, vErr := RequiredEnumString(
+		map[string]json.RawMessage{"contract_type": json.RawMessage(`"employment"`)},
+		"contract_type",
+		allowed,
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got != "employment" {
+		t.Fatalf("got = %q", got)
+	}
+
+	_, vErr = RequiredEnumString(map[string]json.RawMessage{}, "contract_type", allowed)
+	requireValidation(t, vErr, "contract_type", "Field required")
+
+	_, vErr = RequiredEnumString(
+		map[string]json.RawMessage{"contract_type": json.RawMessage(`null`)},
+		"contract_type",
+		allowed,
+	)
+	requireValidation(t, vErr, "contract_type", "Field required")
+
+	_, vErr = RequiredEnumString(
+		map[string]json.RawMessage{"contract_type": json.RawMessage(`7`)},
+		"contract_type",
+		allowed,
+	)
+	requireValidation(t, vErr, "contract_type", "must be a string")
+
+	_, vErr = RequiredEnumString(
+		map[string]json.RawMessage{"contract_type": json.RawMessage(`"mandate"`)},
+		"contract_type",
+		allowed,
+	)
+	requireValidation(t, vErr, "contract_type", `invalid value "mandate"`)
+}
+
 func TestRequiredDecimal(t *testing.T) {
 	got, vErr := RequiredDecimal(
 		map[string]json.RawMessage{"amount": json.RawMessage(`123.45`)},

@@ -34,13 +34,13 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 	}
 	r.Name = name
 
-	t, vErr := requireEnumString(raw, "type", validAccountTypes)
+	t, vErr := validation.RequiredEnumString(raw, "type", validAccountTypes)
 	if vErr != nil {
 		return r, vErr
 	}
 	r.Type = t
 
-	cat, vErr := requireEnumString(raw, "category", validCategories)
+	cat, vErr := validation.RequiredEnumString(raw, "category", validCategories)
 	if vErr != nil {
 		return r, vErr
 	}
@@ -64,7 +64,7 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 	}
 	r.AccountWrapper = wrap
 
-	purpose, vErr := requireEnumString(raw, "purpose", validPurposes)
+	purpose, vErr := validation.RequiredEnumString(raw, "purpose", validPurposes)
 	if vErr != nil {
 		return r, vErr
 	}
@@ -262,21 +262,6 @@ func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httput
 		return nil, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
 	}
 	return &n, nil
-}
-
-func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	if _, ok := allowed[s]; !ok {
-		return "", &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
-	}
-	return s, nil
 }
 
 func optionalString(raw map[string]json.RawMessage, key, fallback string) (string, *httputil.ValidationError) {

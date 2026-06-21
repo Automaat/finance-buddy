@@ -41,7 +41,7 @@ func buildCreateRequest(raw map[string]json.RawMessage, now func() time.Time) (c
 	}
 	r.GrossAmount = amount
 
-	contract, vErr := requireEnumString(raw, "contract_type", validContractTypes)
+	contract, vErr := validation.RequiredEnumString(raw, "contract_type", validContractTypes)
 	if vErr != nil {
 		return r, vErr
 	}
@@ -182,19 +182,4 @@ func requirePositiveDecimal(raw map[string]json.RawMessage, key, msg string) (de
 		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: msg}
 	}
 	return d, nil
-}
-
-func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	s, err := validation.RawString(v)
-	if err != nil {
-		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	if _, ok := allowed[s]; !ok {
-		return "", &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
-	}
-	return s, nil
 }

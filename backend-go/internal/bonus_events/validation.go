@@ -43,7 +43,7 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 	}
 	r.Currency = currency
 
-	r.Type, vErr = requireEnumString(raw, "type", validBonusTypes)
+	r.Type, vErr = validation.RequiredEnumString(raw, "type", validBonusTypes)
 	if vErr != nil {
 		return r, vErr
 	}
@@ -60,7 +60,7 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 	}
 	r.OwnerUserID = ownerID
 
-	r.ContractType, vErr = requireEnumString(raw, "contract_type", validContractTypes)
+	r.ContractType, vErr = validation.RequiredEnumString(raw, "contract_type", validContractTypes)
 	if vErr != nil {
 		return r, vErr
 	}
@@ -218,21 +218,6 @@ func optionalCurrency(raw map[string]json.RawMessage, fallback string) (string, 
 	s = strings.ToUpper(strings.TrimSpace(s))
 	if _, ok := validCurrencies[s]; !ok {
 		return "", &httputil.ValidationError{Field: "currency", Msg: "Currency must be one of [CHF, EUR, GBP, PLN, USD]"}
-	}
-	return s, nil
-}
-
-func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	if _, ok := allowed[s]; !ok {
-		return "", &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
 	}
 	return s, nil
 }
