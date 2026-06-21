@@ -52,7 +52,12 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 	}
 	r.InitialAmount = ia
 
-	ir, vErr := requireNonNegativeDecimal(raw, "interest_rate", "Interest rate must be greater than or equal to 0")
+	ir, vErr := validation.RequiredNonNegativeDecimal(
+		raw,
+		"interest_rate",
+		"Field required",
+		"Interest rate must be greater than or equal to 0",
+	)
 	if vErr != nil {
 		return r, vErr
 	}
@@ -121,15 +126,14 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 		}
 		p.InitialAmount = &d
 	}
-	if v, ok := raw["interest_rate"]; ok && !validation.IsNull(v) {
-		d, err := validation.RawDecimal(v)
-		if err != nil {
-			return p, &httputil.ValidationError{Field: "interest_rate", Msg: "must be a number"}
-		}
-		if d.IsNegative() {
-			return p, &httputil.ValidationError{Field: "interest_rate", Msg: "Interest rate must be greater than or equal to 0"}
-		}
-		p.InterestRate = &d
+	if d, vErr := validation.OptionalNonNegativeDecimal(
+		raw,
+		"interest_rate",
+		"Interest rate must be greater than or equal to 0",
+	); vErr != nil {
+		return p, vErr
+	} else if d != nil {
+		p.InterestRate = d
 	}
 	if v, ok := raw["currency"]; ok && !validation.IsNull(v) {
 		var s string
@@ -165,21 +169,6 @@ func requireDateNotFuture(raw map[string]json.RawMessage, key, msg string) (time
 		return time.Time{}, &httputil.ValidationError{Field: key, Msg: msg}
 	}
 	return t, nil
-}
-
-func requireNonNegativeDecimal(raw map[string]json.RawMessage, key, msg string) (decimal.Decimal, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	d, err := validation.RawDecimal(v)
-	if err != nil {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "must be a number"}
-	}
-	if d.IsNegative() {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: msg}
-	}
-	return d, nil
 }
 
 func optionalCurrencyPLN(raw map[string]json.RawMessage) (string, *httputil.ValidationError) {

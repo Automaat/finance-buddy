@@ -40,17 +40,22 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 	}
 	r.Currency = currency
 
-	fmv, vErr := requireNonNegativeDecimal(raw, "fmv_per_share", "FMV per share must be non-negative")
+	fmv, vErr := validation.RequiredNonNegativeDecimal(
+		raw,
+		"fmv_per_share",
+		"Field required",
+		"FMV per share must be non-negative",
+	)
 	if vErr != nil {
 		return r, vErr
 	}
 	r.FMVPerShare = fmv
 
-	r.FMVLow, vErr = optionalNonNegativeDecimal(raw, "fmv_low", "FMV range values must be non-negative")
+	r.FMVLow, vErr = validation.OptionalNonNegativeDecimal(raw, "fmv_low", "FMV range values must be non-negative")
 	if vErr != nil {
 		return r, vErr
 	}
-	r.FMVHigh, vErr = optionalNonNegativeDecimal(raw, "fmv_high", "FMV range values must be non-negative")
+	r.FMVHigh, vErr = validation.OptionalNonNegativeDecimal(raw, "fmv_high", "FMV range values must be non-negative")
 	if vErr != nil {
 		return r, vErr
 	}
@@ -162,7 +167,7 @@ func patchNumbers(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Vali
 		{"fmv_low", "fmv_low", "FMV values must be non-negative", &p.FMVLow},
 		{"fmv_high", "fmv_high", "FMV values must be non-negative", &p.FMVHigh},
 	} {
-		d, vErr := optionalNonNegativeDecimal(raw, f.key, f.msg)
+		d, vErr := validation.OptionalNonNegativeDecimal(raw, f.key, f.msg)
 		if vErr != nil {
 			vErr.Field = f.field
 			return vErr
@@ -196,39 +201,6 @@ func optionalCurrency(raw map[string]json.RawMessage) (string, *httputil.Validat
 		return "", &httputil.ValidationError{Field: "currency", Msg: "Currency must be one of [CHF, EUR, GBP, PLN, USD]"}
 	}
 	return s, nil
-}
-
-// requireNonNegativeDecimal parses a required JSON number as a Decimal using
-// the raw token (no float64 intermediate) so Numeric column precision is
-// preserved end-to-end.
-func requireNonNegativeDecimal(raw map[string]json.RawMessage, key, msg string) (decimal.Decimal, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	d, err := validation.RawDecimal(v)
-	if err != nil {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "must be a number"}
-	}
-	if d.IsNegative() {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: msg}
-	}
-	return d, nil
-}
-
-func optionalNonNegativeDecimal(raw map[string]json.RawMessage, key, msg string) (*decimal.Decimal, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return nil, nil
-	}
-	d, err := validation.RawDecimal(v)
-	if err != nil {
-		return nil, &httputil.ValidationError{Field: key, Msg: "must be a number"}
-	}
-	if d.IsNegative() {
-		return nil, &httputil.ValidationError{Field: key, Msg: msg}
-	}
-	return &d, nil
 }
 
 func optionalDiscountPct(raw map[string]json.RawMessage) (*decimal.Decimal, *httputil.ValidationError) {
