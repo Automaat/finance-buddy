@@ -6,8 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shopspring/decimal"
-
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 	"github.com/Automaat/finance-buddy/backend-go/internal/validation"
 )
@@ -73,19 +71,29 @@ func patchScalarFields(raw map[string]json.RawMessage, p *UpdatePatch) *httputil
 		}
 		p.Name = &s
 	}
-	if vErr := patchPositiveAmount(raw, "target_amount", &p.TargetAmount, "Target amount must be greater than 0"); vErr != nil {
+	if d, vErr := validation.OptionalPositiveDecimal(raw, "target_amount", "Target amount must be greater than 0"); vErr != nil {
 		return vErr
+	} else if d != nil {
+		p.TargetAmount = d
 	}
 	if t, vErr := validation.OptionalDate(raw, "target_date"); vErr != nil {
 		return vErr
 	} else if t != nil {
 		p.TargetDate = t
 	}
-	if vErr := patchNonNegativeAmount(raw, "current_amount", &p.CurrentAmount, "Current amount must be non-negative"); vErr != nil {
+	if d, vErr := validation.OptionalNonNegativeDecimal(raw, "current_amount", "Current amount must be non-negative"); vErr != nil {
 		return vErr
+	} else if d != nil {
+		p.CurrentAmount = d
 	}
-	if vErr := patchNonNegativeAmount(raw, "monthly_contribution", &p.MonthlyContribution, "Monthly contribution must be non-negative"); vErr != nil {
+	if d, vErr := validation.OptionalNonNegativeDecimal(
+		raw,
+		"monthly_contribution",
+		"Monthly contribution must be non-negative",
+	); vErr != nil {
 		return vErr
+	} else if d != nil {
+		p.MonthlyContribution = d
 	}
 	if v, ok := raw["is_completed"]; ok && !validation.IsNull(v) {
 		var b bool
@@ -124,39 +132,5 @@ func patchNullableRefs(raw map[string]json.RawMessage, p *UpdatePatch) *httputil
 			p.Category = &s
 		}
 	}
-	return nil
-}
-
-func patchPositiveAmount(raw map[string]json.RawMessage, field string, dest **decimal.Decimal, msg string) *httputil.ValidationError {
-	v, ok := raw[field]
-	if !ok || validation.IsNull(v) {
-		return nil
-	}
-	var f float64
-	if err := json.Unmarshal(v, &f); err != nil {
-		return &httputil.ValidationError{Field: field, Msg: "must be a number"}
-	}
-	if f <= 0 {
-		return &httputil.ValidationError{Field: field, Msg: msg}
-	}
-	d := decimal.NewFromFloat(f)
-	*dest = &d
-	return nil
-}
-
-func patchNonNegativeAmount(raw map[string]json.RawMessage, field string, dest **decimal.Decimal, msg string) *httputil.ValidationError {
-	v, ok := raw[field]
-	if !ok || validation.IsNull(v) {
-		return nil
-	}
-	var f float64
-	if err := json.Unmarshal(v, &f); err != nil {
-		return &httputil.ValidationError{Field: field, Msg: "must be a number"}
-	}
-	if f < 0 {
-		return &httputil.ValidationError{Field: field, Msg: msg}
-	}
-	d := decimal.NewFromFloat(f)
-	*dest = &d
 	return nil
 }

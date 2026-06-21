@@ -518,6 +518,52 @@ func TestOptionalDecimal(t *testing.T) {
 	requireValidation(t, vErr, "fee", "must be a number")
 }
 
+func TestOptionalPositiveDecimal(t *testing.T) {
+	got, vErr := OptionalPositiveDecimal(
+		map[string]json.RawMessage{"fee": json.RawMessage(`1.25`)},
+		"fee",
+		"Fee must be greater than 0",
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got == nil || !got.Equal(decimal.RequireFromString("1.25")) {
+		t.Fatalf("got = %v", got)
+	}
+
+	got, vErr = OptionalPositiveDecimal(
+		map[string]json.RawMessage{},
+		"fee",
+		"Fee must be greater than 0",
+	)
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	got, vErr = OptionalPositiveDecimal(
+		map[string]json.RawMessage{"fee": json.RawMessage(`null`)},
+		"fee",
+		"Fee must be greater than 0",
+	)
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	_, vErr = OptionalPositiveDecimal(
+		map[string]json.RawMessage{"fee": json.RawMessage(`0`)},
+		"fee",
+		"Fee must be greater than 0",
+	)
+	requireValidation(t, vErr, "fee", "Fee must be greater than 0")
+
+	_, vErr = OptionalPositiveDecimal(
+		map[string]json.RawMessage{"fee": json.RawMessage(`"1.25"`)},
+		"fee",
+		"Fee must be greater than 0",
+	)
+	requireValidation(t, vErr, "fee", "must be a number")
+}
+
 func TestOptionalNonNegativeDecimal(t *testing.T) {
 	got, vErr := OptionalNonNegativeDecimal(
 		map[string]json.RawMessage{"fee": json.RawMessage(`0`)},

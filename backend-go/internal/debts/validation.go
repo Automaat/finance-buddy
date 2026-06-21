@@ -112,15 +112,14 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 	} else if t != nil {
 		p.StartDate = t
 	}
-	if v, ok := raw["initial_amount"]; ok && !validation.IsNull(v) {
-		d, err := validation.RawDecimal(v)
-		if err != nil {
-			return p, &httputil.ValidationError{Field: "initial_amount", Msg: "must be a number"}
-		}
-		if !d.IsPositive() {
-			return p, &httputil.ValidationError{Field: "initial_amount", Msg: "Initial amount must be greater than 0"}
-		}
-		p.InitialAmount = &d
+	if d, vErr := validation.OptionalPositiveDecimal(
+		raw,
+		"initial_amount",
+		"Initial amount must be greater than 0",
+	); vErr != nil {
+		return p, vErr
+	} else if d != nil {
+		p.InitialAmount = d
 	}
 	if d, vErr := validation.OptionalNonNegativeDecimal(
 		raw,
