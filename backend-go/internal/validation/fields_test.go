@@ -153,6 +153,15 @@ func TestRequiredIntRange(t *testing.T) {
 	requireValidation(t, vErr, "year", "Field required")
 
 	_, vErr = RequiredIntRange(
+		map[string]json.RawMessage{"year": json.RawMessage(`null`)},
+		"year",
+		2000,
+		2030,
+		"Year must be between 2000 and 2030",
+	)
+	requireValidation(t, vErr, "year", "Field required")
+
+	_, vErr = RequiredIntRange(
 		map[string]json.RawMessage{"year": json.RawMessage(`"2026"`)},
 		"year",
 		2000,
