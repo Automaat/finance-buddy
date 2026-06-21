@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/shopspring/decimal"
 
@@ -144,16 +143,10 @@ func patchStrings(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Vali
 		}
 		p.Notes = &s
 	}
-	if v, ok := raw["date"]; ok && !validation.IsNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return &httputil.ValidationError{Field: "date", Msg: "must be a string"}
-		}
-		t, err := time.Parse("2006-01-02", s)
-		if err != nil {
-			return &httputil.ValidationError{Field: "date", Msg: "must be YYYY-MM-DD"}
-		}
-		p.Date = &t
+	if t, vErr := validation.OptionalDate(raw, "date"); vErr != nil {
+		return vErr
+	} else if t != nil {
+		p.Date = t
 	}
 	return nil
 }

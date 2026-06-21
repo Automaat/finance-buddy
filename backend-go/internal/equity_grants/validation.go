@@ -169,16 +169,10 @@ func optionalGrantLiquidity(raw map[string]json.RawMessage, r *createRequest) *h
 		}
 		r.RequiresLiquidityEvent = b
 	}
-	if v, ok := raw["liquidity_event_date"]; ok && !validation.IsNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return &httputil.ValidationError{Field: "liquidity_event_date", Msg: "must be a string"}
-		}
-		t, err := time.Parse("2006-01-02", s)
-		if err != nil {
-			return &httputil.ValidationError{Field: "liquidity_event_date", Msg: "must be YYYY-MM-DD"}
-		}
-		r.LiquidityEventDate = &t
+	if t, vErr := validation.OptionalDate(raw, "liquidity_event_date"); vErr != nil {
+		return vErr
+	} else if t != nil {
+		r.LiquidityEventDate = t
 	}
 	return nil
 }
@@ -282,19 +276,13 @@ func patchDates(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Valida
 		{"vest_start_date", &p.VestStartDate},
 		{"liquidity_event_date", &p.LiquidityEventDate},
 	} {
-		v, ok := raw[f.key]
-		if !ok || validation.IsNull(v) {
-			continue
+		t, vErr := validation.OptionalDate(raw, f.key)
+		if vErr != nil {
+			return vErr
 		}
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return &httputil.ValidationError{Field: f.key, Msg: "must be a string"}
+		if t != nil {
+			*f.dest = t
 		}
-		t, err := time.Parse("2006-01-02", s)
-		if err != nil {
-			return &httputil.ValidationError{Field: f.key, Msg: "must be YYYY-MM-DD"}
-		}
-		*f.dest = &t
 	}
 	return nil
 }
