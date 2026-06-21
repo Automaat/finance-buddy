@@ -40,6 +40,9 @@ func TestWhereBuilderArgsReturnsCopy(t *testing.T) {
 	args := where.Args()
 	args[0] = 42
 	args = append(args, "extra")
+	if got, want := len(args), 2; got != want {
+		t.Fatalf("len(args) = %d, want %d", got, want)
+	}
 
 	if got, want := where.Args(), []any{7}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("Args() = %#v, want %#v", got, want)
