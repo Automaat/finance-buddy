@@ -37,7 +37,7 @@ func buildMortgageInputs(raw map[string]json.RawMessage) (MortgageInputs, *httpu
 	if in.AnnualInterestRate <= 0 || in.AnnualInterestRate > 30 {
 		return in, &httputil.ValidationError{Field: "annual_interest_rate", Msg: "Annual interest rate must be between 0 and 30%"}
 	}
-	in.RemainingMonths, vErr = requireInt(raw, "remaining_months")
+	in.RemainingMonths, vErr = validation.RequiredInt(raw, "remaining_months", "Field required", "must be an integer")
 	if vErr != nil {
 		return in, vErr
 	}
@@ -99,7 +99,7 @@ func buildWiborInputs(raw map[string]json.RawMessage) (WiborScenarioInputs, *htt
 	if in.BaseAnnualRate <= 0 || in.BaseAnnualRate > 30 {
 		return in, &httputil.ValidationError{Field: "base_annual_rate", Msg: "Base annual rate must be > 0 and <= 30%"}
 	}
-	in.RemainingMonths, vErr = requireInt(raw, "remaining_months")
+	in.RemainingMonths, vErr = validation.RequiredInt(raw, "remaining_months", "Field required", "must be an integer")
 	if vErr != nil {
 		return in, vErr
 	}
@@ -431,20 +431,8 @@ func requireFloat(raw map[string]json.RawMessage, key string) (float64, *httputi
 	return f, nil
 }
 
-func requireInt(raw map[string]json.RawMessage, key string) (int, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return 0, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return 0, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	return n, nil
-}
-
 func requireAge(raw map[string]json.RawMessage, key string) (int, *httputil.ValidationError) {
-	n, vErr := requireInt(raw, key)
+	n, vErr := validation.RequiredInt(raw, key, "Field required", "must be an integer")
 	if vErr != nil {
 		return 0, vErr
 	}

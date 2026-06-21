@@ -81,15 +81,19 @@ func validAssetType(t string) bool {
 
 func buildLotInput(raw map[string]json.RawMessage) (Lot, *httputil.ValidationError) {
 	var l Lot
-	if vErr := requireInt(raw, "account_id", &l.AccountID); vErr != nil {
+	accountID, vErr := validation.RequiredInt(raw, "account_id", "required", "must be integer")
+	if vErr != nil {
 		return l, vErr
 	}
+	l.AccountID = accountID
 	if l.AccountID <= 0 {
 		return l, &httputil.ValidationError{Field: "account_id", Msg: "must be positive"}
 	}
-	if vErr := requireInt(raw, "security_id", &l.SecurityID); vErr != nil {
+	securityID, vErr := validation.RequiredInt(raw, "security_id", "required", "must be integer")
+	if vErr != nil {
 		return l, vErr
 	}
+	l.SecurityID = securityID
 	if l.SecurityID <= 0 {
 		return l, &httputil.ValidationError{Field: "security_id", Msg: "must be positive"}
 	}
@@ -174,15 +178,19 @@ func buildQuoteInput(raw map[string]json.RawMessage, securityID int) (PriceQuote
 func buildDividendInput(raw map[string]json.RawMessage) (Dividend, *httputil.ValidationError) {
 	var d Dividend
 	d.Currency = "PLN"
-	if vErr := requireInt(raw, "account_id", &d.AccountID); vErr != nil {
+	accountID, vErr := validation.RequiredInt(raw, "account_id", "required", "must be integer")
+	if vErr != nil {
 		return d, vErr
 	}
+	d.AccountID = accountID
 	if d.AccountID <= 0 {
 		return d, &httputil.ValidationError{Field: "account_id", Msg: "must be positive"}
 	}
-	if vErr := requireInt(raw, "security_id", &d.SecurityID); vErr != nil {
+	securityID, vErr := validation.RequiredInt(raw, "security_id", "required", "must be integer")
+	if vErr != nil {
 		return d, vErr
 	}
+	d.SecurityID = securityID
 	if d.SecurityID <= 0 {
 		return d, &httputil.ValidationError{Field: "security_id", Msg: "must be positive"}
 	}
@@ -227,17 +235,6 @@ func buildDividendInput(raw map[string]json.RawMessage) (Dividend, *httputil.Val
 		}
 	}
 	return d, nil
-}
-
-func requireInt(raw map[string]json.RawMessage, key string, dest *int) *httputil.ValidationError {
-	v, ok := raw[key]
-	if !ok || string(v) == "null" {
-		return &httputil.ValidationError{Field: key, Msg: "required"}
-	}
-	if err := json.Unmarshal(v, dest); err != nil {
-		return &httputil.ValidationError{Field: key, Msg: "must be integer"}
-	}
-	return nil
 }
 
 func requireString(raw map[string]json.RawMessage, key string, dest *string) *httputil.ValidationError {

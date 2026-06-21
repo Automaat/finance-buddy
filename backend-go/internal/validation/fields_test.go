@@ -134,6 +134,40 @@ func TestRequiredIntOrNull(t *testing.T) {
 	requireValidation(t, vErr, "owner_user_id", "must be an integer")
 }
 
+func TestRequiredInt(t *testing.T) {
+	got, vErr := RequiredInt(
+		map[string]json.RawMessage{"account_id": json.RawMessage(`7`)},
+		"account_id",
+		"required",
+		"must be integer",
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got != 7 {
+		t.Fatalf("got = %d", got)
+	}
+
+	_, vErr = RequiredInt(map[string]json.RawMessage{}, "account_id", "required", "must be integer")
+	requireValidation(t, vErr, "account_id", "required")
+
+	_, vErr = RequiredInt(
+		map[string]json.RawMessage{"account_id": json.RawMessage(`null`)},
+		"account_id",
+		"required",
+		"must be integer",
+	)
+	requireValidation(t, vErr, "account_id", "required")
+
+	_, vErr = RequiredInt(
+		map[string]json.RawMessage{"account_id": json.RawMessage(`"7"`)},
+		"account_id",
+		"required",
+		"must be integer",
+	)
+	requireValidation(t, vErr, "account_id", "must be integer")
+}
+
 func TestRequiredIntRange(t *testing.T) {
 	got, vErr := RequiredIntRange(
 		map[string]json.RawMessage{"year": json.RawMessage(`2026`)},

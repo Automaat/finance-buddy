@@ -26,9 +26,11 @@ func buildInput(raw map[string]json.RawMessage) (CreateInput, *httputil.Validati
 }
 
 func readAccountAndAmount(raw map[string]json.RawMessage, in *CreateInput) *httputil.ValidationError {
-	if err := requireInt(raw, "account_id", &in.AccountID); err != nil {
+	accountID, err := validation.RequiredInt(raw, "account_id", "required", "must be integer")
+	if err != nil {
 		return err
 	}
+	in.AccountID = accountID
 	if in.AccountID <= 0 {
 		return &httputil.ValidationError{Field: "account_id", Msg: "must be positive"}
 	}
@@ -127,17 +129,6 @@ func readDatesAndActive(raw map[string]json.RawMessage, in *CreateInput) *httput
 		if jerr := json.Unmarshal(v, &in.Active); jerr != nil {
 			return &httputil.ValidationError{Field: "active", Msg: "must be a boolean"}
 		}
-	}
-	return nil
-}
-
-func requireInt(raw map[string]json.RawMessage, key string, dest *int) *httputil.ValidationError {
-	v, ok := raw[key]
-	if !ok || string(v) == "null" {
-		return &httputil.ValidationError{Field: key, Msg: "required"}
-	}
-	if err := json.Unmarshal(v, dest); err != nil {
-		return &httputil.ValidationError{Field: key, Msg: "must be integer"}
 	}
 	return nil
 }

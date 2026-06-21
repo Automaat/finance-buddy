@@ -109,6 +109,25 @@ func RequiredIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httpu
 	return &n, nil
 }
 
+// RequiredInt reads a required integer field and returns the supplied messages
+// so callers can preserve existing endpoint wire contracts.
+func RequiredInt(
+	raw map[string]json.RawMessage,
+	key string,
+	missingMsg string,
+	typeMsg string,
+) (int, *httputil.ValidationError) {
+	v, ok := raw[key]
+	if !ok || IsNull(v) {
+		return 0, &httputil.ValidationError{Field: key, Msg: missingMsg}
+	}
+	n, err := RawInt(v)
+	if err != nil {
+		return 0, &httputil.ValidationError{Field: key, Msg: typeMsg}
+	}
+	return n, nil
+}
+
 // RequiredIntRange reads a required integer field and validates it falls
 // within the inclusive [lo, hi] range.
 func RequiredIntRange(
@@ -118,13 +137,9 @@ func RequiredIntRange(
 	hi int,
 	rangeMsg string,
 ) (int, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || IsNull(v) {
-		return 0, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	n, err := RawInt(v)
-	if err != nil {
-		return 0, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
+	n, vErr := RequiredInt(raw, key, "Field required", "must be an integer")
+	if vErr != nil {
+		return 0, vErr
 	}
 	if n < lo || n > hi {
 		return 0, &httputil.ValidationError{Field: key, Msg: rangeMsg}
