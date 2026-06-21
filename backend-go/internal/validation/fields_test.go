@@ -86,6 +86,32 @@ func TestRequiredDate(t *testing.T) {
 	requireValidation(t, vErr, "date", "must be a string")
 }
 
+func TestOptionalDate(t *testing.T) {
+	got, vErr := OptionalDate(map[string]json.RawMessage{"date": json.RawMessage(`"2026-05-26"`)}, "date")
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got == nil || got.Format("2006-01-02") != "2026-05-26" {
+		t.Fatalf("got = %v", got)
+	}
+
+	got, vErr = OptionalDate(map[string]json.RawMessage{}, "date")
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	got, vErr = OptionalDate(map[string]json.RawMessage{"date": json.RawMessage(`null`)}, "date")
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	_, vErr = OptionalDate(map[string]json.RawMessage{"date": json.RawMessage(`"26/05/2026"`)}, "date")
+	requireValidation(t, vErr, "date", "must be YYYY-MM-DD")
+
+	_, vErr = OptionalDate(map[string]json.RawMessage{"date": json.RawMessage(`20260526`)}, "date")
+	requireValidation(t, vErr, "date", "must be a string")
+}
+
 func TestRequiredDateNotFuture(t *testing.T) {
 	now := func() time.Time { return time.Date(2026, 6, 20, 12, 0, 0, 0, time.UTC) }
 

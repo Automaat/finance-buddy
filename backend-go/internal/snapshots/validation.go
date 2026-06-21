@@ -48,16 +48,10 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 
 func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.ValidationError) {
 	var p UpdatePatch
-	if v, ok := raw["date"]; ok && !validation.IsNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return p, &httputil.ValidationError{Field: "date", Msg: "must be a string"}
-		}
-		t, err := time.Parse("2006-01-02", s)
-		if err != nil {
-			return p, &httputil.ValidationError{Field: "date", Msg: "must be YYYY-MM-DD"}
-		}
-		p.Date = &t
+	if t, vErr := validation.OptionalDate(raw, "date"); vErr != nil {
+		return p, vErr
+	} else if t != nil {
+		p.Date = t
 	}
 	if v, ok := raw["notes"]; ok {
 		p.NotesSet = true
