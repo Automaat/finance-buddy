@@ -28,7 +28,7 @@ type createRequest struct {
 // buildCreateRequest validates the POST body.
 func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputil.ValidationError) {
 	var r createRequest
-	name, vErr := requireString(raw, "name", "Name cannot be empty")
+	name, vErr := validation.RequiredTrimmedString(raw, "name", "Field required", "Name cannot be empty")
 	if vErr != nil {
 		return r, vErr
 	}
@@ -230,22 +230,6 @@ func parseInterestRate(v json.RawMessage) (decimal.Decimal, *httputil.Validation
 }
 
 // --- helpers ---
-
-func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return "", &httputil.ValidationError{Field: key, Msg: emptyMsg}
-	}
-	return s, nil
-}
 
 func optionalString(raw map[string]json.RawMessage, key, fallback string) (string, *httputil.ValidationError) {
 	v, ok := raw[key]

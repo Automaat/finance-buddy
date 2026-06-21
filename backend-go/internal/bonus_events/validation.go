@@ -46,7 +46,7 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 		return r, vErr
 	}
 
-	company, vErr := requireString(raw, "company", "Company cannot be empty")
+	company, vErr := validation.RequiredTrimmedString(raw, "company", "Field required", "Company cannot be empty")
 	if vErr != nil {
 		return r, vErr
 	}
@@ -180,10 +180,6 @@ func patchEnums(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Valida
 }
 
 // --- shared decoders ---
-
-func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string, *httputil.ValidationError) {
-	return validation.RequiredTrimmedString(raw, key, "Field required", emptyMsg)
-}
 
 func optionalCurrency(raw map[string]json.RawMessage, fallback string) (string, *httputil.ValidationError) {
 	v, ok := raw["currency"]

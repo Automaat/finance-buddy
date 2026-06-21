@@ -96,7 +96,7 @@ func requireGrantBasics(raw map[string]json.RawMessage, r *createRequest) *httpu
 	}
 	r.Type = grantType
 
-	company, vErr := requireString(raw, "company", "Company cannot be empty")
+	company, vErr := validation.RequiredTrimmedString(raw, "company", "Field required", "Company cannot be empty")
 	if vErr != nil {
 		return vErr
 	}
@@ -322,22 +322,6 @@ func patchSchedule(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Val
 }
 
 // --- shared decoders ---
-
-func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return "", &httputil.ValidationError{Field: key, Msg: emptyMsg}
-	}
-	return s, nil
-}
 
 func requirePositiveInt(raw map[string]json.RawMessage, key, msg string) (int, *httputil.ValidationError) {
 	v, ok := raw[key]

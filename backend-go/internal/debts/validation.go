@@ -28,7 +28,7 @@ type createRequest struct {
 
 func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputil.ValidationError) {
 	var r createRequest
-	name, vErr := requireString(raw, "name", "Name cannot be empty")
+	name, vErr := validation.RequiredTrimmedString(raw, "name", "Field required", "Name cannot be empty")
 	if vErr != nil {
 		return r, vErr
 	}
@@ -154,10 +154,6 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 
 func requireOwnerUserID(raw map[string]json.RawMessage) (*int, *httputil.ValidationError) {
 	return validation.RequiredIntOrNull(raw, "owner_user_id")
-}
-
-func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string, *httputil.ValidationError) {
-	return validation.RequiredTrimmedString(raw, key, "Field required", emptyMsg)
 }
 
 func requireDateNotFuture(raw map[string]json.RawMessage, key, msg string) (time.Time, *httputil.ValidationError) {
