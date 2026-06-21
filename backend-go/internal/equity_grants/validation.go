@@ -114,7 +114,7 @@ func requireGrantBasics(raw map[string]json.RawMessage, r *createRequest) *httpu
 	}
 	r.TotalShares = totalShares
 
-	strike, vErr := optionalNonNegativeDecimal(raw, "strike_price", "Strike price must be non-negative")
+	strike, vErr := validation.OptionalNonNegativeDecimal(raw, "strike_price", "Strike price must be non-negative")
 	if vErr != nil {
 		return vErr
 	}
@@ -258,15 +258,10 @@ func patchNumbersAndBools(raw map[string]json.RawMessage, p *UpdatePatch) *httpu
 	if vErr := patchPositiveInt(raw, "vest_total_months", "Total vesting months must be greater than 0", &p.VestTotalMonths); vErr != nil {
 		return vErr
 	}
-	if v, ok := raw["strike_price"]; ok && !validation.IsNull(v) {
-		d, err := validation.RawDecimal(v)
-		if err != nil {
-			return &httputil.ValidationError{Field: "strike_price", Msg: "must be a number"}
-		}
-		if d.IsNegative() {
-			return &httputil.ValidationError{Field: "strike_price", Msg: "Strike price must be non-negative"}
-		}
-		p.StrikePrice = &d
+	if d, vErr := validation.OptionalNonNegativeDecimal(raw, "strike_price", "Strike price must be non-negative"); vErr != nil {
+		return vErr
+	} else if d != nil {
+		p.StrikePrice = d
 	}
 	if v, ok := raw["requires_liquidity_event"]; ok && !validation.IsNull(v) {
 		var b bool
@@ -382,21 +377,6 @@ func optionalCurrency(raw map[string]json.RawMessage, fallback string) (string, 
 		return "", &httputil.ValidationError{Field: "currency", Msg: "Currency must be one of [CHF, EUR, GBP, PLN, USD]"}
 	}
 	return s, nil
-}
-
-func optionalNonNegativeDecimal(raw map[string]json.RawMessage, key, msg string) (*decimal.Decimal, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return nil, nil
-	}
-	d, err := validation.RawDecimal(v)
-	if err != nil {
-		return nil, &httputil.ValidationError{Field: key, Msg: "must be a number"}
-	}
-	if d.IsNegative() {
-		return nil, &httputil.ValidationError{Field: key, Msg: msg}
-	}
-	return &d, nil
 }
 
 // --- PATCH helpers ---

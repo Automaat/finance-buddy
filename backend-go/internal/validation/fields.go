@@ -189,6 +189,24 @@ func RequiredPositiveDecimal(
 	return d, nil
 }
 
+// RequiredNonNegativeDecimal reads a required JSON number field and rejects
+// negative values with the supplied nonNegativeMsg.
+func RequiredNonNegativeDecimal(
+	raw map[string]json.RawMessage,
+	key string,
+	missingMsg string,
+	nonNegativeMsg string,
+) (decimal.Decimal, *httputil.ValidationError) {
+	d, vErr := RequiredDecimal(raw, key, missingMsg)
+	if vErr != nil {
+		return decimal.Zero, vErr
+	}
+	if d.IsNegative() {
+		return decimal.Zero, &httputil.ValidationError{Field: key, Msg: nonNegativeMsg}
+	}
+	return d, nil
+}
+
 // OptionalDecimal reads an optional JSON number field. Missing and explicit
 // null are treated the same; quoted numeric strings are rejected.
 func OptionalDecimal(
@@ -204,6 +222,23 @@ func OptionalDecimal(
 		return nil, &httputil.ValidationError{Field: key, Msg: "must be a number"}
 	}
 	return &d, nil
+}
+
+// OptionalNonNegativeDecimal reads an optional JSON number field and rejects
+// negative values with the supplied nonNegativeMsg.
+func OptionalNonNegativeDecimal(
+	raw map[string]json.RawMessage,
+	key string,
+	nonNegativeMsg string,
+) (*decimal.Decimal, *httputil.ValidationError) {
+	d, vErr := OptionalDecimal(raw, key)
+	if vErr != nil {
+		return nil, vErr
+	}
+	if d != nil && d.IsNegative() {
+		return nil, &httputil.ValidationError{Field: key, Msg: nonNegativeMsg}
+	}
+	return d, nil
 }
 
 // RequiredDecimalStringOrNumber reads a required decimal field that may arrive
