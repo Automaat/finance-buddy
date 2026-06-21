@@ -39,7 +39,7 @@ func buildLimitRequest(raw map[string]json.RawMessage, now func() time.Time) (li
 	}
 	r.AccountWrapper = wrap
 
-	owner, vErr := requireIntOrNull(raw, "owner_user_id")
+	owner, vErr := validation.RequiredIntOrNull(raw, "owner_user_id")
 	if vErr != nil {
 		return r, vErr
 	}
@@ -133,23 +133,6 @@ func requireInt(raw map[string]json.RawMessage, key string) (int, *httputil.Vali
 		return 0, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
 	}
 	return n, nil
-}
-
-// requireIntOrNull reads an integer key that must be present; an explicit
-// null is allowed and yields nil (jointly owned).
-func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok {
-		return nil, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	if validation.IsNull(v) {
-		return nil, nil
-	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return nil, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	return &n, nil
 }
 
 func requireIntRange(raw map[string]json.RawMessage, key string, lo, hi int, msg string) (int, *httputil.ValidationError) {

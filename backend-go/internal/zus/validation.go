@@ -20,7 +20,7 @@ type calculateInputs struct {
 func buildInputs(raw map[string]json.RawMessage, now func() time.Time) (calculateInputs, *httputil.ValidationError) {
 	var c calculateInputs
 	var err *httputil.ValidationError
-	c.Inputs.OwnerUserID, err = requireIntOrNull(raw, "owner_user_id")
+	c.Inputs.OwnerUserID, err = validation.RequiredIntOrNull(raw, "owner_user_id")
 	if err != nil {
 		return c, err
 	}
@@ -147,23 +147,6 @@ func validateAgeRelationship(birth time.Time, retirementAge int, now func() time
 }
 
 // --- helpers ---
-
-// requireIntOrNull reads an integer key that must be present; an explicit
-// null is allowed and yields nil (jointly owned).
-func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok {
-		return nil, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	if validation.IsNull(v) {
-		return nil, nil
-	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return nil, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	return &n, nil
-}
 
 func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {
 	v, ok := raw[key]

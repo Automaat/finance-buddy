@@ -54,7 +54,7 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 	}
 	r.Company = company
 
-	ownerID, vErr := requireIntOrNull(raw, "owner_user_id")
+	ownerID, vErr := validation.RequiredIntOrNull(raw, "owner_user_id")
 	if vErr != nil {
 		return r, vErr
 	}
@@ -220,12 +220,6 @@ func optionalCurrency(raw map[string]json.RawMessage, fallback string) (string, 
 		return "", &httputil.ValidationError{Field: "currency", Msg: "Currency must be one of [CHF, EUR, GBP, PLN, USD]"}
 	}
 	return s, nil
-}
-
-// requireIntOrNull reads an integer key that must be present; an explicit
-// null is allowed and yields nil (jointly owned).
-func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httputil.ValidationError) {
-	return validation.RequiredIntOrNull(raw, key)
 }
 
 func today() time.Time {
