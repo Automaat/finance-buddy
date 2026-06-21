@@ -10,7 +10,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -66,28 +65,23 @@ const selectColumns = `
 // List returns active bonuses ordered by date desc and the distinct
 // active-company list, matching Python's two-query shape.
 func (s *Store) List(ctx context.Context, f ListFilter) ([]BonusEvent, []string, error) {
-	conds := []string{"is_active = true"}
-	args := []any{}
+	where := dbutil.NewWhereBuilder("is_active = true")
 	if f.OwnerUserID != nil {
-		args = append(args, *f.OwnerUserID)
-		conds = append(conds, fmt.Sprintf("owner_user_id = $%d", len(args)))
+		where.Add("owner_user_id = $%d", *f.OwnerUserID)
 	}
 	if f.DateFrom != nil {
-		args = append(args, *f.DateFrom)
-		conds = append(conds, fmt.Sprintf("date >= $%d", len(args)))
+		where.Add("date >= $%d", *f.DateFrom)
 	}
 	if f.DateTo != nil {
-		args = append(args, *f.DateTo)
-		conds = append(conds, fmt.Sprintf("date <= $%d", len(args)))
+		where.Add("date <= $%d", *f.DateTo)
 	}
 	if f.Company != nil {
-		args = append(args, *f.Company)
-		conds = append(conds, fmt.Sprintf("company = $%d", len(args)))
+		where.Add("company = $%d", *f.Company)
 	}
 	query := `SELECT ` + selectColumns + ` FROM bonus_events WHERE ` +
-		strings.Join(conds, " AND ") + ` ORDER BY date DESC`
+		where.SQL() + ` ORDER BY date DESC`
 
-	rows, err := s.pool.Query(ctx, query, args...)
+	rows, err := s.pool.Query(ctx, query, where.Args()...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("select bonuses: %w", err)
 	}

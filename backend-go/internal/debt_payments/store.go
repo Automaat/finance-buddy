@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -101,30 +100,25 @@ type PaymentWithAccount struct {
 
 // ListAll joins debt_payments to active accounts and applies optional filters.
 func (s *Store) ListAll(ctx context.Context, f ListFilter) ([]PaymentWithAccount, error) {
-	conds := []string{"p.is_active = true", "a.is_active = true"}
-	args := []any{}
+	where := dbutil.NewWhereBuilder("p.is_active = true", "a.is_active = true")
 	if f.AccountID != nil {
-		args = append(args, *f.AccountID)
-		conds = append(conds, fmt.Sprintf("p.account_id = $%d", len(args)))
+		where.Add("p.account_id = $%d", *f.AccountID)
 	}
 	if f.OwnerUserID != nil {
-		args = append(args, *f.OwnerUserID)
-		conds = append(conds, fmt.Sprintf("p.owner_user_id = $%d", len(args)))
+		where.Add("p.owner_user_id = $%d", *f.OwnerUserID)
 	}
 	if f.DateFrom != nil {
-		args = append(args, *f.DateFrom)
-		conds = append(conds, fmt.Sprintf("p.date >= $%d", len(args)))
+		where.Add("p.date >= $%d", *f.DateFrom)
 	}
 	if f.DateTo != nil {
-		args = append(args, *f.DateTo)
-		conds = append(conds, fmt.Sprintf("p.date <= $%d", len(args)))
+		where.Add("p.date <= $%d", *f.DateTo)
 	}
 	q := `SELECT p.id, p.account_id, p.amount, p.date, p.owner_user_id, p.is_active, p.created_at, a.name
 	      FROM debt_payments p
 	      JOIN accounts a ON a.id = p.account_id
-	      WHERE ` + strings.Join(conds, " AND ") + `
+	      WHERE ` + where.SQL() + `
 	      ORDER BY p.date DESC, p.id DESC`
-	rows, err := s.pool.Query(ctx, q, args...)
+	rows, err := s.pool.Query(ctx, q, where.Args()...)
 	if err != nil {
 		return nil, fmt.Errorf("list payments: %w", err)
 	}
