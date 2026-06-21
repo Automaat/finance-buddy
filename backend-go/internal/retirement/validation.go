@@ -74,7 +74,7 @@ func buildGenerateRequest(raw map[string]json.RawMessage, now func() time.Time) 
 	// PPK contributions are always generated for a specific person — a null
 	// (jointly owned) owner is rejected up front rather than failing later
 	// with a confusing 404.
-	owner, vErr := requireInt(raw, "owner_user_id")
+	owner, vErr := validation.RequiredInt(raw, "owner_user_id", "Field required", "must be an integer")
 	if vErr != nil {
 		return r, vErr
 	}
@@ -120,17 +120,4 @@ func optionalBool(raw map[string]json.RawMessage, key string) (bool, *httputil.V
 		return false, &httputil.ValidationError{Field: key, Msg: "must be a boolean"}
 	}
 	return b, nil
-}
-
-// requireInt reads an integer key that must be present and non-null.
-func requireInt(raw map[string]json.RawMessage, key string) (int, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return 0, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return 0, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	return n, nil
 }
