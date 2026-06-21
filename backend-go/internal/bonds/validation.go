@@ -71,16 +71,10 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 	if vErr := patchPositiveAmount(raw, "face_value", &p.FaceValue, "Face value must be greater than 0"); vErr != nil {
 		return p, vErr
 	}
-	if v, ok := raw["purchase_date"]; ok && !validation.IsNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return p, &httputil.ValidationError{Field: "purchase_date", Msg: "must be a string"}
-		}
-		t, err := time.Parse("2006-01-02", s)
-		if err != nil {
-			return p, &httputil.ValidationError{Field: "purchase_date", Msg: "must be YYYY-MM-DD"}
-		}
-		p.PurchaseDate = &t
+	if t, vErr := validation.OptionalDate(raw, "purchase_date"); vErr != nil {
+		return p, vErr
+	} else if t != nil {
+		p.PurchaseDate = t
 	}
 	if _, ok := raw["owner_user_id"]; ok {
 		p.OwnerUserIDSet = true

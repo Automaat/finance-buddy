@@ -76,16 +76,10 @@ func patchScalarFields(raw map[string]json.RawMessage, p *UpdatePatch) *httputil
 	if vErr := patchPositiveAmount(raw, "target_amount", &p.TargetAmount, "Target amount must be greater than 0"); vErr != nil {
 		return vErr
 	}
-	if v, ok := raw["target_date"]; ok && !validation.IsNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return &httputil.ValidationError{Field: "target_date", Msg: "must be a string"}
-		}
-		t, err := time.Parse("2006-01-02", s)
-		if err != nil {
-			return &httputil.ValidationError{Field: "target_date", Msg: "must be YYYY-MM-DD"}
-		}
-		p.TargetDate = &t
+	if t, vErr := validation.OptionalDate(raw, "target_date"); vErr != nil {
+		return vErr
+	} else if t != nil {
+		p.TargetDate = t
 	}
 	if vErr := patchNonNegativeAmount(raw, "current_amount", &p.CurrentAmount, "Current amount must be non-negative"); vErr != nil {
 		return vErr
