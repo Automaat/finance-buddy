@@ -186,11 +186,9 @@ func TestRequiredDate(t *testing.T) {
 }
 
 func TestRequiredDateWithMissingMessage(t *testing.T) {
-	got, vErr := RequiredDateWithMissingMessage(
-		map[string]json.RawMessage{"date": json.RawMessage(`"2026-05-26"`)},
-		"date",
-		"required",
-	)
+	got, vErr := RequiredDateWithMissingMessage(map[string]json.RawMessage{
+		"date": json.RawMessage(`"2026-05-26"`),
+	}, "date", "required")
 	if vErr != nil {
 		t.Fatalf("vErr = %#v", vErr)
 	}
