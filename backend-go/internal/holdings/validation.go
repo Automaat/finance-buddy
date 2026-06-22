@@ -3,7 +3,6 @@ package holdings
 import (
 	"encoding/json"
 	"strings"
-	"time"
 
 	"github.com/shopspring/decimal"
 
@@ -129,13 +128,9 @@ func buildLotInput(raw map[string]json.RawMessage) (Lot, *httputil.ValidationErr
 		}
 		l.Fee = *fee
 	}
-	dateStr, vErr := validation.RequiredString(raw, "date", "required", "cannot be empty")
+	parsed, vErr := validation.RequiredNonEmptyDate(raw, "date", "required", "cannot be empty")
 	if vErr != nil {
 		return l, vErr
-	}
-	parsed, derr := time.Parse("2006-01-02", dateStr)
-	if derr != nil {
-		return l, &httputil.ValidationError{Field: "date", Msg: "must be YYYY-MM-DD"}
 	}
 	l.Date = parsed
 	return l, nil
@@ -143,13 +138,9 @@ func buildLotInput(raw map[string]json.RawMessage) (Lot, *httputil.ValidationErr
 
 func buildQuoteInput(raw map[string]json.RawMessage, securityID int) (PriceQuote, *httputil.ValidationError) {
 	q := PriceQuote{SecurityID: securityID, Source: "manual"}
-	dateStr, vErr := validation.RequiredString(raw, "date", "required", "cannot be empty")
+	parsed, vErr := validation.RequiredNonEmptyDate(raw, "date", "required", "cannot be empty")
 	if vErr != nil {
 		return q, vErr
-	}
-	parsed, derr := time.Parse("2006-01-02", dateStr)
-	if derr != nil {
-		return q, &httputil.ValidationError{Field: "date", Msg: "must be YYYY-MM-DD"}
 	}
 	q.Date = parsed
 	price, vErr := requireDecimal(raw, "price")
@@ -194,13 +185,9 @@ func buildDividendInput(raw map[string]json.RawMessage) (Dividend, *httputil.Val
 	if d.SecurityID <= 0 {
 		return d, &httputil.ValidationError{Field: "security_id", Msg: "must be positive"}
 	}
-	dateStr, vErr := validation.RequiredString(raw, "pay_date", "required", "cannot be empty")
+	parsed, vErr := validation.RequiredNonEmptyDate(raw, "pay_date", "required", "cannot be empty")
 	if vErr != nil {
 		return d, vErr
-	}
-	parsed, derr := time.Parse("2006-01-02", dateStr)
-	if derr != nil {
-		return d, &httputil.ValidationError{Field: "pay_date", Msg: "must be YYYY-MM-DD"}
 	}
 	d.PayDate = parsed
 	gross, vErr := requireDecimal(raw, "gross_amount")
