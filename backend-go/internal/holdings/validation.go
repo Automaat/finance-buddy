@@ -39,7 +39,7 @@ func buildSecurityInput(raw map[string]json.RawMessage) (Security, *httputil.Val
 	if len(s.Name) > 200 {
 		return s, &httputil.ValidationError{Field: "name", Msg: "max 200 chars"}
 	}
-	if v, ok := raw["asset_type"]; ok && string(v) != "null" {
+	if v, ok := raw["asset_type"]; ok && !validation.IsNull(v) {
 		if err := json.Unmarshal(v, &s.AssetType); err != nil {
 			return s, &httputil.ValidationError{Field: "asset_type", Msg: "must be a string"}
 		}
