@@ -81,15 +81,10 @@ func buildUpdatePatch(raw map[string]json.RawMessage, now func() time.Time) (Upd
 		}
 		p.ContractType = &s
 	}
-	if v, ok := raw["company"]; ok && !validation.IsNull(v) {
-		s, err := validation.RawTrimmedString(v)
-		if err != nil {
-			return p, &httputil.ValidationError{Field: "company", Msg: "must be a string"}
-		}
-		if s == "" {
-			return p, &httputil.ValidationError{Field: "company", Msg: "Company cannot be empty"}
-		}
-		p.Company = &s
+	if s, vErr := validation.OptionalTrimmedString(raw, "company", "Company cannot be empty"); vErr != nil {
+		return p, vErr
+	} else if s != nil {
+		p.Company = s
 	}
 	if _, ok := raw["owner_user_id"]; ok {
 		p.OwnerUserIDSet = true

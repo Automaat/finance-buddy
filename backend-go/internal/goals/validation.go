@@ -60,16 +60,10 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 // Matches Python's GoalUpdate validators: explicit null is treated as
 // "no-op" (the validator returns None and the service skips that field).
 func patchScalarFields(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.ValidationError {
-	if v, ok := raw["name"]; ok && !validation.IsNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return &httputil.ValidationError{Field: "name", Msg: "must be a string"}
-		}
-		s = strings.TrimSpace(s)
-		if s == "" {
-			return &httputil.ValidationError{Field: "name", Msg: "Name cannot be empty"}
-		}
-		p.Name = &s
+	if s, vErr := validation.OptionalTrimmedString(raw, "name", "Name cannot be empty"); vErr != nil {
+		return vErr
+	} else if s != nil {
+		p.Name = s
 	}
 	if d, vErr := validation.OptionalPositiveDecimal(raw, "target_amount", "Target amount must be greater than 0"); vErr != nil {
 		return vErr

@@ -3,7 +3,6 @@ package companyvaluations
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/shopspring/decimal"
 
@@ -110,16 +109,10 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 }
 
 func patchStrings(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.ValidationError {
-	if v, ok := raw["company"]; ok && !validation.IsNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return &httputil.ValidationError{Field: "company", Msg: "must be a string"}
-		}
-		s = strings.TrimSpace(s)
-		if s == "" {
-			return &httputil.ValidationError{Field: "company", Msg: "Company cannot be empty"}
-		}
-		p.Company = &s
+	if s, vErr := validation.OptionalTrimmedString(raw, "company", "Company cannot be empty"); vErr != nil {
+		return vErr
+	} else if s != nil {
+		p.Company = s
 	}
 	if s, vErr := validation.OptionalUpperTrimmedEnumStringPtr(
 		raw,

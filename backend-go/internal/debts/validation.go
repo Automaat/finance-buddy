@@ -2,7 +2,6 @@ package debts
 
 import (
 	"encoding/json"
-	"strings"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -80,16 +79,10 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 
 func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.ValidationError) {
 	var p UpdatePatch
-	if v, ok := raw["name"]; ok && !validation.IsNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return p, &httputil.ValidationError{Field: "name", Msg: "must be a string"}
-		}
-		s = strings.TrimSpace(s)
-		if s == "" {
-			return p, &httputil.ValidationError{Field: "name", Msg: "Name cannot be empty"}
-		}
-		p.Name = &s
+	if s, vErr := validation.OptionalTrimmedString(raw, "name", "Name cannot be empty"); vErr != nil {
+		return p, vErr
+	} else if s != nil {
+		p.Name = s
 	}
 	if debtType, vErr := validation.OptionalEnumStringPtr(raw, "debt_type", validDebtTypes); vErr != nil {
 		return p, vErr

@@ -2,7 +2,6 @@ package equitygrants
 
 import (
 	"encoding/json"
-	"strings"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -227,8 +226,10 @@ func patchStrings(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Vali
 	} else if grantType != nil {
 		p.Type = grantType
 	}
-	if vErr := patchNonEmptyString(raw, "company", "Company cannot be empty", &p.Company); vErr != nil {
+	if s, vErr := validation.OptionalTrimmedString(raw, "company", "Company cannot be empty"); vErr != nil {
 		return vErr
+	} else if s != nil {
+		p.Company = s
 	}
 	if vErr := patchOwnerUserID(raw, p); vErr != nil {
 		return vErr
@@ -334,25 +335,6 @@ func patchSchedule(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Val
 	}
 	p.VestCustomScheduleSet = true
 	p.VestCustomSchedule = schedule
-	return nil
-}
-
-// --- PATCH helpers ---
-
-func patchNonEmptyString(raw map[string]json.RawMessage, key, emptyMsg string, dest **string) *httputil.ValidationError {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return nil
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return &httputil.ValidationError{Field: key, Msg: emptyMsg}
-	}
-	*dest = &s
 	return nil
 }
 

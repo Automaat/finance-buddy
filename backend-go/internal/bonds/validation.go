@@ -57,16 +57,10 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 		}
 		p.Type = &t
 	}
-	if v, ok := raw["series"]; ok && !validation.IsNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return p, &httputil.ValidationError{Field: "series", Msg: "must be a string"}
-		}
-		s = strings.TrimSpace(s)
-		if s == "" {
-			return p, &httputil.ValidationError{Field: "series", Msg: "Series cannot be empty"}
-		}
-		p.Series = &s
+	if s, vErr := validation.OptionalTrimmedString(raw, "series", "Series cannot be empty"); vErr != nil {
+		return p, vErr
+	} else if s != nil {
+		p.Series = s
 	}
 	if d, vErr := validation.OptionalPositiveDecimal(raw, "face_value", "Face value must be greater than 0"); vErr != nil {
 		return p, vErr
