@@ -320,16 +320,16 @@ func TestIsNullVariants(t *testing.T) {
 
 func TestOptionalDecimalParsesAndFails(t *testing.T) {
 	good := rawJSON(t, map[string]any{"x": 12.345})
-	d, vErr := optionalDecimal(good, "x")
+	d, vErr := validation.OptionalDecimal(good, "x")
 	if vErr != nil || d == nil || !d.Equal(decimal.RequireFromString("12.345")) {
 		t.Fatalf("good parse failed: %+v err=%+v", d, vErr)
 	}
 	bad := rawJSON(t, map[string]any{"x": "not-a-number"})
-	if _, vErr := optionalDecimal(bad, "x"); vErr == nil {
+	if _, vErr := validation.OptionalDecimal(bad, "x"); vErr == nil {
 		t.Fatalf("expected error on bad number")
 	}
 	missing := map[string]json.RawMessage{}
-	if d, vErr := optionalDecimal(missing, "x"); d != nil || vErr != nil {
+	if d, vErr := validation.OptionalDecimal(missing, "x"); d != nil || vErr != nil {
 		t.Fatalf("missing should be nil/nil, got %+v err=%+v", d, vErr)
 	}
 }
