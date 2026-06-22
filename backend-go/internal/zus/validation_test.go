@@ -161,10 +161,3 @@ func TestOptionalIntRangeNullIsError(t *testing.T) {
 		t.Fatalf("expected error on null, got %+v", vErr)
 	}
 }
-
-func TestRequireIntRangeRequired(t *testing.T) {
-	_, vErr := requireIntRange(map[string]json.RawMessage{}, "x", 0, 10, "msg")
-	if vErr == nil || vErr.Field != "x" {
-		t.Fatalf("expected required, got %+v", vErr)
-	}
-}

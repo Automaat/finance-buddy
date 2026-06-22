@@ -6,12 +6,10 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/shopspring/decimal"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/bondrates"
@@ -434,13 +432,7 @@ func (h *Handler) loadMonthlyYoY(ctx context.Context) map[cpi.YearMonth]decimal.
 }
 
 func parseIDParam(w http.ResponseWriter, r *http.Request) (int, bool) {
-	raw := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(raw)
-	if err != nil {
-		httputil.WriteBodyValidationError(w, "bond_id", "must be an integer", raw)
-		return 0, false
-	}
-	return id, true
+	return httputil.PathIntField(w, r, "id", "bond_id")
 }
 
 // lookupResponse is the body of GET /api/bonds/lookup.

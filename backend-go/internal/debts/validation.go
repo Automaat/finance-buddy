@@ -28,31 +28,36 @@ type createRequest struct {
 
 func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputil.ValidationError) {
 	var r createRequest
-	name, vErr := requireString(raw, "name", "Name cannot be empty")
+	name, vErr := validation.RequiredTrimmedString(raw, "name", "Field required", "Name cannot be empty")
 	if vErr != nil {
 		return r, vErr
 	}
 	r.Name = name
 
-	dt, vErr := requireEnumString(raw, "debt_type", validDebtTypes)
+	dt, vErr := validation.RequiredEnumString(raw, "debt_type", validDebtTypes)
 	if vErr != nil {
 		return r, vErr
 	}
 	r.DebtType = dt
 
-	sd, vErr := requireDateNotFuture(raw, "start_date", "Start date cannot be in the future")
+	sd, vErr := validation.RequiredDateNotFutureWithMessage(raw, "start_date", time.Now, "Start date cannot be in the future")
 	if vErr != nil {
 		return r, vErr
 	}
 	r.StartDate = sd
 
-	ia, vErr := requirePositiveDecimal(raw, "initial_amount", "Initial amount must be greater than 0")
+	ia, vErr := validation.RequiredPositiveDecimal(raw, "initial_amount", "Field required", "Initial amount must be greater than 0")
 	if vErr != nil {
 		return r, vErr
 	}
 	r.InitialAmount = ia
 
-	ir, vErr := requireNonNegativeDecimal(raw, "interest_rate", "Interest rate must be greater than or equal to 0")
+	ir, vErr := validation.RequiredNonNegativeDecimal(
+		raw,
+		"interest_rate",
+		"Field required",
+		"Interest rate must be greater than or equal to 0",
+	)
 	if vErr != nil {
 		return r, vErr
 	}
@@ -97,39 +102,33 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 		}
 		p.DebtType = &s
 	}
-	if v, ok := raw["start_date"]; ok && !validation.IsNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return p, &httputil.ValidationError{Field: "start_date", Msg: "must be a string"}
-		}
-		t, err := time.Parse("2006-01-02", s)
-		if err != nil {
-			return p, &httputil.ValidationError{Field: "start_date", Msg: "must be YYYY-MM-DD"}
-		}
-		if t.After(today()) {
-			return p, &httputil.ValidationError{Field: "start_date", Msg: "Start date cannot be in the future"}
-		}
-		p.StartDate = &t
+	if t, vErr := validation.OptionalDateNotFuture(
+		raw,
+		"start_date",
+		time.Now,
+		"Start date cannot be in the future",
+	); vErr != nil {
+		return p, vErr
+	} else if t != nil {
+		p.StartDate = t
 	}
-	if v, ok := raw["initial_amount"]; ok && !validation.IsNull(v) {
-		d, err := validation.RawDecimal(v)
-		if err != nil {
-			return p, &httputil.ValidationError{Field: "initial_amount", Msg: "must be a number"}
-		}
-		if !d.IsPositive() {
-			return p, &httputil.ValidationError{Field: "initial_amount", Msg: "Initial amount must be greater than 0"}
-		}
-		p.InitialAmount = &d
+	if d, vErr := validation.OptionalPositiveDecimal(
+		raw,
+		"initial_amount",
+		"Initial amount must be greater than 0",
+	); vErr != nil {
+		return p, vErr
+	} else if d != nil {
+		p.InitialAmount = d
 	}
-	if v, ok := raw["interest_rate"]; ok && !validation.IsNull(v) {
-		d, err := validation.RawDecimal(v)
-		if err != nil {
-			return p, &httputil.ValidationError{Field: "interest_rate", Msg: "must be a number"}
-		}
-		if d.IsNegative() {
-			return p, &httputil.ValidationError{Field: "interest_rate", Msg: "Interest rate must be greater than or equal to 0"}
-		}
-		p.InterestRate = &d
+	if d, vErr := validation.OptionalNonNegativeDecimal(
+		raw,
+		"interest_rate",
+		"Interest rate must be greater than or equal to 0",
+	); vErr != nil {
+		return p, vErr
+	} else if d != nil {
+		p.InterestRate = d
 	}
 	if v, ok := raw["currency"]; ok && !validation.IsNull(v) {
 		var s string
@@ -156,66 +155,6 @@ func requireOwnerUserID(raw map[string]json.RawMessage) (*int, *httputil.Validat
 	return validation.RequiredIntOrNull(raw, "owner_user_id")
 }
 
-func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string, *httputil.ValidationError) {
-	return validation.RequiredTrimmedString(raw, key, "Field required", emptyMsg)
-}
-
-func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	if _, ok := allowed[s]; !ok {
-		return "", &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
-	}
-	return s, nil
-}
-
-func requireDateNotFuture(raw map[string]json.RawMessage, key, msg string) (time.Time, *httputil.ValidationError) {
-	t, vErr := validation.RequiredDate(raw, key)
-	if vErr != nil {
-		return time.Time{}, vErr
-	}
-	if t.After(today()) {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: msg}
-	}
-	return t, nil
-}
-
-func requirePositiveDecimal(raw map[string]json.RawMessage, key, msg string) (decimal.Decimal, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	d, err := validation.RawDecimal(v)
-	if err != nil {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "must be a number"}
-	}
-	if !d.IsPositive() {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: msg}
-	}
-	return d, nil
-}
-
-func requireNonNegativeDecimal(raw map[string]json.RawMessage, key, msg string) (decimal.Decimal, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	d, err := validation.RawDecimal(v)
-	if err != nil {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "must be a number"}
-	}
-	if d.IsNegative() {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: msg}
-	}
-	return d, nil
-}
-
 func optionalCurrencyPLN(raw map[string]json.RawMessage) (string, *httputil.ValidationError) {
 	v, ok := raw["currency"]
 	if !ok || validation.IsNull(v) {
@@ -229,9 +168,4 @@ func optionalCurrencyPLN(raw map[string]json.RawMessage) (string, *httputil.Vali
 		return "", &httputil.ValidationError{Field: "currency", Msg: "Currency must be 'PLN'"}
 	}
 	return s, nil
-}
-
-func today() time.Time {
-	t := time.Now().UTC()
-	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
 }

@@ -2,7 +2,6 @@ package snapshots
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
@@ -17,7 +16,7 @@ type createRequest struct {
 
 func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputil.ValidationError) {
 	var r createRequest
-	t, vErr := requireDate(raw, "date")
+	t, vErr := validation.RequiredDate(raw, "date")
 	if vErr != nil {
 		return r, vErr
 	}
@@ -48,16 +47,10 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 
 func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.ValidationError) {
 	var p UpdatePatch
-	if v, ok := raw["date"]; ok && !validation.IsNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return p, &httputil.ValidationError{Field: "date", Msg: "must be a string"}
-		}
-		t, err := time.Parse("2006-01-02", s)
-		if err != nil {
-			return p, &httputil.ValidationError{Field: "date", Msg: "must be YYYY-MM-DD"}
-		}
-		p.Date = &t
+	if t, vErr := validation.OptionalDate(raw, "date"); vErr != nil {
+		return p, vErr
+	} else if t != nil {
+		p.Date = t
 	}
 	if v, ok := raw["notes"]; ok {
 		p.NotesSet = true
@@ -135,30 +128,6 @@ func parseValueEntry(e map[string]json.RawMessage) (ValueInput, *httputil.Valida
 	return v, nil
 }
 
-func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	t, err := time.Parse("2006-01-02", s)
-	if err != nil {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be YYYY-MM-DD"}
-	}
-	return t, nil
-}
-
 func optionalInt(raw map[string]json.RawMessage, key string) (*int, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return nil, nil
-	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return nil, &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("%s must be an integer", key)}
-	}
-	return &n, nil
+	return validation.OptionalInt(raw, key, key+" must be an integer")
 }

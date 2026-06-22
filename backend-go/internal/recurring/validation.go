@@ -26,9 +26,11 @@ func buildInput(raw map[string]json.RawMessage) (CreateInput, *httputil.Validati
 }
 
 func readAccountAndAmount(raw map[string]json.RawMessage, in *CreateInput) *httputil.ValidationError {
-	if err := requireInt(raw, "account_id", &in.AccountID); err != nil {
+	accountID, err := validation.RequiredInt(raw, "account_id", "required", "must be integer")
+	if err != nil {
 		return err
 	}
+	in.AccountID = accountID
 	if in.AccountID <= 0 {
 		return &httputil.ValidationError{Field: "account_id", Msg: "must be positive"}
 	}
@@ -37,12 +39,12 @@ func readAccountAndAmount(raw map[string]json.RawMessage, in *CreateInput) *http
 		return err
 	}
 	in.Amount = amount
-	if v, ok := raw["owner_user_id"]; ok && string(v) != "null" {
-		var n int
-		if jerr := json.Unmarshal(v, &n); jerr != nil {
-			return &httputil.ValidationError{Field: "owner_user_id", Msg: "must be integer or null"}
-		}
-		in.OwnerUserID = &n
+	ownerID, vErr := validation.OptionalInt(raw, "owner_user_id", "must be integer or null")
+	if vErr != nil {
+		return vErr
+	}
+	if ownerID != nil {
+		in.OwnerUserID = ownerID
 	}
 	return nil
 }
@@ -127,17 +129,6 @@ func readDatesAndActive(raw map[string]json.RawMessage, in *CreateInput) *httput
 		if jerr := json.Unmarshal(v, &in.Active); jerr != nil {
 			return &httputil.ValidationError{Field: "active", Msg: "must be a boolean"}
 		}
-	}
-	return nil
-}
-
-func requireInt(raw map[string]json.RawMessage, key string, dest *int) *httputil.ValidationError {
-	v, ok := raw[key]
-	if !ok || string(v) == "null" {
-		return &httputil.ValidationError{Field: key, Msg: "required"}
-	}
-	if err := json.Unmarshal(v, dest); err != nil {
-		return &httputil.ValidationError{Field: key, Msg: "must be integer"}
 	}
 	return nil
 }

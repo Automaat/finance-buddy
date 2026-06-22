@@ -26,34 +26,31 @@ type createRequest struct {
 // fields surface "Field required" on missing.
 func buildCreateRequest(raw map[string]json.RawMessage, now func() time.Time) (createRequest, *httputil.ValidationError) {
 	var r createRequest
-	t, vErr := requireDate(raw, "date")
+	t, vErr := validation.RequiredDateNotFuture(raw, "date", now)
 	if vErr != nil {
 		return r, vErr
 	}
-	if t.After(truncateDay(now().UTC())) {
-		return r, &httputil.ValidationError{Field: "date", Msg: "Date cannot be in the future"}
-	}
 	r.Date = t
 
-	amount, vErr := requirePositiveDecimal(raw, "gross_amount", "Gross amount must be greater than 0")
+	amount, vErr := validation.RequiredPositiveDecimal(raw, "gross_amount", "Field required", "Gross amount must be greater than 0")
 	if vErr != nil {
 		return r, vErr
 	}
 	r.GrossAmount = amount
 
-	contract, vErr := requireEnumString(raw, "contract_type", validContractTypes)
+	contract, vErr := validation.RequiredEnumString(raw, "contract_type", validContractTypes)
 	if vErr != nil {
 		return r, vErr
 	}
 	r.ContractType = contract
 
-	company, vErr := requireString(raw, "company", "Company cannot be empty")
+	company, vErr := validation.RequiredTrimmedString(raw, "company", "Field required", "Company cannot be empty")
 	if vErr != nil {
 		return r, vErr
 	}
 	r.Company = company
 
-	ownerID, vErr := requireIntOrNull(raw, "owner_user_id")
+	ownerID, vErr := validation.RequiredIntOrNull(raw, "owner_user_id")
 	if vErr != nil {
 		return r, vErr
 	}
@@ -64,28 +61,15 @@ func buildCreateRequest(raw map[string]json.RawMessage, now func() time.Time) (c
 // buildUpdatePatch reads the PATCH body. Null = no-op (Pydantic semantics).
 func buildUpdatePatch(raw map[string]json.RawMessage, now func() time.Time) (UpdatePatch, *httputil.ValidationError) {
 	var p UpdatePatch
-	if v, ok := raw["date"]; ok && !validation.IsNull(v) {
-		t, err := validation.RawDate(v)
-		if err != nil {
-			if validation.IsRawDateFormatError(err) {
-				return p, &httputil.ValidationError{Field: "date", Msg: "must be YYYY-MM-DD"}
-			}
-			return p, &httputil.ValidationError{Field: "date", Msg: "must be a string"}
-		}
-		if t.After(truncateDay(now().UTC())) {
-			return p, &httputil.ValidationError{Field: "date", Msg: "Date cannot be in the future"}
-		}
-		p.Date = &t
+	if t, vErr := validation.OptionalDateNotFuture(raw, "date", now, "Date cannot be in the future"); vErr != nil {
+		return p, vErr
+	} else if t != nil {
+		p.Date = t
 	}
-	if v, ok := raw["gross_amount"]; ok && !validation.IsNull(v) {
-		d, err := validation.RawDecimal(v)
-		if err != nil {
-			return p, &httputil.ValidationError{Field: "gross_amount", Msg: "must be a number"}
-		}
-		if !d.IsPositive() {
-			return p, &httputil.ValidationError{Field: "gross_amount", Msg: "Gross amount must be greater than 0"}
-		}
-		p.GrossAmount = &d
+	if d, vErr := validation.OptionalPositiveDecimal(raw, "gross_amount", "Gross amount must be greater than 0"); vErr != nil {
+		return p, vErr
+	} else if d != nil {
+		p.GrossAmount = d
 	}
 	if v, ok := raw["contract_type"]; ok && !validation.IsNull(v) {
 		s, err := validation.RawString(v)
@@ -107,94 +91,13 @@ func buildUpdatePatch(raw map[string]json.RawMessage, now func() time.Time) (Upd
 		}
 		p.Company = &s
 	}
-	if v, ok := raw["owner_user_id"]; ok {
+	if _, ok := raw["owner_user_id"]; ok {
 		p.OwnerUserIDSet = true
-		if validation.IsNull(v) {
-			p.OwnerUserID = nil
-		} else {
-			n, err := validation.RawInt(v)
-			if err != nil {
-				return p, &httputil.ValidationError{Field: "owner_user_id", Msg: "must be an integer"}
-			}
-			p.OwnerUserID = &n
+		ownerID, vErr := validation.OptionalInt(raw, "owner_user_id", "must be an integer")
+		if vErr != nil {
+			return p, vErr
 		}
+		p.OwnerUserID = ownerID
 	}
 	return p, nil
-}
-
-// requireIntOrNull reads an integer key that must be present; an explicit
-// null is allowed and yields nil (jointly owned).
-func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok {
-		return nil, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	if validation.IsNull(v) {
-		return nil, nil
-	}
-	n, err := validation.RawInt(v)
-	if err != nil {
-		return nil, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	return &n, nil
-}
-
-func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	s, err := validation.RawTrimmedString(v)
-	if err != nil {
-		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	if s == "" {
-		return "", &httputil.ValidationError{Field: key, Msg: emptyMsg}
-	}
-	return s, nil
-}
-
-func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	t, err := validation.RawDate(v)
-	if err != nil {
-		if validation.IsRawDateFormatError(err) {
-			return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be YYYY-MM-DD"}
-		}
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	return t, nil
-}
-
-func requirePositiveDecimal(raw map[string]json.RawMessage, key, msg string) (decimal.Decimal, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	d, err := validation.RawDecimal(v)
-	if err != nil {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "must be a number"}
-	}
-	if !d.IsPositive() {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: msg}
-	}
-	return d, nil
-}
-
-func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	s, err := validation.RawString(v)
-	if err != nil {
-		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	if _, ok := allowed[s]; !ok {
-		return "", &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
-	}
-	return s, nil
 }

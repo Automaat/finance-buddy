@@ -28,25 +28,25 @@ type createRequest struct {
 // buildCreateRequest validates the POST body.
 func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputil.ValidationError) {
 	var r createRequest
-	name, vErr := requireString(raw, "name", "Name cannot be empty")
+	name, vErr := validation.RequiredTrimmedString(raw, "name", "Field required", "Name cannot be empty")
 	if vErr != nil {
 		return r, vErr
 	}
 	r.Name = name
 
-	t, vErr := requireEnumString(raw, "type", validAccountTypes)
+	t, vErr := validation.RequiredEnumString(raw, "type", validAccountTypes)
 	if vErr != nil {
 		return r, vErr
 	}
 	r.Type = t
 
-	cat, vErr := requireEnumString(raw, "category", validCategories)
+	cat, vErr := validation.RequiredEnumString(raw, "category", validCategories)
 	if vErr != nil {
 		return r, vErr
 	}
 	r.Category = cat
 
-	ownerID, vErr := requireIntOrNull(raw, "owner_user_id")
+	ownerID, vErr := validation.RequiredIntOrNull(raw, "owner_user_id")
 	if vErr != nil {
 		return r, vErr
 	}
@@ -64,7 +64,7 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 	}
 	r.AccountWrapper = wrap
 
-	purpose, vErr := requireEnumString(raw, "purpose", validPurposes)
+	purpose, vErr := validation.RequiredEnumString(raw, "purpose", validPurposes)
 	if vErr != nil {
 		return r, vErr
 	}
@@ -119,17 +119,13 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 	if vErr := patchEnumString(raw, "category", validCategories, &p.Category); vErr != nil {
 		return p, vErr
 	}
-	if v, ok := raw["owner_user_id"]; ok {
+	if _, ok := raw["owner_user_id"]; ok {
 		p.OwnerUserIDSet = true
-		if validation.IsNull(v) {
-			p.OwnerUserID = nil
-		} else {
-			var n int
-			if err := json.Unmarshal(v, &n); err != nil {
-				return p, &httputil.ValidationError{Field: "owner_user_id", Msg: "must be an integer"}
-			}
-			p.OwnerUserID = &n
+		ownerID, vErr := validation.OptionalInt(raw, "owner_user_id", "must be an integer")
+		if vErr != nil {
+			return p, vErr
 		}
+		p.OwnerUserID = ownerID
 	}
 	if vErr := patchPlainString(raw, "currency", &p.Currency); vErr != nil {
 		return p, vErr
@@ -230,54 +226,6 @@ func parseInterestRate(v json.RawMessage) (decimal.Decimal, *httputil.Validation
 }
 
 // --- helpers ---
-
-func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return "", &httputil.ValidationError{Field: key, Msg: emptyMsg}
-	}
-	return s, nil
-}
-
-// requireIntOrNull reads an integer key that must be present; an explicit
-// null is allowed and yields nil (the "Shared" owner).
-func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok {
-		return nil, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	if validation.IsNull(v) {
-		return nil, nil
-	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return nil, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	return &n, nil
-}
-
-func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	if _, ok := allowed[s]; !ok {
-		return "", &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
-	}
-	return s, nil
-}
 
 func optionalString(raw map[string]json.RawMessage, key, fallback string) (string, *httputil.ValidationError) {
 	v, ok := raw[key]

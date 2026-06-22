@@ -2,7 +2,6 @@ package zus
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
@@ -21,17 +20,17 @@ type calculateInputs struct {
 func buildInputs(raw map[string]json.RawMessage, now func() time.Time) (calculateInputs, *httputil.ValidationError) {
 	var c calculateInputs
 	var err *httputil.ValidationError
-	c.Inputs.OwnerUserID, err = requireIntOrNull(raw, "owner_user_id")
+	c.Inputs.OwnerUserID, err = validation.RequiredIntOrNull(raw, "owner_user_id")
 	if err != nil {
 		return c, err
 	}
-	c.BirthDate, err = requireDate(raw, "birth_date")
+	c.BirthDate, err = validation.RequiredDate(raw, "birth_date")
 	if err != nil {
 		return c, err
 	}
 	c.Inputs.BirthYear = c.BirthDate.Year()
 
-	c.Inputs.Gender, err = requireEnumString(raw, "gender", map[string]struct{}{"M": {}, "F": {}})
+	c.Inputs.Gender, err = validation.RequiredEnumString(raw, "gender", map[string]struct{}{"M": {}, "F": {}})
 	if err != nil {
 		return c, err
 	}
@@ -91,7 +90,7 @@ func readMisc(raw map[string]json.RawMessage, in *Inputs) *httputil.ValidationEr
 		return err
 	}
 	in.KapitalPoczatkowy = kapital
-	work, err := requireIntRange(raw, "work_start_year", 1970, 2030, "Work start year must be between 1970 and 2030")
+	work, err := validation.RequiredIntRange(raw, "work_start_year", 1970, 2030, "Work start year must be between 1970 and 2030")
 	if err != nil {
 		return err
 	}
@@ -148,54 +147,6 @@ func validateAgeRelationship(birth time.Time, retirementAge int, now func() time
 }
 
 // --- helpers ---
-
-// requireIntOrNull reads an integer key that must be present; an explicit
-// null is allowed and yields nil (jointly owned).
-func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok {
-		return nil, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	if validation.IsNull(v) {
-		return nil, nil
-	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return nil, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	return &n, nil
-}
-
-func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	t, err := time.Parse("2006-01-02", s)
-	if err != nil {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be YYYY-MM-DD"}
-	}
-	return t, nil
-}
-
-func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	if _, ok := allowed[s]; !ok {
-		return "", &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
-	}
-	return s, nil
-}
 
 func requireNonNegativeFloat(raw map[string]json.RawMessage, key, msg string) (float64, *httputil.ValidationError) {
 	v, ok := raw[key]
@@ -257,21 +208,6 @@ func optionalIntRange(raw map[string]json.RawMessage, key string, fallback, lo, 
 	}
 	if validation.IsNull(v) {
 		return 0, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return 0, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	if n < lo || n > hi {
-		return 0, &httputil.ValidationError{Field: key, Msg: msg}
-	}
-	return n, nil
-}
-
-func requireIntRange(raw map[string]json.RawMessage, key string, lo, hi int, msg string) (int, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return 0, &httputil.ValidationError{Field: key, Msg: "Field required"}
 	}
 	var n int
 	if err := json.Unmarshal(v, &n); err != nil {

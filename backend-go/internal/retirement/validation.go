@@ -26,26 +26,26 @@ var validWrappers = map[string]struct{}{
 func buildLimitRequest(raw map[string]json.RawMessage, now func() time.Time) (limitRequest, *httputil.ValidationError) {
 	var r limitRequest
 	currentYear := now().UTC().Year()
-	year, vErr := requireIntRange(raw, "year", 2000, currentYear+10,
+	year, vErr := validation.RequiredIntRange(raw, "year", 2000, currentYear+10,
 		fmt.Sprintf("Year must be between 2000 and %d", currentYear+10))
 	if vErr != nil {
 		return r, vErr
 	}
 	r.Year = year
 
-	wrap, vErr := requireEnumString(raw, "account_wrapper", validWrappers)
+	wrap, vErr := validation.RequiredEnumString(raw, "account_wrapper", validWrappers)
 	if vErr != nil {
 		return r, vErr
 	}
 	r.AccountWrapper = wrap
 
-	owner, vErr := requireIntOrNull(raw, "owner_user_id")
+	owner, vErr := validation.RequiredIntOrNull(raw, "owner_user_id")
 	if vErr != nil {
 		return r, vErr
 	}
 	r.OwnerUserID = owner
 
-	amt, vErr := requirePositiveDecimal(raw, "limit_amount", "Limit amount must be greater than 0")
+	amt, vErr := validation.RequiredPositiveDecimal(raw, "limit_amount", "Field required", "Limit amount must be greater than 0")
 	if vErr != nil {
 		return r, vErr
 	}
@@ -74,20 +74,20 @@ func buildGenerateRequest(raw map[string]json.RawMessage, now func() time.Time) 
 	// PPK contributions are always generated for a specific person — a null
 	// (jointly owned) owner is rejected up front rather than failing later
 	// with a confusing 404.
-	owner, vErr := requireInt(raw, "owner_user_id")
+	owner, vErr := validation.RequiredInt(raw, "owner_user_id", "Field required", "must be an integer")
 	if vErr != nil {
 		return r, vErr
 	}
 	r.OwnerUserID = &owner
 
-	month, vErr := requireIntRange(raw, "month", 1, 12, "Month must be between 1 and 12")
+	month, vErr := validation.RequiredIntRange(raw, "month", 1, 12, "Month must be between 1 and 12")
 	if vErr != nil {
 		return r, vErr
 	}
 	r.Month = month
 
 	currentYear := now().UTC().Year()
-	year, vErr := requireIntRange(raw, "year", 2019, currentYear+1,
+	year, vErr := validation.RequiredIntRange(raw, "year", 2019, currentYear+1,
 		fmt.Sprintf("Year must be between 2019 and %d", currentYear+1))
 	if vErr != nil {
 		return r, vErr
@@ -120,79 +120,4 @@ func optionalBool(raw map[string]json.RawMessage, key string) (bool, *httputil.V
 		return false, &httputil.ValidationError{Field: key, Msg: "must be a boolean"}
 	}
 	return b, nil
-}
-
-// requireInt reads an integer key that must be present and non-null.
-func requireInt(raw map[string]json.RawMessage, key string) (int, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return 0, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return 0, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	return n, nil
-}
-
-// requireIntOrNull reads an integer key that must be present; an explicit
-// null is allowed and yields nil (jointly owned).
-func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok {
-		return nil, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	if validation.IsNull(v) {
-		return nil, nil
-	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return nil, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	return &n, nil
-}
-
-func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	if _, ok := allowed[s]; !ok {
-		return "", &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
-	}
-	return s, nil
-}
-
-func requireIntRange(raw map[string]json.RawMessage, key string, lo, hi int, msg string) (int, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return 0, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return 0, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	if n < lo || n > hi {
-		return 0, &httputil.ValidationError{Field: key, Msg: msg}
-	}
-	return n, nil
-}
-
-func requirePositiveDecimal(raw map[string]json.RawMessage, key, msg string) (decimal.Decimal, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	d, err := validation.RawDecimal(v)
-	if err != nil {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: "must be a number"}
-	}
-	if !d.IsPositive() {
-		return decimal.Decimal{}, &httputil.ValidationError{Field: key, Msg: msg}
-	}
-	return d, nil
 }

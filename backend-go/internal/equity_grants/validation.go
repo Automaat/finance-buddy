@@ -84,25 +84,25 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 }
 
 func requireGrantBasics(raw map[string]json.RawMessage, r *createRequest) *httputil.ValidationError {
-	t, vErr := requireDate(raw, "grant_date")
+	t, vErr := validation.RequiredDate(raw, "grant_date")
 	if vErr != nil {
 		return vErr
 	}
 	r.GrantDate = t
 
-	grantType, vErr := requireEnumString(raw, "type", validGrantTypes)
+	grantType, vErr := validation.RequiredEnumString(raw, "type", validGrantTypes)
 	if vErr != nil {
 		return vErr
 	}
 	r.Type = grantType
 
-	company, vErr := requireString(raw, "company", "Company cannot be empty")
+	company, vErr := validation.RequiredTrimmedString(raw, "company", "Field required", "Company cannot be empty")
 	if vErr != nil {
 		return vErr
 	}
 	r.Company = company
 
-	ownerID, vErr := requireIntOrNull(raw, "owner_user_id")
+	ownerID, vErr := validation.RequiredIntOrNull(raw, "owner_user_id")
 	if vErr != nil {
 		return vErr
 	}
@@ -114,7 +114,7 @@ func requireGrantBasics(raw map[string]json.RawMessage, r *createRequest) *httpu
 	}
 	r.TotalShares = totalShares
 
-	strike, vErr := optionalNonNegativeDecimal(raw, "strike_price", "Strike price must be non-negative")
+	strike, vErr := validation.OptionalNonNegativeDecimal(raw, "strike_price", "Strike price must be non-negative")
 	if vErr != nil {
 		return vErr
 	}
@@ -129,7 +129,7 @@ func requireGrantBasics(raw map[string]json.RawMessage, r *createRequest) *httpu
 }
 
 func requireGrantVesting(raw map[string]json.RawMessage, r *createRequest) *httputil.ValidationError {
-	vsd, vErr := requireDate(raw, "vest_start_date")
+	vsd, vErr := validation.RequiredDate(raw, "vest_start_date")
 	if vErr != nil {
 		return vErr
 	}
@@ -147,7 +147,7 @@ func requireGrantVesting(raw map[string]json.RawMessage, r *createRequest) *http
 	}
 	r.VestTotalMonths = total
 
-	freq, vErr := requireEnumString(raw, "vest_frequency", validFrequencies)
+	freq, vErr := validation.RequiredEnumString(raw, "vest_frequency", validFrequencies)
 	if vErr != nil {
 		return vErr
 	}
@@ -169,16 +169,10 @@ func optionalGrantLiquidity(raw map[string]json.RawMessage, r *createRequest) *h
 		}
 		r.RequiresLiquidityEvent = b
 	}
-	if v, ok := raw["liquidity_event_date"]; ok && !validation.IsNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return &httputil.ValidationError{Field: "liquidity_event_date", Msg: "must be a string"}
-		}
-		t, err := time.Parse("2006-01-02", s)
-		if err != nil {
-			return &httputil.ValidationError{Field: "liquidity_event_date", Msg: "must be YYYY-MM-DD"}
-		}
-		r.LiquidityEventDate = &t
+	if t, vErr := validation.OptionalDate(raw, "liquidity_event_date"); vErr != nil {
+		return vErr
+	} else if t != nil {
+		r.LiquidityEventDate = t
 	}
 	return nil
 }
@@ -258,15 +252,10 @@ func patchNumbersAndBools(raw map[string]json.RawMessage, p *UpdatePatch) *httpu
 	if vErr := patchPositiveInt(raw, "vest_total_months", "Total vesting months must be greater than 0", &p.VestTotalMonths); vErr != nil {
 		return vErr
 	}
-	if v, ok := raw["strike_price"]; ok && !validation.IsNull(v) {
-		d, err := validation.RawDecimal(v)
-		if err != nil {
-			return &httputil.ValidationError{Field: "strike_price", Msg: "must be a number"}
-		}
-		if d.IsNegative() {
-			return &httputil.ValidationError{Field: "strike_price", Msg: "Strike price must be non-negative"}
-		}
-		p.StrikePrice = &d
+	if d, vErr := validation.OptionalNonNegativeDecimal(raw, "strike_price", "Strike price must be non-negative"); vErr != nil {
+		return vErr
+	} else if d != nil {
+		p.StrikePrice = d
 	}
 	if v, ok := raw["requires_liquidity_event"]; ok && !validation.IsNull(v) {
 		var b bool
@@ -287,19 +276,13 @@ func patchDates(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Valida
 		{"vest_start_date", &p.VestStartDate},
 		{"liquidity_event_date", &p.LiquidityEventDate},
 	} {
-		v, ok := raw[f.key]
-		if !ok || validation.IsNull(v) {
-			continue
+		t, vErr := validation.OptionalDate(raw, f.key)
+		if vErr != nil {
+			return vErr
 		}
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return &httputil.ValidationError{Field: f.key, Msg: "must be a string"}
+		if t != nil {
+			*f.dest = t
 		}
-		t, err := time.Parse("2006-01-02", s)
-		if err != nil {
-			return &httputil.ValidationError{Field: f.key, Msg: "must be YYYY-MM-DD"}
-		}
-		*f.dest = &t
 	}
 	return nil
 }
@@ -323,38 +306,6 @@ func patchSchedule(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Val
 
 // --- shared decoders ---
 
-func requireString(raw map[string]json.RawMessage, key, emptyMsg string) (string, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return "", &httputil.ValidationError{Field: key, Msg: emptyMsg}
-	}
-	return s, nil
-}
-
-func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	t, err := time.Parse("2006-01-02", s)
-	if err != nil {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be YYYY-MM-DD"}
-	}
-	return t, nil
-}
-
 func requirePositiveInt(raw map[string]json.RawMessage, key, msg string) (int, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok || validation.IsNull(v) {
@@ -371,33 +322,17 @@ func requirePositiveInt(raw map[string]json.RawMessage, key, msg string) (int, *
 }
 
 func optionalNonNegativeInt(raw map[string]json.RawMessage, key, msg string, fallback int) (int, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
+	n, vErr := validation.OptionalInt(raw, key, "must be an integer")
+	if vErr != nil {
+		return 0, vErr
+	}
+	if n == nil {
 		return fallback, nil
 	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return 0, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	if n < 0 {
+	if *n < 0 {
 		return 0, &httputil.ValidationError{Field: key, Msg: msg}
 	}
-	return n, nil
-}
-
-func requireEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (string, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return "", &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	if _, ok := allowed[s]; !ok {
-		return "", &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
-	}
-	return s, nil
+	return *n, nil
 }
 
 func optionalEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}, fallback string) (string, *httputil.ValidationError) {
@@ -429,21 +364,6 @@ func optionalCurrency(raw map[string]json.RawMessage, fallback string) (string, 
 		return "", &httputil.ValidationError{Field: "currency", Msg: "Currency must be one of [CHF, EUR, GBP, PLN, USD]"}
 	}
 	return s, nil
-}
-
-func optionalNonNegativeDecimal(raw map[string]json.RawMessage, key, msg string) (*decimal.Decimal, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return nil, nil
-	}
-	d, err := validation.RawDecimal(v)
-	if err != nil {
-		return nil, &httputil.ValidationError{Field: key, Msg: "must be a number"}
-	}
-	if d.IsNegative() {
-		return nil, &httputil.ValidationError{Field: key, Msg: msg}
-	}
-	return &d, nil
 }
 
 // --- PATCH helpers ---
@@ -499,70 +419,47 @@ func patchCurrency(raw map[string]json.RawMessage, dest **string) *httputil.Vali
 }
 
 func patchPositiveInt(raw map[string]json.RawMessage, key, msg string, dest **int) *httputil.ValidationError {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
+	n, vErr := validation.OptionalInt(raw, key, "must be an integer")
+	if vErr != nil {
+		return vErr
+	}
+	if n == nil {
 		return nil
 	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	if n <= 0 {
+	if *n <= 0 {
 		return &httputil.ValidationError{Field: key, Msg: msg}
 	}
-	*dest = &n
+	*dest = n
 	return nil
 }
 
 func patchNonNegativeIntPtr(raw map[string]json.RawMessage, key, msg string, dest **int) *httputil.ValidationError {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
+	n, vErr := validation.OptionalInt(raw, key, "must be an integer")
+	if vErr != nil {
+		return vErr
+	}
+	if n == nil {
 		return nil
 	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	if n < 0 {
+	if *n < 0 {
 		return &httputil.ValidationError{Field: key, Msg: msg}
 	}
-	*dest = &n
+	*dest = n
 	return nil
-}
-
-// requireIntOrNull reads an integer key that must be present; an explicit
-// null is allowed and yields nil (jointly owned).
-func requireIntOrNull(raw map[string]json.RawMessage, key string) (*int, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok {
-		return nil, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	if validation.IsNull(v) {
-		return nil, nil
-	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return nil, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	return &n, nil
 }
 
 // patchOwnerUserID reads owner_user_id from a PATCH body: present marks the
 // field set; explicit null clears it (jointly owned).
 func patchOwnerUserID(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.ValidationError {
-	v, ok := raw["owner_user_id"]
+	_, ok := raw["owner_user_id"]
 	if !ok {
 		return nil
 	}
 	p.OwnerUserIDSet = true
-	if validation.IsNull(v) {
-		p.OwnerUserID = nil
-		return nil
+	ownerID, vErr := validation.OptionalInt(raw, "owner_user_id", "must be an integer")
+	if vErr != nil {
+		return vErr
 	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return &httputil.ValidationError{Field: "owner_user_id", Msg: "must be an integer"}
-	}
-	p.OwnerUserID = &n
+	p.OwnerUserID = ownerID
 	return nil
 }
