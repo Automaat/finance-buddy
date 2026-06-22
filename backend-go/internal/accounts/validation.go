@@ -69,7 +69,7 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 	}
 	r.Purpose = purpose
 
-	sq, vErr := optionalDecimal(raw, "square_meters")
+	sq, vErr := validation.OptionalDecimal(raw, "square_meters")
 	if vErr != nil {
 		return r, vErr
 	}
@@ -235,18 +235,6 @@ func optionalString(raw map[string]json.RawMessage, key, fallback string) (strin
 	return s, nil
 }
 
-func optionalDecimal(raw map[string]json.RawMessage, key string) (*decimal.Decimal, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return nil, nil
-	}
-	d, err := validation.RawDecimal(v)
-	if err != nil {
-		return nil, &httputil.ValidationError{Field: key, Msg: "must be a number"}
-	}
-	return &d, nil
-}
-
 func optionalBoolDefaultTrue(raw map[string]json.RawMessage, key string) (bool, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok {
@@ -263,14 +251,12 @@ func optionalBoolDefaultTrue(raw map[string]json.RawMessage, key string) (bool, 
 }
 
 func patchPlainString(raw map[string]json.RawMessage, key string, dest **string) *httputil.ValidationError {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return nil
+	s, vErr := validation.OptionalString(raw, key)
+	if vErr != nil {
+		return vErr
 	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return &httputil.ValidationError{Field: key, Msg: "must be a string"}
+	if s != nil {
+		*dest = s
 	}
-	*dest = &s
 	return nil
 }
