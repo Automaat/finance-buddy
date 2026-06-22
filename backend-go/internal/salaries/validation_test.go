@@ -169,11 +169,11 @@ func TestBuildUpdatePatchBlankCompany(t *testing.T) {
 
 func TestCurrentSalaryFromRecentUsesMostRecentRecord(t *testing.T) {
 	recent := map[int][]SalaryRecord{
-		2: []SalaryRecord{
+		2: {
 			{GrossAmount: decimal.NewFromInt(12000)},
 			{GrossAmount: decimal.NewFromInt(10000)},
 		},
-		3: []SalaryRecord{},
+		3: {},
 	}
 	got := currentSalaryFromRecent(recent)
 	if !got[2].Equal(decimal.NewFromInt(12000)) {
@@ -186,12 +186,12 @@ func TestCurrentSalaryFromRecentUsesMostRecentRecord(t *testing.T) {
 
 func TestHasPreviousSalary(t *testing.T) {
 	if hasPreviousSalary(map[int][]SalaryRecord{
-		1: []SalaryRecord{{GrossAmount: decimal.NewFromInt(1)}},
+		1: {{GrossAmount: decimal.NewFromInt(1)}},
 	}) {
 		t.Fatal("single recent record should not have a previous salary")
 	}
 	if !hasPreviousSalary(map[int][]SalaryRecord{
-		1: []SalaryRecord{
+		1: {
 			{GrossAmount: decimal.NewFromInt(2)},
 			{GrossAmount: decimal.NewFromInt(1)},
 		},

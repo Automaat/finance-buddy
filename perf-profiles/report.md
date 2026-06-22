@@ -42,12 +42,12 @@ hundreds of thousands of request log lines.
 
 ## Iteration Summary
 
-| Iteration | Artifact | Requests | Iterations | HTTP p50 | HTTP p95 | HTTP p99 |
-| --- | --- | ---: | ---: | ---: | ---: | ---: |
-| Baseline | `load-summary.json` | 256,933 | 7,137 | 0.84 ms | 2.97 ms | 4.41 ms |
-| Empty holdings fast path | `empty-holdings-load-summary.json` | 310,141 | 8,615 | 0.64 ms | 2.44 ms | 3.82 ms |
-| Empty bonds fast path | `empty-bonds-load-summary.json` | 335,305 | 9,314 | 0.63 ms | 2.20 ms | 3.25 ms |
-| Salary query reuse | `salary-reuse-load-summary.json` | 366,589 | 10,183 | 0.59 ms | 1.98 ms | 2.69 ms |
+| Iteration                | Artifact                           | Requests | Iterations | HTTP p50 | HTTP p95 | HTTP p99 |
+| ------------------------ | ---------------------------------- | -------: | ---------: | -------: | -------: | -------: |
+| Baseline                 | `load-summary.json`                |  256,933 |      7,137 |  0.84 ms |  2.97 ms |  4.41 ms |
+| Empty holdings fast path | `empty-holdings-load-summary.json` |  310,141 |      8,615 |  0.64 ms |  2.44 ms |  3.82 ms |
+| Empty bonds fast path    | `empty-bonds-load-summary.json`    |  335,305 |      9,314 |  0.63 ms |  2.20 ms |  3.25 ms |
+| Salary query reuse       | `salary-reuse-load-summary.json`   |  366,589 |     10,183 |  0.59 ms |  1.98 ms |  2.69 ms |
 
 ## Iteration 2: Empty Holdings Fast Path
 
@@ -106,18 +106,18 @@ Repeat run:
 
 All timings below are k6 custom per-route trends in milliseconds.
 
-| Route | p50 | p95 | p99 | Max |
-| --- | ---: | ---: | ---: | ---: |
-| `/api/accounts` | 3.79 | 5.73 | 8.16 | 34.39 |
-| `/api/dashboard` | 2.70 | 4.27 | 6.32 | 28.39 |
-| `/api/salaries` | 2.34 | 3.74 | 4.94 | 41.06 |
-| `/api/retirement/stats` | 2.26 | 3.61 | 5.24 | 30.44 |
-| `/api/exposure/currency` | 2.00 | 3.26 | 4.42 | 26.11 |
+| Route                       |  p50 |  p95 |  p99 |   Max |
+| --------------------------- | ---: | ---: | ---: | ----: |
+| `/api/accounts`             | 3.79 | 5.73 | 8.16 | 34.39 |
+| `/api/dashboard`            | 2.70 | 4.27 | 6.32 | 28.39 |
+| `/api/salaries`             | 2.34 | 3.74 | 4.94 | 41.06 |
+| `/api/retirement/stats`     | 2.26 | 3.61 | 5.24 | 30.44 |
+| `/api/exposure/currency`    | 2.00 | 3.26 | 4.42 | 26.11 |
 | `/api/retirement/ppk-stats` | 1.77 | 2.95 | 4.24 | 33.73 |
-| `/api/simulations/prefill` | 1.70 | 2.86 | 4.14 | 30.86 |
-| `/api/equity-grants` | 1.37 | 2.38 | 3.23 | 14.85 |
-| `/api/debts` | 1.32 | 2.30 | 3.06 | 29.44 |
-| `/api/zus/prefill` | 1.31 | 2.30 | 3.27 | 29.15 |
+| `/api/simulations/prefill`  | 1.70 | 2.86 | 4.14 | 30.86 |
+| `/api/equity-grants`        | 1.37 | 2.38 | 3.23 | 14.85 |
+| `/api/debts`                | 1.32 | 2.30 | 3.06 | 29.44 |
+| `/api/zus/prefill`          | 1.31 | 2.30 | 3.27 | 29.15 |
 
 Baseline global HTTP latency: p50 0.84 ms, p95 2.97 ms, p99 4.41 ms.
 
