@@ -70,6 +70,49 @@ func TestOptionalTrimmedString(t *testing.T) {
 	requireValidation(t, vErr, "name", "Name cannot be empty")
 }
 
+func TestOptionalString(t *testing.T) {
+	got, vErr := OptionalString(
+		map[string]json.RawMessage{"notes": json.RawMessage(`"  keep spaces  "`)},
+		"notes",
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got == nil || *got != "  keep spaces  " {
+		t.Fatalf("got = %v", got)
+	}
+
+	got, vErr = OptionalString(map[string]json.RawMessage{}, "notes")
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	got, vErr = OptionalString(
+		map[string]json.RawMessage{"notes": json.RawMessage(`null`)},
+		"notes",
+	)
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	got, vErr = OptionalString(
+		map[string]json.RawMessage{"notes": json.RawMessage(`""`)},
+		"notes",
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got == nil || *got != "" {
+		t.Fatalf("got = %v", got)
+	}
+
+	_, vErr = OptionalString(
+		map[string]json.RawMessage{"notes": json.RawMessage(`7`)},
+		"notes",
+	)
+	requireValidation(t, vErr, "notes", "must be a string")
+}
+
 func TestRequiredDate(t *testing.T) {
 	got, vErr := RequiredDate(map[string]json.RawMessage{"date": json.RawMessage(`"2026-05-26"`)}, "date")
 	if vErr != nil {

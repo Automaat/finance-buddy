@@ -55,6 +55,20 @@ func OptionalTrimmedString(
 	return &s, nil
 }
 
+// OptionalString reads an optional string field without trimming or empty
+// validation. Missing or explicit null returns nil.
+func OptionalString(raw map[string]json.RawMessage, key string) (*string, *httputil.ValidationError) {
+	v, ok := raw[key]
+	if !ok || IsNull(v) {
+		return nil, nil
+	}
+	s, err := RawString(v)
+	if err != nil {
+		return nil, &httputil.ValidationError{Field: key, Msg: "must be a string"}
+	}
+	return &s, nil
+}
+
 // RequiredDate reads a required YYYY-MM-DD field.
 func RequiredDate(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {
 	v, ok := raw[key]
