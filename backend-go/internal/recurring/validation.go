@@ -79,7 +79,7 @@ func readCadence(raw map[string]json.RawMessage, in *CreateInput) *httputil.Vali
 		return &httputil.ValidationError{Field: "frequency", Msg: "invalid cadence"}
 	}
 	in.Frequency = Frequency(freq)
-	if v, ok := raw["day_of_month"]; ok && string(v) != "null" {
+	if v, ok := raw["day_of_month"]; ok && !validation.IsNull(v) {
 		var d int
 		if jerr := json.Unmarshal(v, &d); jerr != nil {
 			return &httputil.ValidationError{Field: "day_of_month", Msg: "must be integer or null"}
