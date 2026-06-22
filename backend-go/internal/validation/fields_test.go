@@ -113,6 +113,48 @@ func TestOptionalString(t *testing.T) {
 	requireValidation(t, vErr, "notes", "must be a string")
 }
 
+func TestRequiredString(t *testing.T) {
+	got, vErr := RequiredString(
+		map[string]json.RawMessage{"frequency": json.RawMessage(`" monthly "`)},
+		"frequency",
+		"required",
+		"cannot be empty",
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got != " monthly " {
+		t.Fatalf("got = %q", got)
+	}
+
+	_, vErr = RequiredString(map[string]json.RawMessage{}, "frequency", "required", "cannot be empty")
+	requireValidation(t, vErr, "frequency", "required")
+
+	_, vErr = RequiredString(
+		map[string]json.RawMessage{"frequency": json.RawMessage(`null`)},
+		"frequency",
+		"required",
+		"cannot be empty",
+	)
+	requireValidation(t, vErr, "frequency", "required")
+
+	_, vErr = RequiredString(
+		map[string]json.RawMessage{"frequency": json.RawMessage(`7`)},
+		"frequency",
+		"required",
+		"cannot be empty",
+	)
+	requireValidation(t, vErr, "frequency", "must be a string")
+
+	_, vErr = RequiredString(
+		map[string]json.RawMessage{"frequency": json.RawMessage(`""`)},
+		"frequency",
+		"required",
+		"cannot be empty",
+	)
+	requireValidation(t, vErr, "frequency", "cannot be empty")
+}
+
 func TestRequiredDate(t *testing.T) {
 	got, vErr := RequiredDate(map[string]json.RawMessage{"date": json.RawMessage(`"2026-05-26"`)}, "date")
 	if vErr != nil {

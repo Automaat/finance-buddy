@@ -69,6 +69,28 @@ func OptionalString(raw map[string]json.RawMessage, key string) (*string, *httpu
 	return &s, nil
 }
 
+// RequiredString reads a required string field without trimming and returns
+// caller-supplied missing/empty messages.
+func RequiredString(
+	raw map[string]json.RawMessage,
+	key string,
+	missingMsg string,
+	emptyMsg string,
+) (string, *httputil.ValidationError) {
+	v, ok := raw[key]
+	if !ok || IsNull(v) {
+		return "", &httputil.ValidationError{Field: key, Msg: missingMsg}
+	}
+	s, err := RawString(v)
+	if err != nil {
+		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
+	}
+	if s == "" {
+		return "", &httputil.ValidationError{Field: key, Msg: emptyMsg}
+	}
+	return s, nil
+}
+
 // RequiredDate reads a required YYYY-MM-DD field.
 func RequiredDate(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {
 	v, ok := raw[key]

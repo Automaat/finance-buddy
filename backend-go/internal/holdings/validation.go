@@ -97,8 +97,8 @@ func buildLotInput(raw map[string]json.RawMessage) (Lot, *httputil.ValidationErr
 	if l.SecurityID <= 0 {
 		return l, &httputil.ValidationError{Field: "security_id", Msg: "must be positive"}
 	}
-	var sideStr string
-	if vErr := requireString(raw, "side", &sideStr); vErr != nil {
+	sideStr, vErr := validation.RequiredString(raw, "side", "required", "cannot be empty")
+	if vErr != nil {
 		return l, vErr
 	}
 	if !IsValidSide(sideStr) {
@@ -129,7 +129,7 @@ func buildLotInput(raw map[string]json.RawMessage) (Lot, *httputil.ValidationErr
 		}
 		l.Fee = *fee
 	}
-	dateStr, vErr := requireString2(raw, "date")
+	dateStr, vErr := validation.RequiredString(raw, "date", "required", "cannot be empty")
 	if vErr != nil {
 		return l, vErr
 	}
@@ -143,7 +143,7 @@ func buildLotInput(raw map[string]json.RawMessage) (Lot, *httputil.ValidationErr
 
 func buildQuoteInput(raw map[string]json.RawMessage, securityID int) (PriceQuote, *httputil.ValidationError) {
 	q := PriceQuote{SecurityID: securityID, Source: "manual"}
-	dateStr, vErr := requireString2(raw, "date")
+	dateStr, vErr := validation.RequiredString(raw, "date", "required", "cannot be empty")
 	if vErr != nil {
 		return q, vErr
 	}
@@ -194,7 +194,7 @@ func buildDividendInput(raw map[string]json.RawMessage) (Dividend, *httputil.Val
 	if d.SecurityID <= 0 {
 		return d, &httputil.ValidationError{Field: "security_id", Msg: "must be positive"}
 	}
-	dateStr, vErr := requireString2(raw, "pay_date")
+	dateStr, vErr := validation.RequiredString(raw, "pay_date", "required", "cannot be empty")
 	if vErr != nil {
 		return d, vErr
 	}
@@ -235,28 +235,6 @@ func buildDividendInput(raw map[string]json.RawMessage) (Dividend, *httputil.Val
 		}
 	}
 	return d, nil
-}
-
-func requireString(raw map[string]json.RawMessage, key string, dest *string) *httputil.ValidationError {
-	v, ok := raw[key]
-	if !ok || string(v) == "null" {
-		return &httputil.ValidationError{Field: key, Msg: "required"}
-	}
-	if err := json.Unmarshal(v, dest); err != nil {
-		return &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	if *dest == "" {
-		return &httputil.ValidationError{Field: key, Msg: "cannot be empty"}
-	}
-	return nil
-}
-
-func requireString2(raw map[string]json.RawMessage, key string) (string, *httputil.ValidationError) {
-	var s string
-	if vErr := requireString(raw, key, &s); vErr != nil {
-		return "", vErr
-	}
-	return s, nil
 }
 
 func requireDecimal(raw map[string]json.RawMessage, key string) (decimal.Decimal, *httputil.ValidationError) {

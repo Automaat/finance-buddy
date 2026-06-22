@@ -83,9 +83,9 @@ func readOptionalStrings(raw map[string]json.RawMessage, in *CreateInput) *httpu
 }
 
 func readCadence(raw map[string]json.RawMessage, in *CreateInput) *httputil.ValidationError {
-	var freq string
-	if err := requireString(raw, "frequency", &freq); err != nil {
-		return err
+	freq, vErr := validation.RequiredString(raw, "frequency", "required", "cannot be empty")
+	if vErr != nil {
+		return vErr
 	}
 	if !IsValidFrequency(freq) {
 		return &httputil.ValidationError{Field: "frequency", Msg: "invalid cadence"}
@@ -130,20 +130,6 @@ func readDatesAndActive(raw map[string]json.RawMessage, in *CreateInput) *httput
 		return vErr
 	}
 	in.Active = active
-	return nil
-}
-
-func requireString(raw map[string]json.RawMessage, key string, dest *string) *httputil.ValidationError {
-	v, ok := raw[key]
-	if !ok || string(v) == "null" {
-		return &httputil.ValidationError{Field: key, Msg: "required"}
-	}
-	if err := json.Unmarshal(v, dest); err != nil {
-		return &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	if *dest == "" {
-		return &httputil.ValidationError{Field: key, Msg: "cannot be empty"}
-	}
 	return nil
 }
 
