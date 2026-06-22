@@ -386,6 +386,13 @@ func TestRequiredPositiveInt(t *testing.T) {
 		"Shares must be greater than 0",
 	)
 	requireValidation(t, vErr, "shares", "Shares must be greater than 0")
+
+	_, vErr = RequiredPositiveInt(
+		map[string]json.RawMessage{"shares": json.RawMessage(`-1`)},
+		"shares",
+		"Shares must be greater than 0",
+	)
+	requireValidation(t, vErr, "shares", "Shares must be greater than 0")
 }
 
 func TestOptionalPositiveInt(t *testing.T) {
@@ -424,6 +431,13 @@ func TestOptionalPositiveInt(t *testing.T) {
 
 	_, vErr = OptionalPositiveInt(
 		map[string]json.RawMessage{"shares": json.RawMessage(`0`)},
+		"shares",
+		"Shares must be greater than 0",
+	)
+	requireValidation(t, vErr, "shares", "Shares must be greater than 0")
+
+	_, vErr = OptionalPositiveInt(
+		map[string]json.RawMessage{"shares": json.RawMessage(`-1`)},
 		"shares",
 		"Shares must be greater than 0",
 	)
