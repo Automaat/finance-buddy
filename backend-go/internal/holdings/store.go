@@ -501,11 +501,14 @@ func (s *Store) accountMeta(ctx context.Context) (map[int]accountMeta, error) {
 // rates for cost basis and the latest-quote-date rate for market value.
 // Each row also exposes a per-account breakdown via HoldingRow.Accounts.
 func (s *Store) Holdings(ctx context.Context, rates RateProvider) ([]HoldingRow, error) {
-	securities, err := s.ListSecurities(ctx)
+	allLots, err := s.ListLots(ctx, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	allLots, err := s.ListLots(ctx, nil, nil)
+	if len(allLots) == 0 {
+		return []HoldingRow{}, nil
+	}
+	securities, err := s.ListSecurities(ctx)
 	if err != nil {
 		return nil, err
 	}

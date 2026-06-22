@@ -40,6 +40,9 @@ func (v *Valuator) AccountValuesPLN(ctx context.Context) (map[int]decimal.Decima
 	if err != nil {
 		return nil, err
 	}
+	if len(bonds) == 0 {
+		return map[int]decimal.Decimal{}, nil
+	}
 	yoy, err := v.cpi.LoadYoYMap(ctx)
 	if err != nil {
 		v.logger.Warn("bonds.valuator: load annual cpi failed", "err", err)

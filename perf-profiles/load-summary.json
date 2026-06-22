@@ -1,0 +1,981 @@
+{
+	"root_group": {
+		"name": "",
+		"path": "",
+		"id": "d41d8cd98f00b204e9800998ecf8427e",
+		"groups": {
+			"setup": {
+				"groups": {},
+				"checks": {
+					"login: 200": {
+						"name": "login: 200",
+						"path": "::setup::login: 200",
+						"id": "129fc54f1b25cccb7471fa0065452b46",
+						"passes": 1,
+						"fails": 0
+					},
+					"login: token present": {
+						"name": "login: token present",
+						"path": "::setup::login: token present",
+						"id": "2c7ea2d74261b49e274e5716393e1078",
+						"passes": 1,
+						"fails": 0
+					}
+				},
+				"name": "setup",
+				"path": "::setup",
+				"id": "5c0f8025f7e0b6654089e5b00e950f1a"
+			},
+			"/health": {
+				"name": "/health",
+				"path": "::/health",
+				"id": "214aa9795ac451750390d2ec629338b0",
+				"groups": {},
+				"checks": {
+					"/health: 2xx": {
+						"fails": 0,
+						"name": "/health: 2xx",
+						"path": "::/health::/health: 2xx",
+						"id": "405fea63b72e49400788a6d9163602a9",
+						"passes": 7137
+					}
+				}
+			},
+			"/api/auth/me": {
+				"checks": {
+					"/api/auth/me: 2xx": {
+						"fails": 0,
+						"name": "/api/auth/me: 2xx",
+						"path": "::/api/auth/me::/api/auth/me: 2xx",
+						"id": "fbcb556e4926a8252258235c97d9f290",
+						"passes": 7137
+					}
+				},
+				"name": "/api/auth/me",
+				"path": "::/api/auth/me",
+				"id": "fa329acb7f38d63cfd50975744d50bf1",
+				"groups": {}
+			},
+			"/api/dashboard": {
+				"checks": {
+					"/api/dashboard: 2xx": {
+						"passes": 7137,
+						"fails": 0,
+						"name": "/api/dashboard: 2xx",
+						"path": "::/api/dashboard::/api/dashboard: 2xx",
+						"id": "fe53653ba67d6c4dc9f636df298521c7"
+					}
+				},
+				"name": "/api/dashboard",
+				"path": "::/api/dashboard",
+				"id": "c415df38fb4895bec914a43dbe227a56",
+				"groups": {}
+			},
+			"/api/accounts": {
+				"name": "/api/accounts",
+				"path": "::/api/accounts",
+				"id": "0c40b305e9df35355f3e9556bc2f1bba",
+				"groups": {},
+				"checks": {
+					"/api/accounts: 2xx": {
+						"path": "::/api/accounts::/api/accounts: 2xx",
+						"id": "74aeeea8e79f683eeb8e65ee3a324667",
+						"passes": 7137,
+						"fails": 0,
+						"name": "/api/accounts: 2xx"
+					}
+				}
+			},
+			"/api/assets": {
+				"id": "96ad319522d45a4ce442e064646e0981",
+				"groups": {},
+				"checks": {
+					"/api/assets: 2xx": {
+						"name": "/api/assets: 2xx",
+						"path": "::/api/assets::/api/assets: 2xx",
+						"id": "f1a4c46e6ae79759438be46cb7de9a65",
+						"passes": 7137,
+						"fails": 0
+					}
+				},
+				"name": "/api/assets",
+				"path": "::/api/assets"
+			},
+			"/api/snapshots": {
+				"id": "66c2af33532039d87ed777077adfe917",
+				"groups": {},
+				"checks": {
+					"/api/snapshots: 2xx": {
+						"path": "::/api/snapshots::/api/snapshots: 2xx",
+						"id": "fa84b13b93ec793a00f2c0325b0b74d9",
+						"passes": 7137,
+						"fails": 0,
+						"name": "/api/snapshots: 2xx"
+					}
+				},
+				"name": "/api/snapshots",
+				"path": "::/api/snapshots"
+			},
+			"/api/users": {
+				"name": "/api/users",
+				"path": "::/api/users",
+				"id": "63ff10da136272fd3805cfdde24be827",
+				"groups": {},
+				"checks": {
+					"/api/users: 2xx": {
+						"id": "c64a6dbbedb3fdf4ef6867941cd935ce",
+						"passes": 7137,
+						"fails": 0,
+						"name": "/api/users: 2xx",
+						"path": "::/api/users::/api/users: 2xx"
+					}
+				}
+			},
+			"/api/config": {
+				"groups": {},
+				"checks": {
+					"/api/config: 2xx": {
+						"passes": 7137,
+						"fails": 0,
+						"name": "/api/config: 2xx",
+						"path": "::/api/config::/api/config: 2xx",
+						"id": "99f47c75a46fa686f4d7c8af94a49a34"
+					}
+				},
+				"name": "/api/config",
+				"path": "::/api/config",
+				"id": "849d15005db3d97e758819bff5893cf8"
+			},
+			"/api/goals": {
+				"name": "/api/goals",
+				"path": "::/api/goals",
+				"id": "7b8d596158e6ce78e82abc2e7d1b21e6",
+				"groups": {},
+				"checks": {
+					"/api/goals: 2xx": {
+						"name": "/api/goals: 2xx",
+						"path": "::/api/goals::/api/goals: 2xx",
+						"id": "bb9de012e30db4fd4b50d4032d0ea72d",
+						"passes": 7137,
+						"fails": 0
+					}
+				}
+			},
+			"/api/transactions": {
+				"name": "/api/transactions",
+				"path": "::/api/transactions",
+				"id": "5f4d84826697e79f93c9739686b27ff9",
+				"groups": {},
+				"checks": {
+					"/api/transactions: 2xx": {
+						"name": "/api/transactions: 2xx",
+						"path": "::/api/transactions::/api/transactions: 2xx",
+						"id": "0b7c8152bf0292edc0cbaa3ae29000b8",
+						"passes": 7137,
+						"fails": 0
+					}
+				}
+			},
+			"/api/transactions/counts": {
+				"name": "/api/transactions/counts",
+				"path": "::/api/transactions/counts",
+				"id": "c28e0e522e5134b78b8f117e8cf42a89",
+				"groups": {},
+				"checks": {
+					"/api/transactions/counts: 2xx": {
+						"name": "/api/transactions/counts: 2xx",
+						"path": "::/api/transactions/counts::/api/transactions/counts: 2xx",
+						"id": "cf1332aebdd3e14d7a156771f6169e7b",
+						"passes": 7137,
+						"fails": 0
+					}
+				}
+			},
+			"/api/payments": {
+				"name": "/api/payments",
+				"path": "::/api/payments",
+				"id": "f0119f91e484e4a8b400a18b2f06da59",
+				"groups": {},
+				"checks": {
+					"/api/payments: 2xx": {
+						"path": "::/api/payments::/api/payments: 2xx",
+						"id": "48a1a943d3bc95d5710d52702eef5b76",
+						"passes": 7137,
+						"fails": 0,
+						"name": "/api/payments: 2xx"
+					}
+				}
+			},
+			"/api/payments/counts": {
+				"name": "/api/payments/counts",
+				"path": "::/api/payments/counts",
+				"id": "e47bcbc44587c985d47a2fe14cddffd3",
+				"groups": {},
+				"checks": {
+					"/api/payments/counts: 2xx": {
+						"name": "/api/payments/counts: 2xx",
+						"path": "::/api/payments/counts::/api/payments/counts: 2xx",
+						"id": "c0af87b1f1d34d5d09698a17fa528fbf",
+						"passes": 7137,
+						"fails": 0
+					}
+				}
+			},
+			"/api/debts": {
+				"name": "/api/debts",
+				"path": "::/api/debts",
+				"id": "1b090f2a75e0f11efd5ac307b0d8df23",
+				"groups": {},
+				"checks": {
+					"/api/debts: 2xx": {
+						"name": "/api/debts: 2xx",
+						"path": "::/api/debts::/api/debts: 2xx",
+						"id": "0957b27aa7f83e115e98a44767244b12",
+						"passes": 7137,
+						"fails": 0
+					}
+				}
+			},
+			"/api/salaries": {
+				"id": "e5481f66255524886b56a5db8bd414cb",
+				"groups": {},
+				"checks": {
+					"/api/salaries: 2xx": {
+						"fails": 0,
+						"name": "/api/salaries: 2xx",
+						"path": "::/api/salaries::/api/salaries: 2xx",
+						"id": "981155694990b69437f63b7c8e89fa12",
+						"passes": 7137
+					}
+				},
+				"name": "/api/salaries",
+				"path": "::/api/salaries"
+			},
+			"/api/bonuses": {
+				"name": "/api/bonuses",
+				"path": "::/api/bonuses",
+				"id": "e284a84304efdf9f4b405a96e3d9321b",
+				"groups": {},
+				"checks": {
+					"/api/bonuses: 2xx": {
+						"name": "/api/bonuses: 2xx",
+						"path": "::/api/bonuses::/api/bonuses: 2xx",
+						"id": "a26f6f59fccb3ff286cffc0fafcf50b9",
+						"passes": 7137,
+						"fails": 0
+					}
+				}
+			},
+			"/api/equity-grants": {
+				"checks": {
+					"/api/equity-grants: 2xx": {
+						"path": "::/api/equity-grants::/api/equity-grants: 2xx",
+						"id": "1a074443914fb2d5e6a44a20d3609a3c",
+						"passes": 7137,
+						"fails": 0,
+						"name": "/api/equity-grants: 2xx"
+					}
+				},
+				"name": "/api/equity-grants",
+				"path": "::/api/equity-grants",
+				"id": "801aaad85687038856ca0e6f34edf7a0",
+				"groups": {}
+			},
+			"/api/company-valuations": {
+				"name": "/api/company-valuations",
+				"path": "::/api/company-valuations",
+				"id": "dfd6e4dab7253cff22c61c19733c5a15",
+				"groups": {},
+				"checks": {
+					"/api/company-valuations: 2xx": {
+						"name": "/api/company-valuations: 2xx",
+						"path": "::/api/company-valuations::/api/company-valuations: 2xx",
+						"id": "6808912e71d41598f518d9caae82ddb8",
+						"passes": 7137,
+						"fails": 0
+					}
+				}
+			},
+			"/api/holdings": {
+				"checks": {
+					"/api/holdings: 2xx": {
+						"name": "/api/holdings: 2xx",
+						"path": "::/api/holdings::/api/holdings: 2xx",
+						"id": "92066c48bd79f75f146fb2d314dc3a0d",
+						"passes": 7137,
+						"fails": 0
+					}
+				},
+				"name": "/api/holdings",
+				"path": "::/api/holdings",
+				"id": "eb6f0f203f823a910fd5a2b68e265a22",
+				"groups": {}
+			},
+			"/api/holdings/securities": {
+				"path": "::/api/holdings/securities",
+				"id": "ff073c57f5a3e5de4e74af6f5f4534ee",
+				"groups": {},
+				"checks": {
+					"/api/holdings/securities: 2xx": {
+						"name": "/api/holdings/securities: 2xx",
+						"path": "::/api/holdings/securities::/api/holdings/securities: 2xx",
+						"id": "42aa98c68f9843f0b160386f6434c3d8",
+						"passes": 7137,
+						"fails": 0
+					}
+				},
+				"name": "/api/holdings/securities"
+			},
+			"/api/holdings/lots": {
+				"name": "/api/holdings/lots",
+				"path": "::/api/holdings/lots",
+				"id": "14abeee141676ad3fce02072249cdb61",
+				"groups": {},
+				"checks": {
+					"/api/holdings/lots: 2xx": {
+						"name": "/api/holdings/lots: 2xx",
+						"path": "::/api/holdings/lots::/api/holdings/lots: 2xx",
+						"id": "f6c2df63f88295aa8f427b684ec28fee",
+						"passes": 7137,
+						"fails": 0
+					}
+				}
+			},
+			"/api/holdings/dividends": {
+				"groups": {},
+				"checks": {
+					"/api/holdings/dividends: 2xx": {
+						"name": "/api/holdings/dividends: 2xx",
+						"path": "::/api/holdings/dividends::/api/holdings/dividends: 2xx",
+						"id": "8ebe7224040670f75de56a8f916685e7",
+						"passes": 7137,
+						"fails": 0
+					}
+				},
+				"name": "/api/holdings/dividends",
+				"path": "::/api/holdings/dividends",
+				"id": "afa75872e7c6466aae67f777bbf6729e"
+			},
+			"/api/bonds": {
+				"id": "176900fce319e5e9add8a65de03d3bbb",
+				"groups": {},
+				"checks": {
+					"/api/bonds: 2xx": {
+						"name": "/api/bonds: 2xx",
+						"path": "::/api/bonds::/api/bonds: 2xx",
+						"id": "4f245d9125a7dd5a95869522d5408fab",
+						"passes": 7137,
+						"fails": 0
+					}
+				},
+				"name": "/api/bonds",
+				"path": "::/api/bonds"
+			},
+			"/api/bonds/maturity-ladder": {
+				"name": "/api/bonds/maturity-ladder",
+				"path": "::/api/bonds/maturity-ladder",
+				"id": "5ddc7f97496bec289cf9031882e6b138",
+				"groups": {},
+				"checks": {
+					"/api/bonds/maturity-ladder: 2xx": {
+						"fails": 0,
+						"name": "/api/bonds/maturity-ladder: 2xx",
+						"path": "::/api/bonds/maturity-ladder::/api/bonds/maturity-ladder: 2xx",
+						"id": "65a525ae2cb4a87db0f1a016d4ed1685",
+						"passes": 7137
+					}
+				}
+			},
+			"/api/investment/stock-stats": {
+				"groups": {},
+				"checks": {
+					"/api/investment/stock-stats: 2xx": {
+						"name": "/api/investment/stock-stats: 2xx",
+						"path": "::/api/investment/stock-stats::/api/investment/stock-stats: 2xx",
+						"id": "9346f6cd2a770804b9c1fa3a072e5a24",
+						"passes": 7137,
+						"fails": 0
+					}
+				},
+				"name": "/api/investment/stock-stats",
+				"path": "::/api/investment/stock-stats",
+				"id": "80d58af72fed0aebd49762a64c7330ef"
+			},
+			"/api/investment/bond-stats": {
+				"name": "/api/investment/bond-stats",
+				"path": "::/api/investment/bond-stats",
+				"id": "86a98bb86eafbdfc7c0b5b642b2103fe",
+				"groups": {},
+				"checks": {
+					"/api/investment/bond-stats: 2xx": {
+						"id": "f3f8d71a3ea6f0aae7b22cdfd0edb6bb",
+						"passes": 7137,
+						"fails": 0,
+						"name": "/api/investment/bond-stats: 2xx",
+						"path": "::/api/investment/bond-stats::/api/investment/bond-stats: 2xx"
+					}
+				}
+			},
+			"/api/investment/returns": {
+				"name": "/api/investment/returns",
+				"path": "::/api/investment/returns",
+				"id": "3f62ef33ad4d707ca2d387361d4c5fd5",
+				"groups": {},
+				"checks": {
+					"/api/investment/returns: 2xx": {
+						"fails": 0,
+						"name": "/api/investment/returns: 2xx",
+						"path": "::/api/investment/returns::/api/investment/returns: 2xx",
+						"id": "d88270e880550515ca1e2cf0c188b2ba",
+						"passes": 7137
+					}
+				}
+			},
+			"/api/retirement/stats": {
+				"id": "e5b1833b6ef9a51d8d1fb38ee618f226",
+				"groups": {},
+				"checks": {
+					"/api/retirement/stats: 2xx": {
+						"name": "/api/retirement/stats: 2xx",
+						"path": "::/api/retirement/stats::/api/retirement/stats: 2xx",
+						"id": "92366b6ee9689ef515f590f069c0f4c2",
+						"passes": 7137,
+						"fails": 0
+					}
+				},
+				"name": "/api/retirement/stats",
+				"path": "::/api/retirement/stats"
+			},
+			"/api/retirement/ppk-stats": {
+				"name": "/api/retirement/ppk-stats",
+				"path": "::/api/retirement/ppk-stats",
+				"id": "b1f2526e33b4c2b50783b6099d550ab5",
+				"groups": {},
+				"checks": {
+					"/api/retirement/ppk-stats: 2xx": {
+						"passes": 7137,
+						"fails": 0,
+						"name": "/api/retirement/ppk-stats: 2xx",
+						"path": "::/api/retirement/ppk-stats::/api/retirement/ppk-stats: 2xx",
+						"id": "e14cc252a1b4f5e3a3cfcc1f768c9880"
+					}
+				}
+			},
+			"/api/cpi/series": {
+				"name": "/api/cpi/series",
+				"path": "::/api/cpi/series",
+				"id": "4a6188509da399e08abc3f7675b9f055",
+				"groups": {},
+				"checks": {
+					"/api/cpi/series: 2xx": {
+						"id": "0178ae8702cb6460abe66e548ad8e2a7",
+						"passes": 7137,
+						"fails": 0,
+						"name": "/api/cpi/series: 2xx",
+						"path": "::/api/cpi/series::/api/cpi/series: 2xx"
+					}
+				}
+			},
+			"/api/zus/prefill": {
+				"checks": {
+					"/api/zus/prefill: 2xx": {
+						"fails": 0,
+						"name": "/api/zus/prefill: 2xx",
+						"path": "::/api/zus/prefill::/api/zus/prefill: 2xx",
+						"id": "ee86f86a8ed76af9171cca9a7ad2af0c",
+						"passes": 7137
+					}
+				},
+				"name": "/api/zus/prefill",
+				"path": "::/api/zus/prefill",
+				"id": "a2079a2952eb859821968aec4d628bc6",
+				"groups": {}
+			},
+			"/api/simulations/prefill": {
+				"name": "/api/simulations/prefill",
+				"path": "::/api/simulations/prefill",
+				"id": "27b35004b799eb97d27313b38ba4505e",
+				"groups": {},
+				"checks": {
+					"/api/simulations/prefill: 2xx": {
+						"id": "07db553a445b24e3ed29aa9097813be9",
+						"passes": 7137,
+						"fails": 0,
+						"name": "/api/simulations/prefill: 2xx",
+						"path": "::/api/simulations/prefill::/api/simulations/prefill: 2xx"
+					}
+				}
+			},
+			"/api/exposure/currency": {
+				"id": "a7e5373ee741a9ca2b3468d4c05c22d8",
+				"groups": {},
+				"checks": {
+					"/api/exposure/currency: 2xx": {
+						"path": "::/api/exposure/currency::/api/exposure/currency: 2xx",
+						"id": "c567a5f4d6e3715537b32cde7e2ab53a",
+						"passes": 7137,
+						"fails": 0,
+						"name": "/api/exposure/currency: 2xx"
+					}
+				},
+				"name": "/api/exposure/currency",
+				"path": "::/api/exposure/currency"
+			},
+			"/api/pit38/realized": {
+				"id": "ee9f96a7a65cdc55cd2552c031a1c0f3",
+				"groups": {},
+				"checks": {
+					"/api/pit38/realized: 2xx": {
+						"id": "2821ed8378c1c113993e6997a98afb87",
+						"passes": 7137,
+						"fails": 0,
+						"name": "/api/pit38/realized: 2xx",
+						"path": "::/api/pit38/realized::/api/pit38/realized: 2xx"
+					}
+				},
+				"name": "/api/pit38/realized",
+				"path": "::/api/pit38/realized"
+			},
+			"/api/allocation/targets": {
+				"name": "/api/allocation/targets",
+				"path": "::/api/allocation/targets",
+				"id": "98d134aabc2a8aeb4104e084319af174",
+				"groups": {},
+				"checks": {
+					"/api/allocation/targets: 2xx": {
+						"name": "/api/allocation/targets: 2xx",
+						"path": "::/api/allocation/targets::/api/allocation/targets: 2xx",
+						"id": "9f46624bd212365a810f0e76eb5742dc",
+						"passes": 7137,
+						"fails": 0
+					}
+				}
+			},
+			"/api/allocation/drift": {
+				"id": "90e48e6e28103423f8dbc499a0ed3bcd",
+				"groups": {},
+				"checks": {
+					"/api/allocation/drift: 2xx": {
+						"name": "/api/allocation/drift: 2xx",
+						"path": "::/api/allocation/drift::/api/allocation/drift: 2xx",
+						"id": "cfce5d6dc8593e33ccc644237112d6a7",
+						"passes": 7137,
+						"fails": 0
+					}
+				},
+				"name": "/api/allocation/drift",
+				"path": "::/api/allocation/drift"
+			}
+		},
+		"checks": {}
+	},
+	"metrics": {
+		"latency_api_bonds_maturity_ladder": {
+			"p(99)": 2.9576799999999994,
+			"max": 13.751,
+			"avg": 1.300374667227124,
+			"min": 0.481,
+			"med": 1.232,
+			"p(95)": 2.107
+		},
+		"latency_api_assets": {
+			"min": 0.349,
+			"med": 0.901,
+			"p(95)": 1.6771999999999998,
+			"p(99)": 2.28292,
+			"max": 15.134,
+			"avg": 0.9735884825556984
+		},
+		"latency_api_salaries": {
+			"p(99)": 4.94164,
+			"max": 41.061,
+			"avg": 2.4608268179907444,
+			"min": 1.003,
+			"med": 2.343,
+			"p(95)": 3.7351999999999994
+		},
+		"latency_api_bonuses": {
+			"min": 0.378,
+			"med": 1.079,
+			"p(95)": 1.883,
+			"p(99)": 2.6916799999999994,
+			"max": 29.075,
+			"avg": 1.1464702255849797
+		},
+		"http_req_waiting": {
+			"med": 0.827,
+			"p(95)": 2.951,
+			"p(99)": 4.39,
+			"max": 75.895,
+			"avg": 1.1226389798118623,
+			"min": 0.118
+		},
+		"iteration_duration": {
+			"p(95)": 57.356174599999996,
+			"p(99)": 70.53217688,
+			"max": 117.420333,
+			"avg": 42.04702148703952,
+			"min": 29.472167,
+			"med": 39.760792
+		},
+		"http_req_failed": {
+			"passes": 0,
+			"fails": 256933,
+			"value": 0
+		},
+		"latency_api_dashboard": {
+			"p(95)": 4.267599999999999,
+			"p(99)": 6.321479999999999,
+			"max": 28.392,
+			"avg": 2.8592003642987236,
+			"min": 1.219,
+			"med": 2.696
+		},
+		"latency_api_allocation_drift": {
+			"med": 1.085,
+			"p(95)": 1.8953999999999993,
+			"p(99)": 2.676119999999999,
+			"max": 13.227,
+			"avg": 1.1499436738125288,
+			"min": 0.376
+		},
+		"latency_api_company_valuations": {
+			"min": 0.244,
+			"med": 0.743,
+			"p(95)": 1.3711999999999998,
+			"p(99)": 1.9219199999999999,
+			"max": 28.172,
+			"avg": 0.803859744990892
+		},
+		"latency_api_zus_prefill": {
+			"avg": 1.4102251646350008,
+			"min": 0.481,
+			"med": 1.307,
+			"p(95)": 2.3023999999999996,
+			"p(99)": 3.27264,
+			"max": 29.15
+		},
+		"group_duration": {
+			"med": 0.867708,
+			"p(95)": 3.00129145,
+			"p(99)": 4.441698539999999,
+			"max": 41.151375,
+			"avg": 1.1632565058303668,
+			"min": 0.144042
+		},
+		"http_req_receiving": {
+			"med": 0.007,
+			"p(95)": 0.032,
+			"p(99)": 0.057,
+			"max": 2.085,
+			"avg": 0.010843546761223004,
+			"min": 0.002
+		},
+		"latency_health": {
+			"p(95)": 0.8911999999999997,
+			"p(99)": 1.2753999999999992,
+			"max": 24.789,
+			"avg": 0.46954770912147903,
+			"min": 0.135,
+			"med": 0.395
+		},
+		"data_received": {
+			"count": 143154721,
+			"rate": 4755251.190392949
+		},
+		"latency_api_auth_me": {
+			"max": 23.211,
+			"avg": 0.5093309513801306,
+			"min": 0.17,
+			"med": 0.444,
+			"p(95)": 0.973,
+			"p(99)": 1.4043999999999992
+		},
+		"latency_api_holdings": {
+			"min": 0.45,
+			"med": 1.281,
+			"p(95)": 2.2017999999999986,
+			"p(99)": 3.1110399999999996,
+			"max": 18.547,
+			"avg": 1.3612005044136224
+		},
+		"latency_api_bonds": {
+			"avg": 1.278575732100323,
+			"min": 0.472,
+			"med": 1.202,
+			"p(95)": 2.1261999999999994,
+			"p(99)": 2.9246399999999997,
+			"max": 15.533
+		},
+		"vus_max": {
+			"value": 10,
+			"min": 10,
+			"max": 10
+		},
+		"vus": {
+			"value": 10,
+			"min": 10,
+			"max": 10
+		},
+		"latency_api_goals": {
+			"min": 0.275,
+			"med": 0.742,
+			"p(95)": 1.3801999999999996,
+			"p(99)": 2.0033999999999996,
+			"max": 27.916,
+			"avg": 0.8074796132828922
+		},
+		"latency_api_payments_counts": {
+			"avg": 0.48901204988090347,
+			"min": 0.13,
+			"med": 0.431,
+			"p(95)": 0.945,
+			"p(99)": 1.2989199999999999,
+			"max": 6.746
+		},
+		"latency_api_exposure_currency": {
+			"med": 2.004,
+			"p(95)": 3.2641999999999993,
+			"p(99)": 4.420239999999999,
+			"max": 26.108,
+			"avg": 2.1158412498248573,
+			"min": 0.708
+		},
+		"latency_api_holdings_securities": {
+			"p(99)": 1.3657599999999994,
+			"max": 9.28,
+			"avg": 0.47470912147961175,
+			"min": 0.139,
+			"med": 0.413,
+			"p(95)": 0.93
+		},
+		"latency_api_accounts": {
+			"avg": 3.9541927980944274,
+			"min": 1.853,
+			"med": 3.785,
+			"p(95)": 5.725199999999999,
+			"p(99)": 8.15592,
+			"max": 34.391
+		},
+		"data_sent": {
+			"count": 78171757,
+			"rate": 2596675.3868309963
+		},
+		"latency_api_retirement_stats": {
+			"min": 0.812,
+			"med": 2.262,
+			"p(95)": 3.614,
+			"p(99)": 5.240039999999999,
+			"max": 30.437,
+			"avg": 2.373935967493341
+		},
+		"latency_api_equity_grants": {
+			"p(95)": 2.377,
+			"p(99)": 3.2312,
+			"max": 14.847,
+			"avg": 1.4779038811825698,
+			"min": 0.52,
+			"med": 1.373
+		},
+		"latency_api_simulations_prefill": {
+			"avg": 1.8305842791088658,
+			"min": 0.687,
+			"med": 1.703,
+			"p(95)": 2.857,
+			"p(99)": 4.14292,
+			"max": 30.862
+		},
+		"http_req_blocked": {
+			"avg": 0.0008159559106866914,
+			"min": 0,
+			"med": 0.001,
+			"p(95)": 0.002,
+			"p(99)": 0.004,
+			"max": 0.82
+		},
+		"latency_api_investment_returns": {
+			"avg": 1.347715286534955,
+			"min": 0.462,
+			"med": 1.259,
+			"p(95)": 2.1871999999999994,
+			"p(99)": 3.0024799999999994,
+			"max": 35.09
+		},
+		"latency_api_config": {
+			"p(95)": 0.9911999999999996,
+			"p(99)": 1.417,
+			"max": 9.625,
+			"avg": 0.5202520666946863,
+			"min": 0.17,
+			"med": 0.458
+		},
+		"latency_api_investment_stock_stats": {
+			"avg": 0.6856243519686154,
+			"min": 0.226,
+			"med": 0.606,
+			"p(95)": 1.271,
+			"p(99)": 1.86228,
+			"max": 27.614
+		},
+		"http_req_duration{expected_response:true}": {
+			"avg": 1.1360997653084777,
+			"min": 0.126,
+			"med": 0.84,
+			"p(95)": 2.969,
+			"p(99)": 4.408,
+			"max": 76.234
+		},
+		"latency_api_allocation_targets": {
+			"p(95)": 0.941,
+			"p(99)": 1.3928399999999996,
+			"max": 25.989,
+			"avg": 0.4802956424267922,
+			"min": 0.15,
+			"med": 0.412
+		},
+		"http_req_duration": {
+			"p(95)": 2.969,
+			"p(99)": 4.408,
+			"max": 76.234,
+			"avg": 1.1360997653084777,
+			"min": 0.126,
+			"med": 0.84
+		},
+		"latency_api_payments": {
+			"avg": 0.5401671570687985,
+			"min": 0.18,
+			"med": 0.471,
+			"p(95)": 1.0071999999999997,
+			"p(99)": 1.3985599999999996,
+			"max": 26.023
+		},
+		"http_req_connecting": {
+			"med": 0,
+			"p(95)": 0,
+			"p(99)": 0,
+			"max": 0.242,
+			"avg": 0.000009251439091124923,
+			"min": 0
+		},
+		"latency_api_holdings_lots": {
+			"max": 12.321,
+			"avg": 0.4770594087151476,
+			"min": 0.154,
+			"med": 0.416,
+			"p(95)": 0.9221999999999997,
+			"p(99)": 1.3938399999999995
+		},
+		"latency_api_retirement_ppk_stats": {
+			"max": 33.729,
+			"avg": 1.8889085049740784,
+			"min": 0.716,
+			"med": 1.772,
+			"p(95)": 2.9541999999999997,
+			"p(99)": 4.235719999999999
+		},
+		"latency_api_users": {
+			"p(99)": 1.3303199999999993,
+			"max": 16.844,
+			"avg": 0.4760661342300683,
+			"min": 0.147,
+			"med": 0.409,
+			"p(95)": 0.9351999999999997
+		},
+		"latency_api_investment_bond_stats": {
+			"max": 13.083,
+			"avg": 0.6064464060529655,
+			"min": 0.206,
+			"med": 0.537,
+			"p(95)": 1.1321999999999997,
+			"p(99)": 1.63628
+		},
+		"latency_api_snapshots": {
+			"avg": 0.6353606557377033,
+			"min": 0.224,
+			"med": 0.569,
+			"p(95)": 1.1661999999999997,
+			"p(99)": 1.6495599999999997,
+			"max": 12.066
+		},
+		"http_reqs": {
+			"count": 256933,
+			"rate": 8534.688521388209
+		},
+		"latency_api_pit38_realized": {
+			"med": 0.426,
+			"p(95)": 0.93,
+			"p(99)": 1.36028,
+			"max": 8.879,
+			"avg": 0.4866513941431968,
+			"min": 0.158
+		},
+		"http_req_sending": {
+			"p(99)": 0.016,
+			"max": 0.645,
+			"avg": 0.0026172387353825366,
+			"min": 0,
+			"med": 0.002,
+			"p(95)": 0.006
+		},
+		"latency_api_transactions": {
+			"avg": 0.5537553593947054,
+			"min": 0.184,
+			"med": 0.49,
+			"p(95)": 1.036,
+			"p(99)": 1.44328,
+			"max": 28.427
+		},
+		"latency_api_debts": {
+			"avg": 1.411255149222368,
+			"min": 0.508,
+			"med": 1.318,
+			"p(95)": 2.3031999999999995,
+			"p(99)": 3.06084,
+			"max": 29.442
+		},
+		"latency_api_holdings_dividends": {
+			"max": 13.082,
+			"avg": 0.47767661482415796,
+			"min": 0.126,
+			"med": 0.417,
+			"p(95)": 0.929,
+			"p(99)": 1.32528
+		},
+		"latency_api_cpi_series": {
+			"avg": 0.5646045957685291,
+			"min": 0.203,
+			"med": 0.507,
+			"p(95)": 1.054,
+			"p(99)": 1.4583199999999992,
+			"max": 5.9
+		},
+		"checks": {
+			"passes": 256934,
+			"fails": 0,
+			"thresholds": {
+				"rate>0.99": false
+			},
+			"value": 1
+		},
+		"iterations": {
+			"count": 7137,
+			"rate": 237.0737584395451
+		},
+		"latency_api_transactions_counts": {
+			"p(99)": 1.365,
+			"max": 16.91,
+			"avg": 0.4904274905422445,
+			"min": 0.159,
+			"med": 0.426,
+			"p(95)": 0.941
+		},
+		"http_req_tls_handshaking": {
+			"p(95)": 0,
+			"p(99)": 0,
+			"max": 0,
+			"avg": 0,
+			"min": 0,
+			"med": 0
+		}
+	}
+}

@@ -167,6 +167,39 @@ func TestBuildUpdatePatchBlankCompany(t *testing.T) {
 	}
 }
 
+func TestCurrentSalaryFromRecentUsesMostRecentRecord(t *testing.T) {
+	recent := map[int][]SalaryRecord{
+		2: {
+			{GrossAmount: decimal.NewFromInt(12000)},
+			{GrossAmount: decimal.NewFromInt(10000)},
+		},
+		3: {},
+	}
+	got := currentSalaryFromRecent(recent)
+	if !got[2].Equal(decimal.NewFromInt(12000)) {
+		t.Fatalf("current salary = %s, want 12000", got[2])
+	}
+	if _, ok := got[3]; ok {
+		t.Fatalf("owner 3 should be absent when there are no recent records")
+	}
+}
+
+func TestHasPreviousSalary(t *testing.T) {
+	if hasPreviousSalary(map[int][]SalaryRecord{
+		1: {{GrossAmount: decimal.NewFromInt(1)}},
+	}) {
+		t.Fatal("single recent record should not have a previous salary")
+	}
+	if !hasPreviousSalary(map[int][]SalaryRecord{
+		1: {
+			{GrossAmount: decimal.NewFromInt(2)},
+			{GrossAmount: decimal.NewFromInt(1)},
+		},
+	}) {
+		t.Fatal("two recent records should have a previous salary")
+	}
+}
+
 func TestBuildCreateRequestInvalidDate(t *testing.T) {
 	raw := rawJSON(t, map[string]any{
 		"date":          "31-01-2026",

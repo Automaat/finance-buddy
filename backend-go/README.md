@@ -27,6 +27,7 @@ Environment variables:
 | `FB_ADMIN_USERNAME` | `admin`                 | Admin user reseeded on every startup                                                                                                                                           |
 | `FB_ADMIN_PASSWORD` | — (required)            | Admin password reseeded on every startup                                                                                                                                       |
 | `FB_COOKIE_SECURE`  | `false`                 | Mark session cookie Secure (HTTPS-only deploys)                                                                                                                                |
+| `FB_ACCESS_LOG`     | `false`                 | Emit one structured info log per HTTP request. Prometheus request metrics are always recorded.                                                                                 |
 | `FB_STOOQ_APIKEY`   | —                       | Stooq daily-history apikey for holdings backfill. Empty → keyless intraday snapshot only, no historical backfill.                                                              |
 | `FB_FRED_API_KEY`   | —                       | FRED apikey for monthly Polish CPI (POLCPIALLMINMEI). Empty → Eurostat HICP fallback (drifts 0.1-0.3pp vs Ministry GUS CPI). Free signup at fredaccount.stlouisfed.org/apikey. |
 
