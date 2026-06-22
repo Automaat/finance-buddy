@@ -13,37 +13,29 @@ import (
 func buildSecurityInput(raw map[string]json.RawMessage) (Security, *httputil.ValidationError) {
 	var s Security
 	s.Currency = "PLN"
-	if v, ok := raw["symbol"]; ok && string(v) != "null" {
-		if err := json.Unmarshal(v, &s.Symbol); err != nil {
-			return s, &httputil.ValidationError{Field: "symbol", Msg: "must be a string"}
-		}
+
+	symbol, vErr := validation.RequiredTrimmedString(raw, "symbol", "required", "required")
+	if vErr != nil {
+		return s, vErr
 	}
-	if s.Symbol = strings.TrimSpace(s.Symbol); s.Symbol == "" {
-		return s, &httputil.ValidationError{Field: "symbol", Msg: "required"}
-	}
+	s.Symbol = symbol
 	if len(s.Symbol) > 32 {
 		return s, &httputil.ValidationError{Field: "symbol", Msg: "max 32 chars"}
 	}
-	if v, ok := raw["isin"]; ok && string(v) != "null" {
-		var isin string
-		if err := json.Unmarshal(v, &isin); err != nil {
-			return s, &httputil.ValidationError{Field: "isin", Msg: "must be a string"}
+	if isin, vErr := validation.OptionalNonEmptyTrimmedString(raw, "isin"); vErr != nil {
+		return s, vErr
+	} else if isin != nil {
+		if len(*isin) != 12 {
+			return s, &httputil.ValidationError{Field: "isin", Msg: "must be 12 chars"}
 		}
-		if isin = strings.TrimSpace(isin); isin != "" {
-			if len(isin) != 12 {
-				return s, &httputil.ValidationError{Field: "isin", Msg: "must be 12 chars"}
-			}
-			s.ISIN = &isin
-		}
+		s.ISIN = isin
 	}
-	if v, ok := raw["name"]; ok && string(v) != "null" {
-		if err := json.Unmarshal(v, &s.Name); err != nil {
-			return s, &httputil.ValidationError{Field: "name", Msg: "must be a string"}
-		}
+
+	name, vErr := validation.RequiredTrimmedString(raw, "name", "required", "required")
+	if vErr != nil {
+		return s, vErr
 	}
-	if s.Name = strings.TrimSpace(s.Name); s.Name == "" {
-		return s, &httputil.ValidationError{Field: "name", Msg: "required"}
-	}
+	s.Name = name
 	if len(s.Name) > 200 {
 		return s, &httputil.ValidationError{Field: "name", Msg: "max 200 chars"}
 	}
@@ -55,17 +47,13 @@ func buildSecurityInput(raw map[string]json.RawMessage) (Security, *httputil.Val
 	if !validAssetType(s.AssetType) {
 		return s, &httputil.ValidationError{Field: "asset_type", Msg: "must be one of stock|etf|bond|fund"}
 	}
-	if v, ok := raw["currency"]; ok && string(v) != "null" {
-		var c string
-		if err := json.Unmarshal(v, &c); err != nil {
-			return s, &httputil.ValidationError{Field: "currency", Msg: "must be a string"}
+	if c, vErr := validation.OptionalNonEmptyTrimmedString(raw, "currency"); vErr != nil {
+		return s, vErr
+	} else if c != nil {
+		if len(*c) != 3 {
+			return s, &httputil.ValidationError{Field: "currency", Msg: "must be 3 chars"}
 		}
-		if c = strings.TrimSpace(c); c != "" {
-			if len(c) != 3 {
-				return s, &httputil.ValidationError{Field: "currency", Msg: "must be 3 chars"}
-			}
-			s.Currency = strings.ToUpper(c)
-		}
+		s.Currency = strings.ToUpper(*c)
 	}
 	return s, nil
 }
@@ -202,17 +190,13 @@ func buildDividendInput(raw map[string]json.RawMessage) (Dividend, *httputil.Val
 		}
 		d.WithholdingTax = *tax
 	}
-	if v, ok := raw["currency"]; ok && string(v) != "null" {
-		var c string
-		if err := json.Unmarshal(v, &c); err != nil {
-			return d, &httputil.ValidationError{Field: "currency", Msg: "must be a string"}
+	if c, vErr := validation.OptionalNonEmptyTrimmedString(raw, "currency"); vErr != nil {
+		return d, vErr
+	} else if c != nil {
+		if len(*c) != 3 {
+			return d, &httputil.ValidationError{Field: "currency", Msg: "must be 3 chars"}
 		}
-		if c = strings.TrimSpace(c); c != "" {
-			if len(c) != 3 {
-				return d, &httputil.ValidationError{Field: "currency", Msg: "must be 3 chars"}
-			}
-			d.Currency = strings.ToUpper(c)
-		}
+		d.Currency = strings.ToUpper(*c)
 	}
 	return d, nil
 }
