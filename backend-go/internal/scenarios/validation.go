@@ -39,7 +39,7 @@ func validateCreate(name, kind string, inputs json.RawMessage) *httputil.Validat
 	if _, ok := validKinds[kind]; !ok {
 		return &httputil.ValidationError{Field: "kind", Msg: "Kind must be one of: monte-carlo, mortgage-vs-invest, retirement, wibor"}
 	}
-	if len(inputs) == 0 || validation.IsNull(inputs) {
+	if inputsMissingOrNull(inputs) {
 		return &httputil.ValidationError{Field: "inputs_json", Msg: "Inputs must be a JSON object"}
 	}
 	if len(inputs) > maxInputsBytes {
@@ -67,7 +67,7 @@ func validateUpdate(name string, inputs json.RawMessage) *httputil.ValidationErr
 	if len(trimmed) > maxNameLen {
 		return &httputil.ValidationError{Field: "name", Msg: "Name must be at most 200 characters"}
 	}
-	if len(inputs) == 0 || validation.IsNull(inputs) {
+	if inputsMissingOrNull(inputs) {
 		return &httputil.ValidationError{Field: "inputs_json", Msg: "Inputs must be a JSON object"}
 	}
 	if len(inputs) > maxInputsBytes {
@@ -91,4 +91,8 @@ func validateCloneName(name string) *httputil.ValidationError {
 		return &httputil.ValidationError{Field: "name", Msg: "Name must be at most 200 characters"}
 	}
 	return nil
+}
+
+func inputsMissingOrNull(inputs json.RawMessage) bool {
+	return len(inputs) == 0 || validation.IsNull(inputs)
 }
