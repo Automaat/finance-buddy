@@ -390,6 +390,96 @@ func TestRequiredEnumString(t *testing.T) {
 	requireValidation(t, vErr, "contract_type", `invalid value "mandate"`)
 }
 
+func TestOptionalEnumString(t *testing.T) {
+	allowed := map[string]struct{}{"employment": {}, "b2b": {}}
+	got, vErr := OptionalEnumString(
+		map[string]json.RawMessage{"contract_type": json.RawMessage(`"b2b"`)},
+		"contract_type",
+		allowed,
+		"employment",
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got != "b2b" {
+		t.Fatalf("got = %q", got)
+	}
+
+	got, vErr = OptionalEnumString(map[string]json.RawMessage{}, "contract_type", allowed, "employment")
+	if vErr != nil || got != "employment" {
+		t.Fatalf("got = %q vErr = %#v", got, vErr)
+	}
+
+	got, vErr = OptionalEnumString(
+		map[string]json.RawMessage{"contract_type": json.RawMessage(`null`)},
+		"contract_type",
+		allowed,
+		"employment",
+	)
+	if vErr != nil || got != "employment" {
+		t.Fatalf("got = %q vErr = %#v", got, vErr)
+	}
+
+	_, vErr = OptionalEnumString(
+		map[string]json.RawMessage{"contract_type": json.RawMessage(`7`)},
+		"contract_type",
+		allowed,
+		"employment",
+	)
+	requireValidation(t, vErr, "contract_type", "must be a string")
+
+	_, vErr = OptionalEnumString(
+		map[string]json.RawMessage{"contract_type": json.RawMessage(`"mandate"`)},
+		"contract_type",
+		allowed,
+		"employment",
+	)
+	requireValidation(t, vErr, "contract_type", `invalid value "mandate"`)
+}
+
+func TestOptionalEnumStringPtr(t *testing.T) {
+	allowed := map[string]struct{}{"employment": {}, "b2b": {}}
+	got, vErr := OptionalEnumStringPtr(
+		map[string]json.RawMessage{"contract_type": json.RawMessage(`"b2b"`)},
+		"contract_type",
+		allowed,
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got == nil || *got != "b2b" {
+		t.Fatalf("got = %v", got)
+	}
+
+	got, vErr = OptionalEnumStringPtr(map[string]json.RawMessage{}, "contract_type", allowed)
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	got, vErr = OptionalEnumStringPtr(
+		map[string]json.RawMessage{"contract_type": json.RawMessage(`null`)},
+		"contract_type",
+		allowed,
+	)
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	_, vErr = OptionalEnumStringPtr(
+		map[string]json.RawMessage{"contract_type": json.RawMessage(`7`)},
+		"contract_type",
+		allowed,
+	)
+	requireValidation(t, vErr, "contract_type", "must be a string")
+
+	_, vErr = OptionalEnumStringPtr(
+		map[string]json.RawMessage{"contract_type": json.RawMessage(`"mandate"`)},
+		"contract_type",
+		allowed,
+	)
+	requireValidation(t, vErr, "contract_type", `invalid value "mandate"`)
+}
+
 func TestOptionalUpperTrimmedEnumString(t *testing.T) {
 	allowed := map[string]struct{}{"PLN": {}, "USD": {}}
 	got, vErr := OptionalUpperTrimmedEnumString(

@@ -239,6 +239,45 @@ func RequiredEnumString(
 	return s, nil
 }
 
+// OptionalEnumString reads an optional string field and checks it belongs to
+// the provided allowed set. Missing and explicit null return fallback.
+func OptionalEnumString(
+	raw map[string]json.RawMessage,
+	key string,
+	allowed map[string]struct{},
+	fallback string,
+) (string, *httputil.ValidationError) {
+	s, vErr := OptionalEnumStringPtr(raw, key, allowed)
+	if vErr != nil {
+		return "", vErr
+	}
+	if s == nil {
+		return fallback, nil
+	}
+	return *s, nil
+}
+
+// OptionalEnumStringPtr is the sparse-update variant of OptionalEnumString.
+// Missing and explicit null return nil.
+func OptionalEnumStringPtr(
+	raw map[string]json.RawMessage,
+	key string,
+	allowed map[string]struct{},
+) (*string, *httputil.ValidationError) {
+	v, ok := raw[key]
+	if !ok || IsNull(v) {
+		return nil, nil
+	}
+	s, err := RawString(v)
+	if err != nil {
+		return nil, &httputil.ValidationError{Field: key, Msg: "must be a string"}
+	}
+	if _, ok := allowed[s]; !ok {
+		return nil, &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
+	}
+	return &s, nil
+}
+
 // OptionalUpperTrimmedEnumString reads an optional string field, trims
 // whitespace, uppercases it, and checks it belongs to the provided allowed set.
 // Missing and explicit null return fallback.

@@ -58,7 +58,7 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 	}
 	r.Currency = cur
 
-	wrap, vErr := optionalEnumOrNull(raw, "account_wrapper", validWrappers)
+	wrap, vErr := validation.OptionalEnumStringPtr(raw, "account_wrapper", validWrappers)
 	if vErr != nil {
 		return r, vErr
 	}
@@ -116,8 +116,10 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 		}
 		p.Name = &s
 	}
-	if vErr := patchEnumString(raw, "category", validCategories, &p.Category); vErr != nil {
+	if category, vErr := validation.OptionalEnumStringPtr(raw, "category", validCategories); vErr != nil {
 		return p, vErr
+	} else if category != nil {
+		p.Category = category
 	}
 	if _, ok := raw["owner_user_id"]; ok {
 		p.OwnerUserIDSet = true
@@ -130,8 +132,10 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 	if vErr := patchPlainString(raw, "currency", &p.Currency); vErr != nil {
 		return p, vErr
 	}
-	if vErr := patchEnumString(raw, "purpose", validPurposes, &p.Purpose); vErr != nil {
+	if purpose, vErr := validation.OptionalEnumStringPtr(raw, "purpose", validPurposes); vErr != nil {
 		return p, vErr
+	} else if purpose != nil {
+		p.Purpose = purpose
 	}
 	if v, ok := raw["account_wrapper"]; ok {
 		p.AccountWrapperSet = true
@@ -242,21 +246,6 @@ func optionalString(raw map[string]json.RawMessage, key, fallback string) (strin
 	return s, nil
 }
 
-func optionalEnumOrNull(raw map[string]json.RawMessage, key string, allowed map[string]struct{}) (*string, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return nil, nil
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return nil, &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	if _, ok := allowed[s]; !ok {
-		return nil, &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
-	}
-	return &s, nil
-}
-
 func optionalDecimal(raw map[string]json.RawMessage, key string) (*decimal.Decimal, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok || validation.IsNull(v) {
@@ -294,22 +283,6 @@ func optionalBoolDefaultFalse(raw map[string]json.RawMessage, key string) (bool,
 		return false, &httputil.ValidationError{Field: key, Msg: "must be a boolean"}
 	}
 	return b, nil
-}
-
-func patchEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}, dest **string) *httputil.ValidationError {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return nil
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	if _, ok := allowed[s]; !ok {
-		return &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
-	}
-	*dest = &s
-	return nil
 }
 
 func patchPlainString(raw map[string]json.RawMessage, key string, dest **string) *httputil.ValidationError {

@@ -2,7 +2,6 @@ package debts
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 	"time"
 
@@ -92,15 +91,10 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 		}
 		p.Name = &s
 	}
-	if v, ok := raw["debt_type"]; ok && !validation.IsNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return p, &httputil.ValidationError{Field: "debt_type", Msg: "must be a string"}
-		}
-		if _, ok := validDebtTypes[s]; !ok {
-			return p, &httputil.ValidationError{Field: "debt_type", Msg: fmt.Sprintf("invalid value %q", s)}
-		}
-		p.DebtType = &s
+	if debtType, vErr := validation.OptionalEnumStringPtr(raw, "debt_type", validDebtTypes); vErr != nil {
+		return p, vErr
+	} else if debtType != nil {
+		p.DebtType = debtType
 	}
 	if t, vErr := validation.OptionalDateNotFuture(
 		raw,
