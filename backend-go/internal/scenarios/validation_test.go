@@ -63,6 +63,14 @@ func TestValidateCreateInputsMissing(t *testing.T) {
 	}
 }
 
+func TestValidateCreateInputsWhitespaceNull(t *testing.T) {
+	t.Parallel()
+	err := validateCreate("Plan", "retirement", json.RawMessage(`  null  `))
+	if err == nil || err.Field != "inputs_json" || err.Msg != "Inputs must be a JSON object" {
+		t.Fatalf("expected inputs object error for whitespace null, got %+v", err)
+	}
+}
+
 func TestValidateCreateInputsTooLarge(t *testing.T) {
 	t.Parallel()
 	// Build a JSON object that exceeds maxInputsBytes.
@@ -84,6 +92,14 @@ func TestValidateUpdateInputsMustBeObject(t *testing.T) {
 	t.Parallel()
 	if err := validateUpdate("Plan", json.RawMessage(`[]`)); err == nil || err.Field != "inputs_json" {
 		t.Fatalf("expected inputs error, got %+v", err)
+	}
+}
+
+func TestValidateUpdateInputsWhitespaceNull(t *testing.T) {
+	t.Parallel()
+	err := validateUpdate("Plan", json.RawMessage(`  null  `))
+	if err == nil || err.Field != "inputs_json" || err.Msg != "Inputs must be a JSON object" {
+		t.Fatalf("expected inputs object error for whitespace null, got %+v", err)
 	}
 }
 
