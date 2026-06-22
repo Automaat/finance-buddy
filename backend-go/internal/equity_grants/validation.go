@@ -107,7 +107,7 @@ func requireGrantBasics(raw map[string]json.RawMessage, r *createRequest) *httpu
 	}
 	r.OwnerUserID = ownerID
 
-	totalShares, vErr := requirePositiveInt(raw, "total_shares", "Total shares must be greater than 0")
+	totalShares, vErr := validation.RequiredPositiveInt(raw, "total_shares", "Total shares must be greater than 0")
 	if vErr != nil {
 		return vErr
 	}
@@ -140,13 +140,18 @@ func requireGrantVesting(raw map[string]json.RawMessage, r *createRequest) *http
 	}
 	r.VestStartDate = vsd
 
-	cliff, vErr := optionalNonNegativeInt(raw, "vest_cliff_months", "Cliff months must be non-negative", 0)
+	cliff, vErr := validation.OptionalNonNegativeIntDefault(
+		raw,
+		"vest_cliff_months",
+		"Cliff months must be non-negative",
+		0,
+	)
 	if vErr != nil {
 		return vErr
 	}
 	r.VestCliffMonths = cliff
 
-	total, vErr := requirePositiveInt(raw, "vest_total_months", "Total vesting months must be greater than 0")
+	total, vErr := validation.RequiredPositiveInt(raw, "vest_total_months", "Total vesting months must be greater than 0")
 	if vErr != nil {
 		return vErr
 	}
@@ -261,14 +266,28 @@ func patchStrings(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Vali
 }
 
 func patchNumbersAndBools(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.ValidationError {
-	if vErr := patchPositiveInt(raw, "total_shares", "Total shares must be greater than 0", &p.TotalShares); vErr != nil {
+	if totalShares, vErr := validation.OptionalPositiveInt(raw, "total_shares", "Total shares must be greater than 0"); vErr != nil {
 		return vErr
+	} else if totalShares != nil {
+		p.TotalShares = totalShares
 	}
-	if vErr := patchNonNegativeIntPtr(raw, "vest_cliff_months", "Cliff months must be non-negative", &p.VestCliffMonths); vErr != nil {
+	if cliffMonths, vErr := validation.OptionalNonNegativeInt(
+		raw,
+		"vest_cliff_months",
+		"Cliff months must be non-negative",
+	); vErr != nil {
 		return vErr
+	} else if cliffMonths != nil {
+		p.VestCliffMonths = cliffMonths
 	}
-	if vErr := patchPositiveInt(raw, "vest_total_months", "Total vesting months must be greater than 0", &p.VestTotalMonths); vErr != nil {
+	if totalMonths, vErr := validation.OptionalPositiveInt(
+		raw,
+		"vest_total_months",
+		"Total vesting months must be greater than 0",
+	); vErr != nil {
 		return vErr
+	} else if totalMonths != nil {
+		p.VestTotalMonths = totalMonths
 	}
 	if d, vErr := validation.OptionalNonNegativeDecimal(raw, "strike_price", "Strike price must be non-negative"); vErr != nil {
 		return vErr
@@ -322,37 +341,6 @@ func patchSchedule(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Val
 	return nil
 }
 
-// --- shared decoders ---
-
-func requirePositiveInt(raw map[string]json.RawMessage, key, msg string) (int, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return 0, &httputil.ValidationError{Field: key, Msg: "Field required"}
-	}
-	var n int
-	if err := json.Unmarshal(v, &n); err != nil {
-		return 0, &httputil.ValidationError{Field: key, Msg: "must be an integer"}
-	}
-	if n <= 0 {
-		return 0, &httputil.ValidationError{Field: key, Msg: msg}
-	}
-	return n, nil
-}
-
-func optionalNonNegativeInt(raw map[string]json.RawMessage, key, msg string, fallback int) (int, *httputil.ValidationError) {
-	n, vErr := validation.OptionalInt(raw, key, "must be an integer")
-	if vErr != nil {
-		return 0, vErr
-	}
-	if n == nil {
-		return fallback, nil
-	}
-	if *n < 0 {
-		return 0, &httputil.ValidationError{Field: key, Msg: msg}
-	}
-	return *n, nil
-}
-
 // --- PATCH helpers ---
 
 func patchNonEmptyString(raw map[string]json.RawMessage, key, emptyMsg string, dest **string) *httputil.ValidationError {
@@ -369,36 +357,6 @@ func patchNonEmptyString(raw map[string]json.RawMessage, key, emptyMsg string, d
 		return &httputil.ValidationError{Field: key, Msg: emptyMsg}
 	}
 	*dest = &s
-	return nil
-}
-
-func patchPositiveInt(raw map[string]json.RawMessage, key, msg string, dest **int) *httputil.ValidationError {
-	n, vErr := validation.OptionalInt(raw, key, "must be an integer")
-	if vErr != nil {
-		return vErr
-	}
-	if n == nil {
-		return nil
-	}
-	if *n <= 0 {
-		return &httputil.ValidationError{Field: key, Msg: msg}
-	}
-	*dest = n
-	return nil
-}
-
-func patchNonNegativeIntPtr(raw map[string]json.RawMessage, key, msg string, dest **int) *httputil.ValidationError {
-	n, vErr := validation.OptionalInt(raw, key, "must be an integer")
-	if vErr != nil {
-		return vErr
-	}
-	if n == nil {
-		return nil
-	}
-	if *n < 0 {
-		return &httputil.ValidationError{Field: key, Msg: msg}
-	}
-	*dest = n
 	return nil
 }
 

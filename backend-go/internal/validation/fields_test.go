@@ -350,6 +350,191 @@ func TestRequiredIntRange(t *testing.T) {
 	requireValidation(t, vErr, "year", "Year must be between 2000 and 2030")
 }
 
+func TestRequiredPositiveInt(t *testing.T) {
+	got, vErr := RequiredPositiveInt(
+		map[string]json.RawMessage{"shares": json.RawMessage(`7`)},
+		"shares",
+		"Shares must be greater than 0",
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got != 7 {
+		t.Fatalf("got = %d", got)
+	}
+
+	_, vErr = RequiredPositiveInt(map[string]json.RawMessage{}, "shares", "Shares must be greater than 0")
+	requireValidation(t, vErr, "shares", "Field required")
+
+	_, vErr = RequiredPositiveInt(
+		map[string]json.RawMessage{"shares": json.RawMessage(`null`)},
+		"shares",
+		"Shares must be greater than 0",
+	)
+	requireValidation(t, vErr, "shares", "Field required")
+
+	_, vErr = RequiredPositiveInt(
+		map[string]json.RawMessage{"shares": json.RawMessage(`"7"`)},
+		"shares",
+		"Shares must be greater than 0",
+	)
+	requireValidation(t, vErr, "shares", "must be an integer")
+
+	_, vErr = RequiredPositiveInt(
+		map[string]json.RawMessage{"shares": json.RawMessage(`0`)},
+		"shares",
+		"Shares must be greater than 0",
+	)
+	requireValidation(t, vErr, "shares", "Shares must be greater than 0")
+
+	_, vErr = RequiredPositiveInt(
+		map[string]json.RawMessage{"shares": json.RawMessage(`-1`)},
+		"shares",
+		"Shares must be greater than 0",
+	)
+	requireValidation(t, vErr, "shares", "Shares must be greater than 0")
+}
+
+func TestOptionalPositiveInt(t *testing.T) {
+	got, vErr := OptionalPositiveInt(
+		map[string]json.RawMessage{"shares": json.RawMessage(`7`)},
+		"shares",
+		"Shares must be greater than 0",
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got == nil || *got != 7 {
+		t.Fatalf("got = %v", got)
+	}
+
+	got, vErr = OptionalPositiveInt(map[string]json.RawMessage{}, "shares", "Shares must be greater than 0")
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	got, vErr = OptionalPositiveInt(
+		map[string]json.RawMessage{"shares": json.RawMessage(`null`)},
+		"shares",
+		"Shares must be greater than 0",
+	)
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	_, vErr = OptionalPositiveInt(
+		map[string]json.RawMessage{"shares": json.RawMessage(`"7"`)},
+		"shares",
+		"Shares must be greater than 0",
+	)
+	requireValidation(t, vErr, "shares", "must be an integer")
+
+	_, vErr = OptionalPositiveInt(
+		map[string]json.RawMessage{"shares": json.RawMessage(`0`)},
+		"shares",
+		"Shares must be greater than 0",
+	)
+	requireValidation(t, vErr, "shares", "Shares must be greater than 0")
+
+	_, vErr = OptionalPositiveInt(
+		map[string]json.RawMessage{"shares": json.RawMessage(`-1`)},
+		"shares",
+		"Shares must be greater than 0",
+	)
+	requireValidation(t, vErr, "shares", "Shares must be greater than 0")
+}
+
+func TestOptionalNonNegativeInt(t *testing.T) {
+	got, vErr := OptionalNonNegativeInt(
+		map[string]json.RawMessage{"months": json.RawMessage(`0`)},
+		"months",
+		"Months must be non-negative",
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got == nil || *got != 0 {
+		t.Fatalf("got = %v", got)
+	}
+
+	got, vErr = OptionalNonNegativeInt(map[string]json.RawMessage{}, "months", "Months must be non-negative")
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	got, vErr = OptionalNonNegativeInt(
+		map[string]json.RawMessage{"months": json.RawMessage(`null`)},
+		"months",
+		"Months must be non-negative",
+	)
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	_, vErr = OptionalNonNegativeInt(
+		map[string]json.RawMessage{"months": json.RawMessage(`"0"`)},
+		"months",
+		"Months must be non-negative",
+	)
+	requireValidation(t, vErr, "months", "must be an integer")
+
+	_, vErr = OptionalNonNegativeInt(
+		map[string]json.RawMessage{"months": json.RawMessage(`-1`)},
+		"months",
+		"Months must be non-negative",
+	)
+	requireValidation(t, vErr, "months", "Months must be non-negative")
+}
+
+func TestOptionalNonNegativeIntDefault(t *testing.T) {
+	got, vErr := OptionalNonNegativeIntDefault(
+		map[string]json.RawMessage{},
+		"months",
+		"Months must be non-negative",
+		12,
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got != 12 {
+		t.Fatalf("got = %d", got)
+	}
+
+	got, vErr = OptionalNonNegativeIntDefault(
+		map[string]json.RawMessage{"months": json.RawMessage(`null`)},
+		"months",
+		"Months must be non-negative",
+		12,
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got != 12 {
+		t.Fatalf("got = %d", got)
+	}
+
+	got, vErr = OptionalNonNegativeIntDefault(
+		map[string]json.RawMessage{"months": json.RawMessage(`3`)},
+		"months",
+		"Months must be non-negative",
+		12,
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got != 3 {
+		t.Fatalf("got = %d", got)
+	}
+
+	_, vErr = OptionalNonNegativeIntDefault(
+		map[string]json.RawMessage{"months": json.RawMessage(`-1`)},
+		"months",
+		"Months must be non-negative",
+		12,
+	)
+	requireValidation(t, vErr, "months", "Months must be non-negative")
+}
+
 func TestRequiredEnumString(t *testing.T) {
 	allowed := map[string]struct{}{"employment": {}, "b2b": {}}
 

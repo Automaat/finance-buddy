@@ -218,6 +218,75 @@ func RequiredIntRange(
 	return n, nil
 }
 
+// RequiredPositiveInt reads a required integer field and rejects zero or
+// negative values with the supplied positiveMsg.
+func RequiredPositiveInt(
+	raw map[string]json.RawMessage,
+	key string,
+	positiveMsg string,
+) (int, *httputil.ValidationError) {
+	n, vErr := RequiredInt(raw, key, "Field required", "must be an integer")
+	if vErr != nil {
+		return 0, vErr
+	}
+	if n <= 0 {
+		return 0, &httputil.ValidationError{Field: key, Msg: positiveMsg}
+	}
+	return n, nil
+}
+
+// OptionalPositiveInt reads an optional integer field and rejects zero or
+// negative values with the supplied positiveMsg.
+func OptionalPositiveInt(
+	raw map[string]json.RawMessage,
+	key string,
+	positiveMsg string,
+) (*int, *httputil.ValidationError) {
+	n, vErr := OptionalInt(raw, key, "must be an integer")
+	if vErr != nil {
+		return nil, vErr
+	}
+	if n != nil && *n <= 0 {
+		return nil, &httputil.ValidationError{Field: key, Msg: positiveMsg}
+	}
+	return n, nil
+}
+
+// OptionalNonNegativeInt reads an optional integer field and rejects negative
+// values with the supplied nonNegativeMsg.
+func OptionalNonNegativeInt(
+	raw map[string]json.RawMessage,
+	key string,
+	nonNegativeMsg string,
+) (*int, *httputil.ValidationError) {
+	n, vErr := OptionalInt(raw, key, "must be an integer")
+	if vErr != nil {
+		return nil, vErr
+	}
+	if n != nil && *n < 0 {
+		return nil, &httputil.ValidationError{Field: key, Msg: nonNegativeMsg}
+	}
+	return n, nil
+}
+
+// OptionalNonNegativeIntDefault is the default-valued variant of
+// OptionalNonNegativeInt. Missing and explicit null return fallback.
+func OptionalNonNegativeIntDefault(
+	raw map[string]json.RawMessage,
+	key string,
+	nonNegativeMsg string,
+	fallback int,
+) (int, *httputil.ValidationError) {
+	n, vErr := OptionalNonNegativeInt(raw, key, nonNegativeMsg)
+	if vErr != nil {
+		return 0, vErr
+	}
+	if n == nil {
+		return fallback, nil
+	}
+	return *n, nil
+}
+
 // RequiredEnumString reads a required string field and checks it belongs to
 // the provided allowed set.
 func RequiredEnumString(
