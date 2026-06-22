@@ -124,6 +124,31 @@ func TestOptionalNonEmptyTrimmedStringMax(t *testing.T) {
 		t.Fatalf("got = %v", got)
 	}
 
+	got, vErr = OptionalNonEmptyTrimmedStringMax(map[string]json.RawMessage{}, "source", 10, "max 10 chars")
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	got, vErr = OptionalNonEmptyTrimmedStringMax(
+		map[string]json.RawMessage{"source": json.RawMessage(`null`)},
+		"source",
+		10,
+		"max 10 chars",
+	)
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	got, vErr = OptionalNonEmptyTrimmedStringMax(
+		map[string]json.RawMessage{"source": json.RawMessage(`"  "`)},
+		"source",
+		10,
+		"max 10 chars",
+	)
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
 	_, vErr = OptionalNonEmptyTrimmedStringMax(
 		map[string]json.RawMessage{"source": json.RawMessage(`"too-long"`)},
 		"source",
@@ -131,6 +156,14 @@ func TestOptionalNonEmptyTrimmedStringMax(t *testing.T) {
 		"max 3 chars",
 	)
 	requireValidation(t, vErr, "source", "max 3 chars")
+
+	_, vErr = OptionalNonEmptyTrimmedStringMax(
+		map[string]json.RawMessage{"source": json.RawMessage(`7`)},
+		"source",
+		10,
+		"max 10 chars",
+	)
+	requireValidation(t, vErr, "source", "must be a string")
 }
 
 func TestOptionalString(t *testing.T) {
