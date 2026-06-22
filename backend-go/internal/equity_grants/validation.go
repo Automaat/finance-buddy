@@ -120,7 +120,13 @@ func requireGrantBasics(raw map[string]json.RawMessage, r *createRequest) *httpu
 	}
 	r.StrikePrice = strike
 
-	currency, vErr := optionalCurrency(raw, "USD")
+	currency, vErr := validation.OptionalUpperTrimmedEnumString(
+		raw,
+		"currency",
+		validCurrencies,
+		"USD",
+		"Currency must be one of [CHF, EUR, GBP, PLN, USD]",
+	)
 	if vErr != nil {
 		return vErr
 	}
@@ -223,8 +229,15 @@ func patchStrings(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Vali
 	if vErr := patchOwnerUserID(raw, p); vErr != nil {
 		return vErr
 	}
-	if vErr := patchCurrency(raw, &p.Currency); vErr != nil {
+	if s, vErr := validation.OptionalUpperTrimmedEnumStringPtr(
+		raw,
+		"currency",
+		validCurrencies,
+		"Currency must be one of [CHF, EUR, GBP, PLN, USD]",
+	); vErr != nil {
 		return vErr
+	} else if s != nil {
+		p.Currency = s
 	}
 	if vErr := patchEnumString(raw, "vest_frequency", validFrequencies, &p.VestFrequency); vErr != nil {
 		return vErr
@@ -350,22 +363,6 @@ func optionalEnumString(raw map[string]json.RawMessage, key string, allowed map[
 	return s, nil
 }
 
-func optionalCurrency(raw map[string]json.RawMessage, fallback string) (string, *httputil.ValidationError) {
-	v, ok := raw["currency"]
-	if !ok || validation.IsNull(v) {
-		return fallback, nil
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &httputil.ValidationError{Field: "currency", Msg: "must be a string"}
-	}
-	s = strings.ToUpper(strings.TrimSpace(s))
-	if _, ok := validCurrencies[s]; !ok {
-		return "", &httputil.ValidationError{Field: "currency", Msg: "Currency must be one of [CHF, EUR, GBP, PLN, USD]"}
-	}
-	return s, nil
-}
-
 // --- PATCH helpers ---
 
 func patchEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}, dest **string) *httputil.ValidationError {
@@ -396,23 +393,6 @@ func patchNonEmptyString(raw map[string]json.RawMessage, key, emptyMsg string, d
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return &httputil.ValidationError{Field: key, Msg: emptyMsg}
-	}
-	*dest = &s
-	return nil
-}
-
-func patchCurrency(raw map[string]json.RawMessage, dest **string) *httputil.ValidationError {
-	v, ok := raw["currency"]
-	if !ok || validation.IsNull(v) {
-		return nil
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return &httputil.ValidationError{Field: "currency", Msg: "must be a string"}
-	}
-	s = strings.ToUpper(strings.TrimSpace(s))
-	if _, ok := validCurrencies[s]; !ok {
-		return &httputil.ValidationError{Field: "currency", Msg: "Currency must be one of [CHF, EUR, GBP, PLN, USD]"}
 	}
 	*dest = &s
 	return nil

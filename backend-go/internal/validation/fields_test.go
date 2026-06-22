@@ -390,6 +390,115 @@ func TestRequiredEnumString(t *testing.T) {
 	requireValidation(t, vErr, "contract_type", `invalid value "mandate"`)
 }
 
+func TestOptionalUpperTrimmedEnumString(t *testing.T) {
+	allowed := map[string]struct{}{"PLN": {}, "USD": {}}
+	got, vErr := OptionalUpperTrimmedEnumString(
+		map[string]json.RawMessage{"currency": json.RawMessage(`" usd "`)},
+		"currency",
+		allowed,
+		"PLN",
+		"invalid currency",
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got != "USD" {
+		t.Fatalf("got = %q", got)
+	}
+
+	got, vErr = OptionalUpperTrimmedEnumString(
+		map[string]json.RawMessage{},
+		"currency",
+		allowed,
+		"PLN",
+		"invalid currency",
+	)
+	if vErr != nil || got != "PLN" {
+		t.Fatalf("got = %q vErr = %#v", got, vErr)
+	}
+
+	got, vErr = OptionalUpperTrimmedEnumString(
+		map[string]json.RawMessage{"currency": json.RawMessage(`null`)},
+		"currency",
+		allowed,
+		"PLN",
+		"invalid currency",
+	)
+	if vErr != nil || got != "PLN" {
+		t.Fatalf("got = %q vErr = %#v", got, vErr)
+	}
+
+	_, vErr = OptionalUpperTrimmedEnumString(
+		map[string]json.RawMessage{"currency": json.RawMessage(`7`)},
+		"currency",
+		allowed,
+		"PLN",
+		"invalid currency",
+	)
+	requireValidation(t, vErr, "currency", "must be a string")
+
+	_, vErr = OptionalUpperTrimmedEnumString(
+		map[string]json.RawMessage{"currency": json.RawMessage(`"EUR"`)},
+		"currency",
+		allowed,
+		"PLN",
+		"invalid currency",
+	)
+	requireValidation(t, vErr, "currency", "invalid currency")
+}
+
+func TestOptionalUpperTrimmedEnumStringPtr(t *testing.T) {
+	allowed := map[string]struct{}{"PLN": {}, "USD": {}}
+	got, vErr := OptionalUpperTrimmedEnumStringPtr(
+		map[string]json.RawMessage{"currency": json.RawMessage(`" pln "`)},
+		"currency",
+		allowed,
+		"invalid currency",
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got == nil || *got != "PLN" {
+		t.Fatalf("got = %v", got)
+	}
+
+	got, vErr = OptionalUpperTrimmedEnumStringPtr(
+		map[string]json.RawMessage{},
+		"currency",
+		allowed,
+		"invalid currency",
+	)
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	got, vErr = OptionalUpperTrimmedEnumStringPtr(
+		map[string]json.RawMessage{"currency": json.RawMessage(`null`)},
+		"currency",
+		allowed,
+		"invalid currency",
+	)
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	_, vErr = OptionalUpperTrimmedEnumStringPtr(
+		map[string]json.RawMessage{"currency": json.RawMessage(`7`)},
+		"currency",
+		allowed,
+		"invalid currency",
+	)
+	requireValidation(t, vErr, "currency", "must be a string")
+
+	_, vErr = OptionalUpperTrimmedEnumStringPtr(
+		map[string]json.RawMessage{"currency": json.RawMessage(`"EUR"`)},
+		"currency",
+		allowed,
+		"invalid currency",
+	)
+	requireValidation(t, vErr, "currency", "invalid currency")
+}
+
 func TestRequiredDecimal(t *testing.T) {
 	got, vErr := RequiredDecimal(
 		map[string]json.RawMessage{"amount": json.RawMessage(`123.45`)},

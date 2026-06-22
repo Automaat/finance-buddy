@@ -33,7 +33,13 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 	}
 	r.Date = t
 
-	currency, vErr := optionalCurrency(raw)
+	currency, vErr := validation.OptionalUpperTrimmedEnumString(
+		raw,
+		"currency",
+		validCurrencies,
+		"USD",
+		"Currency must be one of [CHF, EUR, GBP, PLN, USD]",
+	)
 	if vErr != nil {
 		return r, vErr
 	}
@@ -115,16 +121,15 @@ func patchStrings(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Vali
 		}
 		p.Company = &s
 	}
-	if v, ok := raw["currency"]; ok && !validation.IsNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return &httputil.ValidationError{Field: "currency", Msg: "must be a string"}
-		}
-		s = strings.ToUpper(strings.TrimSpace(s))
-		if _, valid := validCurrencies[s]; !valid {
-			return &httputil.ValidationError{Field: "currency", Msg: "Currency must be one of [CHF, EUR, GBP, PLN, USD]"}
-		}
-		p.Currency = &s
+	if s, vErr := validation.OptionalUpperTrimmedEnumStringPtr(
+		raw,
+		"currency",
+		validCurrencies,
+		"Currency must be one of [CHF, EUR, GBP, PLN, USD]",
+	); vErr != nil {
+		return vErr
+	} else if s != nil {
+		p.Currency = s
 	}
 	if v, ok := raw["source"]; ok && !validation.IsNull(v) {
 		var s string
@@ -176,24 +181,6 @@ func patchNumbers(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Vali
 		return vErr
 	}
 	return nil
-}
-
-// --- shared decoders ---
-
-func optionalCurrency(raw map[string]json.RawMessage) (string, *httputil.ValidationError) {
-	v, ok := raw["currency"]
-	if !ok || validation.IsNull(v) {
-		return "USD", nil // Python default
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &httputil.ValidationError{Field: "currency", Msg: "must be a string"}
-	}
-	s = strings.ToUpper(strings.TrimSpace(s))
-	if _, ok := validCurrencies[s]; !ok {
-		return "", &httputil.ValidationError{Field: "currency", Msg: "Currency must be one of [CHF, EUR, GBP, PLN, USD]"}
-	}
-	return s, nil
 }
 
 func optionalDiscountPct(raw map[string]json.RawMessage) (*decimal.Decimal, *httputil.ValidationError) {
