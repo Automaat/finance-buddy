@@ -67,12 +67,10 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 	}
 	r.Currency = cur
 
-	if v, ok := raw["notes"]; ok && !validation.IsNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return r, &httputil.ValidationError{Field: "notes", Msg: "must be a string"}
-		}
-		r.Notes = &s
+	if s, vErr := validation.OptionalString(raw, "notes"); vErr != nil {
+		return r, vErr
+	} else if s != nil {
+		r.Notes = s
 	}
 	return r, nil
 }
@@ -127,13 +125,11 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 		}
 		p.Currency = &s
 	}
-	if v, ok := raw["notes"]; ok && !validation.IsNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return p, &httputil.ValidationError{Field: "notes", Msg: "must be a string"}
-		}
+	if s, vErr := validation.OptionalString(raw, "notes"); vErr != nil {
+		return p, vErr
+	} else if s != nil {
 		p.NotesSet = true
-		p.Notes = &s
+		p.Notes = s
 	}
 	return p, nil
 }

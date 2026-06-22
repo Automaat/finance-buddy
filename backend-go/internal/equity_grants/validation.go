@@ -191,12 +191,10 @@ func optionalGrantTaxNotes(raw map[string]json.RawMessage, r *createRequest) *ht
 	}
 	r.TaxTreatment = tax
 
-	if v, ok := raw["notes"]; ok && !validation.IsNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return &httputil.ValidationError{Field: "notes", Msg: "must be a string"}
-		}
-		r.Notes = &s
+	if s, vErr := validation.OptionalString(raw, "notes"); vErr != nil {
+		return vErr
+	} else if s != nil {
+		r.Notes = s
 	}
 	return nil
 }
@@ -254,12 +252,10 @@ func patchStrings(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Vali
 	} else if tax != nil {
 		p.TaxTreatment = tax
 	}
-	if v, ok := raw["notes"]; ok && !validation.IsNull(v) {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return &httputil.ValidationError{Field: "notes", Msg: "must be a string"}
-		}
-		p.Notes = &s
+	if s, vErr := validation.OptionalString(raw, "notes"); vErr != nil {
+		return vErr
+	} else if s != nil {
+		p.Notes = s
 	}
 	return nil
 }
