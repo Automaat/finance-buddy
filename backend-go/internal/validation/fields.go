@@ -55,6 +55,41 @@ func OptionalTrimmedString(
 	return &s, nil
 }
 
+// OptionalNonEmptyTrimmedString reads an optional string field, trims
+// whitespace, and returns nil when the trimmed value is empty.
+func OptionalNonEmptyTrimmedString(raw map[string]json.RawMessage, key string) (*string, *httputil.ValidationError) {
+	v, ok := raw[key]
+	if !ok || IsNull(v) {
+		return nil, nil
+	}
+	s, err := RawTrimmedString(v)
+	if err != nil {
+		return nil, &httputil.ValidationError{Field: key, Msg: "must be a string"}
+	}
+	if s == "" {
+		return nil, nil
+	}
+	return &s, nil
+}
+
+// OptionalNonEmptyTrimmedStringMax is OptionalNonEmptyTrimmedString with a
+// maximum length check for non-empty values.
+func OptionalNonEmptyTrimmedStringMax(
+	raw map[string]json.RawMessage,
+	key string,
+	maxLen int,
+	maxMsg string,
+) (*string, *httputil.ValidationError) {
+	s, vErr := OptionalNonEmptyTrimmedString(raw, key)
+	if vErr != nil {
+		return nil, vErr
+	}
+	if s != nil && len(*s) > maxLen {
+		return nil, &httputil.ValidationError{Field: key, Msg: maxMsg}
+	}
+	return s, nil
+}
+
 // OptionalString reads an optional string field without trimming or empty
 // validation. Missing or explicit null returns nil.
 func OptionalString(raw map[string]json.RawMessage, key string) (*string, *httputil.ValidationError) {

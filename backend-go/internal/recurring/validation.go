@@ -2,7 +2,6 @@ package recurring
 
 import (
 	"encoding/json"
-	"strings"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -50,31 +49,20 @@ func readAccountAndAmount(raw map[string]json.RawMessage, in *CreateInput) *http
 }
 
 func readOptionalStrings(raw map[string]json.RawMessage, in *CreateInput) *httputil.ValidationError {
-	if v, ok := raw["transaction_type"]; ok && string(v) != "null" {
-		var s string
-		if jerr := json.Unmarshal(v, &s); jerr != nil {
-			return &httputil.ValidationError{Field: "transaction_type", Msg: "must be a string"}
-		}
-		if s = strings.TrimSpace(s); s != "" {
-			in.TransactionType = &s
-		}
+	if s, vErr := validation.OptionalNonEmptyTrimmedString(raw, "transaction_type"); vErr != nil {
+		return vErr
+	} else if s != nil {
+		in.TransactionType = s
 	}
-	if v, ok := raw["category"]; ok && string(v) != "null" {
-		var s string
-		if jerr := json.Unmarshal(v, &s); jerr != nil {
-			return &httputil.ValidationError{Field: "category", Msg: "must be a string"}
-		}
-		if s = strings.TrimSpace(s); s != "" {
-			if len(s) > 50 {
-				return &httputil.ValidationError{Field: "category", Msg: "max 50 chars"}
-			}
-			in.Category = &s
-		}
+	if s, vErr := validation.OptionalNonEmptyTrimmedStringMax(raw, "category", 50, "max 50 chars"); vErr != nil {
+		return vErr
+	} else if s != nil {
+		in.Category = s
 	}
-	if v, ok := raw["description"]; ok && string(v) != "null" {
-		if jerr := json.Unmarshal(v, &in.Description); jerr != nil {
-			return &httputil.ValidationError{Field: "description", Msg: "must be a string"}
-		}
+	if s, vErr := validation.OptionalString(raw, "description"); vErr != nil {
+		return vErr
+	} else if s != nil {
+		in.Description = *s
 	}
 	if len(in.Description) > 200 {
 		return &httputil.ValidationError{Field: "description", Msg: "max 200 chars"}
