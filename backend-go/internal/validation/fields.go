@@ -137,6 +137,33 @@ func OptionalDateNotFuture(
 	return t, nil
 }
 
+// OptionalBool reads an optional boolean field. Missing and explicit null
+// return nil.
+func OptionalBool(raw map[string]json.RawMessage, key string) (*bool, *httputil.ValidationError) {
+	v, ok := raw[key]
+	if !ok || IsNull(v) {
+		return nil, nil
+	}
+	var b bool
+	if err := json.Unmarshal(v, &b); err != nil {
+		return nil, &httputil.ValidationError{Field: key, Msg: "must be a boolean"}
+	}
+	return &b, nil
+}
+
+// OptionalBoolDefault is the default-valued variant of OptionalBool. Missing
+// and explicit null return fallback.
+func OptionalBoolDefault(raw map[string]json.RawMessage, key string, fallback bool) (bool, *httputil.ValidationError) {
+	b, vErr := OptionalBool(raw, key)
+	if vErr != nil {
+		return false, vErr
+	}
+	if b == nil {
+		return fallback, nil
+	}
+	return *b, nil
+}
+
 func todayUTC(now func() time.Time) time.Time {
 	if now == nil {
 		now = time.Now

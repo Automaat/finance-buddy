@@ -125,11 +125,11 @@ func readDatesAndActive(raw map[string]json.RawMessage, in *CreateInput) *httput
 		in.EndDate = &t
 	}
 	in.Active = true
-	if v, ok := raw["active"]; ok && string(v) != "null" {
-		if jerr := json.Unmarshal(v, &in.Active); jerr != nil {
-			return &httputil.ValidationError{Field: "active", Msg: "must be a boolean"}
-		}
+	active, vErr := validation.OptionalBoolDefault(raw, "active", true)
+	if vErr != nil {
+		return vErr
 	}
+	in.Active = active
 	return nil
 }
 

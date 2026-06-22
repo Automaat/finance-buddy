@@ -210,6 +210,61 @@ func TestOptionalDateNotFuture(t *testing.T) {
 	requireValidation(t, vErr, "date", "must be a string")
 }
 
+func TestOptionalBool(t *testing.T) {
+	got, vErr := OptionalBool(
+		map[string]json.RawMessage{"active": json.RawMessage(`true`)},
+		"active",
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got == nil || *got != true {
+		t.Fatalf("got = %v", got)
+	}
+
+	got, vErr = OptionalBool(map[string]json.RawMessage{}, "active")
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	got, vErr = OptionalBool(map[string]json.RawMessage{"active": json.RawMessage(`null`)}, "active")
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	_, vErr = OptionalBool(map[string]json.RawMessage{"active": json.RawMessage(`"true"`)}, "active")
+	requireValidation(t, vErr, "active", "must be a boolean")
+}
+
+func TestOptionalBoolDefault(t *testing.T) {
+	got, vErr := OptionalBoolDefault(map[string]json.RawMessage{}, "active", true)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got != true {
+		t.Fatalf("got = %v", got)
+	}
+
+	got, vErr = OptionalBoolDefault(map[string]json.RawMessage{"active": json.RawMessage(`null`)}, "active", true)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got != true {
+		t.Fatalf("got = %v", got)
+	}
+
+	got, vErr = OptionalBoolDefault(map[string]json.RawMessage{"active": json.RawMessage(`false`)}, "active", true)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got != false {
+		t.Fatalf("got = %v", got)
+	}
+
+	_, vErr = OptionalBoolDefault(map[string]json.RawMessage{"active": json.RawMessage(`"false"`)}, "active", true)
+	requireValidation(t, vErr, "active", "must be a boolean")
+}
+
 func TestOptionalInt(t *testing.T) {
 	got, vErr := OptionalInt(
 		map[string]json.RawMessage{"owner_user_id": json.RawMessage(`7`)},
