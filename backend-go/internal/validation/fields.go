@@ -93,16 +93,50 @@ func RequiredString(
 
 // RequiredDate reads a required YYYY-MM-DD field.
 func RequiredDate(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {
+	return RequiredDateWithMissingMessage(raw, key, "Field required")
+}
+
+// RequiredDateWithMissingMessage reads a required YYYY-MM-DD field and returns
+// missingMsg when the key is absent or explicit null.
+func RequiredDateWithMissingMessage(
+	raw map[string]json.RawMessage,
+	key string,
+	missingMsg string,
+) (time.Time, *httputil.ValidationError) {
+	return requiredDate(raw, key, missingMsg, "")
+}
+
+// RequiredNonEmptyDate reads a required YYYY-MM-DD field and rejects an empty
+// string with emptyMsg before date-format validation.
+func RequiredNonEmptyDate(
+	raw map[string]json.RawMessage,
+	key string,
+	missingMsg string,
+	emptyMsg string,
+) (time.Time, *httputil.ValidationError) {
+	return requiredDate(raw, key, missingMsg, emptyMsg)
+}
+
+func requiredDate(
+	raw map[string]json.RawMessage,
+	key string,
+	missingMsg string,
+	emptyMsg string,
+) (time.Time, *httputil.ValidationError) {
 	v, ok := raw[key]
 	if !ok || IsNull(v) {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "Field required"}
+		return time.Time{}, &httputil.ValidationError{Field: key, Msg: missingMsg}
 	}
-	t, err := RawDate(v)
+	s, err := RawString(v)
 	if err != nil {
-		if IsRawDateFormatError(err) {
-			return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be YYYY-MM-DD"}
-		}
 		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be a string"}
+	}
+	if s == "" && emptyMsg != "" {
+		return time.Time{}, &httputil.ValidationError{Field: key, Msg: emptyMsg}
+	}
+	t, err := time.Parse("2006-01-02", s)
+	if err != nil {
+		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be YYYY-MM-DD"}
 	}
 	return t, nil
 }

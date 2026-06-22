@@ -171,6 +171,75 @@ func TestRequiredDate(t *testing.T) {
 	requireValidation(t, vErr, "date", "must be a string")
 }
 
+func TestRequiredDateWithMissingMessage(t *testing.T) {
+	got, vErr := RequiredDateWithMissingMessage(
+		map[string]json.RawMessage{"date": json.RawMessage(`"2026-05-26"`)},
+		"date",
+		"required",
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got.Format("2006-01-02") != "2026-05-26" {
+		t.Fatalf("got = %s", got.Format("2006-01-02"))
+	}
+
+	_, vErr = RequiredDateWithMissingMessage(map[string]json.RawMessage{}, "date", "required")
+	requireValidation(t, vErr, "date", "required")
+
+	_, vErr = RequiredDateWithMissingMessage(
+		map[string]json.RawMessage{"date": json.RawMessage(`null`)},
+		"date",
+		"required",
+	)
+	requireValidation(t, vErr, "date", "required")
+
+	_, vErr = RequiredDateWithMissingMessage(
+		map[string]json.RawMessage{"date": json.RawMessage(`"26/05/2026"`)},
+		"date",
+		"required",
+	)
+	requireValidation(t, vErr, "date", "must be YYYY-MM-DD")
+
+	_, vErr = RequiredDateWithMissingMessage(
+		map[string]json.RawMessage{"date": json.RawMessage(`20260526`)},
+		"date",
+		"required",
+	)
+	requireValidation(t, vErr, "date", "must be a string")
+}
+
+func TestRequiredNonEmptyDate(t *testing.T) {
+	got, vErr := RequiredNonEmptyDate(
+		map[string]json.RawMessage{"date": json.RawMessage(`"2026-05-26"`)},
+		"date",
+		"required",
+		"cannot be empty",
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got.Format("2006-01-02") != "2026-05-26" {
+		t.Fatalf("got = %s", got.Format("2006-01-02"))
+	}
+
+	_, vErr = RequiredNonEmptyDate(
+		map[string]json.RawMessage{"date": json.RawMessage(`""`)},
+		"date",
+		"required",
+		"cannot be empty",
+	)
+	requireValidation(t, vErr, "date", "cannot be empty")
+
+	_, vErr = RequiredNonEmptyDate(
+		map[string]json.RawMessage{"date": json.RawMessage(`"26/05/2026"`)},
+		"date",
+		"required",
+		"cannot be empty",
+	)
+	requireValidation(t, vErr, "date", "must be YYYY-MM-DD")
+}
+
 func TestOptionalDate(t *testing.T) {
 	got, vErr := OptionalDate(map[string]json.RawMessage{"date": json.RawMessage(`"2026-05-26"`)}, "date")
 	if vErr != nil {

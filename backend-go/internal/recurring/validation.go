@@ -105,9 +105,9 @@ func readCadence(raw map[string]json.RawMessage, in *CreateInput) *httputil.Vali
 }
 
 func readDatesAndActive(raw map[string]json.RawMessage, in *CreateInput) *httputil.ValidationError {
-	startDate, err := requireDate(raw, "start_date")
-	if err != nil {
-		return err
+	startDate, vErr := validation.RequiredDateWithMissingMessage(raw, "start_date", "required")
+	if vErr != nil {
+		return vErr
 	}
 	in.StartDate = startDate
 	if v, ok := raw["end_date"]; ok && string(v) != "null" {
@@ -135,20 +135,4 @@ func readDatesAndActive(raw map[string]json.RawMessage, in *CreateInput) *httput
 
 func requireDecimal(raw map[string]json.RawMessage, key string) (decimal.Decimal, *httputil.ValidationError) {
 	return validation.RequiredDecimalStringOrNumber(raw, key, "required")
-}
-
-func requireDate(raw map[string]json.RawMessage, key string) (time.Time, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || string(v) == "null" {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "required"}
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	t, err := time.Parse("2006-01-02", s)
-	if err != nil {
-		return time.Time{}, &httputil.ValidationError{Field: key, Msg: "must be YYYY-MM-DD"}
-	}
-	return t, nil
 }
