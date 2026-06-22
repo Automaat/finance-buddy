@@ -164,6 +164,12 @@ func TestRequiredDate(t *testing.T) {
 		t.Fatalf("got = %s", got.Format("2006-01-02"))
 	}
 
+	_, vErr = RequiredDate(map[string]json.RawMessage{}, "date")
+	requireValidation(t, vErr, "date", "Field required")
+
+	_, vErr = RequiredDate(map[string]json.RawMessage{"date": json.RawMessage(`null`)}, "date")
+	requireValidation(t, vErr, "date", "Field required")
+
 	_, vErr = RequiredDate(map[string]json.RawMessage{"date": json.RawMessage(`"26/05/2026"`)}, "date")
 	requireValidation(t, vErr, "date", "must be YYYY-MM-DD")
 

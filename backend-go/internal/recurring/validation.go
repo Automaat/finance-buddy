@@ -110,7 +110,7 @@ func readDatesAndActive(raw map[string]json.RawMessage, in *CreateInput) *httput
 		return vErr
 	}
 	in.StartDate = startDate
-	if v, ok := raw["end_date"]; ok && string(v) != "null" {
+	if v, ok := raw["end_date"]; ok && !validation.IsNull(v) {
 		var s string
 		if jerr := json.Unmarshal(v, &s); jerr != nil {
 			return &httputil.ValidationError{Field: "end_date", Msg: "must be YYYY-MM-DD or null"}
