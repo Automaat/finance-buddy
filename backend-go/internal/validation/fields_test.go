@@ -164,17 +164,25 @@ func TestRequiredDate(t *testing.T) {
 		t.Fatalf("got = %s", got.Format("2006-01-02"))
 	}
 
-	_, vErr = RequiredDate(map[string]json.RawMessage{}, "date")
-	requireValidation(t, vErr, "date", "Field required")
-
-	_, vErr = RequiredDate(map[string]json.RawMessage{"date": json.RawMessage(`null`)}, "date")
-	requireValidation(t, vErr, "date", "Field required")
-
-	_, vErr = RequiredDate(map[string]json.RawMessage{"date": json.RawMessage(`"26/05/2026"`)}, "date")
-	requireValidation(t, vErr, "date", "must be YYYY-MM-DD")
-
-	_, vErr = RequiredDate(map[string]json.RawMessage{"date": json.RawMessage(`20260526`)}, "date")
-	requireValidation(t, vErr, "date", "must be a string")
+	for _, tc := range []struct {
+		name string
+		raw  map[string]json.RawMessage
+		msg  string
+	}{
+		{name: "missing", raw: map[string]json.RawMessage{}, msg: "Field required"},
+		{name: "null", raw: map[string]json.RawMessage{"date": json.RawMessage(`null`)}, msg: "Field required"},
+		{
+			name: "invalid format",
+			raw:  map[string]json.RawMessage{"date": json.RawMessage(`"26/05/2026"`)},
+			msg:  "must be YYYY-MM-DD",
+		},
+		{name: "non-string", raw: map[string]json.RawMessage{"date": json.RawMessage(`20260526`)}, msg: "must be a string"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, vErr = RequiredDate(tc.raw, "date")
+			requireValidation(t, vErr, "date", tc.msg)
+		})
+	}
 }
 
 func TestRequiredDateWithMissingMessage(t *testing.T) {
