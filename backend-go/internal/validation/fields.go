@@ -3,6 +3,7 @@ package validation
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -236,6 +237,49 @@ func RequiredEnumString(
 		return "", &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
 	}
 	return s, nil
+}
+
+// OptionalUpperTrimmedEnumString reads an optional string field, trims
+// whitespace, uppercases it, and checks it belongs to the provided allowed set.
+// Missing and explicit null return fallback.
+func OptionalUpperTrimmedEnumString(
+	raw map[string]json.RawMessage,
+	key string,
+	allowed map[string]struct{},
+	fallback string,
+	invalidMsg string,
+) (string, *httputil.ValidationError) {
+	s, vErr := OptionalUpperTrimmedEnumStringPtr(raw, key, allowed, invalidMsg)
+	if vErr != nil {
+		return "", vErr
+	}
+	if s == nil {
+		return fallback, nil
+	}
+	return *s, nil
+}
+
+// OptionalUpperTrimmedEnumStringPtr is the sparse-update variant of
+// OptionalUpperTrimmedEnumString. Missing and explicit null return nil.
+func OptionalUpperTrimmedEnumStringPtr(
+	raw map[string]json.RawMessage,
+	key string,
+	allowed map[string]struct{},
+	invalidMsg string,
+) (*string, *httputil.ValidationError) {
+	v, ok := raw[key]
+	if !ok || IsNull(v) {
+		return nil, nil
+	}
+	s, err := RawString(v)
+	if err != nil {
+		return nil, &httputil.ValidationError{Field: key, Msg: "must be a string"}
+	}
+	s = strings.ToUpper(strings.TrimSpace(s))
+	if _, ok := allowed[s]; !ok {
+		return nil, &httputil.ValidationError{Field: key, Msg: invalidMsg}
+	}
+	return &s, nil
 }
 
 // RequiredDecimal reads a required JSON number field. Quoted numeric strings
