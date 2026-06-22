@@ -2,7 +2,6 @@ package equitygrants
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 	"time"
 
@@ -184,7 +183,7 @@ func optionalGrantLiquidity(raw map[string]json.RawMessage, r *createRequest) *h
 }
 
 func optionalGrantTaxNotes(raw map[string]json.RawMessage, r *createRequest) *httputil.ValidationError {
-	tax, vErr := optionalEnumString(raw, "tax_treatment", validTaxTreatments, "capital_gains_19")
+	tax, vErr := validation.OptionalEnumString(raw, "tax_treatment", validTaxTreatments, "capital_gains_19")
 	if vErr != nil {
 		return vErr
 	}
@@ -220,8 +219,10 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 }
 
 func patchStrings(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.ValidationError {
-	if vErr := patchEnumString(raw, "type", validGrantTypes, &p.Type); vErr != nil {
+	if grantType, vErr := validation.OptionalEnumStringPtr(raw, "type", validGrantTypes); vErr != nil {
 		return vErr
+	} else if grantType != nil {
+		p.Type = grantType
 	}
 	if vErr := patchNonEmptyString(raw, "company", "Company cannot be empty", &p.Company); vErr != nil {
 		return vErr
@@ -239,11 +240,15 @@ func patchStrings(raw map[string]json.RawMessage, p *UpdatePatch) *httputil.Vali
 	} else if s != nil {
 		p.Currency = s
 	}
-	if vErr := patchEnumString(raw, "vest_frequency", validFrequencies, &p.VestFrequency); vErr != nil {
+	if frequency, vErr := validation.OptionalEnumStringPtr(raw, "vest_frequency", validFrequencies); vErr != nil {
 		return vErr
+	} else if frequency != nil {
+		p.VestFrequency = frequency
 	}
-	if vErr := patchEnumString(raw, "tax_treatment", validTaxTreatments, &p.TaxTreatment); vErr != nil {
+	if tax, vErr := validation.OptionalEnumStringPtr(raw, "tax_treatment", validTaxTreatments); vErr != nil {
 		return vErr
+	} else if tax != nil {
+		p.TaxTreatment = tax
 	}
 	if v, ok := raw["notes"]; ok && !validation.IsNull(v) {
 		var s string
@@ -348,38 +353,7 @@ func optionalNonNegativeInt(raw map[string]json.RawMessage, key, msg string, fal
 	return *n, nil
 }
 
-func optionalEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}, fallback string) (string, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return fallback, nil
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return "", &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	if _, ok := allowed[s]; !ok {
-		return "", &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
-	}
-	return s, nil
-}
-
 // --- PATCH helpers ---
-
-func patchEnumString(raw map[string]json.RawMessage, key string, allowed map[string]struct{}, dest **string) *httputil.ValidationError {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return nil
-	}
-	var s string
-	if err := json.Unmarshal(v, &s); err != nil {
-		return &httputil.ValidationError{Field: key, Msg: "must be a string"}
-	}
-	if _, ok := allowed[s]; !ok {
-		return &httputil.ValidationError{Field: key, Msg: fmt.Sprintf("invalid value %q", s)}
-	}
-	*dest = &s
-	return nil
-}
 
 func patchNonEmptyString(raw map[string]json.RawMessage, key, emptyMsg string, dest **string) *httputil.ValidationError {
 	v, ok := raw[key]
