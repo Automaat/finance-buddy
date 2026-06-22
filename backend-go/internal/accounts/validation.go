@@ -82,7 +82,7 @@ func buildCreateRequest(raw map[string]json.RawMessage) (createRequest, *httputi
 	}
 	r.ReceivesContributions = recv
 
-	excl, vErr := optionalBoolDefaultFalse(raw, "excluded_from_fire")
+	excl, vErr := validation.OptionalBoolDefault(raw, "excluded_from_fire", false)
 	if vErr != nil {
 		return r, vErr
 	}
@@ -164,19 +164,15 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 			p.SquareMeters = &d
 		}
 	}
-	if v, ok := raw["receives_contributions"]; ok && !validation.IsNull(v) {
-		var b bool
-		if err := json.Unmarshal(v, &b); err != nil {
-			return p, &httputil.ValidationError{Field: "receives_contributions", Msg: "must be a boolean"}
-		}
-		p.ReceivesContributions = &b
+	if b, vErr := validation.OptionalBool(raw, "receives_contributions"); vErr != nil {
+		return p, vErr
+	} else if b != nil {
+		p.ReceivesContributions = b
 	}
-	if v, ok := raw["excluded_from_fire"]; ok && !validation.IsNull(v) {
-		var b bool
-		if err := json.Unmarshal(v, &b); err != nil {
-			return p, &httputil.ValidationError{Field: "excluded_from_fire", Msg: "must be a boolean"}
-		}
-		p.ExcludedFromFire = &b
+	if b, vErr := validation.OptionalBool(raw, "excluded_from_fire"); vErr != nil {
+		return p, vErr
+	} else if b != nil {
+		p.ExcludedFromFire = b
 	}
 	if v, ok := raw["interest_rate_pct"]; ok {
 		p.InterestRatePctSet = true
@@ -265,18 +261,6 @@ func optionalBoolDefaultTrue(raw map[string]json.RawMessage, key string) (bool, 
 	}
 	if validation.IsNull(v) {
 		return false, &httputil.ValidationError{Field: key, Msg: "must be a boolean"}
-	}
-	var b bool
-	if err := json.Unmarshal(v, &b); err != nil {
-		return false, &httputil.ValidationError{Field: key, Msg: "must be a boolean"}
-	}
-	return b, nil
-}
-
-func optionalBoolDefaultFalse(raw map[string]json.RawMessage, key string) (bool, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return false, nil
 	}
 	var b bool
 	if err := json.Unmarshal(v, &b); err != nil {

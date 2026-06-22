@@ -172,12 +172,10 @@ func requireGrantVesting(raw map[string]json.RawMessage, r *createRequest) *http
 }
 
 func optionalGrantLiquidity(raw map[string]json.RawMessage, r *createRequest) *httputil.ValidationError {
-	if v, ok := raw["requires_liquidity_event"]; ok && !validation.IsNull(v) {
-		var b bool
-		if err := json.Unmarshal(v, &b); err != nil {
-			return &httputil.ValidationError{Field: "requires_liquidity_event", Msg: "must be a boolean"}
-		}
-		r.RequiresLiquidityEvent = b
+	if b, vErr := validation.OptionalBool(raw, "requires_liquidity_event"); vErr != nil {
+		return vErr
+	} else if b != nil {
+		r.RequiresLiquidityEvent = *b
 	}
 	if t, vErr := validation.OptionalDate(raw, "liquidity_event_date"); vErr != nil {
 		return vErr
@@ -294,12 +292,10 @@ func patchNumbersAndBools(raw map[string]json.RawMessage, p *UpdatePatch) *httpu
 	} else if d != nil {
 		p.StrikePrice = d
 	}
-	if v, ok := raw["requires_liquidity_event"]; ok && !validation.IsNull(v) {
-		var b bool
-		if err := json.Unmarshal(v, &b); err != nil {
-			return &httputil.ValidationError{Field: "requires_liquidity_event", Msg: "must be a boolean"}
-		}
-		p.RequiresLiquidityEvent = &b
+	if b, vErr := validation.OptionalBool(raw, "requires_liquidity_event"); vErr != nil {
+		return vErr
+	} else if b != nil {
+		p.RequiresLiquidityEvent = b
 	}
 	return nil
 }

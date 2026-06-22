@@ -111,13 +111,5 @@ func buildGenerateRequest(raw map[string]json.RawMessage, now func() time.Time) 
 // non-bool value (e.g. "true" sent as a string) is rejected so the client
 // gets a 422 instead of silently degrading to false.
 func optionalBool(raw map[string]json.RawMessage, key string) (bool, *httputil.ValidationError) {
-	v, ok := raw[key]
-	if !ok || validation.IsNull(v) {
-		return false, nil
-	}
-	var b bool
-	if err := json.Unmarshal(v, &b); err != nil {
-		return false, &httputil.ValidationError{Field: key, Msg: "must be a boolean"}
-	}
-	return b, nil
+	return validation.OptionalBoolDefault(raw, key, false)
 }

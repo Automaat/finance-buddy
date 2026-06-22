@@ -95,12 +95,10 @@ func patchScalarFields(raw map[string]json.RawMessage, p *UpdatePatch) *httputil
 	} else if d != nil {
 		p.MonthlyContribution = d
 	}
-	if v, ok := raw["is_completed"]; ok && !validation.IsNull(v) {
-		var b bool
-		if err := json.Unmarshal(v, &b); err != nil {
-			return &httputil.ValidationError{Field: "is_completed", Msg: "must be a boolean"}
-		}
-		p.IsCompleted = &b
+	if b, vErr := validation.OptionalBool(raw, "is_completed"); vErr != nil {
+		return vErr
+	} else if b != nil {
+		p.IsCompleted = b
 	}
 	return nil
 }

@@ -100,12 +100,10 @@ func buildUpdatePatch(raw map[string]json.RawMessage) (UpdatePatch, *httputil.Va
 	if vErr := patchRatePercent(raw, "margin", &p.Margin); vErr != nil {
 		return p, vErr
 	}
-	if v, ok := raw["capitalize"]; ok && !validation.IsNull(v) {
-		var b bool
-		if err := json.Unmarshal(v, &b); err != nil {
-			return p, &httputil.ValidationError{Field: "capitalize", Msg: "must be a boolean"}
-		}
-		p.Capitalize = &b
+	if b, vErr := validation.OptionalBool(raw, "capitalize"); vErr != nil {
+		return p, vErr
+	} else if b != nil {
+		p.Capitalize = b
 	}
 	return p, nil
 }
