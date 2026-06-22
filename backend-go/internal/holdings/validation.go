@@ -151,17 +151,10 @@ func buildQuoteInput(raw map[string]json.RawMessage, securityID int) (PriceQuote
 		return q, &httputil.ValidationError{Field: "price", Msg: "must not be negative"}
 	}
 	q.Price = price
-	if v, ok := raw["source"]; ok && string(v) != "null" {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return q, &httputil.ValidationError{Field: "source", Msg: "must be a string"}
-		}
-		if s = strings.TrimSpace(s); s != "" {
-			if len(s) > 40 {
-				return q, &httputil.ValidationError{Field: "source", Msg: "max 40 chars"}
-			}
-			q.Source = s
-		}
+	if s, vErr := validation.OptionalNonEmptyTrimmedStringMax(raw, "source", 40, "max 40 chars"); vErr != nil {
+		return q, vErr
+	} else if s != nil {
+		q.Source = *s
 	}
 	return q, nil
 }

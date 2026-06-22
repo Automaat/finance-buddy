@@ -70,6 +70,69 @@ func TestOptionalTrimmedString(t *testing.T) {
 	requireValidation(t, vErr, "name", "Name cannot be empty")
 }
 
+func TestOptionalNonEmptyTrimmedString(t *testing.T) {
+	got, vErr := OptionalNonEmptyTrimmedString(
+		map[string]json.RawMessage{"category": json.RawMessage(`"  bills  "`)},
+		"category",
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got == nil || *got != "bills" {
+		t.Fatalf("got = %v", got)
+	}
+
+	got, vErr = OptionalNonEmptyTrimmedString(map[string]json.RawMessage{}, "category")
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	got, vErr = OptionalNonEmptyTrimmedString(
+		map[string]json.RawMessage{"category": json.RawMessage(`null`)},
+		"category",
+	)
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	got, vErr = OptionalNonEmptyTrimmedString(
+		map[string]json.RawMessage{"category": json.RawMessage(`"  "`)},
+		"category",
+	)
+	if vErr != nil || got != nil {
+		t.Fatalf("got = %v vErr = %#v", got, vErr)
+	}
+
+	_, vErr = OptionalNonEmptyTrimmedString(
+		map[string]json.RawMessage{"category": json.RawMessage(`7`)},
+		"category",
+	)
+	requireValidation(t, vErr, "category", "must be a string")
+}
+
+func TestOptionalNonEmptyTrimmedStringMax(t *testing.T) {
+	got, vErr := OptionalNonEmptyTrimmedStringMax(
+		map[string]json.RawMessage{"source": json.RawMessage(`" broker "`)},
+		"source",
+		10,
+		"max 10 chars",
+	)
+	if vErr != nil {
+		t.Fatalf("vErr = %#v", vErr)
+	}
+	if got == nil || *got != "broker" {
+		t.Fatalf("got = %v", got)
+	}
+
+	_, vErr = OptionalNonEmptyTrimmedStringMax(
+		map[string]json.RawMessage{"source": json.RawMessage(`"too-long"`)},
+		"source",
+		3,
+		"max 3 chars",
+	)
+	requireValidation(t, vErr, "source", "max 3 chars")
+}
+
 func TestOptionalString(t *testing.T) {
 	got, vErr := OptionalString(
 		map[string]json.RawMessage{"notes": json.RawMessage(`"  keep spaces  "`)},
