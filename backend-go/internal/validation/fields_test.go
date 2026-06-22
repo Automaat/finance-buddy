@@ -481,6 +481,22 @@ func TestOptionalUpperTrimmedEnumStringPtr(t *testing.T) {
 	if vErr != nil || got != nil {
 		t.Fatalf("got = %v vErr = %#v", got, vErr)
 	}
+
+	_, vErr = OptionalUpperTrimmedEnumStringPtr(
+		map[string]json.RawMessage{"currency": json.RawMessage(`7`)},
+		"currency",
+		allowed,
+		"invalid currency",
+	)
+	requireValidation(t, vErr, "currency", "must be a string")
+
+	_, vErr = OptionalUpperTrimmedEnumStringPtr(
+		map[string]json.RawMessage{"currency": json.RawMessage(`"EUR"`)},
+		"currency",
+		allowed,
+		"invalid currency",
+	)
+	requireValidation(t, vErr, "currency", "invalid currency")
 }
 
 func TestRequiredDecimal(t *testing.T) {
