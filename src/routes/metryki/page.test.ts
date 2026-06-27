@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeAll, vi } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import Page from './+page.svelte';
 import { load } from './+page';
 
@@ -91,33 +91,96 @@ describe('Metryki Page', () => {
 		expect(screen.getByRole('heading', { name: 'Metryki', level: 1 })).toBeTruthy();
 	});
 
+	it('renders the financial overview section after switching tabs', async () => {
+		render(Page, { props: { data: mockData } });
+		await fireEvent.click(screen.getByRole('tab', { name: 'Przegląd' }));
+		expect(screen.getByRole('heading', { name: 'Przegląd finansowy' })).toBeTruthy();
+	});
+
 	it('renders the investing guidance section', () => {
 		render(Page, { props: { data: mockData } });
 		expect(screen.getByRole('heading', { name: 'Jak inwestować nowe pieniądze' })).toBeTruthy();
 	});
 
-	it('renders the sticky section navigation with anchor links', () => {
+	it('renders section tabs and only mounts the active panel', async () => {
 		render(Page, { props: { data: mockData } });
-		const nav = screen.getByRole('navigation', { name: 'Sekcje strony' });
-		expect(nav).toBeTruthy();
-		const links = ['Działania', 'Konta', 'Zwroty', 'Wzrost'].map((label) =>
-			screen.getByRole('link', { name: label })
+		const tablist = screen.getByRole('tablist', { name: 'Sekcje strony' });
+		expect(tablist).toBeTruthy();
+		const tabs = ['Działania', 'Przegląd', 'Konta', 'Zwroty', 'Wzrost'].map((label) =>
+			screen.getByRole('tab', { name: label })
 		);
-		expect(links.map((l) => l.getAttribute('href'))).toEqual([
-			'#dzialania',
-			'#konta',
-			'#zwroty',
-			'#wzrost'
+		expect(tabs.map((tab) => tab.getAttribute('aria-selected'))).toEqual([
+			'true',
+			'false',
+			'false',
+			'false',
+			'false'
 		]);
-		// every nav target must exist so the anchors actually scroll somewhere
-		for (const id of ['dzialania', 'konta', 'zwroty', 'wzrost']) {
-			expect(document.getElementById(id)).toBeTruthy();
-		}
+		expect(screen.queryByRole('heading', { name: 'Przegląd finansowy' })).toBeNull();
+
+		await fireEvent.click(screen.getByRole('tab', { name: 'Przegląd' }));
+		expect(screen.getByRole('tab', { name: 'Przegląd' }).getAttribute('aria-selected')).toBe(
+			'true'
+		);
+		expect(screen.getByRole('heading', { name: 'Przegląd finansowy' })).toBeTruthy();
+		expect(screen.queryByRole('heading', { name: 'Jak inwestować nowe pieniądze' })).toBeNull();
+	});
+
+	it('renders the emergency fund metric card with its formatted value', async () => {
+		render(Page, { props: { data: mockData } });
+		await fireEvent.click(screen.getByRole('tab', { name: 'Przegląd' }));
+		expect(screen.getByText('Ile miesięcy bez pracy')).toBeTruthy();
+		expect(screen.getByText('6,00')).toBeTruthy();
 	});
 
 	it('shows the no-rebalancing message when there are no suggestions', () => {
 		render(Page, { props: { data: mockData } });
 		expect(screen.getByText(/Portfel jest zgodny z docelową alokacją/)).toBeTruthy();
+	});
+
+	it('keeps optional metric cards visible with a config hint when null', async () => {
+		render(Page, { props: { data: mockData } });
+		await fireEvent.click(screen.getByRole('tab', { name: 'Przegląd' }));
+		// Labels stay on the page instead of vanishing…
+		expect(screen.getByText('Stosunek długu do dochodu')).toBeTruthy();
+		expect(screen.getByText('Koszt godziny pracy')).toBeTruthy();
+		expect(screen.getByText('Koszt godziny życia')).toBeTruthy();
+		// …and point the user at where to fill the gap.
+		const hints = screen.getAllByRole('link', { name: 'Uzupełnij konfigurację' });
+		expect(hints.length).toBeGreaterThan(0);
+		expect(hints[0].getAttribute('href')).toBe('/settings/config');
+		// savings_rate has its own bespoke hint pointing at /salaries.
+		const savingsHint = screen.getByRole('link', { name: 'Dodaj pensje i snapshoty, by policzyć' });
+		expect(savingsHint.getAttribute('href')).toBe('/salaries');
+	});
+
+	it('omits the mortgage payoff line when there is nothing left to pay', async () => {
+		render(Page, { props: { data: mockData } });
+		await fireEvent.click(screen.getByRole('tab', { name: 'Przegląd' }));
+		// mockData has mortgage_months_left: 0 → no "X mies. … do spłaty" line.
+		// (The card's tooltip mentions "do spłaty"; the secondary line is the
+		// one that also carries "mies.".)
+		expect(screen.queryByText(/mies\..*do spłaty/)).toBeNull();
+	});
+
+	it('does not show a snapshot date when none is available', async () => {
+		render(Page, { props: { data: mockData } });
+		await fireEvent.click(screen.getByRole('tab', { name: 'Przegląd' }));
+		expect(screen.queryByText(/stan na/)).toBeNull();
+	});
+
+	it('omits PPK, stock and bond summary sections when no data', async () => {
+		render(Page, { props: { data: mockData } });
+		await fireEvent.click(screen.getByRole('tab', { name: 'Konta' }));
+		expect(screen.queryByRole('heading', { name: 'Podsumowanie PPK' })).toBeNull();
+		expect(screen.queryByRole('heading', { name: 'Podsumowanie Akcji' })).toBeNull();
+		expect(screen.queryByRole('heading', { name: 'Podsumowanie Obligacji' })).toBeNull();
+	});
+
+	it('omits the IKZE tax-benefit section when there are no PIT stats', async () => {
+		render(Page, { props: { data: mockData } });
+		await fireEvent.click(screen.getByRole('tab', { name: 'Konta' }));
+		expect(screen.queryByRole('heading', { name: /Korzyść podatkowa IKZE/ })).toBeNull();
 	});
 });
 
@@ -125,6 +188,11 @@ describe('Metryki Page with populated data', () => {
 	const populatedData = {
 		user: null,
 		metricCards: {
+			property_sqm: 42,
+			emergency_fund_months: 8,
+			retirement_income_monthly: 1200,
+			mortgage_remaining: 300000,
+			mortgage_months_left: 240,
 			mortgage_years_left: 20,
 			retirement_total: 90000,
 			investment_contributions: 50000,
@@ -215,12 +283,34 @@ describe('Metryki Page with populated data', () => {
 		render(Page, { props: { data: populatedData } });
 		expect(screen.getByText('KUP')).toBeTruthy();
 		expect(screen.getByText('stock')).toBeTruthy();
-		expect(screen.getAllByText((text) => /5\s*000\s*PLN/.test(text)).length).toBeGreaterThan(0);
 		expect(screen.queryByText(/Portfel jest zgodny z docelową alokacją/)).toBeNull();
 	});
 
-	it('renders the PPK, stock and bond summary sections', () => {
+	it('renders the optional metric cards when values are present', async () => {
 		render(Page, { props: { data: populatedData } });
+		await fireEvent.click(screen.getByRole('tab', { name: 'Przegląd' }));
+		expect(screen.getByText('Ile oszczędzamy miesięcznie')).toBeTruthy();
+		expect(screen.getByText('Stosunek długu do dochodu')).toBeTruthy();
+		expect(screen.getByText('Koszt godziny pracy')).toBeTruthy();
+		expect(screen.getByText('Koszt godziny życia')).toBeTruthy();
+		// values present → no config hint links
+		expect(screen.queryByRole('link', { name: 'Uzupełnij konfigurację' })).toBeNull();
+	});
+
+	it('shows the snapshot date and one consolidated mortgage card', async () => {
+		render(Page, { props: { data: populatedData } });
+		await fireEvent.click(screen.getByRole('tab', { name: 'Przegląd' }));
+		expect(screen.getByText('stan na 24.05.2026')).toBeTruthy();
+		// the three legacy mortgage cards collapse into one with a payoff line
+		expect(screen.getByText('Hipoteka do spłaty')).toBeTruthy();
+		expect(screen.queryByText('Ile miesięcy do spłaty hipoteki')).toBeNull();
+		expect(screen.queryByText('Ile lat do spłaty hipoteki')).toBeNull();
+		expect(screen.getByText(/240 mies\..*do spłaty/)).toBeTruthy();
+	});
+
+	it('renders the PPK, stock and bond summary sections', async () => {
+		render(Page, { props: { data: populatedData } });
+		await fireEvent.click(screen.getByRole('tab', { name: 'Konta' }));
 		expect(screen.getByRole('heading', { name: 'Podsumowanie PPK' })).toBeTruthy();
 		// "Marcin" heads both the PPK and IKZE owner sub-sections.
 		expect(screen.getAllByRole('heading', { name: 'Marcin', level: 3 }).length).toBeGreaterThan(0);
@@ -228,8 +318,9 @@ describe('Metryki Page with populated data', () => {
 		expect(screen.getByRole('heading', { name: 'Podsumowanie Obligacji' })).toBeTruthy();
 	});
 
-	it('renders the IKZE tax-benefit section with its estimated PIT saving', () => {
+	it('renders the IKZE tax-benefit section with its estimated PIT saving', async () => {
 		render(Page, { props: { data: populatedData } });
+		await fireEvent.click(screen.getByRole('tab', { name: 'Konta' }));
 		expect(screen.getByRole('heading', { name: /Korzyść podatkowa IKZE/ })).toBeTruthy();
 		expect(screen.getByText('IKZE - Szacowana ulga PIT')).toBeTruthy();
 		// pit_savings 2880 → pl-PL formats with a narrow no-break space; match on
@@ -336,6 +427,7 @@ describe('metryki load', () => {
 		const { fetchFn } = routedFetch(happyRoutes());
 		const result = await load(loadEvent(fetchFn as unknown as typeof fetch));
 
+		expect(result.metricCards).toEqual(metricCards);
 		expect(result.ppkStats).toEqual([{ owner_user_id: 1 }]);
 		expect(result.stockStats).toEqual({ total_value: 1 });
 		expect(result.bondStats).toEqual({ total_value: 2 });
@@ -413,6 +505,7 @@ describe('metryki load', () => {
 			source: ''
 		});
 		// the dashboard still loaded fine, including its snapshot date
+		expect(result.metricCards).toEqual(metricCards);
 		expect(result.snapshotDate).toBe('2026-05-24');
 	});
 

@@ -589,55 +589,58 @@
 	</button>
 
 	{#if plRules.length > 0}
-		<div class="card preset-filled-surface-100-900 p-4 space-y-3">
-			<header>
-				<h3 class="h3 flex items-center gap-2">
+		<details class="card preset-filled-surface-100-900 p-4 space-y-3">
+			<summary class="flex cursor-pointer list-none items-center justify-between gap-3">
+				<span class="h3 flex items-center gap-2">
 					<BookOpen size={20} /> Źródła stałych PL ({plRules[0].year})
-				</h3>
+				</span>
+				<span class="text-xs text-surface-700-300">Pokaż tabelę</span>
+			</summary>
+			<div class="space-y-3 pt-3">
 				<p class="text-xs italic text-surface-700-300 mt-1">
 					Polskie wartości graniczne używane przez symulacje i dashboard. Każda pozycja wskazuje
 					oficjalne źródło i datę ostatniej weryfikacji przez maintainera.
 				</p>
-			</header>
-			<div class="overflow-x-auto">
-				<table class="table w-full text-sm">
-					<thead>
-						<tr>
-							<th class="text-left">Nazwa</th>
-							<th class="text-right">Wartość</th>
-							<th class="text-left">Obowiązuje od</th>
-							<th class="text-left">Ostatnia weryfikacja</th>
-							<th class="text-left">Źródło</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each plRules as r (r.key)}
+				<div class="overflow-x-auto">
+					<table class="table w-full text-sm">
+						<thead>
 							<tr>
-								<td>
-									<div class="font-semibold">{r.name}</div>
-									<div class="text-xs text-surface-700-300">{r.description}</div>
-								</td>
-								<td class="text-right whitespace-nowrap">
-									{r.value}
-									<span class="text-xs text-surface-700-300">{r.unit}</span>
-								</td>
-								<td class="whitespace-nowrap">{formatDate(r.effective_date)}</td>
-								<td class="whitespace-nowrap">{formatDate(r.last_checked_date)}</td>
-								<td>
-									<a
-										href={r.source_url}
-										target="_blank"
-										rel="noopener noreferrer"
-										class="text-primary-600-400 underline inline-flex items-center gap-1"
-									>
-										link <ExternalLink size={12} />
-									</a>
-								</td>
+								<th class="text-left">Nazwa</th>
+								<th class="text-right">Wartość</th>
+								<th class="text-left">Obowiązuje od</th>
+								<th class="text-left">Ostatnia weryfikacja</th>
+								<th class="text-left">Źródło</th>
 							</tr>
-						{/each}
-					</tbody>
-				</table>
+						</thead>
+						<tbody>
+							{#each plRules as r (r.key)}
+								<tr>
+									<td>
+										<div class="font-semibold">{r.name}</div>
+										<div class="text-xs text-surface-700-300">{r.description}</div>
+									</td>
+									<td class="text-right whitespace-nowrap">
+										{r.value}
+										<span class="text-xs text-surface-700-300">{r.unit}</span>
+									</td>
+									<td class="whitespace-nowrap">{formatDate(r.effective_date)}</td>
+									<td class="whitespace-nowrap">{formatDate(r.last_checked_date)}</td>
+									<td>
+										<a
+											href={r.source_url}
+											target="_blank"
+											rel="noopener noreferrer"
+											class="text-primary-600-400 underline inline-flex items-center gap-1"
+										>
+											link <ExternalLink size={12} />
+										</a>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
 			</div>
-		</div>
+		</details>
 	{/if}
 </div>

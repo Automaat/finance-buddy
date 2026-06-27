@@ -70,6 +70,10 @@ async function openNewSalaryModalAndFill(opts: {
 		await fireEvent.input(companyInput, { target: { value: opts.company } });
 }
 
+async function selectSalaryTab(label: string) {
+	await fireEvent.click(screen.getByRole('tab', { name: label }));
+}
+
 describe('Salaries page — saveSalary validation & error display', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -210,6 +214,7 @@ describe('Salaries page — saveSalary validation & error display', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Premie');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowy bonus/i }));
 
 		const dateInput = screen.getByLabelText(/Data wypłaty/) as HTMLInputElement;
@@ -244,6 +249,7 @@ describe('Salaries page — saveSalary validation & error display', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Premie');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowy bonus/i }));
 
 		const dateInput = screen.getByLabelText(/Data wypłaty/) as HTMLInputElement;
@@ -306,6 +312,7 @@ describe('Salaries page — equity grant flows', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Udziały');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowy grant/i }));
 		// Modal renders with defaults (RSU, 1000 shares etc.), but company is empty.
 		const sharesInput = screen.getByLabelText(/Liczba akcji/) as HTMLInputElement;
@@ -321,6 +328,7 @@ describe('Salaries page — equity grant flows', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Udziały');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowy grant/i }));
 		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
 		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
@@ -339,6 +347,7 @@ describe('Salaries page — equity grant flows', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Udziały');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowy grant/i }));
 		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
 		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
@@ -359,6 +368,7 @@ describe('Salaries page — equity grant flows', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Udziały');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowy grant/i }));
 		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
 		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
@@ -390,6 +400,7 @@ describe('Salaries page — equity grant flows', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Udziały');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowy grant/i }));
 		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
 		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
@@ -408,6 +419,7 @@ describe('Salaries page — equity grant flows', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Udziały');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowy grant/i }));
 		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
 		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
@@ -436,6 +448,7 @@ describe('Salaries page — valuation flows', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Wyceny');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowa wycena/i }));
 		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
 
@@ -448,6 +461,7 @@ describe('Salaries page — valuation flows', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Wyceny');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowa wycena/i }));
 		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
 		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
@@ -468,6 +482,7 @@ describe('Salaries page — valuation flows', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Wyceny');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowa wycena/i }));
 		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
 		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
@@ -488,6 +503,7 @@ describe('Salaries page — valuation flows', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Wyceny');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowa wycena/i }));
 		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
 		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
@@ -519,6 +535,7 @@ describe('Salaries page — valuation flows', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Wyceny');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowa wycena/i }));
 		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
 		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
