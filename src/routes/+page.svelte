@@ -155,19 +155,19 @@
 </script>
 
 <svelte:head>
-	<title>Dashboard | Finansowa Forteca</title>
+	<title>Pulpit | Finansowa Forteca</title>
 </svelte:head>
 
 <div class="space-y-8">
 	<div class="space-y-1">
-		<h1 class="h2">Dashboard</h1>
+		<h1 class="h2">Pulpit</h1>
 		<p class="text-surface-700-300 text-sm">Twoja sytuacja finansowa w jednym miejscu</p>
 	</div>
 
 	<DateRangePicker />
 
 	{#await data.dashboardData}
-		<div role="status" aria-live="polite" aria-label="Ładowanie dashboardu" class="space-y-8">
+		<div role="status" aria-live="polite" aria-label="Ładowanie pulpitu" class="space-y-8">
 			<div class="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
 				{#each { length: 3 } as _, i (i)}
 					<div class="card preset-filled-surface-100-900 p-4 space-y-3">
@@ -630,7 +630,7 @@
 		/>
 	{:catch err}
 		<div class="card preset-filled-error-500 p-4">
-			<p class="font-semibold">Nie udało się załadować danych dashboardu.</p>
+			<p class="font-semibold">Nie udało się załadować danych pulpitu.</p>
 			<p class="text-sm">{err?.message ?? 'Spróbuj ponownie później.'}</p>
 		</div>
 	{/await}

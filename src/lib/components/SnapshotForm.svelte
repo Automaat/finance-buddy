@@ -474,7 +474,7 @@
 	<!-- Date & Notes -->
 	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
 		<header class="space-y-1">
-			<h3 class="h3">Data Snapshot</h3>
+			<h3 class="h3">Data migawki</h3>
 		</header>
 		<div class="space-y-4">
 			<div class="flex flex-col gap-1">
@@ -821,7 +821,7 @@
 	<!-- Submit Buttons -->
 	<div class="flex flex-col-reverse sm:flex-row gap-3">
 		<button type="submit" disabled={loading} class="btn preset-filled-primary-500 sm:flex-1 w-full">
-			{loading ? 'Zapisywanie...' : '💾 Zapisz Snapshot'}
+			{loading ? 'Zapisywanie...' : '💾 Zapisz migawkę'}
 		</button>
 		<button
 			type="button"

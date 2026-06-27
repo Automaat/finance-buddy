@@ -161,7 +161,9 @@ describe('Salaries page — saveSalary validation & error display', () => {
 
 		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
 
-		await waitFor(() => expect(screen.getByText('Failed to save salary record')).toBeTruthy());
+		await waitFor(() =>
+			expect(screen.getByText('Nie udało się zapisać rekordu wynagrodzenia')).toBeTruthy()
+		);
 	});
 
 	it('rejects future date evaluated at submit time, not page load', async () => {
@@ -449,14 +451,14 @@ describe('Salaries page — valuation flows', () => {
 		await fireEvent.click(screen.getByRole('button', { name: /Nowa wycena/i }));
 		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
 		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
-		const fmv = screen.getByLabelText(/FMV per share/) as HTMLInputElement;
+		const fmv = screen.getByLabelText(/WR\/akcję \(bazowa\)/) as HTMLInputElement;
 		await fireEvent.input(fmv, { target: { value: '5' } });
-		const low = screen.getByLabelText(/FMV low/) as HTMLInputElement;
+		const low = screen.getByLabelText(/WR minimalna/) as HTMLInputElement;
 		await fireEvent.input(low, { target: { value: '10' } });
 		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
 
 		await waitFor(() =>
-			expect(screen.getByText('fmv_low nie może być większe niż fmv_per_share')).toBeTruthy()
+			expect(screen.getByText('WR minimalna nie może być większa niż WR bazowa')).toBeTruthy()
 		);
 		expect(fetchMock).not.toHaveBeenCalled();
 	});
@@ -469,14 +471,14 @@ describe('Salaries page — valuation flows', () => {
 		await fireEvent.click(screen.getByRole('button', { name: /Nowa wycena/i }));
 		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
 		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
-		const fmv = screen.getByLabelText(/FMV per share/) as HTMLInputElement;
+		const fmv = screen.getByLabelText(/WR\/akcję \(bazowa\)/) as HTMLInputElement;
 		await fireEvent.input(fmv, { target: { value: '10' } });
-		const high = screen.getByLabelText(/FMV high/) as HTMLInputElement;
+		const high = screen.getByLabelText(/WR maksymalna/) as HTMLInputElement;
 		await fireEvent.input(high, { target: { value: '5' } });
 		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
 
 		await waitFor(() =>
-			expect(screen.getByText('fmv_high nie może być mniejsze niż fmv_per_share')).toBeTruthy()
+			expect(screen.getByText('WR maksymalna nie może być mniejsza niż WR bazowa')).toBeTruthy()
 		);
 		expect(fetchMock).not.toHaveBeenCalled();
 	});
@@ -489,7 +491,7 @@ describe('Salaries page — valuation flows', () => {
 		await fireEvent.click(screen.getByRole('button', { name: /Nowa wycena/i }));
 		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
 		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
-		const fmv = screen.getByLabelText(/FMV per share/) as HTMLInputElement;
+		const fmv = screen.getByLabelText(/WR\/akcję \(bazowa\)/) as HTMLInputElement;
 		await fireEvent.input(fmv, { target: { value: '12.5' } });
 		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
 
@@ -520,7 +522,7 @@ describe('Salaries page — valuation flows', () => {
 		await fireEvent.click(screen.getByRole('button', { name: /Nowa wycena/i }));
 		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
 		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
-		const fmv = screen.getByLabelText(/FMV per share/) as HTMLInputElement;
+		const fmv = screen.getByLabelText(/WR\/akcję \(bazowa\)/) as HTMLInputElement;
 		await fireEvent.input(fmv, { target: { value: '12.5' } });
 		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
 

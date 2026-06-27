@@ -125,7 +125,7 @@ function buildData(
 describe('Dashboard Page', () => {
 	it('renders the main heading', () => {
 		render(Page, { props: { data: buildData() } });
-		expect(screen.getByRole('heading', { name: /Dashboard/i })).toBeTruthy();
+		expect(screen.getByRole('heading', { name: /Pulpit/i })).toBeTruthy();
 	});
 
 	it('renders the description', () => {
@@ -138,7 +138,7 @@ describe('Dashboard Page', () => {
 		const { container } = render(Page, {
 			props: { data: buildData({ dashboardData: pending }) }
 		});
-		const live = screen.getByRole('status', { name: /Ładowanie dashboardu/i });
+		const live = screen.getByRole('status', { name: /Ładowanie pulpitu/i });
 		expect(live).toBeTruthy();
 		expect(container.querySelectorAll('.skeleton').length).toBeGreaterThan(0);
 	});

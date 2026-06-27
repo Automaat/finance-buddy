@@ -14,17 +14,17 @@ export interface GotoRoute {
 }
 
 export const GOTO_ROUTES: GotoRoute[] = [
-	{ key: 'h', href: '/', label: 'Dashboard' },
+	{ key: 'h', href: '/', label: 'Pulpit' },
 	{ key: 'a', href: '/accounts', label: 'Konta' },
-	{ key: 's', href: '/snapshots', label: 'Snapshoty' },
+	{ key: 's', href: '/snapshots', label: 'Migawki' },
 	{ key: 't', href: '/transactions', label: 'Transakcje' }
 ];
 
 export const SHORTCUT_BINDINGS: ShortcutBinding[] = [
-	{ keys: 'n', description: 'Nowy snapshot' },
-	{ keys: 'g h', description: 'Dashboard' },
+	{ keys: 'n', description: 'Nowa migawka' },
+	{ keys: 'g h', description: 'Pulpit' },
 	{ keys: 'g a', description: 'Konta' },
-	{ keys: 'g s', description: 'Snapshoty' },
+	{ keys: 'g s', description: 'Migawki' },
 	{ keys: 'g t', description: 'Transakcje' },
 	{ keys: '?', description: 'Pokaż skróty' },
 	{ keys: 'Cmd/Ctrl + K', description: 'Paleta komend' }

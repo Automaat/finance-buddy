@@ -360,7 +360,7 @@
 			if (!response.ok) {
 				const errorData = await response.json();
 				const detail = errorData.detail;
-				const fallback = 'Failed to save bonus';
+				const fallback = 'Nie udało się zapisać bonusu';
 				let message: string;
 				if (Array.isArray(detail)) {
 					const joined = detail
@@ -711,7 +711,7 @@
 			if (!response.ok) {
 				const errorData = await response.json();
 				const detail = errorData.detail;
-				const fallback = 'Failed to save grant';
+				const fallback = 'Nie udało się zapisać grantu';
 				let message: string;
 				if (Array.isArray(detail)) {
 					const joined = detail
@@ -760,8 +760,8 @@
 
 	const valuationSourceLabels: Record<ValuationSource, string> = {
 		'409a': '409A',
-		preferred_round: 'Runda preferred',
-		tender: 'Tender / wykup',
+		preferred_round: 'Runda uprzywilejowana',
+		tender: 'Oferta odkupu',
 		estimate: 'Estymacja'
 	};
 
@@ -844,21 +844,21 @@
 			return;
 		}
 		if (valuationFormData.fmv_per_share < 0) {
-			valuationError = 'FMV musi być nieujemne';
+			valuationError = 'WR musi być nieujemna';
 			return;
 		}
 		if (
 			valuationFormData.fmv_low !== null &&
 			valuationFormData.fmv_low > valuationFormData.fmv_per_share
 		) {
-			valuationError = 'fmv_low nie może być większe niż fmv_per_share';
+			valuationError = 'WR minimalna nie może być większa niż WR bazowa';
 			return;
 		}
 		if (
 			valuationFormData.fmv_high !== null &&
 			valuationFormData.fmv_high < valuationFormData.fmv_per_share
 		) {
-			valuationError = 'fmv_high nie może być mniejsze niż fmv_per_share';
+			valuationError = 'WR maksymalna nie może być mniejsza niż WR bazowa';
 			return;
 		}
 
@@ -885,7 +885,7 @@
 			if (!response.ok) {
 				const errorData = await response.json();
 				const detail = errorData.detail;
-				const fallback = 'Failed to save valuation';
+				const fallback = 'Nie udało się zapisać wyceny';
 				let message: string;
 				if (Array.isArray(detail)) {
 					const joined = detail
@@ -1030,7 +1030,7 @@
 			if (!response.ok) {
 				const errorData = await response.json();
 				const detail = errorData.detail;
-				const fallback = 'Failed to save salary record';
+				const fallback = 'Nie udało się zapisać rekordu wynagrodzenia';
 				let message: string;
 				if (Array.isArray(detail)) {
 					const joined = detail
@@ -1274,10 +1274,10 @@
 		<header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
 			<div>
 				<h3 class="h3 flex items-center gap-2">
-					<Wallet size={20} /> Total compensation
+					<Wallet size={20} /> Łączne wynagrodzenie
 				</h3>
 				<p class="text-xs text-surface-700-300">
-					Roczna pensja podstawowa + bonusy + equity (opcjonalnie). Wszystko w PLN.
+					Roczna pensja podstawowa + bonusy + udziały (opcjonalnie). Wszystko w PLN.
 				</p>
 			</div>
 			<div class="flex flex-wrap gap-2">
@@ -1295,7 +1295,7 @@
 		{#if compSummary}
 			<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
 				<div class="card preset-tonal-surface p-3">
-					<div class="text-xs text-surface-700-300">Pensja podstawowa (gross)</div>
+					<div class="text-xs text-surface-700-300">Pensja podstawowa (brutto)</div>
 					<div class="text-lg font-semibold">{formatPLN(compSummary.baseAnnualGross)}</div>
 					<div class="text-xs text-surface-700-300">
 						netto: {formatPLN(compSummary.baseAnnualNet)}
@@ -1311,7 +1311,7 @@
 					{/if}
 				</div>
 				<div class="card preset-tonal-surface p-3">
-					<div class="text-xs text-surface-700-300">Equity vesting w {totalCompYear}</div>
+					<div class="text-xs text-surface-700-300">Nabycie udziałów w {totalCompYear}</div>
 					<div class="text-lg font-semibold">{formatPLN(compSummary.equityVestedYearPln)}</div>
 					{#if compSummary.equityVestedYearLowPln !== compSummary.equityVestedYearHighPln}
 						<div class="text-xs text-surface-700-300">
@@ -1327,7 +1327,7 @@
 					{/if}
 					{#if compSummary.equityLockedYearPln > 0}
 						<div class="text-xs text-warning-500">
-							+ {formatPLN(compSummary.equityLockedYearPln)} zablokowane (RSU, czeka na liquidity event)
+							+ {formatPLN(compSummary.equityLockedYearPln)} zablokowane (RSU, czeka na zdarzenie płynnościowe)
 						</div>
 					{/if}
 					{#if compSummary.hasEquityWithoutFx}
@@ -1336,7 +1336,7 @@
 				</div>
 				<div class="card preset-tonal-surface p-3">
 					<div class="text-xs text-surface-700-300">
-						Total {includeEquityInTotal ? '(z equity)' : '(bez equity)'}
+						Łącznie {includeEquityInTotal ? '(z udziałami)' : '(bez udziałów)'}
 					</div>
 					<div class="text-xl font-bold text-primary-600-400">{formatPLN(totalCompGross)}</div>
 					<div class="text-xs text-surface-700-300">
@@ -1345,12 +1345,15 @@
 				</div>
 			</div>
 			<div class="text-xs text-surface-700-300">
-				Pensja, bonusy i equity filtrowane po roku. Equity = akcje time-vesting w wybranym roku ×
-				najnowsza wycena per share (intrinsic spread dla opcji, FMV dla RSU).
+				Pensja, bonusy i udziały filtrowane po roku. Udziały = akcje z nabywaniem w czasie w
+				wybranym roku × najnowsza wycena/akcję (spread wewnętrzny dla opcji, WR dla RSU).
 			</div>
 			<label class="flex items-center gap-2 text-sm cursor-pointer">
 				<input type="checkbox" class="checkbox" bind:checked={includeEquityInTotal} />
-				<span>Wlicz equity vesting w tym roku do total (uwaga: nie zrealizowane do sprzedaży)</span>
+				<span
+					>Wlicz udziały nabywane w tym roku do łącznego wynagrodzenia (uwaga: nie zrealizowane do
+					sprzedaży)</span
+				>
 			</label>
 		{:else}
 			<p class="text-sm text-surface-700-300">Wybierz właściciela aby zobaczyć podsumowanie.</p>
@@ -1569,10 +1572,10 @@
 	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
 		<header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
 			<div>
-				<h3 class="h3 flex items-center gap-2"><Award size={20} /> Equity (opcje + RSU)</h3>
+				<h3 class="h3 flex items-center gap-2"><Award size={20} /> Udziały (opcje + RSU)</h3>
 				<p class="text-xs text-surface-700-300">
-					Grupy po firmie. Vested = ile akcji już Ci się odblokowało dziś. Dla RSU z double-trigger
-					pokazane jest 0 dopóki nie wystąpi liquidity event.
+					Grupy po firmie. Nabyte = ile akcji już Ci się odblokowało dziś. Dla RSU z podwójnym
+					wyzwalaczem pokazane jest 0 dopóki nie wystąpi zdarzenie płynnościowe.
 				</p>
 			</div>
 			<button
@@ -1598,9 +1601,9 @@
 							<span class="text-xs text-surface-700-300">
 								{group.grants.length}
 								{group.grantLabel} ·
-								{formatShares(group.vestedShares)} / {formatShares(group.totalShares)} vested
+								{formatShares(group.vestedShares)} / {formatShares(group.totalShares)} nabytych
 								{#if group.hasPaperValue}
-									· paper {formatCurrency(group.paperBase, group.currency)}
+									· wart. papierowa {formatCurrency(group.paperBase, group.currency)}
 									{#if group.hasPaperValuePln}
 										(≈ {formatPLN(group.paperBasePln)})
 									{/if}
@@ -1614,10 +1617,10 @@
 										<th>Data grantu</th>
 										<th>Typ</th>
 										<th>Właściciel</th>
-										<th>Akcje (vested / total)</th>
-										<th>Strike</th>
-										<th>Paper value</th>
-										<th>Vesting</th>
+										<th>Akcje (nabyte / łącznie)</th>
+										<th>Cena wykonania</th>
+										<th>Wart. papierowa</th>
+										<th>Nabywanie</th>
 										<th>Status</th>
 										<th class="text-right">Akcje</th>
 									</tr>
@@ -1672,11 +1675,11 @@
 											</td>
 											<td class="text-xs">
 												{#if grant.requires_liquidity_event && !grant.liquidity_event_date}
-													<span class="text-warning-500">double-trigger: oczekuje</span>
+													<span class="text-warning-500">podwójny wyzwalacz: oczekuje</span>
 												{:else if grant.requires_liquidity_event}
-													<span class="text-success-500">trigger uruchomiony</span>
+													<span class="text-success-500">wyzwalacz uruchomiony</span>
 												{:else}
-													<span class="text-surface-700-300">single-trigger</span>
+													<span class="text-surface-700-300">pojedynczy wyzwalacz</span>
 												{/if}
 											</td>
 											<td class="text-right whitespace-nowrap">
@@ -1713,7 +1716,8 @@
 			<div>
 				<h3 class="h3 flex items-center gap-2"><Building2 size={20} /> Wycena spółek</h3>
 				<p class="text-xs text-surface-700-300">
-					FMV per share dla spółek prywatnych (i publicznych). Range low/high pokazuje niepewność.
+					Wartość rynkowa (WR) na akcję dla spółek prywatnych (i publicznych). Zakres min/max
+					pokazuje niepewność.
 				</p>
 			</div>
 			<button
@@ -1728,7 +1732,7 @@
 
 		{#if valuations.length === 0}
 			<div class="text-center py-8 text-surface-700-300">
-				<p>Brak wycen — dodaj wycenę, aby zobaczyć paper value grantów</p>
+				<p>Brak wycen — dodaj wycenę, aby zobaczyć wartość papierową grantów</p>
 			</div>
 		{:else}
 			<div class="table-wrap">
@@ -1737,10 +1741,10 @@
 						<tr>
 							<th>Firma</th>
 							<th>Data</th>
-							<th>FMV / akcję</th>
-							<th>Zakres (low–high)</th>
+							<th>WR / akcję</th>
+							<th>Zakres (min–max)</th>
 							<th>Źródło</th>
-							<th>Discount</th>
+							<th>Dyskonto</th>
 							<th>Notatki</th>
 							<th class="text-right">Akcje</th>
 						</tr>

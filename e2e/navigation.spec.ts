@@ -7,7 +7,7 @@ const SIDEBAR_LINKS: { label: string; path: string }[] = [
 	{ label: 'Majątek', path: '/assets' },
 	{ label: 'Zobowiązania', path: '/debts' },
 	{ label: 'Cele', path: '/goals' },
-	{ label: 'Snapshoty', path: '/snapshots' },
+	{ label: 'Migawki', path: '/snapshots' },
 	{ label: 'Wynagrodzenia', path: '/salaries' },
 	{ label: 'Ustawienia', path: '/settings/config' }
 ];
@@ -30,7 +30,7 @@ test.describe('navigation', () => {
 		await page.goto('/');
 		const nav = page.getByRole('navigation', { name: 'Mobile navigation' });
 		await expect(nav).toBeVisible();
-		await expect(nav.getByRole('link', { name: 'Dashboard' })).toBeVisible();
+		await expect(nav.getByRole('link', { name: 'Pulpit' })).toBeVisible();
 		await nav.getByRole('link', { name: 'Konta' }).click();
 		await expect(page).toHaveURL(/\/accounts$/);
 	});

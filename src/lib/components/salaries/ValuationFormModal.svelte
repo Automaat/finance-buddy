@@ -75,7 +75,7 @@
 		</div>
 
 		<label class="label">
-			<span class="font-semibold text-sm">FMV per share (bazowa)*</span>
+			<span class="font-semibold text-sm">WR/akcję (bazowa)*</span>
 			<input
 				type="number"
 				class="input"
@@ -88,11 +88,11 @@
 
 		<div class="grid grid-cols-2 gap-2">
 			<label class="label">
-				<span class="font-semibold text-sm">FMV low (opcjonalna)</span>
+				<span class="font-semibold text-sm">WR minimalna (opcjonalna)</span>
 				<input type="number" class="input" bind:value={data.fmv_low} min="0" step="0.0001" />
 			</label>
 			<label class="label">
-				<span class="font-semibold text-sm">FMV high (opcjonalna)</span>
+				<span class="font-semibold text-sm">WR maksymalna (opcjonalna)</span>
 				<input type="number" class="input" bind:value={data.fmv_high} min="0" step="0.0001" />
 			</label>
 		</div>
@@ -101,14 +101,14 @@
 			<span class="font-semibold text-sm">Źródło*</span>
 			<select class="select" bind:value={data.source} required>
 				<option value="409a">409A</option>
-				<option value="preferred_round">Runda preferred</option>
-				<option value="tender">Tender / wykup</option>
+				<option value="preferred_round">Runda uprzywilejowana</option>
+				<option value="tender">Oferta odkupu</option>
 				<option value="estimate">Estymacja</option>
 			</select>
 		</label>
 
 		<label class="label">
-			<span class="font-semibold text-sm">Common stock discount (%) — opcjonalne</span>
+			<span class="font-semibold text-sm">Dyskonto akcji zwykłych (%) — opcjonalne</span>
 			<input
 				type="number"
 				class="input"
@@ -119,7 +119,7 @@
 				placeholder="np. 30"
 			/>
 			<span class="text-xs text-surface-700-300"
-				>Stosowane przy wycenie preferred → common (zwykle 20–40%)</span
+				>Stosowane przy wycenie akcji uprzywilejowanych → zwykłych (zwykle 20–40%)</span
 			>
 		</label>
 

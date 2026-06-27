@@ -10,7 +10,7 @@
 	}
 
 	const commands: Command[] = [
-		{ label: 'Dashboard', hint: '/', run: () => goto('/') },
+		{ label: 'Pulpit', hint: '/', run: () => goto('/') },
 		{ label: 'Metryki', hint: '/metryki', run: () => goto('/metryki') },
 		{ label: 'Symulacje', hint: '/simulations', run: () => goto('/simulations') },
 		{ label: 'Emerytura (Monte Carlo)', hint: '/retirement', run: () => goto('/retirement') },
@@ -29,8 +29,8 @@
 		},
 		{ label: 'Zobowiązania', hint: '/debts', run: () => goto('/debts') },
 		{ label: 'Cele', hint: '/goals', run: () => goto('/goals') },
-		{ label: 'Snapshoty', hint: '/snapshots', run: () => goto('/snapshots') },
-		{ label: 'Nowy snapshot', hint: '/snapshots/new', run: () => goto('/snapshots/new') },
+		{ label: 'Migawki', hint: '/snapshots', run: () => goto('/snapshots') },
+		{ label: 'Nowa migawka', hint: '/snapshots/new', run: () => goto('/snapshots/new') },
 		{ label: 'Wynagrodzenia', hint: '/salaries', run: () => goto('/salaries') },
 		{ label: 'Ustawienia', hint: '/settings', run: () => goto('/settings') }
 	];

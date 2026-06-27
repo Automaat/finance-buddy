@@ -78,7 +78,7 @@ describe('SnapshotForm', () => {
 		render(SnapshotForm, {
 			props: { assets: [], liabilities: [], physicalAssets: [] }
 		});
-		expect(screen.getByRole('heading', { name: 'Data Snapshot' })).toBeTruthy();
+		expect(screen.getByRole('heading', { name: 'Data migawki' })).toBeTruthy();
 		expect(screen.getByLabelText('Data')).toBeTruthy();
 		expect(screen.getByLabelText('Notatki (opcjonalne)')).toBeTruthy();
 	});
@@ -109,7 +109,7 @@ describe('SnapshotForm', () => {
 		render(SnapshotForm, {
 			props: { assets: [], liabilities: [], physicalAssets: [] }
 		});
-		expect(screen.getByRole('button', { name: /Zapisz Snapshot/ })).toBeTruthy();
+		expect(screen.getByRole('button', { name: /Zapisz migawkę/ })).toBeTruthy();
 	});
 
 	it('populates date and notes from editingSnapshot', () => {
@@ -174,9 +174,7 @@ describe('SnapshotForm submit', () => {
 			props: { assets: [bankAccount], liabilities: [mortgage], physicalAssets: [] }
 		});
 
-		await fireEvent.submit(
-			screen.getByRole('button', { name: /Zapisz Snapshot/ }).closest('form')!
-		);
+		await fireEvent.submit(screen.getByRole('button', { name: /Zapisz migawkę/ }).closest('form')!);
 
 		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
 		const [url, options] = fetchMock.mock.calls[0];
@@ -203,9 +201,7 @@ describe('SnapshotForm submit', () => {
 			props: { assets: [bankAccount], liabilities: [], physicalAssets: [] }
 		});
 
-		await fireEvent.submit(
-			screen.getByRole('button', { name: /Zapisz Snapshot/ }).closest('form')!
-		);
+		await fireEvent.submit(screen.getByRole('button', { name: /Zapisz migawkę/ }).closest('form')!);
 
 		await waitFor(() => expect(screen.getByText('Snapshot już istnieje')).toBeTruthy());
 		expect(goto).not.toHaveBeenCalled();
@@ -229,9 +225,7 @@ describe('SnapshotForm submit', () => {
 			props: { editingSnapshot, assets: [bankAccount], liabilities: [], physicalAssets: [] }
 		});
 
-		await fireEvent.submit(
-			screen.getByRole('button', { name: /Zapisz Snapshot/ }).closest('form')!
-		);
+		await fireEvent.submit(screen.getByRole('button', { name: /Zapisz migawkę/ }).closest('form')!);
 
 		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
 		const [url, options] = fetchMock.mock.calls[0];
@@ -261,9 +255,7 @@ describe('SnapshotForm submit', () => {
 			props: { editingSnapshot, assets: [bankAccount], liabilities: [], physicalAssets: [] }
 		});
 
-		await fireEvent.submit(
-			screen.getByRole('button', { name: /Zapisz Snapshot/ }).closest('form')!
-		);
+		await fireEvent.submit(screen.getByRole('button', { name: /Zapisz migawkę/ }).closest('form')!);
 
 		await waitFor(() => expect(screen.getByText('Nie udało się zaktualizować')).toBeTruthy());
 		expect(goto).not.toHaveBeenCalled();
@@ -296,9 +288,7 @@ describe('SnapshotForm submit', () => {
 			}
 		});
 
-		await fireEvent.submit(
-			screen.getByRole('button', { name: /Zapisz Snapshot/ }).closest('form')!
-		);
+		await fireEvent.submit(screen.getByRole('button', { name: /Zapisz migawkę/ }).closest('form')!);
 
 		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
 		const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);

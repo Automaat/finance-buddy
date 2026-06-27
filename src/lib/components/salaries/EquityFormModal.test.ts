@@ -114,9 +114,9 @@ describe('EquityFormModal', () => {
 		const { rerender } = render(EquityFormModal, {
 			props: { ...baseProps, data: makeData({ type: 'rsu' }) }
 		});
-		expect(screen.queryByText(/Strike price/i)).toBeNull();
+		expect(screen.queryByText(/Cena wykonania/i)).toBeNull();
 		await rerender({ ...baseProps, data: makeData({ type: 'option', strike_price: 1.5 }) });
-		expect(screen.getByText(/Strike price/i)).toBeTruthy();
+		expect(screen.getByText(/Cena wykonania/i)).toBeTruthy();
 	});
 
 	it('calls onApplyPreset when preset select changes', async () => {
@@ -169,9 +169,9 @@ describe('EquityFormModal', () => {
 		const { rerender } = render(EquityFormModal, {
 			props: { ...baseProps, data: makeData({ requires_liquidity_event: false }) }
 		});
-		expect(screen.queryByText(/Data liquidity event/i)).toBeNull();
+		expect(screen.queryByText(/Data zdarzenia płynnościowego/i)).toBeNull();
 		await rerender({ ...baseProps, data: makeData({ requires_liquidity_event: true }) });
-		expect(screen.getByText(/Data liquidity event/i)).toBeTruthy();
+		expect(screen.getByText(/Data zdarzenia płynnościowego/i)).toBeTruthy();
 	});
 
 	it('lists every owner in the owner select', () => {

@@ -17,7 +17,7 @@ import {
 } from 'lucide-svelte';
 
 export const NAV_ROUTES = [
-	{ href: '/', label: 'Dashboard', icon: LayoutDashboard },
+	{ href: '/', label: 'Pulpit', icon: LayoutDashboard },
 	{ href: '/metryki', label: 'Metryki', icon: TrendingUp },
 	{ href: '/simulations', label: 'Symulacje', icon: Sparkles },
 	{ href: '/optimizer', label: 'Optymalizator', icon: Compass },
@@ -29,7 +29,7 @@ export const NAV_ROUTES = [
 	{ href: '/ekspozycja', label: 'Ekspozycja', icon: Globe },
 	{ href: '/debts', label: 'Zobowiązania', icon: ClipboardList },
 	{ href: '/goals', label: 'Cele', icon: Target },
-	{ href: '/snapshots', label: 'Snapshoty', icon: Camera },
+	{ href: '/snapshots', label: 'Migawki', icon: Camera },
 	{ href: '/salaries', label: 'Wynagrodzenia', icon: Banknote },
 	{ href: '/settings', label: 'Ustawienia', icon: Settings }
 ] as const;
