@@ -67,6 +67,12 @@ describe('formatSignedPercent', () => {
 	it('returns — for NaN', () => {
 		expect(formatSignedPercent(NaN)).toBe('—');
 	});
+
+	it('does not double-round values near a display-rounding boundary', () => {
+		// Same double-rounding hazard as formatPercent — verify both signs.
+		expect(formatSignedPercent(1.04996)).toBe(formatSignedPercent(1.0));
+		expect(formatSignedPercent(-1.04996)).toBe(formatSignedPercent(-1.0));
+	});
 });
 
 describe('formatPLN', () => {
@@ -89,6 +95,12 @@ describe('formatPercent', () => {
 	it('suppresses float precision noise from 0.07*100', () => {
 		// 0.07 * 100 === 7.000000000000001 in JS
 		expect(formatPercent(7.000000000000001)).toBe(formatPercent(7));
+	});
+
+	it('does not double-round values near a display-rounding boundary', () => {
+		// Pre-rounding 1.04996 to 4 decimals gives 1.0500, which Intl then rounds
+		// up to 1,1% — wrong. Without pre-rounding, Intl rounds 1.04996% to 1,0%.
+		expect(formatPercent(1.04996)).toBe(formatPercent(1.0));
 	});
 
 	it('returns — for null, undefined and NaN', () => {
