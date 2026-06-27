@@ -124,7 +124,6 @@ export async function load({ fetch, url }) {
 		const snapshotDate: string | null = dashboard.latest_snapshot_date ?? null;
 
 		return {
-			metricCards: dashboard.metric_cards,
 			allocationAnalysis: dashboard.allocation_analysis,
 			investmentTimeSeries: dashboard.investment_time_series,
 			wrapperTimeSeries: dashboard.wrapper_time_series,

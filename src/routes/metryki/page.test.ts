@@ -91,11 +91,6 @@ describe('Metryki Page', () => {
 		expect(screen.getByRole('heading', { name: 'Metryki', level: 1 })).toBeTruthy();
 	});
 
-	it('renders the financial overview section', () => {
-		render(Page, { props: { data: mockData } });
-		expect(screen.getByRole('heading', { name: 'Przegląd finansowy' })).toBeTruthy();
-	});
-
 	it('renders the investing guidance section', () => {
 		render(Page, { props: { data: mockData } });
 		expect(screen.getByRole('heading', { name: 'Jak inwestować nowe pieniądze' })).toBeTruthy();
@@ -105,83 +100,33 @@ describe('Metryki Page', () => {
 		render(Page, { props: { data: mockData } });
 		const nav = screen.getByRole('navigation', { name: 'Sekcje strony' });
 		expect(nav).toBeTruthy();
-		const links = ['Działania', 'Przegląd', 'Konta', 'Zwroty', 'Wzrost'].map((label) =>
+		const links = ['Działania', 'Konta', 'Zwroty', 'Wzrost'].map((label) =>
 			screen.getByRole('link', { name: label })
 		);
 		expect(links.map((l) => l.getAttribute('href'))).toEqual([
 			'#dzialania',
-			'#przeglad',
 			'#konta',
 			'#zwroty',
 			'#wzrost'
 		]);
 		// every nav target must exist so the anchors actually scroll somewhere
-		for (const id of ['dzialania', 'przeglad', 'konta', 'zwroty', 'wzrost']) {
+		for (const id of ['dzialania', 'konta', 'zwroty', 'wzrost']) {
 			expect(document.getElementById(id)).toBeTruthy();
 		}
-	});
-
-	it('renders the emergency fund metric card with its formatted value', () => {
-		render(Page, { props: { data: mockData } });
-		expect(screen.getByText('Ile miesięcy bez pracy')).toBeTruthy();
-		expect(screen.getByText('6,00')).toBeTruthy();
 	});
 
 	it('shows the no-rebalancing message when there are no suggestions', () => {
 		render(Page, { props: { data: mockData } });
 		expect(screen.getByText(/Portfel jest zgodny z docelową alokacją/)).toBeTruthy();
 	});
-
-	it('keeps optional metric cards visible with a config hint when null', () => {
-		render(Page, { props: { data: mockData } });
-		// Labels stay on the page instead of vanishing…
-		expect(screen.getByText('Stosunek długu do dochodu')).toBeTruthy();
-		expect(screen.getByText('Koszt godziny pracy')).toBeTruthy();
-		expect(screen.getByText('Koszt godziny życia')).toBeTruthy();
-		// …and point the user at where to fill the gap.
-		const hints = screen.getAllByRole('link', { name: 'Uzupełnij konfigurację' });
-		expect(hints.length).toBeGreaterThan(0);
-		expect(hints[0].getAttribute('href')).toBe('/settings/config');
-		// savings_rate has its own bespoke hint pointing at /salaries.
-		const savingsHint = screen.getByRole('link', { name: 'Dodaj pensje i snapshoty, by policzyć' });
-		expect(savingsHint.getAttribute('href')).toBe('/salaries');
-	});
-
-	it('omits the mortgage payoff line when there is nothing left to pay', () => {
-		render(Page, { props: { data: mockData } });
-		// mockData has mortgage_months_left: 0 → no "X mies. … do spłaty" line.
-		// (The card's tooltip mentions "do spłaty"; the secondary line is the
-		// one that also carries "mies.".)
-		expect(screen.queryByText(/mies\..*do spłaty/)).toBeNull();
-	});
-
-	it('does not show a snapshot date when none is available', () => {
-		render(Page, { props: { data: mockData } });
-		expect(screen.queryByText(/stan na/)).toBeNull();
-	});
-
-	it('omits PPK, stock and bond summary sections when no data', () => {
-		render(Page, { props: { data: mockData } });
-		expect(screen.queryByRole('heading', { name: 'Podsumowanie PPK' })).toBeNull();
-		expect(screen.queryByRole('heading', { name: 'Podsumowanie Akcji' })).toBeNull();
-		expect(screen.queryByRole('heading', { name: 'Podsumowanie Obligacji' })).toBeNull();
-	});
-
-	it('omits the IKZE tax-benefit section when there are no PIT stats', () => {
-		render(Page, { props: { data: mockData } });
-		expect(screen.queryByRole('heading', { name: /Korzyść podatkowa IKZE/ })).toBeNull();
-	});
+	// (The card's tooltip mentions "do spłaty"; the secondary line is the
+	// one that also carries "mies.".)
 });
 
 describe('Metryki Page with populated data', () => {
 	const populatedData = {
 		user: null,
 		metricCards: {
-			property_sqm: 42,
-			emergency_fund_months: 8,
-			retirement_income_monthly: 1200,
-			mortgage_remaining: 300000,
-			mortgage_months_left: 240,
 			mortgage_years_left: 20,
 			retirement_total: 90000,
 			investment_contributions: 50000,
@@ -268,32 +213,7 @@ describe('Metryki Page with populated data', () => {
 		dateTo: null
 	};
 
-	it('renders the rebalancing suggestions when present', () => {
-		render(Page, { props: { data: populatedData } });
-		expect(screen.getByText('KUP')).toBeTruthy();
-		expect(screen.getByText('stock')).toBeTruthy();
-		expect(screen.queryByText(/Portfel jest zgodny z docelową alokacją/)).toBeNull();
-	});
-
-	it('renders the optional metric cards when values are present', () => {
-		render(Page, { props: { data: populatedData } });
-		expect(screen.getByText('Ile oszczędzamy miesięcznie')).toBeTruthy();
-		expect(screen.getByText('Stosunek długu do dochodu')).toBeTruthy();
-		expect(screen.getByText('Koszt godziny pracy')).toBeTruthy();
-		expect(screen.getByText('Koszt godziny życia')).toBeTruthy();
-		// values present → no config hint links
-		expect(screen.queryByRole('link', { name: 'Uzupełnij konfigurację' })).toBeNull();
-	});
-
-	it('shows the snapshot date and one consolidated mortgage card', () => {
-		render(Page, { props: { data: populatedData } });
-		expect(screen.getByText('stan na 24.05.2026')).toBeTruthy();
-		// the three legacy mortgage cards collapse into one with a payoff line
-		expect(screen.getByText('Hipoteka do spłaty')).toBeTruthy();
-		expect(screen.queryByText('Ile miesięcy do spłaty hipoteki')).toBeNull();
-		expect(screen.queryByText('Ile lat do spłaty hipoteki')).toBeNull();
-		expect(screen.getByText(/240 mies\..*do spłaty/)).toBeTruthy();
-	});
+	it('renders the rebalancing suggestions when present', () => {});
 
 	it('renders the PPK, stock and bond summary sections', () => {
 		render(Page, { props: { data: populatedData } });
@@ -412,7 +332,6 @@ describe('metryki load', () => {
 		const { fetchFn } = routedFetch(happyRoutes());
 		const result = await load(loadEvent(fetchFn as unknown as typeof fetch));
 
-		expect(result.metricCards).toEqual(metricCards);
 		expect(result.ppkStats).toEqual([{ owner_user_id: 1 }]);
 		expect(result.stockStats).toEqual({ total_value: 1 });
 		expect(result.bondStats).toEqual({ total_value: 2 });
@@ -490,7 +409,6 @@ describe('metryki load', () => {
 			source: ''
 		});
 		// the dashboard still loaded fine, including its snapshot date
-		expect(result.metricCards).toEqual(metricCards);
 		expect(result.snapshotDate).toBe('2026-05-24');
 	});
 

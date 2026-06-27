@@ -201,18 +201,21 @@
 
 	<IKZEOptimizer />
 
-	<FireGapChart
-		bind:currentAge
-		bind:retirementAge
-		bind:lifeExpectancy
-		bind:currentPortfolioPLN={currentPortfolio}
-		bind:annualContributionPLN={annualContribution}
-		bind:expectedReturnPct={expectedReturn}
-	/>
-
 	<section class="card preset-filled-surface-100-900 p-5 space-y-4">
-		<h2 class="h4">Parametry</h2>
+		<h2 class="h4">Wspólne parametry (Luka FIRE & Monte Carlo)</h2>
 		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+			<label class="space-y-1">
+				<span class="text-xs font-semibold">Obecny wiek</span>
+				<input type="number" min="18" max="120" class="input w-full" bind:value={currentAge} />
+			</label>
+			<label class="space-y-1">
+				<span class="text-xs font-semibold">Wiek emerytalny</span>
+				<input type="number" min="18" max="120" class="input w-full" bind:value={retirementAge} />
+			</label>
+			<label class="space-y-1">
+				<span class="text-xs font-semibold">Oczekiwana długość życia</span>
+				<input type="number" min="18" max="120" class="input w-full" bind:value={lifeExpectancy} />
+			</label>
 			<label class="space-y-1">
 				<span class="text-xs font-semibold">Obecny portfel (PLN)</span>
 				<input type="number" min="0" class="input w-full" bind:value={currentPortfolio} />
@@ -231,6 +234,21 @@
 					disabled={useAllocation}
 				/>
 			</label>
+		</div>
+	</section>
+
+	<FireGapChart
+		bind:currentAge
+		bind:retirementAge
+		bind:lifeExpectancy
+		bind:currentPortfolioPLN={currentPortfolio}
+		bind:annualContributionPLN={annualContribution}
+		bind:expectedReturnPct={expectedReturn}
+	/>
+
+	<section class="card preset-filled-surface-100-900 p-5 space-y-4">
+		<h2 class="h4">Parametry Monte Carlo</h2>
+		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 			<label class="space-y-1">
 				<span class="text-xs font-semibold">Zmienność / odchylenie std. (%)</span>
 				<input
@@ -241,18 +259,6 @@
 					bind:value={volatility}
 					disabled={useAllocation}
 				/>
-			</label>
-			<label class="space-y-1">
-				<span class="text-xs font-semibold">Obecny wiek</span>
-				<input type="number" min="18" max="120" class="input w-full" bind:value={currentAge} />
-			</label>
-			<label class="space-y-1">
-				<span class="text-xs font-semibold">Wiek emerytalny</span>
-				<input type="number" min="18" max="120" class="input w-full" bind:value={retirementAge} />
-			</label>
-			<label class="space-y-1">
-				<span class="text-xs font-semibold">Oczekiwana długość życia</span>
-				<input type="number" min="18" max="120" class="input w-full" bind:value={lifeExpectancy} />
 			</label>
 			<label class="space-y-1">
 				<span class="text-xs font-semibold">Roczna wypłata na emeryturze (PLN)</span>
