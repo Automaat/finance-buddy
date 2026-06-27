@@ -187,10 +187,6 @@
 		return v.toLocaleString('pl-PL', { maximumFractionDigits: 0 }) + ' PLN';
 	}
 
-	function fmtDate(d: Date): string {
-		return d.toLocaleDateString('pl-PL', { year: 'numeric', month: 'long' });
-	}
-
 	function fmtPct(v: number): string {
 		return (v * 100).toFixed(1) + '%';
 	}
@@ -404,9 +400,9 @@
 						{/each}
 					</tr>
 					<tr>
-						<td>Data FI (m-c/rok)</td>
+						<td>Data FI</td>
 						{#each results as r (r.scenario.id)}
-							<td class="text-right">{fmtDate(r.fiDate)}</td>
+							<td class="text-right">{formatDate(r.fiDate)}</td>
 						{/each}
 					</tr>
 					{#if requiredCapital > 0}
