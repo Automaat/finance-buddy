@@ -9,10 +9,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/shopspring/decimal"
+
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 	"github.com/Automaat/finance-buddy/backend-go/internal/validation"
 	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
-	"github.com/shopspring/decimal"
 )
 
 // MonthlyFetcher is the slice of cpi.EurostatHICPFetcher / cpi.FREDFetcher
