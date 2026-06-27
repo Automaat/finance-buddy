@@ -4,7 +4,7 @@
 	import type { EChartsOption } from 'echarts';
 	import Modal from '$lib/components/Modal.svelte';
 	import BondsMaturityLadder from '$lib/components/BondsMaturityLadder.svelte';
-	import { formatPLN } from '$lib/utils/format';
+	import { formatPLN, formatDate } from '$lib/utils/format';
 	import { chartValue, chartValueGradient } from '$lib/utils/theme';
 	import { createChart } from '$lib/utils/charts/lifecycle';
 	import { Banknote, Pencil, Plus, Trash2, TrendingUp } from 'lucide-svelte';
@@ -242,7 +242,7 @@
 			formatter: (params: unknown) => {
 				const arr = params as Array<{ value: [string, number]; data: YTMPoint }>;
 				const p = arr[0];
-				const date = new Date(p.value[0]).toLocaleDateString('pl-PL');
+				const date = formatDate(p.value[0]);
 				const value = formatPLN(p.value[1]);
 				const rate = (p.data.year_rate ?? 0).toFixed(2);
 				return `${date}<br/>Wartość: ${value}<br/>Stopa roku: ${rate}%`;

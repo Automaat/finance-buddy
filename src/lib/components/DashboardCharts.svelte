@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import * as echarts from 'echarts';
 	import type { ECElementEvent, EChartsOption } from 'echarts';
-	import { formatPLN, formatNumber } from '$lib/utils/format';
+	import { formatPLN, formatNumber, formatDate } from '$lib/utils/format';
 	import { isMobile, isTablet } from '$lib/utils/viewport';
 	import { chartPalette, chartValue, chartValueGradient } from '$lib/utils/theme';
 	import { ownerName, type OwnerOption } from '$lib/types/owners';
@@ -71,7 +71,7 @@
 		tooltip: {
 			trigger: 'axis',
 			formatter: (params: any) => {
-				const date = new Date(params[0].value[0]).toLocaleDateString('pl-PL');
+				const date = formatDate(params[0].value[0]);
 				const value = formatPLN(params[0].value[1]);
 				return `${date}<br/>Wartość: ${value}`;
 			}

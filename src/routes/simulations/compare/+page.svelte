@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { resolveApiUrl } from '$lib/api';
+	import { formatDate } from '$lib/utils/format';
 	import { GitCompareArrows, ArrowLeft } from 'lucide-svelte';
 
 	interface RetirementScenarioInputs {
@@ -200,7 +201,7 @@
 	// strings doesn't double-up.
 	function fmtUpdatedAt(s: string): string {
 		const utc = s.endsWith('Z') ? s : s + 'Z';
-		return new Date(utc).toLocaleDateString('pl-PL');
+		return formatDate(utc);
 	}
 
 	// Per-row min/max for color-coding so differences are easy to scan.

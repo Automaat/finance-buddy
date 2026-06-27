@@ -2,7 +2,7 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import Skeleton from '$lib/components/Skeleton.svelte';
 	import SortableTable, { type SortableColumn } from '$lib/components/SortableTable.svelte';
-	import { formatPLN, formatNumber } from '$lib/utils/format';
+	import { formatPLN, formatNumber, formatDate } from '$lib/utils/format';
 	import { Wallet, TrendingDown, Pencil, Trash2, Plus, BarChart3 } from 'lucide-svelte';
 	import { resolveApiUrl } from '$lib/api';
 	import { invalidateAll } from '$app/navigation';
@@ -854,7 +854,7 @@
 						<tbody>
 							{#each transactionsData.transactions as transaction}
 								<tr>
-									<td>{new Date(transaction.date).toLocaleDateString('pl-PL')}</td>
+									<td>{formatDate(transaction.date)}</td>
 									<td class="font-semibold text-primary-600-400">{formatPLN(transaction.amount)}</td
 									>
 									<td>{ownerName(owners, transaction.owner_user_id)}</td>

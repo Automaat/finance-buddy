@@ -7,7 +7,7 @@
 	import EquityFormModal from '$lib/components/salaries/EquityFormModal.svelte';
 	import SalaryFormModal from '$lib/components/salaries/SalaryFormModal.svelte';
 	import ValuationFormModal from '$lib/components/salaries/ValuationFormModal.svelte';
-	import { formatPLN } from '$lib/utils/format';
+	import { formatPLN, formatDate } from '$lib/utils/format';
 	import {
 		formatPctSigned,
 		formatPlnSigned,
@@ -1189,7 +1189,7 @@
 				formatter: (params: unknown) => {
 					if (!params || !Array.isArray(params) || params.length === 0) return '';
 					const rows = params as Array<{ value: [string, number]; seriesName: string }>;
-					let result = `${new Date(rows[0].value[0]).toLocaleDateString('pl-PL')}<br/>`;
+					let result = `${formatDate(rows[0].value[0])}<br/>`;
 					rows.forEach((p) => {
 						result += `${p.seriesName}: ${formatPLN(p.value[1])}<br/>`;
 					});
@@ -1452,7 +1452,7 @@
 					<tbody>
 						{#each visibleSalaryRecords as record}
 							<tr>
-								<td>{new Date(record.date).toLocaleDateString('pl-PL')}</td>
+								<td>{formatDate(record.date)}</td>
 								<td>{ownerName(owners, record.owner_user_id)}</td>
 								<td>{record.company}</td>
 								<td class="font-semibold text-primary-600-400">{formatPLN(record.gross_amount)}</td>
@@ -1527,7 +1527,7 @@
 								<tbody>
 									{#each bonuses as bonus (bonus.id)}
 										<tr>
-											<td>{new Date(bonus.date).toLocaleDateString('pl-PL')}</td>
+											<td>{formatDate(bonus.date)}</td>
 											<td>{bonusTypeLabels[bonus.type]}</td>
 											<td>{ownerName(owners, bonus.owner_user_id)}</td>
 											<td class="font-semibold text-primary-600-400">
@@ -1628,7 +1628,7 @@
 								<tbody>
 									{#each group.grants as grant (grant.id)}
 										<tr>
-											<td>{new Date(grant.grant_date).toLocaleDateString('pl-PL')}</td>
+											<td>{formatDate(grant.grant_date)}</td>
 											<td>{equityTypeLabels[grant.type]}</td>
 											<td>{ownerName(owners, grant.owner_user_id)}</td>
 											<td class="font-semibold">
@@ -1656,7 +1656,7 @@
 													{/if}
 													{#if grant.valuation_date}
 														<br /><span class="text-surface-700-300"
-															>wg {new Date(grant.valuation_date).toLocaleDateString('pl-PL')}</span
+															>wg {formatDate(grant.valuation_date)}</span
 														>
 													{/if}
 												{:else if grant.valuation_date}
@@ -1753,7 +1753,7 @@
 						{#each valuations as valuation (valuation.id)}
 							<tr>
 								<td class="font-semibold">{valuation.company}</td>
-								<td>{new Date(valuation.date).toLocaleDateString('pl-PL')}</td>
+								<td>{formatDate(valuation.date)}</td>
 								<td>{formatCurrency(valuation.fmv_per_share, valuation.currency)}</td>
 								<td class="text-xs">
 									{#if valuation.fmv_low !== null || valuation.fmv_high !== null}
@@ -1824,7 +1824,7 @@
 						<div class="flex items-baseline justify-between flex-wrap gap-2">
 							<strong class="text-lg">{ownerName(owners, ctx.owner_user_id)}</strong>
 							<span class="text-xs text-surface-700-300">
-								od {new Date(ctx.last_change_date).toLocaleDateString('pl-PL')}
+								od {formatDate(ctx.last_change_date)}
 								{#if getPreviousCompany(ctx.owner_user_id, ctx.previous_change_date)}
 									· {getPreviousCompany(ctx.owner_user_id, ctx.previous_change_date)}
 								{/if}

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import Skeleton from '$lib/components/Skeleton.svelte';
-	import { formatPLN } from '$lib/utils/format';
+	import { formatPLN, formatDate } from '$lib/utils/format';
 	import { Plus, Camera, Pencil } from 'lucide-svelte';
 	import type { PageData } from './$types';
 
@@ -90,11 +90,7 @@
 						{#each snapshots as snapshot}
 							<tr>
 								<td class="font-medium">
-									{new Date(snapshot.date).toLocaleDateString('pl-PL', {
-										year: 'numeric',
-										month: 'long',
-										day: 'numeric'
-									})}
+									{formatDate(snapshot.date)}
 								</td>
 								<td class="font-semibold text-primary-600-400"
 									>{formatPLN(snapshot.total_net_worth)}</td
