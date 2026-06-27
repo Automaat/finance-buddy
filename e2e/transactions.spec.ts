@@ -28,7 +28,7 @@ async function pickInvestmentAccount(
 test.describe('transactions', () => {
 	test('list page renders header and create button', async ({ page }) => {
 		await page.goto('/transactions');
-		await expect(page.getByRole('heading', { name: 'Wszystkie transakcje' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Transakcje' })).toBeVisible();
 		await expect(page.getByRole('button', { name: /Nowa Transakcja/ })).toBeVisible();
 	});
 
