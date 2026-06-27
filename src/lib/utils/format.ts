@@ -6,10 +6,16 @@ const percentFormatter = new Intl.NumberFormat('pl-PL', {
 
 const numberFormatterCache = new Map<number, Intl.NumberFormat>();
 
-const dateFormatter = new Intl.DateTimeFormat('pl-PL', {
+const dateFormatterOptions: Intl.DateTimeFormatOptions = {
 	year: 'numeric',
 	month: '2-digit',
 	day: '2-digit'
+};
+
+const dateFormatter = new Intl.DateTimeFormat('pl-PL', dateFormatterOptions);
+const utcDateFormatter = new Intl.DateTimeFormat('pl-PL', {
+	...dateFormatterOptions,
+	timeZone: 'UTC'
 });
 
 export interface Change {
@@ -49,11 +55,37 @@ export function formatPercent(value: number | null | undefined): string {
 	return percentFormatter.format(value / 100);
 }
 
-export function formatDate(value: string | Date | null | undefined): string {
+const dateOnlyRe = /^\d{4}-\d{2}-\d{2}$/;
+
+export function formatDate(
+	value: string | Date | null | undefined,
+	options?: { timeZone?: 'UTC' }
+): string {
 	if (!value) return '—';
-	const date = value instanceof Date ? value : new Date(value);
+	let date: Date;
+	if (typeof value === 'string' && dateOnlyRe.test(value)) {
+		// Parse YYYY-MM-DD as local date — new Date(string) treats it as UTC
+		// which shifts the displayed day backward in negative-UTC-offset zones.
+		const [year, month, day] = value.split('-').map(Number);
+		date =
+			options?.timeZone === 'UTC'
+				? new Date(Date.UTC(year, month - 1, day))
+				: new Date(year, month - 1, day);
+		// Reject overflow (e.g. Feb 31 rolls into March in JS)
+		if (
+			options?.timeZone === 'UTC'
+				? date.getUTCFullYear() !== year ||
+					date.getUTCMonth() !== month - 1 ||
+					date.getUTCDate() !== day
+				: date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day
+		) {
+			return '—';
+		}
+	} else {
+		date = value instanceof Date ? value : new Date(value as string);
+	}
 	if (Number.isNaN(date.getTime())) return '—';
-	return dateFormatter.format(date);
+	return (options?.timeZone === 'UTC' ? utcDateFormatter : dateFormatter).format(date);
 }
 
 export function formatSignedPLN(value: number | null | undefined): string {

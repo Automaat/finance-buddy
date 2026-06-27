@@ -123,7 +123,7 @@ describe('buildWaterfallOption', () => {
 		expect(tooltip.formatter({ dataIndex: 0 })).toContain('Saldo początkowe');
 	});
 
-	it('xAxis falls back to the raw date when it is not parsable', () => {
+	it('xAxis renders the shared empty marker when a date is not parsable', () => {
 		const opt = buildWaterfallOption([
 			{
 				date: 'not-a-date',
@@ -143,7 +143,9 @@ describe('buildWaterfallOption', () => {
 			}
 		]);
 		const xAxis = opt.xAxis as { data: string[] };
-		expect(xAxis.data).toEqual(['not-a-date', 'still-not-a-date']);
+		// Dates now route through the shared formatDate util, which renders an
+		// unparsable value as the em-dash placeholder rather than echoing it.
+		expect(xAxis.data).toEqual(['—', '—']);
 	});
 
 	it('both yAxis formatters render k-shorthand', () => {

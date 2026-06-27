@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Modal from '$lib/components/Modal.svelte';
 	import SortableTable, { type SortableColumn } from '$lib/components/SortableTable.svelte';
-	import { formatPLN } from '$lib/utils/format';
+	import { formatPLN, formatDate } from '$lib/utils/format';
 	import { Plus, Landmark, Search, BarChart3, Trash2 } from 'lucide-svelte';
 	import { api } from '$lib/apiClient';
 	import { goto, invalidateAll } from '$app/navigation';
@@ -152,12 +152,12 @@
 
 {#snippet transactionRow(transaction: Transaction)}
 	<tr>
-		<td data-label="Data zakupu">{new Date(transaction.date).toLocaleDateString('pl-PL')}</td>
+		<td data-label="Data zakupu">{formatDate(transaction.date)}</td>
 		<td class="font-medium" data-label="Konto">{transaction.account_name}</td>
 		<td data-label="Właściciel">{ownerName(owners, transaction.owner_user_id)}</td>
-		<td class="font-semibold text-primary-600-400" data-label="Kwota"
-			>{formatPLN(transaction.amount)}</td
-		>
+		<td class="font-semibold text-primary-600-400" data-label="Kwota">
+			{formatPLN(transaction.amount)}
+		</td>
 		<td class="text-right">
 			<button
 				type="button"

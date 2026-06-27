@@ -116,8 +116,17 @@ describe('formatDate', () => {
 		expect(formatDate('2024-03-15')).toMatch(/2024/);
 	});
 
+	it('preserves the calendar day for date-only strings regardless of timezone', () => {
+		expect(formatDate('2026-01-31')).toContain('31');
+		expect(formatDate('2025-12-05')).toContain('05');
+	});
+
 	it('formats a Date instance', () => {
 		expect(formatDate(new Date('2024-03-15'))).toMatch(/2024/);
+	});
+
+	it('can format timestamps against the UTC calendar day', () => {
+		expect(formatDate('2026-01-31T23:30:00Z', { timeZone: 'UTC' })).toMatch(/31.*01.*2026/);
 	});
 
 	it('returns — for empty and invalid input', () => {
@@ -125,6 +134,12 @@ describe('formatDate', () => {
 		expect(formatDate(undefined)).toBe('—');
 		expect(formatDate('')).toBe('—');
 		expect(formatDate('not-a-date')).toBe('—');
+	});
+
+	it('returns — for date-only strings with out-of-range components', () => {
+		expect(formatDate('2026-02-31')).toBe('—');
+		expect(formatDate('2026-13-01')).toBe('—');
+		expect(formatDate('2026-00-15')).toBe('—');
 	});
 });
 

@@ -3,6 +3,7 @@
 	import { resolveApiUrl } from '$lib/api';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { confirm } from '$lib/stores/confirm.svelte';
+	import { formatDate } from '$lib/utils/format';
 	import Modal from '$lib/components/Modal.svelte';
 	import { Plus, Play, SkipForward, Trash2, Pencil } from 'lucide-svelte';
 	import type { PageData } from './$types';
@@ -282,10 +283,10 @@
 											<button
 												type="button"
 												class="badge preset-tonal-warning cursor-pointer"
-												title="Przywróć {d}"
+												title="Przywróć {formatDate(d)}"
 												onclick={() => unskip(row, d)}
 											>
-												{d} ×
+												{formatDate(d)} ×
 											</button>
 										{/each}
 									</div>

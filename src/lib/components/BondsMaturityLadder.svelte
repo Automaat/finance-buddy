@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { formatPLN } from '$lib/utils/format';
+	import { formatPLN, formatDate } from '$lib/utils/format';
 	import { daysLabel } from '$lib/utils/yearEnd';
 	import { CalendarClock, Coins, ArrowDownToLine } from 'lucide-svelte';
 	import type {
@@ -83,7 +83,7 @@
 				<span>
 					Najbliższy wykup: <strong>{nextMaturity.type}</strong> · {nextMaturity.count}
 					{nextMaturity.count === 1 ? 'obligacja' : 'obligacji'}
-					· {nextMaturity.date} ({nextMaturity.days_until}
+					· {formatDate(nextMaturity.date)} ({nextMaturity.days_until}
 					{daysLabel(nextMaturity.days_until)})
 				</span>
 			</div>

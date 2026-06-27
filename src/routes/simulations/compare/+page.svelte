@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { resolveApiUrl } from '$lib/api';
+	import { formatDate } from '$lib/utils/format';
 	import { GitCompareArrows, ArrowLeft } from 'lucide-svelte';
 
 	interface RetirementScenarioInputs {
@@ -186,10 +187,6 @@
 		return v.toLocaleString('pl-PL', { maximumFractionDigits: 0 }) + ' PLN';
 	}
 
-	function fmtDate(d: Date): string {
-		return d.toLocaleDateString('pl-PL', { year: 'numeric', month: 'long' });
-	}
-
 	function fmtPct(v: number): string {
 		return (v * 100).toFixed(1) + '%';
 	}
@@ -200,7 +197,7 @@
 	// strings doesn't double-up.
 	function fmtUpdatedAt(s: string): string {
 		const utc = s.endsWith('Z') ? s : s + 'Z';
-		return new Date(utc).toLocaleDateString('pl-PL');
+		return formatDate(utc, { timeZone: 'UTC' });
 	}
 
 	// Per-row min/max for color-coding so differences are easy to scan.
@@ -403,9 +400,9 @@
 						{/each}
 					</tr>
 					<tr>
-						<td>Data FI (m-c/rok)</td>
+						<td>Data FI</td>
 						{#each results as r (r.scenario.id)}
-							<td class="text-right">{fmtDate(r.fiDate)}</td>
+							<td class="text-right">{formatDate(r.fiDate)}</td>
 						{/each}
 					</tr>
 					{#if requiredCapital > 0}

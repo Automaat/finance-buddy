@@ -1,6 +1,7 @@
 import type { BarSeriesOption, EChartsOption, LineSeriesOption } from 'echarts';
 import type { TopLevelFormatterParams } from 'echarts/types/dist/shared';
 import { chartPositive, chartNegative, chartValue } from '$lib/utils/theme';
+import { formatDate } from '../format';
 
 export interface NetWorthPoint {
 	date: string;
@@ -55,12 +56,6 @@ function fmtPLN(value: number): string {
 	return `${sign}${abs} PLN`;
 }
 
-function formatMonth(dateISO: string): string {
-	const d = new Date(dateISO);
-	if (Number.isNaN(d.getTime())) return dateISO;
-	return d.toLocaleDateString('pl-PL', { year: '2-digit', month: 'short' });
-}
-
 export interface WaterfallChartOptions {
 	maxMonths?: number; // crop to the most recent N steps (mobile = 6)
 	isMobile?: boolean; // shrink the in-canvas title so it doesn't clip on phones
@@ -75,7 +70,7 @@ export function buildWaterfallOption(
 ): EChartsOption {
 	const sliced = options.maxMonths ? steps.slice(-options.maxMonths) : steps;
 
-	const months = sliced.map((s) => formatMonth(s.date));
+	const months = sliced.map((s) => formatDate(s.date));
 	const assetSeries: BarSeriesOption = {
 		name: 'Δ Aktywa',
 		type: 'bar',
@@ -117,7 +112,7 @@ export function buildWaterfallOption(
 				const idx = items[0].dataIndex as number;
 				const step = sliced[idx];
 				if (!step) return '';
-				const month = escapeHtml(formatMonth(step.date));
+				const month = escapeHtml(formatDate(step.date));
 				const netDelta = step.endingNetWorth - step.startingNetWorth;
 				return (
 					`<strong>${month}</strong><br/>` +

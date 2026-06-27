@@ -7,6 +7,7 @@
 	import type { OwnerOption } from '$lib/types/owners';
 	import { categoryLabel } from '$lib/utils/categories';
 	import { round2, staleQuotes, type HoldingQuote } from '$lib/utils/quoteFreshness';
+	import { formatDate } from '$lib/utils/format';
 	import NewAccountModal from './snapshot/NewAccountModal.svelte';
 	import NewAssetModal from './snapshot/NewAssetModal.svelte';
 	import ValueRow from './snapshot/ValueRow.svelte';
@@ -453,7 +454,7 @@
 					<li>
 						{q.name}:
 						{#if q.date}
-							{q.date} ({q.daysOld} dni temu)
+							{formatDate(q.date)} ({q.daysOld} dni temu)
 						{:else}
 							brak notowania
 						{/if}

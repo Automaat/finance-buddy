@@ -8,6 +8,7 @@
 	import PIT38Report from '$lib/components/PIT38Report.svelte';
 	import { Plus, Trash2, BarChart, RefreshCw, Coins } from 'lucide-svelte';
 	import { CrudForm } from '$lib/stores/crudForm.svelte';
+	import { formatDate } from '$lib/utils/format';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -469,7 +470,9 @@
 									{fmt(h.latest_quote)}
 									{h.security.currency}
 									<div class="text-xs font-normal text-surface-600-400">
-										{h.latest_quote_date}{#if h.latest_quote_rate_pln && h.security.currency !== 'PLN'}
+										{formatDate(
+											h.latest_quote_date
+										)}{#if h.latest_quote_rate_pln && h.security.currency !== 'PLN'}
 											· {fmt(h.latest_quote_rate_pln)} PLN/{h.security.currency}{/if}
 									</div>
 								{:else}
@@ -634,7 +637,7 @@
 					<tbody>
 						{#each data.dividends as d (d.id)}
 							<tr>
-								<td>{d.pay_date}</td>
+								<td>{formatDate(d.pay_date)}</td>
 								<td class="font-semibold">{securityLabel(d.security_id)}</td>
 								<td class="text-surface-700-300">{accountLabel(d.account_id)}</td>
 								<td class="text-right">{fmt(d.gross_amount)} {d.currency}</td>
