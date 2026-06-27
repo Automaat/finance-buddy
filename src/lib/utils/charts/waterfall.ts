@@ -1,5 +1,6 @@
 import type { BarSeriesOption, EChartsOption, LineSeriesOption } from 'echarts';
 import type { TopLevelFormatterParams } from 'echarts/types/dist/shared';
+import { chartPositive, chartNegative, chartAccent } from '$lib/utils/theme';
 
 export interface NetWorthPoint {
 	date: string;
@@ -17,12 +18,6 @@ export interface WaterfallStep {
 	assetDelta: number;
 	liabilityDelta: number;
 }
-
-const COLOR_ASSET_POS = '#A3BE8C'; // green: assets grew
-const COLOR_ASSET_NEG = '#BF616A'; // red: assets fell
-const COLOR_LIAB_POS = '#BF616A'; // red: liabilities grew (worse)
-const COLOR_LIAB_NEG = '#A3BE8C'; // green: liabilities shrank (better)
-const COLOR_LINE = '#5E81AC';
 
 // Tooltips render as HTML; escape any interpolated string in case future
 // labels carry user content.
@@ -86,7 +81,7 @@ export function buildWaterfallOption(
 		type: 'bar',
 		data: sliced.map((s) => ({
 			value: s.assetDelta,
-			itemStyle: { color: s.assetDelta >= 0 ? COLOR_ASSET_POS : COLOR_ASSET_NEG }
+			itemStyle: { color: s.assetDelta >= 0 ? chartPositive : chartNegative }
 		}))
 	};
 	// Liability delta is shown as how it impacted net worth: a liability
@@ -96,7 +91,7 @@ export function buildWaterfallOption(
 		type: 'bar',
 		data: sliced.map((s) => ({
 			value: -s.liabilityDelta,
-			itemStyle: { color: s.liabilityDelta <= 0 ? COLOR_LIAB_NEG : COLOR_LIAB_POS }
+			itemStyle: { color: s.liabilityDelta <= 0 ? chartPositive : chartNegative }
 		}))
 	};
 	const netWorthLine: LineSeriesOption = {
@@ -106,8 +101,8 @@ export function buildWaterfallOption(
 		smooth: true,
 		showSymbol: true,
 		data: sliced.map((s) => s.endingNetWorth),
-		lineStyle: { color: COLOR_LINE, width: 2 },
-		itemStyle: { color: COLOR_LINE }
+		lineStyle: { color: chartAccent, width: 2 },
+		itemStyle: { color: chartAccent }
 	};
 
 	return {

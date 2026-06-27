@@ -5,6 +5,7 @@
 	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
 	import { applyMobileChartTweaks } from '$lib/utils/charts/responsive';
 	import { isMobile } from '$lib/utils/viewport';
+	import { chartPalette } from '$lib/utils/theme';
 	import { Globe } from 'lucide-svelte';
 
 	interface CurrencyBucket {
@@ -72,17 +73,6 @@
 		return () => inFlight?.abort();
 	});
 
-	const palette = [
-		'#3b82f6',
-		'#ef4444',
-		'#10b981',
-		'#f59e0b',
-		'#a855f7',
-		'#06b6d4',
-		'#84cc16',
-		'#ec4899'
-	];
-
 	$effect(() => {
 		if (!container) {
 			handle?.dispose();
@@ -94,7 +84,7 @@
 		const data = report.currencies.map((c, i) => ({
 			name: c.currency,
 			value: c.value_pln,
-			itemStyle: { color: c.currency === 'PLN' ? '#1e40af' : palette[i % palette.length] }
+			itemStyle: { color: chartPalette[i % chartPalette.length] }
 		}));
 		handle.chart.setOption(
 			applyMobileChartTweaks(

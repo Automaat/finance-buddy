@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildWaterfallOption, buildWaterfallSteps, type NetWorthPoint } from './waterfall';
+import { chartPositive, chartNegative } from '$lib/utils/theme';
 
 function point(
 	date: string,
@@ -73,8 +74,8 @@ describe('buildWaterfallOption', () => {
 			.data;
 		const liabData = (opt.series as Array<{ data: Array<{ itemStyle: { color: string } }> }>)[1]
 			.data;
-		expect(assetData[0].itemStyle.color).toBe('#BF616A'); // red
-		expect(liabData[0].itemStyle.color).toBe('#A3BE8C'); // no liab change → green branch
+		expect(assetData[0].itemStyle.color).toBe(chartNegative); // negative asset delta
+		expect(liabData[0].itemStyle.color).toBe(chartPositive); // no liab change → better
 	});
 
 	it('maxMonths crops to the most recent N steps', () => {

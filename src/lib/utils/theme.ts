@@ -52,3 +52,9 @@ export const chartValue = '#e11d48';
 
 /** Positive return / gains. */
 export const chartPositive = '#16a34a';
+
+/** Negative values / losses — unambiguously red, reserved for bad outcomes only. */
+export const chartNegative = '#dc2626';
+
+/** Area-fill gradient stops for chartPositive, top (opaque) to bottom (faint). */
+export const chartPositiveGradient = ['rgba(22, 163, 74, 0.5)', 'rgba(22, 163, 74, 0.1)'] as const;

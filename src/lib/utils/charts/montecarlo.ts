@@ -1,5 +1,6 @@
 import type { EChartsOption, LineSeriesOption } from 'echarts';
 import type { TopLevelFormatterParams } from 'echarts/types/dist/shared';
+import { chartAccent, chartPalette } from '$lib/utils/theme';
 
 export interface MonteCarloBand {
 	age: number;
@@ -130,7 +131,8 @@ export function buildMonteCarloFanOption(
 			stack: 'fan',
 			lineStyle: { opacity: 0 },
 			showSymbol: false,
-			areaStyle: { color: '#88C0D0', opacity: 0.35 }
+			areaStyle: { color: chartPalette[3], opacity: 0.35 },
+			itemStyle: { color: chartPalette[3] }
 		},
 		{
 			name: 'Mediana',
@@ -138,8 +140,8 @@ export function buildMonteCarloFanOption(
 			data: p50,
 			smooth: true,
 			showSymbol: false,
-			lineStyle: { color: '#5E81AC', width: 2 },
-			itemStyle: { color: '#5E81AC' }
+			lineStyle: { color: chartAccent, width: 2 },
+			itemStyle: { color: chartAccent }
 		}
 	];
 

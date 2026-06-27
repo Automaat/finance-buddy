@@ -5,7 +5,7 @@
 	import type { ECElementEvent, EChartsOption } from 'echarts';
 	import { formatPLN, formatNumber } from '$lib/utils/format';
 	import { isMobile, isTablet } from '$lib/utils/viewport';
-	import { chartPalette, chartAccent, chartAccentGradient } from '$lib/utils/theme';
+	import { chartPalette, chartPositive, chartPositiveGradient } from '$lib/utils/theme';
 	import { ownerName, type OwnerOption } from '$lib/types/owners';
 	import { createChart } from '$lib/utils/charts/lifecycle';
 	import { buildWaterfallOption, buildWaterfallSteps } from '$lib/utils/charts/waterfall';
@@ -96,11 +96,12 @@
 				smooth: true,
 				areaStyle: {
 					color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-						{ offset: 0, color: chartAccentGradient[0] },
-						{ offset: 1, color: chartAccentGradient[1] }
+						{ offset: 0, color: chartPositiveGradient[0] },
+						{ offset: 1, color: chartPositiveGradient[1] }
 					])
 				},
-				lineStyle: { color: chartAccent, width: 2 }
+				lineStyle: { color: chartPositive, width: 2 },
+				itemStyle: { color: chartPositive }
 			}
 		]
 	});
