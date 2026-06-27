@@ -344,13 +344,13 @@
 </script>
 
 <svelte:head>
-	<title>Akcje | Finansowa Forteca</title>
+	<title>Inwestycje | Finansowa Forteca</title>
 </svelte:head>
 
 <div class="space-y-6">
 	<div class="flex flex-wrap items-start justify-between gap-3">
 		<div>
-			<h1 class="h1">Akcje</h1>
+			<h2 class="h3">Akcje / ETF</h2>
 			<p class="text-sm text-surface-700-300">
 				Pozycje skonsolidowane po tickerze: ilość, średnia cena, zysk zrealizowany i niezrealizowany
 				na podstawie ręcznych notowań.

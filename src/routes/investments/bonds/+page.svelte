@@ -281,7 +281,7 @@
 
 <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
 	<div class="space-y-1">
-		<h1 class="h2">Obligacje skarbowe</h1>
+		<h2 class="h3">Obligacje skarbowe</h2>
 		<p class="text-surface-700-300 text-sm">
 			Śledź obligacje EDO, COI, ROR, TOZ, DOS z auto-wyliczaną wartością wg CPI.
 		</p>

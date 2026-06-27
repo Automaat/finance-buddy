@@ -25,7 +25,7 @@
 </svelte:head>
 
 <div class="space-y-1 mb-6">
-	<h1 class="h2">PPK</h1>
+	<h2 class="h3">PPK</h2>
 	<p class="text-surface-700-300 text-sm">
 		Pracownicze Plany Kapitałowe — wpłaty pracownika, pracodawcy i dopłaty państwa.
 	</p>
