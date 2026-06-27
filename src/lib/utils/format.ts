@@ -49,9 +49,19 @@ export function formatPercent(value: number | null | undefined): string {
 	return percentFormatter.format(value / 100);
 }
 
+const dateOnlyRe = /^\d{4}-\d{2}-\d{2}$/;
+
 export function formatDate(value: string | Date | null | undefined): string {
 	if (!value) return '—';
-	const date = value instanceof Date ? value : new Date(value);
+	let date: Date;
+	if (typeof value === 'string' && dateOnlyRe.test(value)) {
+		// Parse YYYY-MM-DD as local date — new Date(string) treats it as UTC
+		// which shifts the displayed day backward in negative-UTC-offset zones.
+		const [year, month, day] = value.split('-').map(Number);
+		date = new Date(year, month - 1, day);
+	} else {
+		date = value instanceof Date ? value : new Date(value as string);
+	}
 	if (Number.isNaN(date.getTime())) return '—';
 	return dateFormatter.format(date);
 }

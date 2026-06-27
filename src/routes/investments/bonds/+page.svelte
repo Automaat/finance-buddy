@@ -504,8 +504,8 @@
 								<td>{formatPLN(bond.face_value)}</td>
 								<td class="font-semibold text-primary-600-400">{formatPLN(bond.current_value)}</td>
 								<td>{bond.current_yield.toFixed(2)}%</td>
-								<td>{bond.purchase_date}</td>
-								<td>{bond.maturity_date}</td>
+								<td>{formatDate(bond.purchase_date)}</td>
+								<td>{formatDate(bond.maturity_date)}</td>
 								<td class="text-right whitespace-nowrap">
 									<button
 										type="button"

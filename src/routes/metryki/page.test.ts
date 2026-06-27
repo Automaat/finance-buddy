@@ -287,7 +287,7 @@ describe('Metryki Page with populated data', () => {
 
 	it('shows the snapshot date and one consolidated mortgage card', () => {
 		render(Page, { props: { data: populatedData } });
-		expect(screen.getByText('stan na 2026-05-24')).toBeTruthy();
+		expect(screen.getByText('stan na 24.05.2026')).toBeTruthy();
 		// the three legacy mortgage cards collapse into one with a payoff line
 		expect(screen.getByText('Hipoteka do spłaty')).toBeTruthy();
 		expect(screen.queryByText('Ile miesięcy do spłaty hipoteki')).toBeNull();

@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { Globe } from 'lucide-svelte';
-	import { formatPLN } from '$lib/utils/format';
+	import { formatPLN, formatDate } from '$lib/utils/format';
 	import { chartPalette } from '$lib/utils/theme';
 	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
 	import type { PageData } from './$types';
@@ -151,7 +151,7 @@
 			</div>
 			<div class="card preset-tonal-surface p-4">
 				<div class="text-xs text-surface-600-400">Snapshot</div>
-				<div class="text-2xl font-bold">{report.snapshot_date}</div>
+				<div class="text-2xl font-bold">{formatDate(report.snapshot_date)}</div>
 			</div>
 		</div>
 

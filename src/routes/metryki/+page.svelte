@@ -15,6 +15,7 @@
 	import { applyMobileChartTweaks } from '$lib/utils/charts/responsive';
 	import { isMobile } from '$lib/utils/viewport';
 	import { ownerName, type OwnerOption } from '$lib/types/owners';
+	import { formatDate } from '$lib/utils/format';
 	import ContributionAdjustedReturns from '$lib/components/ContributionAdjustedReturns.svelte';
 	import CurrencyExposureWidget from '$lib/components/CurrencyExposureWidget.svelte';
 	import RealYieldsTable from '$lib/components/RealYieldsTable.svelte';
@@ -218,7 +219,7 @@
 		<div class="flex flex-wrap items-baseline justify-between gap-2">
 			<h2 class="h2">Przegląd finansowy</h2>
 			{#if snapshotDate}
-				<span class="text-sm text-surface-600-400">stan na {snapshotDate}</span>
+				<span class="text-sm text-surface-600-400">stan na {formatDate(snapshotDate)}</span>
 			{/if}
 		</div>
 

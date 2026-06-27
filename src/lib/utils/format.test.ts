@@ -116,6 +116,11 @@ describe('formatDate', () => {
 		expect(formatDate('2024-03-15')).toMatch(/2024/);
 	});
 
+	it('preserves the calendar day for date-only strings regardless of timezone', () => {
+		expect(formatDate('2026-01-31')).toContain('31');
+		expect(formatDate('2025-12-05')).toContain('05');
+	});
+
 	it('formats a Date instance', () => {
 		expect(formatDate(new Date('2024-03-15'))).toMatch(/2024/);
 	});
