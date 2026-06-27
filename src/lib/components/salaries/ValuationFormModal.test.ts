@@ -73,8 +73,8 @@ describe('ValuationFormModal', () => {
 	it('renders the four valuation sources', () => {
 		render(ValuationFormModal, { props: { ...baseProps, data: makeData() } });
 		expect(screen.getByText('409A')).toBeTruthy();
-		expect(screen.getByText(/Runda preferred/i)).toBeTruthy();
-		expect(screen.getByText(/Tender/i)).toBeTruthy();
+		expect(screen.getByText(/Runda uprzywilejowana/i)).toBeTruthy();
+		expect(screen.getByText(/Oferta odkupu/i)).toBeTruthy();
 		expect(screen.getByText(/Estymacja/i)).toBeTruthy();
 	});
 

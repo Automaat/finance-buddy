@@ -17,7 +17,7 @@ import {
 } from 'lucide-svelte';
 
 export const NAV_ROUTES = [
-	{ href: '/', label: 'Dashboard', icon: LayoutDashboard },
+	{ href: '/', label: 'Pulpit', icon: LayoutDashboard },
 	{ href: '/metryki', label: 'Metryki', icon: TrendingUp },
 	{ href: '/simulations', label: 'Symulacje', icon: Sparkles },
 	{ href: '/optimizer', label: 'Optymalizator', icon: Compass },

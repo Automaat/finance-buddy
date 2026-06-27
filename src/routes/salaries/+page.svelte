@@ -360,7 +360,7 @@
 			if (!response.ok) {
 				const errorData = await response.json();
 				const detail = errorData.detail;
-				const fallback = 'Failed to save bonus';
+				const fallback = 'Nie udało się zapisać bonusu';
 				let message: string;
 				if (Array.isArray(detail)) {
 					const joined = detail
@@ -885,7 +885,7 @@
 			if (!response.ok) {
 				const errorData = await response.json();
 				const detail = errorData.detail;
-				const fallback = 'Failed to save valuation';
+				const fallback = 'Nie udało się zapisać wyceny';
 				let message: string;
 				if (Array.isArray(detail)) {
 					const joined = detail
@@ -1030,7 +1030,7 @@
 			if (!response.ok) {
 				const errorData = await response.json();
 				const detail = errorData.detail;
-				const fallback = 'Failed to save salary record';
+				const fallback = 'Nie udało się zapisać rekordu wynagrodzenia';
 				let message: string;
 				if (Array.isArray(detail)) {
 					const joined = detail

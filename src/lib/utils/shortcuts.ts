@@ -14,7 +14,7 @@ export interface GotoRoute {
 }
 
 export const GOTO_ROUTES: GotoRoute[] = [
-	{ key: 'h', href: '/', label: 'Dashboard' },
+	{ key: 'h', href: '/', label: 'Pulpit' },
 	{ key: 'a', href: '/accounts', label: 'Konta' },
 	{ key: 's', href: '/snapshots', label: 'Snapshoty' },
 	{ key: 't', href: '/transactions', label: 'Transakcje' }
@@ -22,7 +22,7 @@ export const GOTO_ROUTES: GotoRoute[] = [
 
 export const SHORTCUT_BINDINGS: ShortcutBinding[] = [
 	{ keys: 'n', description: 'Nowy snapshot' },
-	{ keys: 'g h', description: 'Dashboard' },
+	{ keys: 'g h', description: 'Pulpit' },
 	{ keys: 'g a', description: 'Konta' },
 	{ keys: 'g s', description: 'Snapshoty' },
 	{ keys: 'g t', description: 'Transakcje' },
