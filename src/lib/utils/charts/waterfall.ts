@@ -1,6 +1,6 @@
 import type { BarSeriesOption, EChartsOption, LineSeriesOption } from 'echarts';
 import type { TopLevelFormatterParams } from 'echarts/types/dist/shared';
-import { chartPositive, chartNegative, chartAccent } from '$lib/utils/theme';
+import { chartPositive, chartNegative, chartValue } from '$lib/utils/theme';
 
 export interface NetWorthPoint {
 	date: string;
@@ -101,8 +101,8 @@ export function buildWaterfallOption(
 		smooth: true,
 		showSymbol: true,
 		data: sliced.map((s) => s.endingNetWorth),
-		lineStyle: { color: chartAccent, width: 2 },
-		itemStyle: { color: chartAccent }
+		lineStyle: { color: chartValue, width: 2 },
+		itemStyle: { color: chartValue }
 	};
 
 	return {
