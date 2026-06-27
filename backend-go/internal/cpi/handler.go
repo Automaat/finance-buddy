@@ -12,6 +12,7 @@ import (
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 	"github.com/Automaat/finance-buddy/backend-go/internal/validation"
 	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
+	"github.com/shopspring/decimal"
 )
 
 // MonthlyFetcher is the slice of cpi.EurostatHICPFetcher / cpi.FREDFetcher
@@ -92,12 +93,14 @@ func (h *Handler) GetSeries(w http.ResponseWriter, r *http.Request) {
 	indexMap := CumulativeIndex(yoyMap)
 	years := sortedYears(indexMap)
 	points := make([]cpiPoint, 0, len(years))
+	hundred := decimal.NewFromInt(100)
 	for _, y := range years {
-		yoyRaw, _ := yoyMap[y].Float64()
+		// Subtract in decimal to preserve GUS one-decimal precision (e.g. 100.8 → 0.8).
+		yoyRaw, _ := yoyMap[y].Sub(hundred).Float64()
 		idx, _ := indexMap[y].Float64()
 		points = append(points, cpiPoint{
 			Year:            y,
-			YoYRate:         wire.PyFloat(yoyRaw - 100), // normalize from GUS format (114.4) to percentage (14.4)
+			YoYRate:         wire.PyFloat(yoyRaw),
 			CumulativeIndex: wire.PyFloat(idx),
 		})
 	}
