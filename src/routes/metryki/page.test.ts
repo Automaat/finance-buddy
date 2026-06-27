@@ -119,8 +119,6 @@ describe('Metryki Page', () => {
 		render(Page, { props: { data: mockData } });
 		expect(screen.getByText(/Portfel jest zgodny z docelową alokacją/)).toBeTruthy();
 	});
-	// (The card's tooltip mentions "do spłaty"; the secondary line is the
-	// one that also carries "mies.".)
 });
 
 describe('Metryki Page with populated data', () => {
@@ -213,7 +211,13 @@ describe('Metryki Page with populated data', () => {
 		dateTo: null
 	};
 
-	it('renders the rebalancing suggestions when present', () => {});
+	it('renders the rebalancing suggestions when present', () => {
+		render(Page, { props: { data: populatedData } });
+		expect(screen.getByText('KUP')).toBeTruthy();
+		expect(screen.getByText('stock')).toBeTruthy();
+		expect(screen.getAllByText((text) => /5\s*000\s*PLN/.test(text)).length).toBeGreaterThan(0);
+		expect(screen.queryByText(/Portfel jest zgodny z docelową alokacją/)).toBeNull();
+	});
 
 	it('renders the PPK, stock and bond summary sections', () => {
 		render(Page, { props: { data: populatedData } });
