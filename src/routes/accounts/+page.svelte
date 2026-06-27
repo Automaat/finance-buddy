@@ -149,7 +149,7 @@
 
 	function formatPct(v: number): string {
 		const sign = v > 0 ? '+' : '';
-		return `${sign}${formatNumber(Math.abs(v), 2)}%`;
+		return `${sign}${formatNumber(v, 2)}%`;
 	}
 
 	// Color buckets per issue #573 acceptance: green > 1%, amber 0–1%, red < 0%.

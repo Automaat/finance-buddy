@@ -86,8 +86,8 @@
 	});
 
 	function fmtPct(n: number): string {
-		const sign = n >= 0 ? '+' : '';
-		return `${sign}${formatNumber(Math.abs(n), 2)}%`;
+		const sign = n > 0 ? '+' : '';
+		return `${sign}${formatNumber(n, 2)}%`;
 	}
 </script>
 

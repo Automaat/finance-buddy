@@ -151,6 +151,11 @@ describe('formatNumber', () => {
 	it('defaults to 2 decimal places', () => {
 		expect(formatNumber(1.5)).toBe('1,50');
 	});
+
+	it('preserves sign for negative values', () => {
+		const result = formatNumber(-5, 2);
+		expect(result).toMatch(/[-−]5,00/);
+	});
 });
 
 describe('calculateChange', () => {
