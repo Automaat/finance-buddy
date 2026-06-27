@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const routes: { path: string; heading: RegExp }[] = [
-	{ path: '/', heading: /Dashboard/i },
+	{ path: '/', heading: /Pulpit/i },
 	{ path: '/metryki', heading: /Metryki/i },
 	{ path: '/simulations', heading: /Symulacje/i },
 	{ path: '/accounts', heading: /Konta/i },
@@ -9,7 +9,7 @@ const routes: { path: string; heading: RegExp }[] = [
 	{ path: '/assets', heading: /Majątek/i },
 	{ path: '/debts', heading: /Zobowiązania/i },
 	{ path: '/goals', heading: /Cele finansowe/i },
-	{ path: '/snapshots', heading: /Snapshots/i },
+	{ path: '/snapshots', heading: /Migawki/i },
 	{ path: '/salaries', heading: /Historia wynagrodzeń/i },
 	{ path: '/settings/config', heading: /Konfiguracja/i },
 	{ path: '/settings/users', heading: /Użytkownicy/i }
