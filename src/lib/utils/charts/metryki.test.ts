@@ -94,17 +94,25 @@ describe('buildInvestmentTrendChartOption', () => {
 		expect(xAxis.data).toEqual(['2023-01-31', '2023-12-31']);
 	});
 
-	it('defaults missing values to zero', () => {
-		const option = buildInvestmentTrendChartOption([{ date: '2023-01-31' }]);
+	it('defaults missing contributions to zero', () => {
+		const option = buildInvestmentTrendChartOption([{ date: '2023-01-31', value: 1000 }]);
 		const series = option.series as Array<{ data: number[] }>;
 		expect(series[0].data).toEqual([0]);
-		expect(series[1].data).toEqual([0]);
+		expect(series[1].data).toEqual([1000]);
 	});
 
-	it('handles an empty input', () => {
+	it('returns empty state for empty series', () => {
 		const option = buildInvestmentTrendChartOption([]);
-		const series = option.series as Array<{ data: number[] }>;
-		expect(series[0].data).toEqual([]);
+		expect(option.series).toEqual([]);
+		expect(option.graphic).toBeDefined();
+	});
+
+	it('returns empty state for all-zero series', () => {
+		const option = buildInvestmentTrendChartOption([
+			{ date: '2023-01-31', value: 0, contributions: 0 }
+		]);
+		expect(option.series).toEqual([]);
+		expect(option.graphic).toBeDefined();
 	});
 });
 
@@ -122,10 +130,19 @@ describe('buildWrapperTrendChartOption', () => {
 		expect(series[1].data).toEqual([1000, 2200]);
 	});
 
-	it('handles an empty input', () => {
+	it('returns empty state for empty series', () => {
 		const option = buildWrapperTrendChartOption('Puste', []);
-		const series = option.series as Array<{ data: number[] }>;
-		expect(series[0].data).toEqual([]);
+		expect(option.series).toEqual([]);
+		expect(option.graphic).toBeDefined();
+	});
+
+	it('returns empty state for all-zero series', () => {
+		const option = buildWrapperTrendChartOption('IKZE w czasie', [
+			{ date: '2023-01-31', value: 0, contributions: 0 },
+			{ date: '2023-02-28', value: 0, contributions: 0 }
+		]);
+		expect(option.series).toEqual([]);
+		expect(option.graphic).toBeDefined();
 	});
 });
 
