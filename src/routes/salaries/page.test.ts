@@ -74,6 +74,26 @@ async function selectSalaryTab(label: string) {
 	await fireEvent.click(screen.getByRole('tab', { name: label }));
 }
 
+describe('Salaries page — tabs', () => {
+	it('keeps each tab aria-controls target mounted while lazy-rendering tab content', async () => {
+		const { container } = render(Page, { props: { data: baseData } });
+		const tabs = ['Przegląd', 'Historia', 'Premie', 'Udziały', 'Wyceny', 'Inflacja'].map((label) =>
+			screen.getByRole('tab', { name: label })
+		);
+
+		for (const tab of tabs) {
+			const panelId = tab.getAttribute('aria-controls');
+			expect(panelId).toBeTruthy();
+			expect(container.querySelector(`#${panelId}`)).toBeTruthy();
+		}
+		expect(screen.queryByRole('heading', { name: 'Filtry' })).toBeNull();
+
+		await selectSalaryTab('Historia');
+		expect(screen.getByRole('heading', { name: 'Filtry' })).toBeTruthy();
+		expect(screen.queryByRole('heading', { name: 'Progresja wynagrodzenia' })).toBeNull();
+	});
+});
+
 describe('Salaries page — saveSalary validation & error display', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();

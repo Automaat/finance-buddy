@@ -102,13 +102,18 @@ describe('Metryki Page', () => {
 		expect(screen.getByRole('heading', { name: 'Jak inwestować nowe pieniądze' })).toBeTruthy();
 	});
 
-	it('renders section tabs and only mounts the active panel', async () => {
-		render(Page, { props: { data: mockData } });
+	it('renders section tabs with stable panels and only mounts active content', async () => {
+		const { container } = render(Page, { props: { data: mockData } });
 		const tablist = screen.getByRole('tablist', { name: 'Sekcje strony' });
 		expect(tablist).toBeTruthy();
 		const tabs = ['Działania', 'Przegląd', 'Konta', 'Zwroty', 'Wzrost'].map((label) =>
 			screen.getByRole('tab', { name: label })
 		);
+		for (const tab of tabs) {
+			const panelId = tab.getAttribute('aria-controls');
+			expect(panelId).toBeTruthy();
+			expect(container.querySelector(`#${panelId}`)).toBeTruthy();
+		}
 		expect(tabs.map((tab) => tab.getAttribute('aria-selected'))).toEqual([
 			'true',
 			'false',
