@@ -303,7 +303,7 @@
 	</div>
 	<div class="card preset-filled-surface-100-900 p-4 space-y-1">
 		<header class="text-sm text-surface-700-300">Wartość bieżąca</header>
-		<div class="text-2xl font-bold text-primary-600-400">{formatPLN(data.total_value)}</div>
+		<div class="text-2xl font-bold">{formatPLN(data.total_value)}</div>
 	</div>
 	<div class="card preset-filled-surface-100-900 p-4 space-y-1">
 		<header class="text-sm text-surface-700-300">Zysk</header>
@@ -502,7 +502,7 @@
 									{data.accounts.find((a) => a.id === bond.account_id)?.name ?? '—'}
 								</td>
 								<td>{formatPLN(bond.face_value)}</td>
-								<td class="font-semibold text-primary-600-400">{formatPLN(bond.current_value)}</td>
+								<td class="font-semibold">{formatPLN(bond.current_value)}</td>
 								<td>{bond.current_yield.toFixed(2)}%</td>
 								<td>{formatDate(bond.purchase_date)}</td>
 								<td>{formatDate(bond.maturity_date)}</td>

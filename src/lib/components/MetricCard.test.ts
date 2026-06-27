@@ -16,10 +16,28 @@ describe('MetricCard', () => {
 		expect(screen.getByText('—')).toBeTruthy();
 	});
 
-	it('applies the colour class for the chosen colour', () => {
-		render(MetricCard, { props: { label: 'Zysk', value: 10, color: 'green' } });
+	it('uses neutral ink for ordinary values', () => {
+		render(MetricCard, { props: { label: 'Wartość', value: 10 } });
 		const valueEl = screen.getByText('10');
+		expect(valueEl.className).toContain('text-surface-950-50');
+	});
+
+	it('colors only explicitly signed values', () => {
+		render(MetricCard, { props: { label: 'Zysk', value: 10, signed: true } });
+		const valueEl = screen.getByText('+10');
 		expect(valueEl.className).toContain('text-success-600-400');
+	});
+
+	it('treats near-zero signed values that round to zero as neutral', () => {
+		render(MetricCard, {
+			props: { label: 'Zmiana', value: -0.004, decimals: 2, suffix: '%', signed: true }
+		});
+		const valueEl = screen.getByText((text) => text.includes('0,00') && text.includes('%'));
+		// Must NOT show a sign prefix or error/success color
+		expect(valueEl.textContent).not.toMatch(/[+−]/);
+		expect(valueEl.className).toContain('text-surface-950-50');
+		expect(valueEl.className).not.toContain('text-error');
+		expect(valueEl.className).not.toContain('text-success');
 	});
 
 	it('exposes the tooltip as a title on the label', () => {

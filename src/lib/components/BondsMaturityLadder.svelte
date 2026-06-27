@@ -102,9 +102,7 @@
 					<header class="flex items-center justify-between gap-2 flex-wrap">
 						<h4 class="font-semibold capitalize">{group.monthLabel}</h4>
 						<span class="text-sm text-surface-700-300">
-							Łącznie netto: <strong class="text-primary-600-400"
-								>{formatPLN(group.totalNet)}</strong
-							>
+							Łącznie netto: <strong>{formatPLN(group.totalNet)}</strong>
 						</span>
 					</header>
 					<div class="table-wrap">
@@ -142,7 +140,7 @@
 										<td class="text-right text-surface-700-300">
 											{ev.tax > 0 ? formatPLN(ev.tax) : '—'}
 										</td>
-										<td class="text-right font-semibold text-primary-600-400">
+										<td class="text-right font-semibold">
 											{formatPLN(ev.net_cashflow)}
 										</td>
 									</tr>

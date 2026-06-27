@@ -161,9 +161,7 @@
 						</div>
 						<div>
 							<dt class="text-xs text-surface-600-400">{refundLabel(row.marginal_tax_rate)}</dt>
-							<dd class="font-bold {refund.hasRate ? 'text-success-600-400' : ''}">
-								{refund.text}
-							</dd>
+							<dd class="font-bold">{refund.text}</dd>
 						</div>
 					</dl>
 

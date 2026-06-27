@@ -122,7 +122,7 @@
 						</div>
 						<div>
 							<div class="text-xs text-surface-600-400">Szac. oszczędność PIT</div>
-							<div class="font-bold text-success-600-400">{formatPLN(row.pit_savings)}</div>
+							<div class="font-bold">{formatPLN(row.pit_savings)}</div>
 						</div>
 					</div>
 				</article>

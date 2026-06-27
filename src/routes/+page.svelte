@@ -214,7 +214,7 @@
 				<header>
 					<h3 class="h4 flex items-center gap-2"><TrendingUp size={18} /> Aktywa</h3>
 				</header>
-				<div class="text-3xl font-bold text-success-600-400">
+				<div class="text-3xl font-bold">
 					{formatPLN(dashboard.total_assets)}
 				</div>
 				<div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
@@ -237,7 +237,7 @@
 				<header>
 					<h3 class="h4 flex items-center gap-2"><TrendingDown size={18} /> Zobowiązania</h3>
 				</header>
-				<div class="text-3xl font-bold text-error-600-400">
+				<div class="text-3xl font-bold">
 					{formatPLN(dashboard.total_liabilities)}
 				</div>
 				<div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
@@ -349,11 +349,7 @@
 							<div class="text-xs text-surface-700-300">
 								{surplus ? 'Nadwyżka' : 'Brakuje'}
 							</div>
-							<div
-								class="text-2xl font-bold {surplus
-									? 'text-success-600-400'
-									: 'text-warning-600-400'}"
-							>
+							<div class="text-2xl font-bold">
 								{formatPLN(Math.abs(coastGap))}
 							</div>
 							<div class="text-xs text-surface-700-300">
@@ -495,11 +491,7 @@
 								<div class="text-xs text-surface-700-300">
 									{#if bridgeSurplus}Nadwyżka{:else if bridgeExact}Pokryty{:else}Brakuje{/if}
 								</div>
-								<div
-									class="text-xl font-bold {bridgeOK
-										? 'text-success-600-400'
-										: 'text-warning-600-400'}"
-								>
+								<div class="text-xl font-bold">
 									{formatPLN(Math.abs(bridgeGap))}
 								</div>
 								<div class="text-xs text-surface-700-300">
@@ -520,7 +512,7 @@
 				<header>
 					<h3 class="h4 flex items-center gap-2"><Coins size={18} /> Obligacje skarbowe</h3>
 				</header>
-				<div class="text-3xl font-bold text-primary-600-400">
+				<div class="text-3xl font-bold">
 					{formatPLN(dashboard.treasuryBondsValue)}
 				</div>
 				<p class="text-xs text-surface-700-300">

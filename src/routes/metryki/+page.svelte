@@ -204,7 +204,6 @@
 						value={ppkStat.total_value}
 						decimals={0}
 						suffix=" PLN"
-						color="green"
 					/>
 
 					<MetricCard
@@ -212,7 +211,6 @@
 						value={ppkStat.employee_contributed}
 						decimals={0}
 						suffix=" PLN"
-						color="blue"
 					/>
 
 					<MetricCard
@@ -220,7 +218,6 @@
 						value={ppkStat.employer_contributed}
 						decimals={0}
 						suffix=" PLN"
-						color="blue"
 					/>
 
 					<MetricCard
@@ -228,7 +225,6 @@
 						value={ppkStat.government_contributed}
 						decimals={0}
 						suffix=" PLN"
-						color="blue"
 					/>
 
 					<MetricCard
@@ -236,7 +232,6 @@
 						value={ppkStat.total_contributed}
 						decimals={0}
 						suffix=" PLN"
-						color="blue"
 					/>
 
 					<MetricCard
@@ -244,7 +239,7 @@
 						value={ppkStat.returns}
 						decimals={0}
 						suffix=" PLN"
-						color={ppkStat.returns >= 0 ? 'green' : 'red'}
+						signed
 					/>
 
 					<MetricCard
@@ -252,7 +247,7 @@
 						value={ppkStat.roi_percentage}
 						decimals={2}
 						suffix="%"
-						color={ppkStat.roi_percentage >= 0 ? 'green' : 'red'}
+						signed
 					/>
 				</div>
 			{/each}
@@ -275,7 +270,6 @@
 						value={pit.total_contributed}
 						decimals={0}
 						suffix=" PLN"
-						color="blue"
 					/>
 
 					<MetricCard
@@ -283,7 +277,6 @@
 						value={pit.marginal_tax_rate == null ? null : pit.marginal_tax_rate * 100}
 						decimals={0}
 						suffix="%"
-						color="blue"
 					/>
 
 					<MetricCard
@@ -291,7 +284,6 @@
 						value={pit.pit_savings}
 						decimals={0}
 						suffix=" PLN"
-						color="green"
 					/>
 				</div>
 			{/each}
@@ -306,7 +298,6 @@
 					value={data.stockStats.total_value}
 					decimals={0}
 					suffix=" PLN"
-					color="green"
 				/>
 
 				<MetricCard
@@ -314,7 +305,6 @@
 					value={data.stockStats.total_contributed}
 					decimals={0}
 					suffix=" PLN"
-					color="blue"
 				/>
 
 				<MetricCard
@@ -322,7 +312,7 @@
 					value={data.stockStats.returns}
 					decimals={0}
 					suffix=" PLN"
-					color={data.stockStats.returns >= 0 ? 'green' : 'red'}
+					signed
 				/>
 
 				<MetricCard
@@ -330,7 +320,7 @@
 					value={data.stockStats.roi_percentage}
 					decimals={2}
 					suffix="%"
-					color={data.stockStats.roi_percentage >= 0 ? 'green' : 'red'}
+					signed
 				/>
 			</div>
 		{/if}
@@ -344,7 +334,6 @@
 					value={data.bondStats.total_value}
 					decimals={0}
 					suffix=" PLN"
-					color="green"
 				/>
 
 				<MetricCard
@@ -352,7 +341,6 @@
 					value={data.bondStats.total_contributed}
 					decimals={0}
 					suffix=" PLN"
-					color="blue"
 				/>
 
 				<MetricCard
@@ -360,7 +348,7 @@
 					value={data.bondStats.returns}
 					decimals={0}
 					suffix=" PLN"
-					color={data.bondStats.returns >= 0 ? 'green' : 'red'}
+					signed
 				/>
 
 				<MetricCard
@@ -368,7 +356,7 @@
 					value={data.bondStats.roi_percentage}
 					decimals={2}
 					suffix="%"
-					color={data.bondStats.roi_percentage >= 0 ? 'green' : 'red'}
+					signed
 				/>
 			</div>
 		{/if}

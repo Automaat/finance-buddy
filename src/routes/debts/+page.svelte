@@ -333,7 +333,7 @@
 								<td class="font-semibold" data-label="Kwota początkowa"
 									>{formatPLN(debt.initial_amount)}</td
 								>
-								<td class="font-semibold text-error-600-400" data-label="Pozostało">
+								<td class="font-semibold" data-label="Pozostało">
 									{#if debt.latest_balance !== null}
 										<div>{formatPLN(debt.latest_balance)}</div>
 										{#if debt.latest_balance_date}
@@ -346,9 +346,7 @@
 									{/if}
 								</td>
 								<td class="font-semibold" data-label="Wpłacono">{formatPLN(debt.total_paid)}</td>
-								<td class="font-semibold text-error-600-400" data-label="Odsetki"
-									>{formatPLN(debt.interest_paid)}</td
-								>
+								<td class="font-semibold" data-label="Odsetki">{formatPLN(debt.interest_paid)}</td>
 								<td data-label="Oprocentowanie">{debt.interest_rate}%</td>
 								<td data-label="Data">{formatDate(debt.start_date)}</td>
 								<td data-label="Właściciel">{ownerName(owners, debt.account_owner_user_id)}</td>
