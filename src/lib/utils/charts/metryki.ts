@@ -240,8 +240,9 @@ function buildTrendChartOption(
 	if (isEmptyOrZero) {
 		return {
 			...baseChartOption(title, isMobile),
-			xAxis: { show: false },
-			yAxis: { show: false },
+			xAxis: [],
+			yAxis: [],
+			legend: { data: [] },
 			series: [],
 			graphic: [
 				{

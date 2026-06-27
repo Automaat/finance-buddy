@@ -104,6 +104,9 @@ describe('buildInvestmentTrendChartOption', () => {
 	it('returns empty state for empty series', () => {
 		const option = buildInvestmentTrendChartOption([]);
 		expect(option.series).toEqual([]);
+		expect(option.xAxis).toEqual([]);
+		expect(option.yAxis).toEqual([]);
+		expect((option.legend as { data: unknown[] }).data).toEqual([]);
 		const graphic = option.graphic as Array<{ style: { text: string } }>;
 		expect(graphic[0].style.text).toBe('Brak danych');
 	});
@@ -113,6 +116,9 @@ describe('buildInvestmentTrendChartOption', () => {
 			{ date: '2023-01-31', value: 0, contributions: 0 }
 		]);
 		expect(option.series).toEqual([]);
+		expect(option.xAxis).toEqual([]);
+		expect(option.yAxis).toEqual([]);
+		expect((option.legend as { data: unknown[] }).data).toEqual([]);
 		const graphic = option.graphic as Array<{ style: { text: string } }>;
 		expect(graphic[0].style.text).toBe('Brak danych');
 	});
@@ -120,6 +126,9 @@ describe('buildInvestmentTrendChartOption', () => {
 	it('returns empty state for date-only point with no value or contributions', () => {
 		const option = buildInvestmentTrendChartOption([{ date: '2023-01-31' }]);
 		expect(option.series).toEqual([]);
+		expect(option.xAxis).toEqual([]);
+		expect(option.yAxis).toEqual([]);
+		expect((option.legend as { data: unknown[] }).data).toEqual([]);
 		const graphic = option.graphic as Array<{ style: { text: string } }>;
 		expect(graphic[0].style.text).toBe('Brak danych');
 	});
@@ -142,6 +151,9 @@ describe('buildWrapperTrendChartOption', () => {
 	it('returns empty state for empty series', () => {
 		const option = buildWrapperTrendChartOption('Puste', []);
 		expect(option.series).toEqual([]);
+		expect(option.xAxis).toEqual([]);
+		expect(option.yAxis).toEqual([]);
+		expect((option.legend as { data: unknown[] }).data).toEqual([]);
 		const graphic = option.graphic as Array<{ style: { text: string } }>;
 		expect(graphic[0].style.text).toBe('Brak danych');
 	});
@@ -152,6 +164,9 @@ describe('buildWrapperTrendChartOption', () => {
 			{ date: '2023-02-28', value: 0, contributions: 0 }
 		]);
 		expect(option.series).toEqual([]);
+		expect(option.xAxis).toEqual([]);
+		expect(option.yAxis).toEqual([]);
+		expect((option.legend as { data: unknown[] }).data).toEqual([]);
 		const graphic = option.graphic as Array<{ style: { text: string } }>;
 		expect(graphic[0].style.text).toBe('Brak danych');
 	});
