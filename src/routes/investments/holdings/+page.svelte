@@ -344,7 +344,7 @@
 </script>
 
 <svelte:head>
-	<title>Inwestycje | Finansowa Forteca</title>
+	<title>Akcje / ETF | Finansowa Forteca</title>
 </svelte:head>
 
 <div class="space-y-6">
