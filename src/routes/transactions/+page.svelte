@@ -161,8 +161,9 @@
 		<td class="text-right">
 			<button
 				type="button"
-				class="btn-icon btn-icon-sm"
+				class="btn-icon btn-icon-sm preset-tonal-error"
 				aria-label="Usuń"
+				title="Usuń"
 				onclick={() => deleteTransaction(transaction.account_id, transaction.id)}
 			>
 				<Trash2 size={16} />

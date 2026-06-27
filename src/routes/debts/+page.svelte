@@ -357,6 +357,7 @@
 										type="button"
 										class="btn preset-tonal-surface btn-sm gap-1"
 										aria-label="Historia wpłat"
+										title="Liczba wpłat"
 										onclick={() => openPayments(debt)}
 									>
 										<CircleDollarSign size={14} />
@@ -366,14 +367,16 @@
 										type="button"
 										class="btn-icon btn-icon-sm"
 										aria-label="Edytuj"
+										title="Edytuj"
 										onclick={() => startEdit(debt)}
 									>
 										<Pencil size={16} />
 									</button>
 									<button
 										type="button"
-										class="btn-icon btn-icon-sm"
+										class="btn-icon btn-icon-sm preset-tonal-error"
 										aria-label="Usuń"
+										title="Usuń"
 										onclick={() => handleDelete(debt.id)}
 									>
 										<Trash2 size={16} />

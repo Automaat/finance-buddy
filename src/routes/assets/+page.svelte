@@ -207,14 +207,16 @@
 										type="button"
 										class="btn-icon btn-icon-sm"
 										aria-label="Edytuj"
+										title="Edytuj"
 										onclick={() => startEdit(asset)}
 									>
 										<Pencil size={16} />
 									</button>
 									<button
 										type="button"
-										class="btn-icon btn-icon-sm"
+										class="btn-icon btn-icon-sm preset-tonal-error"
 										aria-label="Usuń"
+										title="Usuń"
 										onclick={() => handleDelete(asset.id)}
 									>
 										<Trash2 size={16} />

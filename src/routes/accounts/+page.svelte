@@ -476,6 +476,7 @@
 				type="button"
 				class="btn-icon btn-icon-sm"
 				aria-label="Edytuj"
+				title="Edytuj"
 				onclick={() => startEdit(account)}
 			>
 				<Pencil size={16} />
@@ -485,6 +486,7 @@
 					type="button"
 					class="btn preset-tonal-surface btn-sm gap-1"
 					aria-label="Transakcje"
+					title="Liczba transakcji"
 					onclick={() => openTransactions(account.id, account.name, account.account_wrapper)}
 				>
 					<BarChart3 size={14} />
@@ -493,8 +495,9 @@
 			{/if}
 			<button
 				type="button"
-				class="btn-icon btn-icon-sm"
+				class="btn-icon btn-icon-sm preset-tonal-error"
 				aria-label="Usuń"
+				title="Usuń"
 				onclick={() => handleDelete(account.id)}
 			>
 				<Trash2 size={16} />
@@ -516,14 +519,16 @@
 				type="button"
 				class="btn-icon btn-icon-sm"
 				aria-label="Edytuj"
+				title="Edytuj"
 				onclick={() => startEdit(account)}
 			>
 				<Pencil size={16} />
 			</button>
 			<button
 				type="button"
-				class="btn-icon btn-icon-sm"
+				class="btn-icon btn-icon-sm preset-tonal-error"
 				aria-label="Usuń"
+				title="Usuń"
 				onclick={() => handleDelete(account.id)}
 			>
 				<Trash2 size={16} />

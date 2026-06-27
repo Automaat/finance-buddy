@@ -103,12 +103,12 @@
 								<td class="text-right">
 									<button
 										type="button"
-										class="btn btn-sm preset-tonal-primary gap-1"
-										onclick={() => goto(`/snapshots/${snapshot.id}/edit`)}
+										class="btn-icon btn-icon-sm"
+										aria-label="Edytuj"
 										title="Edytuj snapshot"
+										onclick={() => goto(`/snapshots/${snapshot.id}/edit`)}
 									>
-										<Pencil size={14} />
-										Edytuj
+										<Pencil size={16} />
 									</button>
 								</td>
 							</tr>
