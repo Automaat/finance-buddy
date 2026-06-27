@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { resolveApiUrl } from '$lib/api';
 	import { toast } from '$lib/stores/toast.svelte';
-	import { formatPLN, formatNumber } from '$lib/utils/format';
+	import { formatPLN, formatNumber, formatSignedPLN } from '$lib/utils/format';
 
 	interface ScopeProp {
 		type: 'all' | 'category' | 'wrapper' | 'account';
@@ -156,7 +156,7 @@
 						? 'text-success-500'
 						: 'text-error-500'}"
 				>
-					{data.valuation_change >= 0 ? '+' : ''}{formatPLN(data.valuation_change)}
+					{formatSignedPLN(data.valuation_change)}
 				</dd>
 			</div>
 			{#if (data.dividends_received_net ?? 0) !== 0}

@@ -169,7 +169,7 @@
 	const baseline = $derived(results?.find((r) => r.isCurrentJob) ?? null);
 
 	function fmt(v: number): string {
-		return v.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+		return formatNumber(v, 2);
 	}
 
 	function contractLabel(type: ContractType): string {
