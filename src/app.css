@@ -140,12 +140,13 @@ body {
    is unmistakably distinct from the disabled state. The -500 preset is too pale
    and reads as already-disabled. Targets all elements (buttons, anchors, nav). */
 .preset-filled-primary-500 {
-	background-color: var(--color-primary-600);
+	background-color: var(--color-primary);
 	color: var(--color-primary-contrast-600);
 }
 
-.preset-filled-primary-500:not(:disabled):hover {
-	background-color: var(--color-primary-700);
+button.preset-filled-primary-500:not(:disabled):hover,
+a.preset-filled-primary-500:hover {
+	background-color: var(--color-primary-hover);
 }
 
 /* Disabled buttons: clearly inactive regardless of variant. */
