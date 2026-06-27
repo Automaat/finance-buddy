@@ -233,6 +233,28 @@ function buildTrendChartOption(
 	axisFontSize: number,
 	isMobile = false
 ): EChartsOption {
+	const isEmptyOrZero =
+		series.length === 0 ||
+		series.every((p) => (p.value ?? 0) === 0 && (p.contributions ?? 0) === 0);
+
+	if (isEmptyOrZero) {
+		return {
+			...baseChartOption(title, isMobile),
+			xAxis: [],
+			yAxis: [],
+			legend: { data: [] },
+			series: [],
+			graphic: [
+				{
+					type: 'text',
+					left: 'center',
+					top: 'middle',
+					style: { text: 'Brak danych', fontSize: 16, fill: chartInkMuted }
+				}
+			]
+		};
+	}
+
 	const dates = series.map((item) => item.date);
 	const values = series.map((item) => item.value ?? 0);
 	const contributions = series.map((item) => item.contributions ?? 0);
