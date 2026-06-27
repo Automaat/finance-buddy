@@ -594,7 +594,7 @@
 				<span class="h3 flex items-center gap-2">
 					<BookOpen size={20} /> Źródła stałych PL ({plRules[0].year})
 				</span>
-				<span class="text-xs text-surface-700-300">Pokaż tabelę</span>
+				<span class="text-xs text-surface-700-300">Tabela źródeł</span>
 			</summary>
 			<div class="space-y-3 pt-3">
 				<p class="text-xs italic text-surface-700-300 mt-1">

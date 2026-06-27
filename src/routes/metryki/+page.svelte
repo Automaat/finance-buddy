@@ -296,14 +296,12 @@
 							value={metricCards.property_sqm}
 							decimals={2}
 							suffix=" m²"
-							color="blue"
 						/>
 
 						<MetricCard
 							label="Ile miesięcy bez pracy"
 							value={metricCards.emergency_fund_months}
 							decimals={2}
-							color="green"
 							tooltip="Aktywa płynne (bank + konta oszczędnościowe) ÷ miesięczne wydatki."
 						/>
 
@@ -312,7 +310,6 @@
 							value={metricCards.retirement_income_monthly}
 							decimals={2}
 							suffix=" PLN"
-							color="blue"
 							tooltip="Miesięczny dochód, jaki dałyby oszczędności emerytalne przy bezpiecznej stopie wypłaty."
 						/>
 
@@ -321,7 +318,6 @@
 							value={metricCards.mortgage_remaining}
 							decimals={0}
 							suffix=" PLN"
-							color="red"
 							secondary={mortgagePayoffLabel}
 							tooltip="Pozostały kapitał do spłaty oraz szacowany czas przy obecnym tempie."
 						/>
@@ -331,7 +327,6 @@
 							value={metricCards.retirement_total}
 							decimals={0}
 							suffix=" PLN"
-							color="green"
 						/>
 
 						<MetricCard
@@ -339,7 +334,6 @@
 							value={metricCards.investment_contributions}
 							decimals={0}
 							suffix=" PLN"
-							color="blue"
 						/>
 
 						<MetricCard
@@ -347,7 +341,6 @@
 							value={metricCards.investment_returns}
 							decimals={0}
 							suffix=" PLN"
-							color="green"
 						/>
 
 						<MetricCard
@@ -355,7 +348,6 @@
 							value={metricCards.savings_rate}
 							decimals={1}
 							suffix="%"
-							color="green"
 							tooltip="Średnia z 3 ostatnich miesięcznych zmian wartości netto ÷ średnia z 3 ostatnich pensji."
 							emptyHint="Dodaj pensje i snapshoty, by policzyć"
 							emptyHref="/salaries"
@@ -366,13 +358,6 @@
 							value={metricCards.debt_to_income_ratio}
 							decimals={1}
 							suffix="%"
-							color={metricCards.debt_to_income_ratio == null
-								? 'neutral'
-								: metricCards.debt_to_income_ratio < 30
-									? 'green'
-									: metricCards.debt_to_income_ratio <= 36
-										? 'blue'
-										: 'red'}
 							tooltip="Miesięczne zobowiązania ÷ miesięczny dochód. <30% dobrze, >36% wysoko."
 							emptyHint="Uzupełnij konfigurację"
 							emptyHref="/settings/config"
@@ -383,7 +368,6 @@
 							value={metricCards.hour_of_work_cost}
 							decimals={2}
 							suffix=" PLN"
-							color="blue"
 							tooltip="Ile kosztuje Cię godzina pracy (dojazdy, przygotowania) względem pensji netto."
 							emptyHint="Uzupełnij konfigurację"
 							emptyHref="/settings/config"
@@ -394,7 +378,6 @@
 							value={metricCards.hour_of_life_cost}
 							decimals={2}
 							suffix=" PLN"
-							color="green"
 							tooltip="Miesięczne wydatki rozłożone na wszystkie godziny doby — ile kosztuje godzina życia."
 							emptyHint="Uzupełnij konfigurację"
 							emptyHref="/settings/config"
@@ -414,7 +397,6 @@
 									value={ppkStat.total_value}
 									decimals={0}
 									suffix=" PLN"
-									color="green"
 								/>
 
 								<MetricCard
@@ -422,7 +404,6 @@
 									value={ppkStat.employee_contributed}
 									decimals={0}
 									suffix=" PLN"
-									color="blue"
 								/>
 
 								<MetricCard
@@ -430,7 +411,6 @@
 									value={ppkStat.employer_contributed}
 									decimals={0}
 									suffix=" PLN"
-									color="blue"
 								/>
 
 								<MetricCard
@@ -438,7 +418,6 @@
 									value={ppkStat.government_contributed}
 									decimals={0}
 									suffix=" PLN"
-									color="blue"
 								/>
 
 								<MetricCard
@@ -446,7 +425,6 @@
 									value={ppkStat.total_contributed}
 									decimals={0}
 									suffix=" PLN"
-									color="blue"
 								/>
 
 								<MetricCard
@@ -454,7 +432,6 @@
 									value={ppkStat.returns}
 									decimals={0}
 									suffix=" PLN"
-									color={ppkStat.returns >= 0 ? 'green' : 'red'}
 								/>
 
 								<MetricCard
@@ -462,7 +439,6 @@
 									value={ppkStat.roi_percentage}
 									decimals={2}
 									suffix="%"
-									color={ppkStat.roi_percentage >= 0 ? 'green' : 'red'}
 								/>
 							</div>
 						{/each}
@@ -485,7 +461,6 @@
 									value={pit.total_contributed}
 									decimals={0}
 									suffix=" PLN"
-									color="blue"
 								/>
 
 								<MetricCard
@@ -493,7 +468,6 @@
 									value={pit.marginal_tax_rate == null ? null : pit.marginal_tax_rate * 100}
 									decimals={0}
 									suffix="%"
-									color="blue"
 								/>
 
 								<MetricCard
@@ -501,7 +475,6 @@
 									value={pit.pit_savings}
 									decimals={0}
 									suffix=" PLN"
-									color="green"
 								/>
 							</div>
 						{/each}
@@ -516,7 +489,6 @@
 								value={data.stockStats.total_value}
 								decimals={0}
 								suffix=" PLN"
-								color="green"
 							/>
 
 							<MetricCard
@@ -524,7 +496,6 @@
 								value={data.stockStats.total_contributed}
 								decimals={0}
 								suffix=" PLN"
-								color="blue"
 							/>
 
 							<MetricCard
@@ -532,7 +503,6 @@
 								value={data.stockStats.returns}
 								decimals={0}
 								suffix=" PLN"
-								color={data.stockStats.returns >= 0 ? 'green' : 'red'}
 							/>
 
 							<MetricCard
@@ -540,7 +510,6 @@
 								value={data.stockStats.roi_percentage}
 								decimals={2}
 								suffix="%"
-								color={data.stockStats.roi_percentage >= 0 ? 'green' : 'red'}
 							/>
 						</div>
 					{/if}
@@ -554,7 +523,6 @@
 								value={data.bondStats.total_value}
 								decimals={0}
 								suffix=" PLN"
-								color="green"
 							/>
 
 							<MetricCard
@@ -562,7 +530,6 @@
 								value={data.bondStats.total_contributed}
 								decimals={0}
 								suffix=" PLN"
-								color="blue"
 							/>
 
 							<MetricCard
@@ -570,7 +537,6 @@
 								value={data.bondStats.returns}
 								decimals={0}
 								suffix=" PLN"
-								color={data.bondStats.returns >= 0 ? 'green' : 'red'}
 							/>
 
 							<MetricCard
@@ -578,7 +544,6 @@
 								value={data.bondStats.roi_percentage}
 								decimals={2}
 								suffix="%"
-								color={data.bondStats.roi_percentage >= 0 ? 'green' : 'red'}
 							/>
 						</div>
 					{/if}
