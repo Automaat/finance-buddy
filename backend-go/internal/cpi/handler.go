@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/shopspring/decimal"
+
 	"github.com/Automaat/finance-buddy/backend-go/internal/httputil"
 	"github.com/Automaat/finance-buddy/backend-go/internal/validation"
 	"github.com/Automaat/finance-buddy/backend-go/internal/wire"
@@ -92,12 +94,14 @@ func (h *Handler) GetSeries(w http.ResponseWriter, r *http.Request) {
 	indexMap := CumulativeIndex(yoyMap)
 	years := sortedYears(indexMap)
 	points := make([]cpiPoint, 0, len(years))
+	hundred := decimal.NewFromInt(100)
 	for _, y := range years {
-		yoy, _ := yoyMap[y].Float64()
+		// Subtract in decimal to preserve GUS one-decimal precision (e.g. 100.8 → 0.8).
+		yoyRate, _ := yoyMap[y].Sub(hundred).Float64()
 		idx, _ := indexMap[y].Float64()
 		points = append(points, cpiPoint{
 			Year:            y,
-			YoYRate:         wire.PyFloat(yoy),
+			YoYRate:         wire.PyFloat(yoyRate),
 			CumulativeIndex: wire.PyFloat(idx),
 		})
 	}
