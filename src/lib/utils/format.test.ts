@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
 	calculateChange,
 	formatDate,
+	formatNumber,
 	formatPLN,
 	formatPercent,
 	formatSignedPLN,
@@ -124,6 +125,60 @@ describe('formatDate', () => {
 		expect(formatDate(undefined)).toBe('—');
 		expect(formatDate('')).toBe('—');
 		expect(formatDate('not-a-date')).toBe('—');
+	});
+});
+
+describe('formatNumber', () => {
+	it('uses comma as decimal separator', () => {
+		expect(formatNumber(1.5, 1)).toContain(',');
+		expect(formatNumber(1.5, 1)).not.toContain('.');
+	});
+
+	it('contains the correct digits', () => {
+		expect(formatNumber(1234.5, 1)).toMatch(/1.*234.*5/);
+	});
+
+	it('rounds to specified decimal places', () => {
+		expect(formatNumber(1.234, 2)).toBe('1,23');
+	});
+
+	it('returns — for null, undefined and NaN', () => {
+		expect(formatNumber(null)).toBe('—');
+		expect(formatNumber(undefined)).toBe('—');
+		expect(formatNumber(NaN)).toBe('—');
+	});
+
+	it('defaults to 2 decimal places', () => {
+		expect(formatNumber(1.5)).toBe('1,50');
+	});
+
+	it('preserves sign for negative values', () => {
+		const result = formatNumber(-5, 2);
+		expect(result).toMatch(/−5,00/);
+	});
+
+	it('uses NBSP thousands separator for 4-digit values', () => {
+		// pl-PL CLDR minimumGroupingDigits=2 would skip grouping at 1000–9999
+		// without the manual post-processing fix.
+		const result = formatNumber(1000, 2);
+		expect(result).toContain(' ');
+	});
+
+	it('uses NBSP thousands separator consistently across magnitudes', () => {
+		expect(formatNumber(1234, 0)).toContain(' ');
+		expect(formatNumber(9999, 0)).toContain(' ');
+		expect(formatNumber(10000, 0)).toContain(' ');
+	});
+
+	it('does not add separator below 1000', () => {
+		expect(formatNumber(999, 2)).toBe('999,00');
+	});
+});
+
+describe('formatPLN thousands separator', () => {
+	it('groups 4-digit values with NBSP', () => {
+		expect(formatPLN(1000)).toContain(' ');
+		expect(formatPLN(9999)).toContain(' ');
 	});
 });
 

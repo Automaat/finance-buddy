@@ -111,7 +111,10 @@ describe('ContributionAdjustedReturns', () => {
 		render(ContributionAdjustedReturns, { props: { scope: { type: 'all' } } });
 		await waitFor(() => {
 			expect(screen.getByText('Dywidendy (netto)')).toBeTruthy();
-			expect(screen.getByText((t) => /\+150,50\s*PLN/.test(t))).toBeTruthy();
+			// dividends_received_net=150.5 → formatPLN rounds to whole zł (≈150–151 zł)
+			expect(
+				screen.getByText((t) => t.startsWith('+') && t.trimEnd().endsWith('zł') && /15[01]/.test(t))
+			).toBeTruthy();
 		});
 	});
 

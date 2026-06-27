@@ -2,7 +2,7 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import Skeleton from '$lib/components/Skeleton.svelte';
 	import SortableTable, { type SortableColumn } from '$lib/components/SortableTable.svelte';
-	import { formatPLN } from '$lib/utils/format';
+	import { formatPLN, formatNumber } from '$lib/utils/format';
 	import { Wallet, TrendingDown, Pencil, Trash2, Plus, BarChart3 } from 'lucide-svelte';
 	import { resolveApiUrl } from '$lib/api';
 	import { invalidateAll } from '$app/navigation';
@@ -149,7 +149,7 @@
 
 	function formatPct(v: number): string {
 		const sign = v > 0 ? '+' : '';
-		return `${sign}${v.toFixed(2)}%`;
+		return `${sign}${formatNumber(v, 2)}%`;
 	}
 
 	// Color buckets per issue #573 acceptance: green > 1%, amber 0–1%, red < 0%.
@@ -168,7 +168,7 @@
 	// backend `rules` table.
 	function realYieldTooltip(a: Account): string {
 		if (a.interest_rate_pct == null) return '';
-		const nominal = a.interest_rate_pct.toFixed(2);
+		const nominal = formatNumber(a.interest_rate_pct, 2);
 		const shielded = a.account_wrapper === 'IKE' || a.account_wrapper === 'IKZE';
 		const belkaPart = shielded
 			? `bez podatku Belki (opakowanie ${a.account_wrapper})`
@@ -176,7 +176,7 @@
 		if (a.cpi_yoy_pct == null || a.cpi_as_of_year == null) {
 			return `Nominalne ${nominal}% · ${belkaPart} · brak danych CPI`;
 		}
-		const cpi = a.cpi_yoy_pct.toFixed(2);
+		const cpi = formatNumber(a.cpi_yoy_pct, 2);
 		return `Nominalne ${nominal}% · ${belkaPart} · minus CPI ${a.cpi_as_of_year}: ${cpi}%`;
 	}
 
@@ -465,7 +465,7 @@
 				</span>
 			{:else if account.interest_rate_pct != null}
 				<span class="text-surface-700-300" title={realYieldTooltip(account)}>
-					{account.interest_rate_pct.toFixed(2)}%
+					{formatNumber(account.interest_rate_pct, 2)}%
 				</span>
 			{:else}
 				<span class="text-surface-500-500" aria-hidden="true">—</span>

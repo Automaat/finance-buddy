@@ -14,6 +14,7 @@
 		calculateOffer,
 		findBreakEvenAmount
 	} from '$lib/utils/compensation';
+	import { formatPLN, formatNumber } from '$lib/utils/format';
 
 	interface Props {
 		data: { latestSalaries: SalaryRecord[]; owners: OwnerOption[] };
@@ -158,14 +159,17 @@
 			bold: true
 		},
 		{ label: 'Koszt pracodawcy', value: (b) => fmt(b.employerCost) },
-		{ label: 'Efektywna stawka podatkowa', value: (b) => `${b.effectiveTaxRate.toFixed(1)}%` },
+		{
+			label: 'Efektywna stawka podatkowa',
+			value: (b) => `${formatNumber(b.effectiveTaxRate, 1)}%`
+		},
 		{ label: 'Ekwiwalent urlopowy', value: (b) => fmt(b.vacationEquivalent) }
 	];
 
 	const baseline = $derived(results?.find((r) => r.isCurrentJob) ?? null);
 
 	function fmt(v: number): string {
-		return v.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+		return formatNumber(v, 2);
 	}
 
 	function contractLabel(type: ContractType): string {
@@ -198,7 +202,7 @@
 					const items = params as { name: string; value: number; seriesName: string }[];
 					let html = `<strong>${escapeHtml(items[0].name)}</strong><br/>`;
 					for (const p of items) {
-						html += `${escapeHtml(p.seriesName)}: ${fmt(p.value)} PLN<br/>`;
+						html += `${escapeHtml(p.seriesName)}: ${formatPLN(p.value)}<br/>`;
 					}
 					return html;
 				}
@@ -375,7 +379,7 @@
 
 				<div class="winner-banner">
 					🏆 {winner.name}
-					<span class="winner-net">{fmt(winner.netMonthly)} PLN netto/mies.</span>
+					<span class="winner-net">{formatPLN(winner.netMonthly)} netto/mies.</span>
 				</div>
 
 				<div class="chart-container" bind:this={chartContainer}></div>
