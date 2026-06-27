@@ -1,11 +1,9 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import MetricCard from '$lib/components/MetricCard.svelte';
+	import { onMount } from 'svelte';
 	import DateRangePicker from '$lib/components/DateRangePicker.svelte';
 	import { TrendingUp, CheckCircle2, Lightbulb } from 'lucide-svelte';
 	import {
-		buildAllocationChartOption,
-		buildWrapperChartOption,
 		buildInvestmentTrendChartOption,
 		buildWrapperTrendChartOption,
 		buildYearlyRoiChartOption
@@ -17,7 +15,6 @@
 	import { ownerName, type OwnerOption } from '$lib/types/owners';
 	import { formatDate } from '$lib/utils/format';
 	import ContributionAdjustedReturns from '$lib/components/ContributionAdjustedReturns.svelte';
-	import CurrencyExposureWidget from '$lib/components/CurrencyExposureWidget.svelte';
 	import RealYieldsTable from '$lib/components/RealYieldsTable.svelte';
 
 	import type { PageData } from './$types';
@@ -28,7 +25,6 @@
 
 	let { data }: Props = $props();
 
-	const metricCards = $derived(data.metricCards);
 	const allocationAnalysis = $derived(data.allocationAnalysis);
 	const investmentTimeSeries = $derived(data.investmentTimeSeries);
 	const wrapperTimeSeries = $derived(data.wrapperTimeSeries);
@@ -39,31 +35,18 @@
 	const ikzePitStats = $derived(data.ikzePitStats ?? []);
 	const snapshotDate = $derived(data.snapshotDate ?? null);
 
-	// Secondary line for the consolidated mortgage card: "X mies. · Y lat do
-	// spłaty". Empty when there's no mortgage so the card shows just the em-dash.
-	const mortgagePayoffLabel = $derived.by(() => {
-		const months = metricCards.mortgage_months_left;
-		const years = metricCards.mortgage_years_left;
-		if (!months || months <= 0) return undefined;
-		const yearsText = years != null ? ` · ${years.toFixed(1)} lat` : '';
-		return `${months} mies.${yearsText} do spłaty`;
-	});
-
 	// The page is one long scroll across five themes. A sticky anchor nav lets
 	// the user jump between them. Anchors (not tabs) keep every section — and
 	// the always-rendered chart divs ECharts is bound to — in the DOM, so a
 	// tab's display:none can't collapse a canvas to zero size.
 	const sections = [
 		{ id: 'dzialania', label: 'Działania' },
-		{ id: 'przeglad', label: 'Przegląd' },
 		{ id: 'konta', label: 'Konta' },
 		{ id: 'zwroty', label: 'Zwroty' },
 		{ id: 'wzrost', label: 'Wzrost' }
 	];
 
-	let allocationChart: HTMLDivElement;
 	let inflationChart = $state<HTMLDivElement | undefined>(undefined);
-	let wrapperChart: HTMLDivElement;
 	let investmentTrendChart: HTMLDivElement;
 	let ikeChart: HTMLDivElement;
 	let ikzeChart: HTMLDivElement;
@@ -81,8 +64,6 @@
 
 	onMount(() => {
 		handles = {
-			allocation: createChart(allocationChart),
-			wrapper: createChart(wrapperChart),
 			investmentTrend: createChart(investmentTrendChart),
 			ike: createChart(ikeChart),
 			ikze: createChart(ikzeChart),
@@ -107,12 +88,6 @@
 	// Re-apply options whenever the underlying series change (reflow, no remount).
 	$effect(() => {
 		if (!chartsReady) return;
-		handles.allocation.chart.setOption(
-			buildAllocationChartOption(allocationAnalysis.by_category, $isMobile)
-		);
-		handles.wrapper.chart.setOption(
-			buildWrapperChartOption(allocationAnalysis.by_wrapper, $isMobile)
-		);
 		handles.investmentTrend.chart.setOption(buildInvestmentTrendChartOption(investmentTimeSeries));
 		handles.ike.chart.setOption(
 			buildWrapperTrendChartOption('IKE w czasie', wrapperTimeSeries.ike)
@@ -213,126 +188,6 @@
 				<CheckCircle2 size={16} /> Portfel jest zgodny z docelową alokacją (różnice mniejsze niż 1%)
 			</div>
 		{/if}
-	</section>
-
-	<section id="przeglad" class="scroll-mt-24 md:scroll-mt-16 space-y-6">
-		<div class="flex flex-wrap items-baseline justify-between gap-2">
-			<h2 class="h2">Przegląd finansowy</h2>
-			{#if snapshotDate}
-				<span class="text-sm text-surface-600-400">stan na {formatDate(snapshotDate)}</span>
-			{/if}
-		</div>
-
-		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-			<MetricCard
-				label="Ile metrów mieszkania jest nasze"
-				value={metricCards.property_sqm}
-				decimals={2}
-				suffix=" m²"
-				color="blue"
-			/>
-
-			<MetricCard
-				label="Ile miesięcy bez pracy"
-				value={metricCards.emergency_fund_months}
-				decimals={2}
-				color="green"
-				tooltip="Aktywa płynne (bank + konta oszczędnościowe) ÷ miesięczne wydatki."
-			/>
-
-			<MetricCard
-				label="Pensja z odsetek"
-				value={metricCards.retirement_income_monthly}
-				decimals={2}
-				suffix=" PLN"
-				color="blue"
-				tooltip="Miesięczny dochód, jaki dałyby oszczędności emerytalne przy bezpiecznej stopie wypłaty."
-			/>
-
-			<MetricCard
-				label="Hipoteka do spłaty"
-				value={metricCards.mortgage_remaining}
-				decimals={0}
-				suffix=" PLN"
-				color="red"
-				secondary={mortgagePayoffLabel}
-				tooltip="Pozostały kapitał do spłaty oraz szacowany czas przy obecnym tempie."
-			/>
-
-			<MetricCard
-				label="Ile oszczędności emerytalnych"
-				value={metricCards.retirement_total}
-				decimals={0}
-				suffix=" PLN"
-				color="green"
-			/>
-
-			<MetricCard
-				label="Ile wpłaciliśmy na inwestycje"
-				value={metricCards.investment_contributions}
-				decimals={0}
-				suffix=" PLN"
-				color="blue"
-			/>
-
-			<MetricCard
-				label="Ile zarobiliśmy na inwestycjach"
-				value={metricCards.investment_returns}
-				decimals={0}
-				suffix=" PLN"
-				color="green"
-			/>
-
-			<MetricCard
-				label="Ile oszczędzamy miesięcznie"
-				value={metricCards.savings_rate}
-				decimals={1}
-				suffix="%"
-				color="green"
-				tooltip="Średnia z 3 ostatnich miesięcznych zmian wartości netto ÷ średnia z 3 ostatnich pensji."
-				emptyHint="Dodaj pensje i snapshoty, by policzyć"
-				emptyHref="/salaries"
-			/>
-
-			<MetricCard
-				label="Stosunek długu do dochodu"
-				value={metricCards.debt_to_income_ratio}
-				decimals={1}
-				suffix="%"
-				color={metricCards.debt_to_income_ratio == null
-					? 'neutral'
-					: metricCards.debt_to_income_ratio < 30
-						? 'green'
-						: metricCards.debt_to_income_ratio <= 36
-							? 'blue'
-							: 'red'}
-				tooltip="Miesięczne zobowiązania ÷ miesięczny dochód. <30% dobrze, >36% wysoko."
-				emptyHint="Uzupełnij konfigurację"
-				emptyHref="/settings/config"
-			/>
-
-			<MetricCard
-				label="Koszt godziny pracy"
-				value={metricCards.hour_of_work_cost}
-				decimals={2}
-				suffix=" PLN"
-				color="blue"
-				tooltip="Ile kosztuje Cię godzina pracy (dojazdy, przygotowania) względem pensji netto."
-				emptyHint="Uzupełnij konfigurację"
-				emptyHref="/settings/config"
-			/>
-
-			<MetricCard
-				label="Koszt godziny życia"
-				value={metricCards.hour_of_life_cost}
-				decimals={2}
-				suffix=" PLN"
-				color="green"
-				tooltip="Miesięczne wydatki rozłożone na wszystkie godziny doby — ile kosztuje godzina życia."
-				emptyHint="Uzupełnij konfigurację"
-				emptyHref="/settings/config"
-			/>
-		</div>
 	</section>
 
 	<section id="konta" class="scroll-mt-24 md:scroll-mt-16 space-y-6">
@@ -540,19 +395,19 @@
 			</div>
 		{/if}
 
-		<h2 class="h2">Struktura portfela inwestycyjnego</h2>
-
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-			<div class="card preset-filled-surface-100-900 p-4">
-				<div bind:this={allocationChart} class="w-full h-[280px] sm:h-[400px]"></div>
+		<div
+			class="card preset-tonal-surface p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+		>
+			<div>
+				<h3 class="font-bold">Ekspozycja walutowa</h3>
+				<p class="text-sm text-surface-600-400">
+					Zobacz szczegółową analizę alokacji walutowej i geograficznej portfela.
+				</p>
 			</div>
-
-			<div class="card preset-filled-surface-100-900 p-4">
-				<div bind:this={wrapperChart} class="w-full h-[280px] sm:h-[400px]"></div>
-			</div>
+			<a href="/ekspozycja" class="btn preset-filled-primary-500 btn-sm whitespace-nowrap"
+				>Otwórz ekspozycję</a
+			>
 		</div>
-
-		<CurrencyExposureWidget />
 	</section>
 
 	<section id="wzrost" class="scroll-mt-24 md:scroll-mt-16 space-y-6">

@@ -128,31 +128,7 @@
 		</p>
 	</header>
 
-	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-		<label class="space-y-1">
-			<span class="text-xs font-semibold">Obecny wiek</span>
-			<input type="number" min="18" max="100" class="input w-full" bind:value={currentAge} />
-		</label>
-		<label class="space-y-1">
-			<span class="text-xs font-semibold">Wiek emerytalny</span>
-			<input type="number" min="18" max="100" class="input w-full" bind:value={retirementAge} />
-		</label>
-		<label class="space-y-1">
-			<span class="text-xs font-semibold">Oczekiwana długość życia</span>
-			<input type="number" min="18" max="120" class="input w-full" bind:value={lifeExpectancy} />
-		</label>
-		<label class="space-y-1">
-			<span class="text-xs font-semibold">Obecny portfel (PLN)</span>
-			<input type="number" min="0" class="input w-full" bind:value={currentPortfolioPLN} />
-		</label>
-		<label class="space-y-1">
-			<span class="text-xs font-semibold">Roczna wpłata (PLN)</span>
-			<input type="number" min="0" class="input w-full" bind:value={annualContributionPLN} />
-		</label>
-		<label class="space-y-1">
-			<span class="text-xs font-semibold">Oczekiwana stopa zwrotu (%)</span>
-			<input type="number" step="0.1" class="input w-full" bind:value={expectedReturnPct} />
-		</label>
+	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
 		<label class="space-y-1">
 			<span class="text-xs font-semibold">Inflacja (%)</span>
 			<input type="number" step="0.1" min="0" class="input w-full" bind:value={inflationPct} />
