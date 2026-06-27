@@ -52,7 +52,7 @@ describe('theme', () => {
 		}
 		// value is the primary blue (same hue as palette[0]), NOT the red accent
 		expect(chartValue).toBe(chartPalette[0]);
-		// contribution is an independent rose-400 tint, not a palette index
-		expect(chartContribution).toBe('#fb7185');
+		// contribution is amber (not red/rose) — red is reserved for negatives only
+		expect(chartContribution).toBe('#f59e0b');
 	});
 });

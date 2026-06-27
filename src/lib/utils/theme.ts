@@ -46,11 +46,14 @@ export const chartTooltipBorder = '#d4d4d8';
 // Stable meanings used across the investment charts so the same concept reads
 // the same color everywhere.
 
-/** Contributions / deposits (area fill under the value line). */
-export const chartContribution = '#fb7185';
+/** Contributions / deposits (area fill under the value line). Amber — not red/rose. */
+export const chartContribution = '#f59e0b';
 
 /** Portfolio value / primary line. Same hue as chartPalette[0] — blue, not red. */
 export const chartValue = '#3b82f6';
+
+/** Area-fill gradient stops for chartValue, top (opaque) to bottom (faint). */
+export const chartValueGradient = ['rgba(59, 130, 246, 0.5)', 'rgba(59, 130, 246, 0.1)'] as const;
 
 /** Positive return / gains. */
 export const chartPositive = '#16a34a';

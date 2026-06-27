@@ -1,6 +1,6 @@
 import type { EChartsOption, LineSeriesOption } from 'echarts';
 import type { TopLevelFormatterParams } from 'echarts/types/dist/shared';
-import { chartAccent, chartPalette } from '$lib/utils/theme';
+import { chartValue, chartPalette } from '$lib/utils/theme';
 
 export interface MonteCarloBand {
 	age: number;
@@ -140,8 +140,8 @@ export function buildMonteCarloFanOption(
 			data: p50,
 			smooth: true,
 			showSymbol: false,
-			lineStyle: { color: chartAccent, width: 2 },
-			itemStyle: { color: chartAccent }
+			lineStyle: { color: chartValue, width: 2 },
+			itemStyle: { color: chartValue }
 		}
 	];
 
