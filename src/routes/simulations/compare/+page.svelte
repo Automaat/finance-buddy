@@ -197,7 +197,7 @@
 	// strings doesn't double-up.
 	function fmtUpdatedAt(s: string): string {
 		const utc = s.endsWith('Z') ? s : s + 'Z';
-		return formatDate(utc);
+		return formatDate(utc, { timeZone: 'UTC' });
 	}
 
 	// Per-row min/max for color-coding so differences are easy to scan.

@@ -125,6 +125,10 @@ describe('formatDate', () => {
 		expect(formatDate(new Date('2024-03-15'))).toMatch(/2024/);
 	});
 
+	it('can format timestamps against the UTC calendar day', () => {
+		expect(formatDate('2026-01-31T23:30:00Z', { timeZone: 'UTC' })).toMatch(/31.*01.*2026/);
+	});
+
 	it('returns — for empty and invalid input', () => {
 		expect(formatDate(null)).toBe('—');
 		expect(formatDate(undefined)).toBe('—');
