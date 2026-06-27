@@ -51,7 +51,8 @@ body {
 	--color-background: var(--color-surface-50);
 	--color-surface: var(--color-surface-100);
 	--color-border: var(--color-surface-300);
-	--color-primary: var(--color-primary-500);
+	--color-primary: var(--color-primary-600);
+	--color-primary-hover: var(--color-primary-700);
 	--color-accent: var(--color-surface-200);
 	--color-success: var(--color-success-500);
 	--color-error: var(--color-error-500);
@@ -133,4 +134,22 @@ body {
 	.table-scroll-mobile {
 		overflow-x: auto;
 	}
+}
+
+/* Primary buttons: use -600 shade (white text on medium rose) so active state
+   is unmistakably distinct from the disabled state. The -500 preset is too pale
+   and reads as already-disabled. */
+button.preset-filled-primary-500 {
+	background-color: var(--color-primary-600);
+	color: var(--color-primary-contrast-600);
+}
+
+button.preset-filled-primary-500:not(:disabled):hover {
+	background-color: var(--color-primary-700);
+}
+
+/* Disabled buttons: clearly inactive regardless of variant. */
+button:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
 }
