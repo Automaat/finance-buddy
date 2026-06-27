@@ -12,7 +12,7 @@ export const chartPalette = [
 	'#06b6d4', // cyan-500
 	'#84cc16', // lime-500
 	'#ec4899', // pink-500
-	'#f97316'  // orange-500
+	'#f97316' // orange-500
 ] as const;
 
 /** Accent color for single-series charts (e.g. net worth line). */

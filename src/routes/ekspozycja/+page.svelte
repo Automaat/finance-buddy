@@ -201,7 +201,9 @@
 										<div class="flex-1 h-2 rounded-full bg-surface-200-800 overflow-hidden">
 											<div
 												class="h-full rounded-full"
-												style="width: {Math.min(bucket.percent, 100)}%; background: {chartPalette[i % chartPalette.length]}"
+												style="width: {Math.min(bucket.percent, 100)}%; background: {chartPalette[
+													i % chartPalette.length
+												]}"
 											></div>
 										</div>
 										<span class="w-12 text-right tabular-nums">{bucket.percent.toFixed(1)}%</span>
