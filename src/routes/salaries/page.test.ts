@@ -70,6 +70,170 @@ async function openNewSalaryModalAndFill(opts: {
 		await fireEvent.input(companyInput, { target: { value: opts.company } });
 }
 
+async function selectSalaryTab(label: string) {
+	await fireEvent.click(screen.getByRole('tab', { name: label }));
+}
+
+describe('Salaries page — tabs', () => {
+	it('keeps each tab aria-controls target mounted while lazy-rendering tab content', async () => {
+		const { container } = render(Page, { props: { data: baseData } });
+		const tabs = ['Przegląd', 'Historia', 'Premie', 'Udziały', 'Wyceny', 'Inflacja'].map((label) =>
+			screen.getByRole('tab', { name: label })
+		);
+
+		for (const tab of tabs) {
+			const panelId = tab.getAttribute('aria-controls');
+			expect(panelId).toBeTruthy();
+			expect(container.querySelector(`#${panelId}`)).toBeTruthy();
+		}
+		expect(screen.queryByRole('heading', { name: 'Filtry' })).toBeNull();
+
+		await selectSalaryTab('Historia');
+		expect(screen.getByRole('heading', { name: 'Filtry' })).toBeTruthy();
+		expect(screen.queryByRole('heading', { name: 'Progresja wynagrodzenia' })).toBeNull();
+	});
+
+	it('renders populated lazy tab sections after switching tabs', async () => {
+		const populatedData = {
+			...baseData,
+			salaries: {
+				salary_records: [
+					{
+						id: 1,
+						date: '2026-01-01',
+						gross_amount: 18000,
+						contract_type: 'UOP',
+						company: 'Acme',
+						owner_user_id: 1,
+						is_active: true,
+						created_at: '2026-01-01T00:00:00Z'
+					}
+				],
+				total_count: 1,
+				current_salaries: { '1': 18000 },
+				inflation_context: {
+					'1': {
+						owner_user_id: 1,
+						last_change_date: '2026-01-01',
+						previous_change_date: '2025-01-01',
+						previous_salary: 16000,
+						previous_salary_in_today_pln: 17000,
+						current_salary: 18000,
+						real_change_pln: 1000,
+						real_change_pct: 5.88,
+						cpi_as_of_year: 2025
+					}
+				},
+				available_companies: ['Acme']
+			},
+			bonuses: {
+				bonus_events: [
+					{
+						id: 2,
+						date: '2026-03-15',
+						amount: 12000,
+						currency: 'PLN',
+						type: 'annual' as const,
+						company: 'Acme',
+						owner_user_id: 1,
+						contract_type: 'UOP',
+						notes: 'Roczny bonus',
+						is_active: true,
+						created_at: '2026-03-15T00:00:00Z',
+						amount_pln: 12000,
+						fx_rate: null
+					}
+				],
+				total_count: 1,
+				available_companies: ['Acme']
+			},
+			equity: {
+				equity_grants: [
+					{
+						id: 3,
+						grant_date: '2026-02-01',
+						type: 'rsu' as const,
+						company: 'Acme',
+						owner_user_id: 1,
+						total_shares: 1000,
+						strike_price: null,
+						currency: 'USD',
+						vest_start_date: '2026-02-01',
+						vest_cliff_months: 12,
+						vest_total_months: 48,
+						vest_frequency: 'monthly' as const,
+						vest_custom_schedule: null,
+						requires_liquidity_event: false,
+						liquidity_event_date: null,
+						tax_treatment: 'capital_gains_19' as const,
+						notes: null,
+						is_active: true,
+						created_at: '2026-02-01T00:00:00Z',
+						vested_shares_today: 250,
+						vesting_progress_pct: 25,
+						paper_value_base: 5000,
+						paper_value_low: 4000,
+						paper_value_high: 6000,
+						paper_value_currency: 'USD',
+						paper_value_base_pln: 20000,
+						paper_value_low_pln: 16000,
+						paper_value_high_pln: 24000,
+						fx_rate: 4,
+						valuation_date: '2026-04-01',
+						valuation_source: '409a'
+					}
+				],
+				total_count: 1,
+				available_companies: ['Acme']
+			},
+			valuations: {
+				company_valuations: [
+					{
+						id: 4,
+						company: 'Acme',
+						date: '2026-04-01',
+						currency: 'USD',
+						fmv_per_share: 20,
+						fmv_low: 18,
+						fmv_high: 24,
+						source: '409a' as const,
+						common_stock_discount_pct: 15,
+						notes: 'Aktualna wycena',
+						is_active: true,
+						created_at: '2026-04-01T00:00:00Z'
+					}
+				],
+				total_count: 1,
+				available_companies: ['Acme']
+			}
+		};
+
+		render(Page, { props: { data: populatedData } });
+
+		await selectSalaryTab('Historia');
+		expect(screen.getByRole('heading', { name: 'Historia zmian' })).toBeTruthy();
+		expect(screen.getAllByText('Acme').length).toBeGreaterThan(0);
+
+		await selectSalaryTab('Premie');
+		expect(screen.getByRole('heading', { name: 'Premie i bonusy' })).toBeTruthy();
+		expect(screen.getByText('Roczny bonus')).toBeTruthy();
+
+		await selectSalaryTab('Udziały');
+		expect(screen.getByRole('heading', { name: 'Udziały (opcje + RSU)' })).toBeTruthy();
+		expect(screen.getByText('RSU')).toBeTruthy();
+
+		await selectSalaryTab('Wyceny');
+		expect(screen.getByRole('heading', { name: 'Wycena spółek' })).toBeTruthy();
+		expect(screen.getByText('Aktualna wycena')).toBeTruthy();
+
+		await selectSalaryTab('Inflacja');
+		expect(
+			screen.getByRole('heading', { name: 'Wpływ inflacji (od ostatniej podwyżki)' })
+		).toBeTruthy();
+		expect(screen.getByText('CPI na koniec: 2025')).toBeTruthy();
+	});
+});
+
 describe('Salaries page — saveSalary validation & error display', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -210,6 +374,7 @@ describe('Salaries page — saveSalary validation & error display', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Premie');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowy bonus/i }));
 
 		const dateInput = screen.getByLabelText(/Data wypłaty/) as HTMLInputElement;
@@ -244,6 +409,7 @@ describe('Salaries page — saveSalary validation & error display', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Premie');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowy bonus/i }));
 
 		const dateInput = screen.getByLabelText(/Data wypłaty/) as HTMLInputElement;
@@ -306,6 +472,7 @@ describe('Salaries page — equity grant flows', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Udziały');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowy grant/i }));
 		// Modal renders with defaults (RSU, 1000 shares etc.), but company is empty.
 		const sharesInput = screen.getByLabelText(/Liczba akcji/) as HTMLInputElement;
@@ -321,6 +488,7 @@ describe('Salaries page — equity grant flows', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Udziały');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowy grant/i }));
 		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
 		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
@@ -339,6 +507,7 @@ describe('Salaries page — equity grant flows', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Udziały');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowy grant/i }));
 		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
 		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
@@ -359,6 +528,7 @@ describe('Salaries page — equity grant flows', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Udziały');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowy grant/i }));
 		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
 		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
@@ -390,6 +560,7 @@ describe('Salaries page — equity grant flows', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Udziały');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowy grant/i }));
 		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
 		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
@@ -408,6 +579,7 @@ describe('Salaries page — equity grant flows', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Udziały');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowy grant/i }));
 		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
 		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
@@ -436,6 +608,7 @@ describe('Salaries page — valuation flows', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Wyceny');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowa wycena/i }));
 		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
 
@@ -448,6 +621,7 @@ describe('Salaries page — valuation flows', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Wyceny');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowa wycena/i }));
 		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
 		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
@@ -468,6 +642,7 @@ describe('Salaries page — valuation flows', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Wyceny');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowa wycena/i }));
 		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
 		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
@@ -488,6 +663,7 @@ describe('Salaries page — valuation flows', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Wyceny');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowa wycena/i }));
 		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
 		await fireEvent.input(companyInput, { target: { value: 'Acme' } });
@@ -519,6 +695,7 @@ describe('Salaries page — valuation flows', () => {
 		vi.stubGlobal('fetch', fetchMock);
 
 		render(Page, { props: { data: baseData } });
+		await selectSalaryTab('Wyceny');
 		await fireEvent.click(screen.getByRole('button', { name: /Nowa wycena/i }));
 		const companyInput = screen.getByLabelText(/Firma\*/) as HTMLInputElement;
 		await fireEvent.input(companyInput, { target: { value: 'Acme' } });

@@ -68,6 +68,20 @@
 	let showReal = $state(false);
 	let showInflationTracked = $state(false);
 
+	const salarySections = [
+		{ id: 'overview', label: 'Przegląd' },
+		{ id: 'history', label: 'Historia' },
+		{ id: 'bonuses', label: 'Premie' },
+		{ id: 'equity', label: 'Udziały' },
+		{ id: 'valuations', label: 'Wyceny' },
+		{ id: 'inflation', label: 'Inflacja' }
+	] as const;
+	type SalarySectionId = (typeof salarySections)[number]['id'];
+	let activeSalarySection = $state<SalarySectionId>('overview');
+	const activeSalarySectionLabel = $derived(
+		salarySections.find((section) => section.id === activeSalarySection)?.label ?? ''
+	);
+
 	const monthNamesPL = [
 		'styczeń',
 		'luty',
@@ -83,7 +97,7 @@
 		'grudzień'
 	];
 
-	let chartContainer: HTMLDivElement;
+	let chartContainer = $state<HTMLDivElement | undefined>(undefined);
 	let chart: echarts.ECharts | undefined;
 	let chartHandle: ChartHandle | undefined;
 
@@ -127,6 +141,27 @@
 	function setActiveOwner(id: number) {
 		activeOwnerId = id;
 		applyFilters();
+	}
+
+	function selectSalarySection(id: SalarySectionId) {
+		activeSalarySection = id;
+	}
+
+	function handleSalarySectionKeydown(event: KeyboardEvent, id: SalarySectionId) {
+		const currentIndex = salarySections.findIndex((section) => section.id === id);
+		const lastIndex = salarySections.length - 1;
+		let nextIndex: number | null = null;
+
+		if (event.key === 'ArrowRight') nextIndex = currentIndex === lastIndex ? 0 : currentIndex + 1;
+		if (event.key === 'ArrowLeft') nextIndex = currentIndex === 0 ? lastIndex : currentIndex - 1;
+		if (event.key === 'Home') nextIndex = 0;
+		if (event.key === 'End') nextIndex = lastIndex;
+		if (nextIndex === null) return;
+
+		event.preventDefault();
+		const nextSection = salarySections[nextIndex];
+		activeSalarySection = nextSection.id;
+		requestAnimationFrame(() => document.getElementById(`salary-tab-${nextSection.id}`)?.focus());
 	}
 
 	const visibleSalaryRecords = $derived(
@@ -1218,6 +1253,12 @@
 		// Touch reactive dependencies so chart redraws on data + toggle changes.
 		void [visibleSalaryRecords, cpiSeries, showNominal, showReal, showInflationTracked];
 
+		if (activeSalarySection !== 'overview') {
+			chartHandle?.dispose();
+			chartHandle = undefined;
+			chart = undefined;
+			return;
+		}
 		if (!chartContainer) return;
 		if (!chartHandle) {
 			chartHandle = createChart(chartContainer);
@@ -1269,283 +1310,566 @@
 	</div>
 {/if}
 
-<div class="space-y-4">
-	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
-		<header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-			<div>
-				<h3 class="h3 flex items-center gap-2">
-					<Wallet size={20} /> Łączne wynagrodzenie
-				</h3>
-				<p class="text-xs text-surface-700-300">
-					Roczna pensja podstawowa + bonusy + udziały (opcjonalnie). Wszystko w PLN.
-				</p>
-			</div>
-			<div class="flex flex-wrap gap-2">
-				<label class="label">
-					<span class="text-xs">Rok</span>
-					<select class="select" bind:value={totalCompYear}>
-						{#each allYears as y (y)}
-							<option value={y}>{y}</option>
-						{/each}
-					</select>
-				</label>
-			</div>
-		</header>
-
-		{#if compSummary}
-			<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-				<div class="card preset-tonal-surface p-3">
-					<div class="text-xs text-surface-700-300">Pensja podstawowa (brutto)</div>
-					<div class="text-lg font-semibold">{formatPLN(compSummary.baseAnnualGross)}</div>
-					<div class="text-xs text-surface-700-300">
-						netto: {formatPLN(compSummary.baseAnnualNet)}
-					</div>
-				</div>
-				<div class="card preset-tonal-surface p-3">
-					<div class="text-xs text-surface-700-300">Bonusy w {totalCompYear}</div>
-					<div class="text-lg font-semibold">{formatPLN(compSummary.bonusesPln)}</div>
-					{#if compSummary.bonusesPln > 0}
-						<div class="text-xs text-surface-700-300">
-							netto (szac.): {formatPLN(compSummary.bonusesNetPln)}
-						</div>
-					{/if}
-				</div>
-				<div class="card preset-tonal-surface p-3">
-					<div class="text-xs text-surface-700-300">Nabycie udziałów w {totalCompYear}</div>
-					<div class="text-lg font-semibold">{formatPLN(compSummary.equityVestedYearPln)}</div>
-					{#if compSummary.equityVestedYearLowPln !== compSummary.equityVestedYearHighPln}
-						<div class="text-xs text-surface-700-300">
-							{formatPLN(compSummary.equityVestedYearLowPln)}–{formatPLN(
-								compSummary.equityVestedYearHighPln
-							)}
-						</div>
-					{/if}
-					{#if compSummary.equityVestedYearPln > 0}
-						<div class="text-xs text-surface-700-300">
-							po podatku 19% (szac.): {formatPLN(compSummary.equityNetPln)}
-						</div>
-					{/if}
-					{#if compSummary.equityLockedYearPln > 0}
-						<div class="text-xs text-surface-700-300">
-							+ {formatPLN(compSummary.equityLockedYearPln)} zablokowane (RSU, czeka na zdarzenie płynnościowe)
-						</div>
-					{/if}
-					{#if compSummary.hasEquityWithoutFx}
-						<div class="text-xs text-warning-500">część grantów bez FX</div>
-					{/if}
-				</div>
-				<div class="card preset-tonal-surface p-3">
-					<div class="text-xs text-surface-700-300">
-						Łącznie {includeEquityInTotal ? '(z udziałami)' : '(bez udziałów)'}
-					</div>
-					<div class="text-xl font-bold">{formatPLN(totalCompGross)}</div>
-					<div class="text-xs text-surface-700-300">
-						po podatku (szac.): {formatPLN(totalCompNet)}
-					</div>
-				</div>
-			</div>
-			<div class="text-xs text-surface-700-300">
-				Pensja, bonusy i udziały filtrowane po roku. Udziały = akcje z nabywaniem w czasie w
-				wybranym roku × najnowsza wycena/akcję (spread wewnętrzny dla opcji, WR dla RSU).
-			</div>
-			<label class="flex items-center gap-2 text-sm cursor-pointer">
-				<input type="checkbox" class="checkbox" bind:checked={includeEquityInTotal} />
-				<span
-					>Wlicz udziały nabywane w tym roku do łącznego wynagrodzenia (uwaga: nie zrealizowane do
-					sprzedaży)</span
-				>
-			</label>
-		{:else}
-			<p class="text-sm text-surface-700-300">Wybierz właściciela aby zobaczyć podsumowanie.</p>
-		{/if}
-	</div>
-
-	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
-		<header>
-			<h3 class="h3 flex items-center gap-2"><TrendingUp size={20} /> Progresja wynagrodzenia</h3>
-			<p class="text-xs text-surface-700-300">
-				Linia ciągła: pensja nominalna. Linia przerywana: nominalna przeliczona na dzisiejsze PLN wg
-				CPI GUS. Linia kropkowana: hipotetyczna pensja, gdyby od pierwszej zmiany rosła tylko o
-				inflację.
-			</p>
-		</header>
-		<div class="flex flex-wrap gap-4 text-sm">
-			<label class="flex items-center gap-2 cursor-pointer">
-				<input type="checkbox" class="checkbox" bind:checked={showNominal} />
-				<span>Pensja nominalna</span>
-			</label>
-			<label class="flex items-center gap-2 cursor-pointer">
-				<input type="checkbox" class="checkbox" bind:checked={showReal} />
-				<span>Realna wartość (dzisiejsze PLN)</span>
-			</label>
-			<label class="flex items-center gap-2 cursor-pointer">
-				<input type="checkbox" class="checkbox" bind:checked={showInflationTracked} />
-				<span>Indeksowana inflacją</span>
-			</label>
-		</div>
-		<div bind:this={chartContainer} style="width: 100%; height: 400px;"></div>
-	</div>
-
-	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
-		<header>
-			<h3 class="h3 flex items-center gap-2"><Search size={20} /> Filtry</h3>
-		</header>
-		<form
-			class="space-y-4"
-			onsubmit={(event) => {
-				event.preventDefault();
-				applyFilters();
-			}}
+<div class="page-tabs mb-4" role="tablist" aria-label="Sekcje wynagrodzeń">
+	{#each salarySections as section (section.id)}
+		<button
+			type="button"
+			role="tab"
+			id="salary-tab-{section.id}"
+			aria-controls="salary-panel-{section.id}"
+			aria-selected={activeSalarySection === section.id}
+			tabindex={activeSalarySection === section.id ? 0 : -1}
+			class="page-tab"
+			class:active={activeSalarySection === section.id}
+			onclick={() => selectSalarySection(section.id)}
+			onkeydown={(event) => handleSalarySectionKeydown(event, section.id)}
 		>
-			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-				<label class="label">
-					<span class="font-semibold text-sm">Firma</span>
-					<select class="select" bind:value={filterCompany}>
-						<option value="">Wszystkie</option>
-						{#each data.salaries.available_companies as company}
-							<option value={company}>{company}</option>
-						{/each}
-					</select>
-				</label>
+			{section.label}
+		</button>
+	{/each}
+</div>
 
-				<label class="label">
-					<span class="font-semibold text-sm">Data od</span>
-					<input type="date" class="input" bind:value={filterDateFrom} />
-				</label>
+{#each salarySections as section (section.id)}
+	<div
+		id="salary-panel-{section.id}"
+		role="tabpanel"
+		aria-labelledby="salary-tab-{section.id}"
+		hidden={activeSalarySection !== section.id}
+		class="space-y-4"
+	>
+		{#if activeSalarySection === section.id}
+			<h2 class="sr-only">{activeSalarySectionLabel}</h2>
+			{#if activeSalarySection === 'overview'}
+				<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+					<header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+						<div>
+							<h3 class="h3 flex items-center gap-2">
+								<Wallet size={20} /> Łączne wynagrodzenie
+							</h3>
+							<p class="text-xs text-surface-700-300">
+								Roczna pensja podstawowa + bonusy + udziały (opcjonalnie). Wszystko w PLN.
+							</p>
+						</div>
+						<div class="flex flex-wrap gap-2">
+							<label class="label">
+								<span class="text-xs">Rok</span>
+								<select class="select" bind:value={totalCompYear}>
+									{#each allYears as y (y)}
+										<option value={y}>{y}</option>
+									{/each}
+								</select>
+							</label>
+						</div>
+					</header>
 
-				<label class="label">
-					<span class="font-semibold text-sm">Data do</span>
-					<input type="date" class="input" bind:value={filterDateTo} />
-				</label>
-			</div>
+					{#if compSummary}
+						<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+							<div class="card preset-tonal-surface p-3">
+								<div class="text-xs text-surface-700-300">Pensja podstawowa (brutto)</div>
+								<div class="text-lg font-semibold">{formatPLN(compSummary.baseAnnualGross)}</div>
+								<div class="text-xs text-surface-700-300">
+									netto: {formatPLN(compSummary.baseAnnualNet)}
+								</div>
+							</div>
+							<div class="card preset-tonal-surface p-3">
+								<div class="text-xs text-surface-700-300">Bonusy w {totalCompYear}</div>
+								<div class="text-lg font-semibold">{formatPLN(compSummary.bonusesPln)}</div>
+								{#if compSummary.bonusesPln > 0}
+									<div class="text-xs text-surface-700-300">
+										netto (szac.): {formatPLN(compSummary.bonusesNetPln)}
+									</div>
+								{/if}
+							</div>
+							<div class="card preset-tonal-surface p-3">
+								<div class="text-xs text-surface-700-300">Nabycie udziałów w {totalCompYear}</div>
+								<div class="text-lg font-semibold">
+									{formatPLN(compSummary.equityVestedYearPln)}
+								</div>
+								{#if compSummary.equityVestedYearLowPln !== compSummary.equityVestedYearHighPln}
+									<div class="text-xs text-surface-700-300">
+										{formatPLN(compSummary.equityVestedYearLowPln)}–{formatPLN(
+											compSummary.equityVestedYearHighPln
+										)}
+									</div>
+								{/if}
+								{#if compSummary.equityVestedYearPln > 0}
+									<div class="text-xs text-surface-700-300">
+										po podatku 19% (szac.): {formatPLN(compSummary.equityNetPln)}
+									</div>
+								{/if}
+								{#if compSummary.equityLockedYearPln > 0}
+									<div class="text-xs text-warning-500">
+										+ {formatPLN(compSummary.equityLockedYearPln)} zablokowane (RSU, czeka na zdarzenie
+										płynnościowe)
+									</div>
+								{/if}
+								{#if compSummary.hasEquityWithoutFx}
+									<div class="text-xs text-warning-500">część grantów bez FX</div>
+								{/if}
+							</div>
+							<div class="card preset-tonal-surface p-3">
+								<div class="text-xs text-surface-700-300">
+									Łącznie {includeEquityInTotal ? '(z udziałami)' : '(bez udziałów)'}
+								</div>
+								<div class="text-xl font-bold text-primary-600-400">
+									{formatPLN(totalCompGross)}
+								</div>
+								<div class="text-xs text-surface-700-300">
+									po podatku (szac.): {formatPLN(totalCompNet)}
+								</div>
+							</div>
+						</div>
+						<div class="text-xs text-surface-700-300">
+							Pensja, bonusy i udziały filtrowane po roku. Udziały = akcje z nabywaniem w czasie w
+							wybranym roku × najnowsza wycena/akcję (spread wewnętrzny dla opcji, WR dla RSU).
+						</div>
+						<label class="flex items-center gap-2 text-sm cursor-pointer">
+							<input type="checkbox" class="checkbox" bind:checked={includeEquityInTotal} />
+							<span
+								>Wlicz udziały nabywane w tym roku do łącznego wynagrodzenia (uwaga: nie
+								zrealizowane do sprzedaży)</span
+							>
+						</label>
+					{:else}
+						<p class="text-sm text-surface-700-300">
+							Wybierz właściciela aby zobaczyć podsumowanie.
+						</p>
+					{/if}
+				</div>
 
-			<div class="flex flex-col sm:flex-row gap-2">
-				<button type="submit" class="btn preset-filled-primary-500">Filtruj</button>
-				<button type="button" class="btn preset-tonal-surface" onclick={clearFilters}
-					>Wyczyść filtry</button
-				>
-			</div>
-		</form>
-	</div>
+				<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+					<header>
+						<h3 class="h3 flex items-center gap-2">
+							<TrendingUp size={20} /> Progresja wynagrodzenia
+						</h3>
+						<p class="text-xs text-surface-700-300">
+							Linia ciągła: pensja nominalna. Linia przerywana: nominalna przeliczona na dzisiejsze
+							PLN wg CPI GUS. Linia kropkowana: hipotetyczna pensja, gdyby od pierwszej zmiany rosła
+							tylko o inflację.
+						</p>
+					</header>
+					<div class="flex flex-wrap gap-4 text-sm">
+						<label class="flex items-center gap-2 cursor-pointer">
+							<input type="checkbox" class="checkbox" bind:checked={showNominal} />
+							<span>Pensja nominalna</span>
+						</label>
+						<label class="flex items-center gap-2 cursor-pointer">
+							<input type="checkbox" class="checkbox" bind:checked={showReal} />
+							<span>Realna wartość (dzisiejsze PLN)</span>
+						</label>
+						<label class="flex items-center gap-2 cursor-pointer">
+							<input type="checkbox" class="checkbox" bind:checked={showInflationTracked} />
+							<span>Indeksowana inflacją</span>
+						</label>
+					</div>
+					<div bind:this={chartContainer} style="width: 100%; height: 400px;"></div>
+				</div>
+			{:else if activeSalarySection === 'history'}
+				<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+					<header>
+						<h3 class="h3 flex items-center gap-2"><Search size={20} /> Filtry</h3>
+					</header>
+					<form
+						class="space-y-4"
+						onsubmit={(event) => {
+							event.preventDefault();
+							applyFilters();
+						}}
+					>
+						<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+							<label class="label">
+								<span class="font-semibold text-sm">Firma</span>
+								<select class="select" bind:value={filterCompany}>
+									<option value="">Wszystkie</option>
+									{#each data.salaries.available_companies as company}
+										<option value={company}>{company}</option>
+									{/each}
+								</select>
+							</label>
 
-	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
-		<header>
-			<h3 class="h3 flex items-center gap-2"><BarChart3 size={20} /> Historia zmian</h3>
-		</header>
-		{#if visibleSalaryRecords.length === 0}
-			<div class="text-center py-12 text-surface-700-300">
-				<p>Brak rekordów wynagrodzeń</p>
-			</div>
-		{:else}
-			<div class="table-wrap">
-				<table class="table table-hover">
-					<thead>
-						<tr>
-							<th>Data zmiany</th>
-							<th>Właściciel</th>
-							<th>Firma</th>
-							<th>Pensja brutto</th>
-							<th>Rodzaj umowy</th>
-							<th class="text-right">Akcje</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each visibleSalaryRecords as record}
-							<tr>
-								<td>{formatDate(record.date)}</td>
-								<td>{ownerName(owners, record.owner_user_id)}</td>
-								<td>{record.company}</td>
-								<td class="font-semibold">{formatPLN(record.gross_amount)}</td>
-								<td>{record.contract_type}</td>
-								<td class="text-right whitespace-nowrap">
-									<button
-										type="button"
-										class="btn-icon btn-icon-sm"
-										aria-label="Edytuj"
-										onclick={() => openEditSalaryModal(record)}
-									>
-										<Pencil size={16} />
-									</button>
-									<button
-										type="button"
-										class="btn-icon btn-icon-sm"
-										aria-label="Usuń"
-										onclick={() => deleteSalary(record.id)}
-									>
-										<Trash2 size={16} />
-									</button>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-		{/if}
-	</div>
+							<label class="label">
+								<span class="font-semibold text-sm">Data od</span>
+								<input type="date" class="input" bind:value={filterDateFrom} />
+							</label>
 
-	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
-		<header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-			<div>
-				<h3 class="h3 flex items-center gap-2"><Gift size={20} /> Premie i bonusy</h3>
-				<p class="text-xs text-surface-700-300">
-					Roczne, powitalne, uznaniowe i retencyjne. Pokazywane w oryginalnej walucie.
-				</p>
-			</div>
-			<button type="button" class="btn preset-filled-primary-500 gap-2" onclick={openNewBonusModal}>
-				<Plus size={16} />
-				Nowy bonus
-			</button>
-		</header>
+							<label class="label">
+								<span class="font-semibold text-sm">Data do</span>
+								<input type="date" class="input" bind:value={filterDateTo} />
+							</label>
+						</div>
 
-		{#if bonusEvents.length === 0}
-			<div class="text-center py-8 text-surface-700-300">
-				<p>Brak zarejestrowanych bonusów</p>
-			</div>
-		{:else}
-			<div class="space-y-4">
-				{#each [...bonusGroupedByCompany.entries()] as [company, bonuses] (company)}
-					<div class="card preset-tonal-surface p-3 space-y-2">
-						<header class="flex items-baseline justify-between flex-wrap gap-2">
-							<strong class="text-base">{company}</strong>
-							<span class="text-xs text-surface-700-300">
-								{bonuses.length}
-								{bonuses.length === 1 ? 'bonus' : 'bonusów'}
-							</span>
-						</header>
+						<div class="flex flex-col sm:flex-row gap-2">
+							<button type="submit" class="btn preset-filled-primary-500">Filtruj</button>
+							<button type="button" class="btn preset-tonal-surface" onclick={clearFilters}
+								>Wyczyść filtry</button
+							>
+						</div>
+					</form>
+				</div>
+
+				<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+					<header>
+						<h3 class="h3 flex items-center gap-2"><BarChart3 size={20} /> Historia zmian</h3>
+					</header>
+					{#if visibleSalaryRecords.length === 0}
+						<div class="text-center py-12 text-surface-700-300">
+							<p>Brak rekordów wynagrodzeń</p>
+						</div>
+					{:else}
 						<div class="table-wrap">
 							<table class="table table-hover">
 								<thead>
 									<tr>
-										<th>Data</th>
-										<th>Typ</th>
+										<th>Data zmiany</th>
 										<th>Właściciel</th>
-										<th>Kwota</th>
+										<th>Firma</th>
+										<th>Pensja brutto</th>
+										<th>Rodzaj umowy</th>
+										<th class="text-right">Akcje</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each visibleSalaryRecords as record}
+										<tr>
+											<td>{formatDate(record.date)}</td>
+											<td>{ownerName(owners, record.owner_user_id)}</td>
+											<td>{record.company}</td>
+											<td class="font-semibold text-primary-600-400"
+												>{formatPLN(record.gross_amount)}</td
+											>
+											<td>{record.contract_type}</td>
+											<td class="text-right whitespace-nowrap">
+												<button
+													type="button"
+													class="btn-icon btn-icon-sm"
+													aria-label="Edytuj"
+													onclick={() => openEditSalaryModal(record)}
+												>
+													<Pencil size={16} />
+												</button>
+												<button
+													type="button"
+													class="btn-icon btn-icon-sm"
+													aria-label="Usuń"
+													onclick={() => deleteSalary(record.id)}
+												>
+													<Trash2 size={16} />
+												</button>
+											</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					{/if}
+				</div>
+			{:else if activeSalarySection === 'bonuses'}
+				<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+					<header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+						<div>
+							<h3 class="h3 flex items-center gap-2"><Gift size={20} /> Premie i bonusy</h3>
+							<p class="text-xs text-surface-700-300">
+								Roczne, powitalne, uznaniowe i retencyjne. Pokazywane w oryginalnej walucie.
+							</p>
+						</div>
+						<button
+							type="button"
+							class="btn preset-filled-primary-500 gap-2"
+							onclick={openNewBonusModal}
+						>
+							<Plus size={16} />
+							Nowy bonus
+						</button>
+					</header>
+
+					{#if bonusEvents.length === 0}
+						<div class="text-center py-8 text-surface-700-300">
+							<p>Brak zarejestrowanych bonusów</p>
+						</div>
+					{:else}
+						<div class="space-y-4">
+							{#each [...bonusGroupedByCompany.entries()] as [company, bonuses] (company)}
+								<div class="card preset-tonal-surface p-3 space-y-2">
+									<header class="flex items-baseline justify-between flex-wrap gap-2">
+										<strong class="text-base">{company}</strong>
+										<span class="text-xs text-surface-700-300">
+											{bonuses.length}
+											{bonuses.length === 1 ? 'bonus' : 'bonusów'}
+										</span>
+									</header>
+									<div class="table-wrap">
+										<table class="table table-hover">
+											<thead>
+												<tr>
+													<th>Data</th>
+													<th>Typ</th>
+													<th>Właściciel</th>
+													<th>Kwota</th>
+													<th>Notatki</th>
+													<th class="text-right">Akcje</th>
+												</tr>
+											</thead>
+											<tbody>
+												{#each bonuses as bonus (bonus.id)}
+													<tr>
+														<td>{formatDate(bonus.date)}</td>
+														<td>{bonusTypeLabels[bonus.type]}</td>
+														<td>{ownerName(owners, bonus.owner_user_id)}</td>
+														<td class="font-semibold text-primary-600-400">
+															{formatBonusAmount(bonus.amount, bonus.currency)}
+															{#if bonus.currency !== 'PLN' && bonus.amount_pln !== null}
+																<br /><span class="text-xs font-normal text-surface-700-300">
+																	≈ {formatPLN(bonus.amount_pln)}
+																	{#if bonus.fx_rate}@ {bonus.fx_rate.toFixed(4)}{/if}
+																</span>
+															{/if}
+														</td>
+														<td class="text-sm text-surface-700-300">{bonus.notes ?? ''}</td>
+														<td class="text-right whitespace-nowrap">
+															<button
+																type="button"
+																class="btn-icon btn-icon-sm"
+																aria-label="Edytuj"
+																onclick={() => openEditBonusModal(bonus)}
+															>
+																<Pencil size={16} />
+															</button>
+															<button
+																type="button"
+																class="btn-icon btn-icon-sm"
+																aria-label="Usuń"
+																onclick={() => deleteBonus(bonus.id)}
+															>
+																<Trash2 size={16} />
+															</button>
+														</td>
+													</tr>
+												{/each}
+											</tbody>
+										</table>
+									</div>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</div>
+			{:else if activeSalarySection === 'equity'}
+				<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+					<header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+						<div>
+							<h3 class="h3 flex items-center gap-2"><Award size={20} /> Udziały (opcje + RSU)</h3>
+							<p class="text-xs text-surface-700-300">
+								Grupy po firmie. Nabyte = ile akcji już Ci się odblokowało dziś. Dla RSU z podwójnym
+								wyzwalaczem pokazane jest 0 dopóki nie wystąpi zdarzenie płynnościowe.
+							</p>
+						</div>
+						<button
+							type="button"
+							class="btn preset-filled-primary-500 gap-2"
+							onclick={openNewEquityModal}
+						>
+							<Plus size={16} />
+							Nowy grant
+						</button>
+					</header>
+
+					{#if equityGrants.length === 0}
+						<div class="text-center py-8 text-surface-700-300">
+							<p>Brak zarejestrowanych grantów</p>
+						</div>
+					{:else}
+						<div class="space-y-4">
+							{#each equityGroups as group (group.company)}
+								<div class="card preset-tonal-surface p-3 space-y-2">
+									<header class="flex items-baseline justify-between flex-wrap gap-2">
+										<strong class="text-base">{group.company}</strong>
+										<span class="text-xs text-surface-700-300">
+											{group.grants.length}
+											{group.grantLabel} ·
+											{formatShares(group.vestedShares)} / {formatShares(group.totalShares)} nabytych
+											{#if group.hasPaperValue}
+												· wart. papierowa {formatCurrency(group.paperBase, group.currency)}
+												{#if group.hasPaperValuePln}
+													(≈ {formatPLN(group.paperBasePln)})
+												{/if}
+											{/if}
+										</span>
+									</header>
+									<div class="table-wrap">
+										<table class="table table-hover">
+											<thead>
+												<tr>
+													<th>Data grantu</th>
+													<th>Typ</th>
+													<th>Właściciel</th>
+													<th>Akcje (nabyte / łącznie)</th>
+													<th>Cena wykonania</th>
+													<th>Wart. papierowa</th>
+													<th>Nabywanie</th>
+													<th>Status</th>
+													<th class="text-right">Akcje</th>
+												</tr>
+											</thead>
+											<tbody>
+												{#each group.grants as grant (grant.id)}
+													<tr>
+														<td>{formatDate(grant.grant_date)}</td>
+														<td>{equityTypeLabels[grant.type]}</td>
+														<td>{ownerName(owners, grant.owner_user_id)}</td>
+														<td class="font-semibold">
+															{formatShares(grant.vested_shares_today)} /
+															{formatShares(grant.total_shares)}
+															<span class="text-xs text-surface-700-300">
+																({grant.vesting_progress_pct.toFixed(1)}%)
+															</span>
+														</td>
+														<td>
+															{#if grant.strike_price !== null}
+																{formatCurrency(grant.strike_price, grant.currency)}
+															{:else}
+																—
+															{/if}
+														</td>
+														<td class="text-xs">
+															{#if grant.paper_value_base !== null}
+																<span class="font-semibold">{formatRange(grant)}</span>
+																{#if grant.paper_value_base_pln !== null && grant.paper_value_currency !== 'PLN'}
+																	<br /><span class="text-surface-700-300">
+																		≈ {formatPLN(grant.paper_value_base_pln)}
+																		{#if grant.fx_rate}@ {grant.fx_rate.toFixed(4)}{/if}
+																	</span>
+																{/if}
+																{#if grant.valuation_date}
+																	<br /><span class="text-surface-700-300"
+																		>wg {formatDate(grant.valuation_date)}</span
+																	>
+																{/if}
+															{:else if grant.valuation_date}
+																<span class="text-warning-500">{formatRange(grant)}</span>
+															{:else}
+																<span class="text-surface-700-300">brak wyceny</span>
+															{/if}
+														</td>
+														<td class="text-xs">
+															{grant.vest_cliff_months}m cliff · {grant.vest_total_months}m · {vestingFrequencyLabels[
+																grant.vest_frequency
+															]}
+															{#if grant.vest_custom_schedule}
+																<br /><span class="text-surface-700-300"
+																	>niestandardowy harmonogram</span
+																>
+															{/if}
+														</td>
+														<td class="text-xs">
+															{#if grant.requires_liquidity_event && !grant.liquidity_event_date}
+																<span class="text-warning-500">podwójny wyzwalacz: oczekuje</span>
+															{:else if grant.requires_liquidity_event}
+																<span class="text-success-500">wyzwalacz uruchomiony</span>
+															{:else}
+																<span class="text-surface-700-300">pojedynczy wyzwalacz</span>
+															{/if}
+														</td>
+														<td class="text-right whitespace-nowrap">
+															<button
+																type="button"
+																class="btn-icon btn-icon-sm"
+																aria-label="Edytuj"
+																onclick={() => openEditEquityModal(grant)}
+															>
+																<Pencil size={16} />
+															</button>
+															<button
+																type="button"
+																class="btn-icon btn-icon-sm"
+																aria-label="Usuń"
+																onclick={() => deleteEquityGrant(grant.id)}
+															>
+																<Trash2 size={16} />
+															</button>
+														</td>
+													</tr>
+												{/each}
+											</tbody>
+										</table>
+									</div>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</div>
+			{:else if activeSalarySection === 'valuations'}
+				<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+					<header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+						<div>
+							<h3 class="h3 flex items-center gap-2"><Building2 size={20} /> Wycena spółek</h3>
+							<p class="text-xs text-surface-700-300">
+								Wartość rynkowa (WR) na akcję dla spółek prywatnych (i publicznych). Zakres min/max
+								pokazuje niepewność.
+							</p>
+						</div>
+						<button
+							type="button"
+							class="btn preset-filled-primary-500 gap-2"
+							onclick={openNewValuationModal}
+						>
+							<Plus size={16} />
+							Nowa wycena
+						</button>
+					</header>
+
+					{#if valuations.length === 0}
+						<div class="text-center py-8 text-surface-700-300">
+							<p>Brak wycen — dodaj wycenę, aby zobaczyć wartość papierową grantów</p>
+						</div>
+					{:else}
+						<div class="table-wrap">
+							<table class="table table-hover">
+								<thead>
+									<tr>
+										<th>Firma</th>
+										<th>Data</th>
+										<th>WR / akcję</th>
+										<th>Zakres (min–max)</th>
+										<th>Źródło</th>
+										<th>Dyskonto</th>
 										<th>Notatki</th>
 										<th class="text-right">Akcje</th>
 									</tr>
 								</thead>
 								<tbody>
-									{#each bonuses as bonus (bonus.id)}
+									{#each valuations as valuation (valuation.id)}
 										<tr>
-											<td>{formatDate(bonus.date)}</td>
-											<td>{bonusTypeLabels[bonus.type]}</td>
-											<td>{ownerName(owners, bonus.owner_user_id)}</td>
-											<td class="font-semibold">
-												{formatBonusAmount(bonus.amount, bonus.currency)}
-												{#if bonus.currency !== 'PLN' && bonus.amount_pln !== null}
-													<br /><span class="text-xs font-normal text-surface-700-300">
-														≈ {formatPLN(bonus.amount_pln)}
-														{#if bonus.fx_rate}@ {bonus.fx_rate.toFixed(4)}{/if}
-													</span>
+											<td class="font-semibold">{valuation.company}</td>
+											<td>{formatDate(valuation.date)}</td>
+											<td>{formatCurrency(valuation.fmv_per_share, valuation.currency)}</td>
+											<td class="text-xs">
+												{#if valuation.fmv_low !== null || valuation.fmv_high !== null}
+													{valuation.fmv_low !== null
+														? formatCurrency(valuation.fmv_low, valuation.currency)
+														: '—'}
+													–
+													{valuation.fmv_high !== null
+														? formatCurrency(valuation.fmv_high, valuation.currency)
+														: '—'}
+												{:else}
+													<span class="text-surface-700-300">—</span>
 												{/if}
 											</td>
-											<td class="text-sm text-surface-700-300">{bonus.notes ?? ''}</td>
+											<td class="text-xs">{valuationSourceLabels[valuation.source]}</td>
+											<td class="text-xs">
+												{#if valuation.common_stock_discount_pct !== null}
+													{valuation.common_stock_discount_pct}%
+												{:else}
+													<span class="text-surface-700-300">—</span>
+												{/if}
+											</td>
+											<td class="text-sm text-surface-700-300">{valuation.notes ?? ''}</td>
 											<td class="text-right whitespace-nowrap">
 												<button
 													type="button"
 													class="btn-icon btn-icon-sm"
 													aria-label="Edytuj"
-													onclick={() => openEditBonusModal(bonus)}
+													onclick={() => openEditValuationModal(valuation)}
 												>
 													<Pencil size={16} />
 												</button>
@@ -1553,7 +1877,7 @@
 													type="button"
 													class="btn-icon btn-icon-sm"
 													aria-label="Usuń"
-													onclick={() => deleteBonus(bonus.id)}
+													onclick={() => deleteValuation(valuation.id)}
 												>
 													<Trash2 size={16} />
 												</button>
@@ -1563,306 +1887,72 @@
 								</tbody>
 							</table>
 						</div>
-					</div>
-				{/each}
-			</div>
-		{/if}
-	</div>
-
-	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
-		<header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-			<div>
-				<h3 class="h3 flex items-center gap-2"><Award size={20} /> Udziały (opcje + RSU)</h3>
-				<p class="text-xs text-surface-700-300">
-					Grupy po firmie. Nabyte = ile akcji już Ci się odblokowało dziś. Dla RSU z podwójnym
-					wyzwalaczem pokazane jest 0 dopóki nie wystąpi zdarzenie płynnościowe.
-				</p>
-			</div>
-			<button
-				type="button"
-				class="btn preset-filled-primary-500 gap-2"
-				onclick={openNewEquityModal}
-			>
-				<Plus size={16} />
-				Nowy grant
-			</button>
-		</header>
-
-		{#if equityGrants.length === 0}
-			<div class="text-center py-8 text-surface-700-300">
-				<p>Brak zarejestrowanych grantów</p>
-			</div>
-		{:else}
-			<div class="space-y-4">
-				{#each equityGroups as group (group.company)}
-					<div class="card preset-tonal-surface p-3 space-y-2">
-						<header class="flex items-baseline justify-between flex-wrap gap-2">
-							<strong class="text-base">{group.company}</strong>
-							<span class="text-xs text-surface-700-300">
-								{group.grants.length}
-								{group.grantLabel} ·
-								{formatShares(group.vestedShares)} / {formatShares(group.totalShares)} nabytych
-								{#if group.hasPaperValue}
-									· wart. papierowa {formatCurrency(group.paperBase, group.currency)}
-									{#if group.hasPaperValuePln}
-										(≈ {formatPLN(group.paperBasePln)})
-									{/if}
-								{/if}
-							</span>
-						</header>
-						<div class="table-wrap">
-							<table class="table table-hover">
-								<thead>
-									<tr>
-										<th>Data grantu</th>
-										<th>Typ</th>
-										<th>Właściciel</th>
-										<th>Akcje (nabyte / łącznie)</th>
-										<th>Cena wykonania</th>
-										<th>Wart. papierowa</th>
-										<th>Nabywanie</th>
-										<th>Status</th>
-										<th class="text-right">Akcje</th>
-									</tr>
-								</thead>
-								<tbody>
-									{#each group.grants as grant (grant.id)}
-										<tr>
-											<td>{formatDate(grant.grant_date)}</td>
-											<td>{equityTypeLabels[grant.type]}</td>
-											<td>{ownerName(owners, grant.owner_user_id)}</td>
-											<td class="font-semibold">
-												{formatShares(grant.vested_shares_today)} /
-												{formatShares(grant.total_shares)}
-												<span class="text-xs text-surface-700-300">
-													({grant.vesting_progress_pct.toFixed(1)}%)
-												</span>
-											</td>
-											<td>
-												{#if grant.strike_price !== null}
-													{formatCurrency(grant.strike_price, grant.currency)}
-												{:else}
-													—
-												{/if}
-											</td>
-											<td class="text-xs">
-												{#if grant.paper_value_base !== null}
-													<span class="font-semibold">{formatRange(grant)}</span>
-													{#if grant.paper_value_base_pln !== null && grant.paper_value_currency !== 'PLN'}
-														<br /><span class="text-surface-700-300">
-															≈ {formatPLN(grant.paper_value_base_pln)}
-															{#if grant.fx_rate}@ {grant.fx_rate.toFixed(4)}{/if}
-														</span>
-													{/if}
-													{#if grant.valuation_date}
-														<br /><span class="text-surface-700-300"
-															>wg {formatDate(grant.valuation_date)}</span
-														>
-													{/if}
-												{:else if grant.valuation_date}
-													<span class="text-surface-700-300">{formatRange(grant)}</span>
-												{:else}
-													<span class="text-surface-700-300">brak wyceny</span>
-												{/if}
-											</td>
-											<td class="text-xs">
-												{grant.vest_cliff_months}m cliff · {grant.vest_total_months}m · {vestingFrequencyLabels[
-													grant.vest_frequency
-												]}
-												{#if grant.vest_custom_schedule}
-													<br /><span class="text-surface-700-300">niestandardowy harmonogram</span>
-												{/if}
-											</td>
-											<td class="text-xs">
-												{#if grant.requires_liquidity_event && !grant.liquidity_event_date}
-													<span class="text-warning-500">podwójny wyzwalacz: oczekuje</span>
-												{:else if grant.requires_liquidity_event}
-													<span class="text-success-500">wyzwalacz uruchomiony</span>
-												{:else}
-													<span class="text-surface-700-300">pojedynczy wyzwalacz</span>
-												{/if}
-											</td>
-											<td class="text-right whitespace-nowrap">
-												<button
-													type="button"
-													class="btn-icon btn-icon-sm"
-													aria-label="Edytuj"
-													onclick={() => openEditEquityModal(grant)}
-												>
-													<Pencil size={16} />
-												</button>
-												<button
-													type="button"
-													class="btn-icon btn-icon-sm"
-													aria-label="Usuń"
-													onclick={() => deleteEquityGrant(grant.id)}
-												>
-													<Trash2 size={16} />
-												</button>
-											</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						</div>
-					</div>
-				{/each}
-			</div>
-		{/if}
-	</div>
-
-	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
-		<header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-			<div>
-				<h3 class="h3 flex items-center gap-2"><Building2 size={20} /> Wycena spółek</h3>
-				<p class="text-xs text-surface-700-300">
-					Wartość rynkowa (WR) na akcję dla spółek prywatnych (i publicznych). Zakres min/max
-					pokazuje niepewność.
-				</p>
-			</div>
-			<button
-				type="button"
-				class="btn preset-filled-primary-500 gap-2"
-				onclick={openNewValuationModal}
-			>
-				<Plus size={16} />
-				Nowa wycena
-			</button>
-		</header>
-
-		{#if valuations.length === 0}
-			<div class="text-center py-8 text-surface-700-300">
-				<p>Brak wycen — dodaj wycenę, aby zobaczyć wartość papierową grantów</p>
-			</div>
-		{:else}
-			<div class="table-wrap">
-				<table class="table table-hover">
-					<thead>
-						<tr>
-							<th>Firma</th>
-							<th>Data</th>
-							<th>WR / akcję</th>
-							<th>Zakres (min–max)</th>
-							<th>Źródło</th>
-							<th>Dyskonto</th>
-							<th>Notatki</th>
-							<th class="text-right">Akcje</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each valuations as valuation (valuation.id)}
-							<tr>
-								<td class="font-semibold">{valuation.company}</td>
-								<td>{formatDate(valuation.date)}</td>
-								<td>{formatCurrency(valuation.fmv_per_share, valuation.currency)}</td>
-								<td class="text-xs">
-									{#if valuation.fmv_low !== null || valuation.fmv_high !== null}
-										{valuation.fmv_low !== null
-											? formatCurrency(valuation.fmv_low, valuation.currency)
-											: '—'}
-										–
-										{valuation.fmv_high !== null
-											? formatCurrency(valuation.fmv_high, valuation.currency)
-											: '—'}
-									{:else}
-										<span class="text-surface-700-300">—</span>
-									{/if}
-								</td>
-								<td class="text-xs">{valuationSourceLabels[valuation.source]}</td>
-								<td class="text-xs">
-									{#if valuation.common_stock_discount_pct !== null}
-										{valuation.common_stock_discount_pct}%
-									{:else}
-										<span class="text-surface-700-300">—</span>
-									{/if}
-								</td>
-								<td class="text-sm text-surface-700-300">{valuation.notes ?? ''}</td>
-								<td class="text-right whitespace-nowrap">
-									<button
-										type="button"
-										class="btn-icon btn-icon-sm"
-										aria-label="Edytuj"
-										onclick={() => openEditValuationModal(valuation)}
-									>
-										<Pencil size={16} />
-									</button>
-									<button
-										type="button"
-										class="btn-icon btn-icon-sm"
-										aria-label="Usuń"
-										onclick={() => deleteValuation(valuation.id)}
-									>
-										<Trash2 size={16} />
-									</button>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-		{/if}
-	</div>
-
-	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
-		<header>
-			<h3 class="h3 flex items-center gap-2">
-				<Scale size={20} /> Wpływ inflacji (od ostatniej podwyżki)
-			</h3>
-			<p class="text-xs text-surface-700-300">
-				Źródło danych CPI: GUS (Wskaźnik cen towarów i usług konsumpcyjnych — ogółem)
-			</p>
-		</header>
-		{#if inflationEntries.length === 0}
-			<p class="text-sm text-surface-700-300">
-				Za mało danych — dodaj kolejną zmianę pensji lub poczekaj na świeże dane CPI, aby zobaczyć
-				realny wpływ inflacji.
-			</p>
-		{:else}
-			<div class="grid grid-cols-1 gap-4">
-				{#each inflationEntries as ctx (ctx.owner_user_id)}
-					<div class="card preset-tonal-surface p-4 space-y-2">
-						<div class="flex items-baseline justify-between flex-wrap gap-2">
-							<strong class="text-lg">{ownerName(owners, ctx.owner_user_id)}</strong>
-							<span class="text-xs text-surface-700-300">
-								od {formatDate(ctx.last_change_date)}
-								{#if getPreviousCompany(ctx.owner_user_id, ctx.previous_change_date)}
-									· {getPreviousCompany(ctx.owner_user_id, ctx.previous_change_date)}
-								{/if}
-							</span>
-						</div>
-						<dl class="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-sm">
-							<dt class="text-surface-700-300">Poprzednia pensja:</dt>
-							<dd class="text-right font-semibold">{formatPLN(ctx.previous_salary)}</dd>
-
-							<dt class="text-surface-700-300">W dzisiejszych PLN:</dt>
-							<dd class="text-right font-semibold">
-								{formatPLN(ctx.previous_salary_in_today_pln)}
-							</dd>
-
-							<dt class="text-surface-700-300">Obecna pensja:</dt>
-							<dd class="text-right font-semibold">{formatPLN(ctx.current_salary)}</dd>
-
-							<dt class="font-semibold pt-1">Realna podwyżka:</dt>
-							<dd
-								class="text-right font-bold pt-1"
-								class:text-success-500={isNonNegative(ctx.real_change_pln)}
-								class:text-error-500={!isNonNegative(ctx.real_change_pln)}
-							>
-								{formatPlnSigned(ctx.real_change_pln)}
-								<span class="text-xs font-normal">
-									({formatPctSigned(ctx.real_change_pct)})
-								</span>
-							</dd>
-						</dl>
+					{/if}
+				</div>
+			{:else if activeSalarySection === 'inflation'}
+				<div class="card preset-filled-surface-100-900 p-4 space-y-4">
+					<header>
+						<h3 class="h3 flex items-center gap-2">
+							<Scale size={20} /> Wpływ inflacji (od ostatniej podwyżki)
+						</h3>
 						<p class="text-xs text-surface-700-300">
-							CPI na koniec: {ctx.cpi_as_of_year}
+							Źródło danych CPI: GUS (Wskaźnik cen towarów i usług konsumpcyjnych — ogółem)
 						</p>
-					</div>
-				{/each}
-			</div>
+					</header>
+					{#if inflationEntries.length === 0}
+						<p class="text-sm text-surface-700-300">
+							Za mało danych — dodaj kolejną zmianę pensji lub poczekaj na świeże dane CPI, aby
+							zobaczyć realny wpływ inflacji.
+						</p>
+					{:else}
+						<div class="grid grid-cols-1 gap-4">
+							{#each inflationEntries as ctx (ctx.owner_user_id)}
+								<div class="card preset-tonal-surface p-4 space-y-2">
+									<div class="flex items-baseline justify-between flex-wrap gap-2">
+										<strong class="text-lg">{ownerName(owners, ctx.owner_user_id)}</strong>
+										<span class="text-xs text-surface-700-300">
+											od {formatDate(ctx.last_change_date)}
+											{#if getPreviousCompany(ctx.owner_user_id, ctx.previous_change_date)}
+												· {getPreviousCompany(ctx.owner_user_id, ctx.previous_change_date)}
+											{/if}
+										</span>
+									</div>
+									<dl class="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-sm">
+										<dt class="text-surface-700-300">Poprzednia pensja:</dt>
+										<dd class="text-right font-semibold">{formatPLN(ctx.previous_salary)}</dd>
+
+										<dt class="text-surface-700-300">W dzisiejszych PLN:</dt>
+										<dd class="text-right font-semibold">
+											{formatPLN(ctx.previous_salary_in_today_pln)}
+										</dd>
+
+										<dt class="text-surface-700-300">Obecna pensja:</dt>
+										<dd class="text-right font-semibold">{formatPLN(ctx.current_salary)}</dd>
+
+										<dt class="font-semibold pt-1">Realna podwyżka:</dt>
+										<dd
+											class="text-right font-bold pt-1"
+											class:text-success-500={isNonNegative(ctx.real_change_pln)}
+											class:text-error-500={!isNonNegative(ctx.real_change_pln)}
+										>
+											{formatPlnSigned(ctx.real_change_pln)}
+											<span class="text-xs font-normal">
+												({formatPctSigned(ctx.real_change_pct)})
+											</span>
+										</dd>
+									</dl>
+									<p class="text-xs text-surface-700-300">
+										CPI na koniec: {ctx.cpi_as_of_year}
+									</p>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</div>
+			{/if}
 		{/if}
 	</div>
-</div>
+{/each}
 
 <SalaryFormModal
 	open={showNewSalaryModal}
@@ -1914,14 +2004,16 @@
 />
 
 <style>
-	.owner-tabs {
+	.owner-tabs,
+	.page-tabs {
 		display: flex;
 		gap: var(--size-1);
 		border-bottom: 2px solid var(--surface-3);
 		overflow-x: auto;
 	}
 
-	.owner-tab {
+	.owner-tab,
+	.page-tab {
 		padding: var(--size-2) var(--size-4);
 		font-size: var(--font-size-1);
 		font-weight: 500;
@@ -1937,11 +2029,13 @@
 			border-color 0.15s;
 	}
 
-	.owner-tab:hover {
+	.owner-tab:hover,
+	.page-tab:hover {
 		color: var(--color-text-1);
 	}
 
-	.owner-tab.active {
+	.owner-tab.active,
+	.page-tab.active {
 		color: var(--color-primary);
 		border-bottom-color: var(--color-primary);
 		font-weight: 600;
