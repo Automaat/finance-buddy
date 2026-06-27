@@ -356,7 +356,7 @@
 									<button
 										type="button"
 										class="btn preset-tonal-surface btn-sm gap-1"
-										aria-label="Historia wpłat"
+										aria-label="Historia wpłat: {paymentCounts[debt.account_id] || 0}"
 										title="Liczba wpłat"
 										onclick={() => openPayments(debt)}
 									>

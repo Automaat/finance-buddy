@@ -485,7 +485,7 @@
 				<button
 					type="button"
 					class="btn preset-tonal-surface btn-sm gap-1"
-					aria-label="Transakcje"
+					aria-label="Transakcje: {transactionCounts[account.id] || 0}"
 					title="Liczba transakcji"
 					onclick={() => openTransactions(account.id, account.name, account.account_wrapper)}
 				>
