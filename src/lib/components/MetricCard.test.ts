@@ -28,6 +28,18 @@ describe('MetricCard', () => {
 		expect(valueEl.className).toContain('text-success-600-400');
 	});
 
+	it('treats near-zero signed values that round to zero as neutral', () => {
+		render(MetricCard, {
+			props: { label: 'Zmiana', value: -0.004, decimals: 2, suffix: '%', signed: true }
+		});
+		const valueEl = screen.getByText((text) => text.includes('0,00') && text.includes('%'));
+		// Must NOT show a sign prefix or error/success color
+		expect(valueEl.textContent).not.toMatch(/[+−]/);
+		expect(valueEl.className).toContain('text-surface-950-50');
+		expect(valueEl.className).not.toContain('text-error');
+		expect(valueEl.className).not.toContain('text-success');
+	});
+
 	it('exposes the tooltip as a title on the label', () => {
 		render(MetricCard, { props: { label: 'Koszt', value: 5, tooltip: 'Wyjaśnienie' } });
 		expect(screen.getByText('Koszt').getAttribute('title')).toBe('Wyjaśnienie');

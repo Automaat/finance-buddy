@@ -36,16 +36,22 @@
 	);
 
 	const isEmpty = $derived(value == null || Number.isNaN(value));
+	// True when a non-zero value rounds to zero at the current decimal
+	// precision, preventing misleading "−0,00" display and error coloring.
+	const roundsToZero = $derived(
+		!isEmpty && value !== 0 && Math.round(Math.abs(value as number) * 10 ** decimals) === 0
+	);
 	const displayValue = $derived.by(() => {
 		if (isEmpty) return '—';
-		if (!signed || value === 0) return formatter.format(value as number) + suffix;
+		if (!signed) return formatter.format(value as number) + suffix;
+		if (value === 0 || roundsToZero) return formatter.format(0) + suffix;
 		const sign = (value as number) > 0 ? '+' : '−';
 		return sign + formatter.format(Math.abs(value as number)) + suffix;
 	});
 	const showHint = $derived(isEmpty && emptyHint != null);
 
 	const valueClass = $derived(
-		signed && !isEmpty && value !== 0
+		signed && !isEmpty && value !== 0 && !roundsToZero
 			? (value as number) > 0
 				? 'text-success-600-400'
 				: 'text-error-600-400'
