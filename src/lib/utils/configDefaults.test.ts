@@ -42,8 +42,8 @@ describe('loadConfigDefaults', () => {
 
 		const defaults = await loadConfigDefaults(fetchFn);
 
-		expect(defaults.annualReturnPct).toBeCloseTo(7);
-		expect(defaults.withdrawalRatePct).toBeCloseTo(4);
+		expect(defaults.annualReturnPct).toBe(7);
+		expect(defaults.withdrawalRatePct).toBe(4);
 		expect(defaults.currentAge).toBe(36);
 		expect(defaults.retirementAge).toBe(65);
 		expect(defaults.monthlyExpensesPLN).toBe(8000);
