@@ -136,15 +136,15 @@ body {
 	}
 }
 
-/* Primary buttons: use -600 shade (white text on medium rose) so active state
+/* Primary filled: use -600 shade (white text on medium rose) so active state
    is unmistakably distinct from the disabled state. The -500 preset is too pale
-   and reads as already-disabled. */
-button.preset-filled-primary-500 {
+   and reads as already-disabled. Targets all elements (buttons, anchors, nav). */
+.preset-filled-primary-500 {
 	background-color: var(--color-primary-600);
 	color: var(--color-primary-contrast-600);
 }
 
-button.preset-filled-primary-500:not(:disabled):hover {
+.preset-filled-primary-500:not(:disabled):hover {
 	background-color: var(--color-primary-700);
 }
 
