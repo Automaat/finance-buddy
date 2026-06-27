@@ -15,6 +15,7 @@
 </script>
 
 <div class="space-y-4">
+	<h1 class="h2">Inwestycje</h1>
 	<nav class="flex gap-1 border-b border-surface-200-800" aria-label="Inwestycje">
 		{#each tabs as tab (tab.href)}
 			{@const SvelteComponent = tab.icon}

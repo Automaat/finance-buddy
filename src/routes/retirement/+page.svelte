@@ -182,17 +182,18 @@
 </script>
 
 <svelte:head>
-	<title>Monte Carlo emerytura | Finansowa Forteca</title>
+	<title>Emerytura | Finansowa Forteca</title>
 </svelte:head>
 
 <div class="flex flex-col gap-6">
 	<header class="space-y-1">
 		<h1 class="h2 flex items-center gap-2">
 			<Sparkles size={24} class="text-primary-500" />
-			Symulacja Monte Carlo
+			Emerytura
 		</h1>
 		<p class="text-surface-700-300 text-sm">
-			Tysiąc losowych ścieżek emerytalnych zamiast jednego deterministycznego planu.
+			Symulacja Monte Carlo — tysiąc losowych ścieżek emerytalnych zamiast jednego
+			deterministycznego planu.
 		</p>
 	</header>
 

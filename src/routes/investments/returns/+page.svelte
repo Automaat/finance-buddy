@@ -65,7 +65,7 @@
 </script>
 
 <svelte:head>
-	<title>Zwroty - Finance Buddy</title>
+	<title>Zwroty | Finansowa Forteca</title>
 </svelte:head>
 
 <div class="space-y-4">
@@ -100,5 +100,6 @@
 		{/if}
 	</div>
 
+	<h2 class="h3">Zwroty</h2>
 	<ContributionAdjustedReturns {scope} title={scopeTitle} />
 </div>

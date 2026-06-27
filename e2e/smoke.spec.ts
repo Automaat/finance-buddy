@@ -5,7 +5,7 @@ const routes: { path: string; heading: RegExp }[] = [
 	{ path: '/metryki', heading: /Metryki/i },
 	{ path: '/simulations', heading: /Symulacje/i },
 	{ path: '/accounts', heading: /Konta/i },
-	{ path: '/transactions', heading: /Wszystkie transakcje/i },
+	{ path: '/transactions', heading: /Transakcje/i },
 	{ path: '/assets', heading: /Majątek/i },
 	{ path: '/debts', heading: /Zobowiązania/i },
 	{ path: '/goals', heading: /Cele finansowe/i },

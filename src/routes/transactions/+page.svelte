@@ -173,7 +173,7 @@
 
 <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
 	<div class="space-y-1">
-		<h1 class="h2">Wszystkie transakcje</h1>
+		<h1 class="h2">Transakcje</h1>
 		<p class="text-surface-700-300 text-sm">Historia transakcji inwestycyjnych</p>
 	</div>
 	<div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">

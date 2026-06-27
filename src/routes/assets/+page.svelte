@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Modal from '$lib/components/Modal.svelte';
 	import { formatPLN } from '$lib/utils/format';
-	import { Home, Pencil, Plus, Trash2 } from 'lucide-svelte';
+	import { Pencil, Plus, Trash2 } from 'lucide-svelte';
 	import { resolveApiUrl } from '$lib/api';
 	import { invalidateAll } from '$app/navigation';
 	import type { Asset } from './+page';
@@ -183,10 +183,6 @@
 	{/if}
 
 	<div class="card preset-filled-surface-100-900 p-4 space-y-4">
-		<header>
-			<h3 class="h3 flex items-center gap-2"><Home size={20} /> Majątek</h3>
-		</header>
-
 		{#if data.assets.length === 0}
 			<div class="text-center py-12 text-surface-700-300">
 				<p>Brak majątku</p>
