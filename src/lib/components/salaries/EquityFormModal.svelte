@@ -147,7 +147,7 @@
 
 		{#if data.type === 'option'}
 			<label class="label">
-				<span class="font-semibold text-sm">Strike price (cena wykonania)*</span>
+				<span class="font-semibold text-sm">Cena wykonania*</span>
 				<input
 					type="number"
 					class="input"
@@ -243,17 +243,18 @@
 		</fieldset>
 
 		<fieldset class="card preset-tonal-surface p-3 space-y-3">
-			<legend class="font-semibold text-sm px-1">Liquidity event (double-trigger)</legend>
+			<legend class="font-semibold text-sm px-1">Zdarzenie płynnościowe (podwójny wyzwalacz)</legend
+			>
 			<label class="flex items-center gap-2 cursor-pointer">
 				<input type="checkbox" class="checkbox" bind:checked={data.requires_liquidity_event} />
-				<span class="text-sm">Wymaga liquidity event (IPO / akwizycja)</span>
+				<span class="text-sm">Wymaga zdarzenia płynnościowego (IPO / akwizycja)</span>
 			</label>
 			{#if data.requires_liquidity_event}
 				<label class="label">
-					<span class="font-semibold text-sm">Data liquidity event</span>
+					<span class="font-semibold text-sm">Data zdarzenia płynnościowego</span>
 					<input type="date" class="input" bind:value={data.liquidity_event_date} />
 					<span class="text-xs text-surface-700-300"
-						>Puste = jeszcze nie wystąpiło. Vested = 0 dopóki nie wystąpi.</span
+						>Puste = jeszcze nie wystąpiło. Nabyte = 0 dopóki nie wystąpi.</span
 					>
 				</label>
 			{/if}
@@ -274,7 +275,7 @@
 				type="text"
 				class="input"
 				bind:value={data.notes}
-				placeholder="np. ESOP 2024, double-trigger RSU"
+				placeholder="np. ESOP 2024, podwójny wyzwalacz RSU"
 			/>
 		</label>
 	</form>

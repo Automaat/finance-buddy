@@ -75,7 +75,7 @@
 		</div>
 
 		<label class="label">
-			<span class="font-semibold text-sm">FMV per share (bazowa)*</span>
+			<span class="font-semibold text-sm">WR/akcję (bazowa)*</span>
 			<input
 				type="number"
 				class="input"
@@ -88,11 +88,11 @@
 
 		<div class="grid grid-cols-2 gap-2">
 			<label class="label">
-				<span class="font-semibold text-sm">FMV low (opcjonalna)</span>
+				<span class="font-semibold text-sm">WR minimalna (opcjonalna)</span>
 				<input type="number" class="input" bind:value={data.fmv_low} min="0" step="0.0001" />
 			</label>
 			<label class="label">
-				<span class="font-semibold text-sm">FMV high (opcjonalna)</span>
+				<span class="font-semibold text-sm">WR maksymalna (opcjonalna)</span>
 				<input type="number" class="input" bind:value={data.fmv_high} min="0" step="0.0001" />
 			</label>
 		</div>
@@ -108,7 +108,7 @@
 		</label>
 
 		<label class="label">
-			<span class="font-semibold text-sm">Common stock discount (%) — opcjonalne</span>
+			<span class="font-semibold text-sm">Dyskonto akcji zwykłych (%) — opcjonalne</span>
 			<input
 				type="number"
 				class="input"

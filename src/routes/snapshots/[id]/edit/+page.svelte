@@ -10,11 +10,11 @@
 </script>
 
 <svelte:head>
-	<title>Edytuj Snapshot | Finansowa Forteca</title>
+	<title>Edytuj migawkę | Finansowa Forteca</title>
 </svelte:head>
 
 <div class="mb-6 space-y-1">
-	<h1 class="h2">Edytuj Snapshot</h1>
+	<h1 class="h2">Edytuj migawkę</h1>
 	<p class="text-surface-700-300 text-sm">Zaktualizuj wartości z dnia {data.snapshot.date}</p>
 </div>
 
