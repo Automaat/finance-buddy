@@ -97,11 +97,11 @@ func (h *Handler) GetSeries(w http.ResponseWriter, r *http.Request) {
 	hundred := decimal.NewFromInt(100)
 	for _, y := range years {
 		// Subtract in decimal to preserve GUS one-decimal precision (e.g. 100.8 → 0.8).
-		yoyRaw, _ := yoyMap[y].Sub(hundred).Float64()
+		yoyRate, _ := yoyMap[y].Sub(hundred).Float64()
 		idx, _ := indexMap[y].Float64()
 		points = append(points, cpiPoint{
 			Year:            y,
-			YoYRate:         wire.PyFloat(yoyRaw),
+			YoYRate:         wire.PyFloat(yoyRate),
 			CumulativeIndex: wire.PyFloat(idx),
 		})
 	}
