@@ -5,7 +5,7 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import BondsMaturityLadder from '$lib/components/BondsMaturityLadder.svelte';
 	import { formatPLN } from '$lib/utils/format';
-	import { chartAccent, chartAccentGradient } from '$lib/utils/theme';
+	import { chartValue, chartValueGradient } from '$lib/utils/theme';
 	import { createChart } from '$lib/utils/charts/lifecycle';
 	import { Banknote, Pencil, Plus, Trash2, TrendingUp } from 'lucide-svelte';
 	import { resolveApiUrl } from '$lib/api';
@@ -259,11 +259,11 @@
 				type: 'line',
 				smooth: true,
 				symbol: 'circle',
-				lineStyle: { color: chartAccent, width: 2 },
+				lineStyle: { color: chartValue, width: 2 },
 				areaStyle: {
 					color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-						{ offset: 0, color: chartAccentGradient[0] },
-						{ offset: 1, color: chartAccentGradient[1] }
+						{ offset: 0, color: chartValueGradient[0] },
+						{ offset: 1, color: chartValueGradient[1] }
 					])
 				}
 			}

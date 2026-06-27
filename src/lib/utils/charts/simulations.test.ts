@@ -117,8 +117,8 @@ describe('buildRetirementProjectionOption', () => {
 		const option = buildRetirementProjectionOption(sims);
 		const series = option.series as Array<{ itemStyle: { color: string } }>;
 		expect(series).toHaveLength(10);
-		// 7th item should wrap back to the first palette colour
-		expect(series[6].itemStyle.color).toBe(series[0].itemStyle.color);
+		// 9th item (index 8) wraps back to the first palette colour (8 colours in palette)
+		expect(series[8].itemStyle.color).toBe(series[0].itemStyle.color);
 	});
 });
 

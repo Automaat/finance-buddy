@@ -327,6 +327,7 @@ function buildTrendChartOption(
 					color: chartContribution,
 					opacity: 0.8
 				},
+				itemStyle: { color: chartContribution },
 				emphasis: {
 					focus: 'series'
 				}
@@ -338,6 +339,7 @@ function buildTrendChartOption(
 				smooth: true,
 				lineStyle: { width: 3, color: chartValue },
 				showSymbol: false,
+				itemStyle: { color: chartValue },
 				emphasis: {
 					focus: 'series'
 				}

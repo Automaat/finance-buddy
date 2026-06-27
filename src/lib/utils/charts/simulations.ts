@@ -1,5 +1,6 @@
 import type { EChartsOption, LineSeriesOption } from 'echarts';
 import type { TopLevelFormatterParams } from 'echarts/types/dist/shared';
+import { chartPalette, chartInkMuted } from '$lib/utils/theme';
 
 export interface YearlyProjection {
 	year: number;
@@ -27,7 +28,7 @@ export interface AccountSimulation {
 	yearly_projections: YearlyProjection[];
 }
 
-const SERIES_COLORS = ['#5E81AC', '#81A1C1', '#88C0D0', '#8FBCBB', '#B48EAD', '#A3BE8C'];
+const SERIES_COLORS = [...chartPalette];
 
 // Tooltip HTML escape: account names come from the database (user-set
 // owner labels can flow in) and Echarts' default tooltip renderer treats
@@ -140,9 +141,9 @@ export function getTotalBalanceAtAge(simulations: AccountSimulation[], age: numb
 }
 
 const WRAPPER_COLORS: Record<WrapperKey, string> = {
-	IKE: '#5E81AC',
-	IKZE: '#88C0D0',
-	PPK: '#A3BE8C'
+	IKE: chartPalette[0],
+	IKZE: chartPalette[2],
+	PPK: chartPalette[4]
 };
 
 export function buildRetirementByWrapperOption(
@@ -185,7 +186,7 @@ export function buildRetirementByWrapperOption(
 	if (series.length > 0 && markLineData.length > 0) {
 		series[0].markLine = {
 			symbol: ['none', 'none'],
-			lineStyle: { type: 'dashed', color: '#B48EAD' },
+			lineStyle: { type: 'dashed', color: chartInkMuted },
 			data: markLineData
 		};
 	}
