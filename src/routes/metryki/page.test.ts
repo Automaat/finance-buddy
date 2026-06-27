@@ -332,6 +332,20 @@ describe('Metryki Page with populated data', () => {
 		// the digits regardless of which whitespace separates the thousands.
 		expect(screen.getByText((text) => /2\s*880\s*PLN/.test(text))).toBeTruthy();
 	});
+
+	it('renders allocation, inflation and growth sections after tab switches', async () => {
+		render(Page, { props: { data: populatedData } });
+
+		await fireEvent.click(screen.getByRole('tab', { name: 'Zwroty' }));
+		expect(screen.getByRole('heading', { name: 'Zwroty skorygowane o wpłaty' })).toBeTruthy();
+		expect(screen.getByRole('heading', { name: 'Realne zwroty (po inflacji)' })).toBeTruthy();
+		expect(screen.getAllByText('Konto oszczędnościowe').length).toBeGreaterThan(0);
+		expect(screen.getByRole('heading', { name: 'Struktura portfela inwestycyjnego' })).toBeTruthy();
+
+		await fireEvent.click(screen.getByRole('tab', { name: 'Wzrost' }));
+		expect(screen.getByRole('heading', { name: 'Wzrost inwestycji w czasie' })).toBeTruthy();
+		expect(screen.getByRole('heading', { name: 'Roczny ROI według klasy aktywów' })).toBeTruthy();
+	});
 });
 
 // jsonResponse fakes the slice of the Fetch Response that the loader reads:
