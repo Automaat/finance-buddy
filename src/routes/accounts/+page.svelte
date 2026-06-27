@@ -452,7 +452,7 @@
 		</td>
 		<td data-label="Kategoria">{categoryLabels[account.category] || account.category}</td>
 		<td data-label="Właściciel">{ownerName(owners, account.owner_user_id)}</td>
-		<td class="font-semibold text-primary-600-400" data-label="Wartość">
+		<td class="font-semibold" data-label="Wartość">
 			{formatPLN(account.current_value)}
 		</td>
 		<td class="whitespace-nowrap" data-label="Realne %">
@@ -511,7 +511,7 @@
 		<td class="font-medium" data-label="Nazwa">{account.name}</td>
 		<td data-label="Kategoria">{categoryLabels[account.category] || account.category}</td>
 		<td data-label="Właściciel">{ownerName(owners, account.owner_user_id)}</td>
-		<td class="font-semibold text-error-600-400" data-label="Wartość">
+		<td class="font-semibold" data-label="Wartość">
 			{formatPLN(account.current_value)}
 		</td>
 		<td class="text-right whitespace-nowrap">
@@ -832,9 +832,7 @@
 			<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
 				<h3 class="h4">Historia transakcji</h3>
 				<p class="text-sm text-surface-700-300">
-					Zainwestowano łącznie: <strong class="text-primary-600-400"
-						>{formatPLN(transactionsData.total_invested)}</strong
-					>
+					Zainwestowano łącznie: <strong>{formatPLN(transactionsData.total_invested)}</strong>
 				</p>
 			</div>
 
@@ -855,8 +853,7 @@
 							{#each transactionsData.transactions as transaction}
 								<tr>
 									<td>{formatDate(transaction.date)}</td>
-									<td class="font-semibold text-primary-600-400">{formatPLN(transaction.amount)}</td
-									>
+									<td class="font-semibold">{formatPLN(transaction.amount)}</td>
 									<td>{ownerName(owners, transaction.owner_user_id)}</td>
 									<td class="text-right">
 										<button

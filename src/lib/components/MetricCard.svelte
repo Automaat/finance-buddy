@@ -4,7 +4,7 @@
 		value: number | null | undefined;
 		decimals?: number;
 		suffix?: string;
-		color?: 'green' | 'blue' | 'red' | 'yellow' | 'neutral';
+		signed?: boolean;
 		// Optional explanation shown as a native tooltip on the label (and a
 		// subtle dotted underline as the affordance), for cryptic metrics.
 		tooltip?: string;
@@ -21,7 +21,7 @@
 		value,
 		decimals = 0,
 		suffix = '',
-		color = 'neutral',
+		signed = false,
 		tooltip,
 		secondary,
 		emptyHint,
@@ -36,17 +36,20 @@
 	);
 
 	const isEmpty = $derived(value == null || Number.isNaN(value));
-	const displayValue = $derived(isEmpty ? '—' : formatter.format(value as number) + suffix);
+	const displayValue = $derived.by(() => {
+		if (isEmpty) return '—';
+		if (!signed || value === 0) return formatter.format(value as number) + suffix;
+		const sign = (value as number) > 0 ? '+' : '−';
+		return sign + formatter.format(Math.abs(value as number)) + suffix;
+	});
 	const showHint = $derived(isEmpty && emptyHint != null);
 
 	const valueClass = $derived(
-		{
-			green: 'text-success-600-400',
-			red: 'text-error-600-400',
-			blue: 'text-primary-600-400',
-			yellow: 'text-warning-600-400',
-			neutral: 'text-surface-950-50'
-		}[color]
+		signed && !isEmpty && value !== 0
+			? (value as number) > 0
+				? 'text-success-600-400'
+				: 'text-error-600-400'
+			: 'text-surface-950-50'
 	);
 </script>
 

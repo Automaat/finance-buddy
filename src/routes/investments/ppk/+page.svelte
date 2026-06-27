@@ -46,7 +46,7 @@
 		</div>
 		<div class="card preset-filled-surface-100-900 p-4 space-y-1">
 			<header class="text-sm text-surface-700-300">Wartość bieżąca</header>
-			<div class="text-2xl font-bold text-primary-600-400">{formatPLN(totalValue)}</div>
+			<div class="text-2xl font-bold">{formatPLN(totalValue)}</div>
 		</div>
 		<div class="card preset-filled-surface-100-900 p-4 space-y-1">
 			<header class="text-sm text-surface-700-300">Zysk</header>
@@ -78,50 +78,39 @@
 						value={stat.total_value}
 						decimals={0}
 						suffix=" PLN"
-						color="green"
 					/>
 					<MetricCard
 						label="Wpłaty pracownika"
 						value={stat.employee_contributed}
 						decimals={0}
 						suffix=" PLN"
-						color="blue"
 					/>
 					<MetricCard
 						label="Wpłaty pracodawcy"
 						value={stat.employer_contributed}
 						decimals={0}
 						suffix=" PLN"
-						color="blue"
 					/>
 					<MetricCard
 						label="Dopłaty państwa"
 						value={stat.government_contributed}
 						decimals={0}
 						suffix=" PLN"
-						color="blue"
 					/>
 					<MetricCard
 						label="Łącznie wpłacone"
 						value={stat.total_contributed}
 						decimals={0}
 						suffix=" PLN"
-						color="blue"
 					/>
 					<MetricCard
 						label="Zyski z inwestycji"
 						value={stat.returns}
 						decimals={0}
 						suffix=" PLN"
-						color={stat.returns >= 0 ? 'green' : 'red'}
+						signed
 					/>
-					<MetricCard
-						label="ROI"
-						value={stat.roi_percentage}
-						decimals={2}
-						suffix="%"
-						color={stat.roi_percentage >= 0 ? 'green' : 'red'}
-					/>
+					<MetricCard label="ROI" value={stat.roi_percentage} decimals={2} suffix="%" signed />
 				</div>
 			</div>
 		{/each}
@@ -154,7 +143,7 @@
 									<td class="text-xs text-surface-700-300">
 										{account.is_active ? 'Aktywne' : 'Nieaktywne'}
 									</td>
-									<td class="text-right font-semibold text-primary-600-400">
+									<td class="text-right font-semibold">
 										{formatPLN(account.current_value)}
 									</td>
 								</tr>

@@ -92,9 +92,7 @@
 								<td class="font-medium">
 									{formatDate(snapshot.date)}
 								</td>
-								<td class="font-semibold text-primary-600-400"
-									>{formatPLN(snapshot.total_net_worth)}</td
-								>
+								<td class="font-semibold">{formatPLN(snapshot.total_net_worth)}</td>
 								<td class="italic text-surface-700-300">{snapshot.notes || '—'}</td>
 								<td class="text-right">
 									<button

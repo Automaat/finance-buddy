@@ -16,9 +16,15 @@ describe('MetricCard', () => {
 		expect(screen.getByText('—')).toBeTruthy();
 	});
 
-	it('applies the colour class for the chosen colour', () => {
-		render(MetricCard, { props: { label: 'Zysk', value: 10, color: 'green' } });
+	it('uses neutral ink for ordinary values', () => {
+		render(MetricCard, { props: { label: 'Wartość', value: 10 } });
 		const valueEl = screen.getByText('10');
+		expect(valueEl.className).toContain('text-surface-950-50');
+	});
+
+	it('colors only explicitly signed values', () => {
+		render(MetricCard, { props: { label: 'Zysk', value: 10, signed: true } });
+		const valueEl = screen.getByText('+10');
 		expect(valueEl.className).toContain('text-success-600-400');
 	});
 

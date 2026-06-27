@@ -201,7 +201,7 @@
 						{#each data.assets as asset}
 							<tr>
 								<td class="font-medium">{asset.name}</td>
-								<td class="font-semibold text-primary-600-400">{formatPLN(asset.current_value)}</td>
+								<td class="font-semibold">{formatPLN(asset.current_value)}</td>
 								<td class="text-right whitespace-nowrap">
 									<button
 										type="button"

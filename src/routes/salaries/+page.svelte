@@ -1326,7 +1326,7 @@
 						</div>
 					{/if}
 					{#if compSummary.equityLockedYearPln > 0}
-						<div class="text-xs text-warning-500">
+						<div class="text-xs text-surface-700-300">
 							+ {formatPLN(compSummary.equityLockedYearPln)} zablokowane (RSU, czeka na zdarzenie płynnościowe)
 						</div>
 					{/if}
@@ -1338,7 +1338,7 @@
 					<div class="text-xs text-surface-700-300">
 						Łącznie {includeEquityInTotal ? '(z udziałami)' : '(bez udziałów)'}
 					</div>
-					<div class="text-xl font-bold text-primary-600-400">{formatPLN(totalCompGross)}</div>
+					<div class="text-xl font-bold">{formatPLN(totalCompGross)}</div>
 					<div class="text-xs text-surface-700-300">
 						po podatku (szac.): {formatPLN(totalCompNet)}
 					</div>
@@ -1455,7 +1455,7 @@
 								<td>{formatDate(record.date)}</td>
 								<td>{ownerName(owners, record.owner_user_id)}</td>
 								<td>{record.company}</td>
-								<td class="font-semibold text-primary-600-400">{formatPLN(record.gross_amount)}</td>
+								<td class="font-semibold">{formatPLN(record.gross_amount)}</td>
 								<td>{record.contract_type}</td>
 								<td class="text-right whitespace-nowrap">
 									<button
@@ -1530,7 +1530,7 @@
 											<td>{formatDate(bonus.date)}</td>
 											<td>{bonusTypeLabels[bonus.type]}</td>
 											<td>{ownerName(owners, bonus.owner_user_id)}</td>
-											<td class="font-semibold text-primary-600-400">
+											<td class="font-semibold">
 												{formatBonusAmount(bonus.amount, bonus.currency)}
 												{#if bonus.currency !== 'PLN' && bonus.amount_pln !== null}
 													<br /><span class="text-xs font-normal text-surface-700-300">
@@ -1660,7 +1660,7 @@
 														>
 													{/if}
 												{:else if grant.valuation_date}
-													<span class="text-warning-500">{formatRange(grant)}</span>
+													<span class="text-surface-700-300">{formatRange(grant)}</span>
 												{:else}
 													<span class="text-surface-700-300">brak wyceny</span>
 												{/if}

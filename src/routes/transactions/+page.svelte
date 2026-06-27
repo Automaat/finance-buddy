@@ -155,9 +155,7 @@
 		<td data-label="Data zakupu">{formatDate(transaction.date)}</td>
 		<td class="font-medium" data-label="Konto">{transaction.account_name}</td>
 		<td data-label="Właściciel">{ownerName(owners, transaction.owner_user_id)}</td>
-		<td class="font-semibold text-primary-600-400" data-label="Kwota">
-			{formatPLN(transaction.amount)}
-		</td>
+		<td class="font-semibold" data-label="Kwota">{formatPLN(transaction.amount)}</td>
 		<td class="text-right">
 			<button
 				type="button"
@@ -250,9 +248,9 @@
 		<header class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
 			<h3 class="h3 flex items-center gap-2"><BarChart3 size={20} /> Historia transakcji</h3>
 			<p class="text-sm text-surface-700-300">
-				Zainwestowano łącznie: <strong class="text-primary-600-400 font-bold"
-					>{formatPLN(data.transactions.total_invested)}</strong
-				>
+				Zainwestowano łącznie: <strong class="font-bold">
+					{formatPLN(data.transactions.total_invested)}
+				</strong>
 			</p>
 		</header>
 

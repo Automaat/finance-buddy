@@ -391,7 +391,7 @@
 			</div>
 			<div class="card preset-filled-surface-100-900 p-4 space-y-1">
 				<header class="text-sm text-surface-700-300">Wartość bieżąca</header>
-				<div class="text-2xl font-bold text-primary-600-400">{fmtPLN(totalValue)}</div>
+				<div class="text-2xl font-bold">{fmtPLN(totalValue)}</div>
 			</div>
 			<div class="card preset-filled-surface-100-900 p-4 space-y-1">
 				<header class="text-sm text-surface-700-300">Zysk</header>
@@ -610,9 +610,7 @@
 			<h2 class="h3 flex items-center gap-2"><Coins size={18} /> Dywidendy</h2>
 			{#if data.dividends.length > 0}
 				<span class="text-sm text-surface-700-300">
-					Netto łącznie: <span class="font-semibold text-success-500"
-						>{fmtPLN(totalDividendsNet)}</span
-					>
+					Netto łącznie: <span class="font-semibold">{fmtPLN(totalDividendsNet)}</span>
 				</span>
 			{/if}
 		</header>
@@ -644,9 +642,7 @@
 								<td class="text-right text-surface-600-400"
 									>{fmt(d.withholding_tax)} {d.currency}</td
 								>
-								<td class="text-right font-semibold text-success-500"
-									>{fmt(d.net_amount)} {d.currency}</td
-								>
+								<td class="text-right font-semibold">{fmt(d.net_amount)} {d.currency}</td>
 								<td class="text-right">
 									<button
 										type="button"
