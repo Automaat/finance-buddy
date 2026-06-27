@@ -7,7 +7,7 @@ const SIDEBAR_LINKS: { label: string; path: string }[] = [
 	{ label: 'Majątek', path: '/assets' },
 	{ label: 'Zobowiązania', path: '/debts' },
 	{ label: 'Cele', path: '/goals' },
-	{ label: 'Snapshoty', path: '/snapshots' },
+	{ label: 'Migawki', path: '/snapshots' },
 	{ label: 'Wynagrodzenia', path: '/salaries' },
 	{ label: 'Ustawienia', path: '/settings/config' }
 ];
