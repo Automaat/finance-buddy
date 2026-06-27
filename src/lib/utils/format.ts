@@ -59,3 +59,11 @@ export function calculateChange(current: number, previous: number): Change {
 	const direction: Change['direction'] = absolute > 0 ? 'up' : absolute < 0 ? 'down' : 'flat';
 	return { absolute, percent, direction };
 }
+
+export function formatNumber(value: number | null | undefined, decimals = 2): string {
+	if (value == null || Number.isNaN(value)) return '—';
+	return new Intl.NumberFormat('pl-PL', {
+		minimumFractionDigits: decimals,
+		maximumFractionDigits: decimals
+	}).format(value);
+}

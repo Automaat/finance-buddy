@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolveApiUrl } from '$lib/api';
 	import { toast } from '$lib/stores/toast.svelte';
+	import { formatPLN, formatNumber } from '$lib/utils/format';
 
 	interface ScopeProp {
 		type: 'all' | 'category' | 'wrapper' | 'account';
@@ -84,13 +85,9 @@
 		return () => controller.abort();
 	});
 
-	function fmt(n: number): string {
-		return n.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-	}
-
 	function fmtPct(n: number): string {
 		const sign = n >= 0 ? '+' : '';
-		return `${sign}${n.toFixed(2)}%`;
+		return `${sign}${formatNumber(Math.abs(n), 2)}%`;
 	}
 </script>
 
@@ -133,11 +130,11 @@
 				<dt class="text-xs text-surface-600-400 shrink-0">
 					Wpłacono netto
 					<span class="block text-[10px] opacity-70">
-						+{fmt(data.deposits)} / -{fmt(data.withdrawals)}
+						+{formatPLN(data.deposits)} / −{formatPLN(data.withdrawals)}
 					</span>
 				</dt>
 				<dd class="text-base font-semibold text-right tabular-nums">
-					{fmt(data.net_contributed)} PLN
+					{formatPLN(data.net_contributed)}
 				</dd>
 			</div>
 			<div class="flex items-baseline justify-between gap-3 py-2">
@@ -146,7 +143,7 @@
 					<span class="block text-[10px] opacity-70">na {data.as_of}</span>
 				</dt>
 				<dd class="text-base font-semibold text-right tabular-nums">
-					{fmt(data.current_value)} PLN
+					{formatPLN(data.current_value)}
 				</dd>
 			</div>
 			<div class="flex items-baseline justify-between gap-3 py-2">
@@ -159,7 +156,7 @@
 						? 'text-success-500'
 						: 'text-error-500'}"
 				>
-					{data.valuation_change >= 0 ? '+' : ''}{fmt(data.valuation_change)} PLN
+					{data.valuation_change >= 0 ? '+' : ''}{formatPLN(data.valuation_change)}
 				</dd>
 			</div>
 			{#if (data.dividends_received_net ?? 0) !== 0}
@@ -169,7 +166,7 @@
 						<span class="block text-[10px] opacity-70">w okresie, po podatku</span>
 					</dt>
 					<dd class="text-base font-semibold text-right tabular-nums text-success-500">
-						+{fmt(data.dividends_received_net ?? 0)} PLN
+						+{formatPLN(data.dividends_received_net ?? 0)}
 					</dd>
 				</div>
 			{/if}

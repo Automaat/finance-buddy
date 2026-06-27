@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import * as echarts from 'echarts';
 	import type { ECElementEvent, EChartsOption } from 'echarts';
-	import { formatPLN } from '$lib/utils/format';
+	import { formatPLN, formatNumber } from '$lib/utils/format';
 	import { isMobile, isTablet } from '$lib/utils/viewport';
 	import { chartPalette, chartAccent, chartAccentGradient } from '$lib/utils/theme';
 	import { ownerName, type OwnerOption } from '$lib/types/owners';
@@ -111,7 +111,13 @@
 			left: 'center',
 			textStyle: { fontSize: titleFontSize }
 		},
-		tooltip: { trigger: 'item', formatter: '{b}: {c} PLN ({d}%)' },
+		tooltip: {
+			trigger: 'item',
+			formatter: (params: unknown) => {
+				const p = params as { name: string; value: number; percent: number };
+				return `${p.name}: ${formatPLN(p.value)} (${formatNumber(p.percent, 1)}%)`;
+			}
+		},
 		// On a phone the radial callout labels collide and get clipped at the
 		// card edges, so swap them for a scrollable legend along the bottom.
 		legend: $isMobile
