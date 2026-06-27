@@ -1,16 +1,18 @@
 // Shared ECharts color tokens. Centralized so chart components don't carry
-// their own hardcoded palettes. Rose/crimson scale matching the app theme.
+// their own hardcoded palettes.
 
-/** Categorical palette for multi-series charts (e.g. allocation pie). */
+/** Categorical palette for multi-series charts (e.g. allocation pie, retirement by wrapper).
+ *  Multi-hue so each category reads as visually distinct. Red/rose are excluded —
+ *  those are reserved for chartNegative / chartAccent. */
 export const chartPalette = [
-	'#e11d48',
-	'#f43f5e',
-	'#fb7185',
-	'#fda4af',
-	'#881337',
-	'#9f1239',
-	'#be123c',
-	'#be185d'
+	'#3b82f6', // blue-500
+	'#10b981', // emerald-500
+	'#f59e0b', // amber-500
+	'#a855f7', // purple-500
+	'#06b6d4', // cyan-500
+	'#84cc16', // lime-500
+	'#ec4899', // pink-500
+	'#f97316'  // orange-500
 ] as const;
 
 /** Accent color for single-series charts (e.g. net worth line). */
@@ -47,8 +49,8 @@ export const chartTooltipBorder = '#d4d4d8';
 /** Contributions / deposits (area fill under the value line). */
 export const chartContribution = '#fb7185';
 
-/** Portfolio value / primary line. */
-export const chartValue = '#e11d48';
+/** Portfolio value / primary line. Same hue as chartPalette[0] — blue, not red. */
+export const chartValue = '#3b82f6';
 
 /** Positive return / gains. */
 export const chartPositive = '#16a34a';

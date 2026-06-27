@@ -24,8 +24,10 @@ describe('theme', () => {
 		}
 	});
 
-	it('accent is the first palette color', () => {
-		expect(chartAccent).toBe(chartPalette[0]);
+	it('accent is the brand rose, independent of categorical palette', () => {
+		expect(chartAccent).toBe('#e11d48');
+		// Red/rose must not appear in the categorical palette (reserved for accent/negative only)
+		expect([...chartPalette]).not.toContain(chartAccent);
 	});
 
 	it('gradient has two stops derived from the accent', () => {
@@ -48,8 +50,9 @@ describe('theme', () => {
 		for (const token of tokens) {
 			expect(token).toMatch(/^#[0-9a-f]{6}$/);
 		}
-		// the rose value color is the accent; contribution is a lighter rose tint
-		expect(chartValue).toBe(chartAccent);
-		expect(chartContribution).toBe(chartPalette[2]);
+		// value is the primary blue (same hue as palette[0]), NOT the red accent
+		expect(chartValue).toBe(chartPalette[0]);
+		// contribution is an independent rose-400 tint, not a palette index
+		expect(chartContribution).toBe('#fb7185');
 	});
 });

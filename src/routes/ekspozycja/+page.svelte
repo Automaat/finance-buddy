@@ -4,6 +4,7 @@
 	import { page } from '$app/stores';
 	import { Globe } from 'lucide-svelte';
 	import { formatPLN } from '$lib/utils/format';
+	import { chartPalette } from '$lib/utils/theme';
 	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
 	import type { PageData } from './$types';
 
@@ -25,20 +26,6 @@
 		toleranceInput = data.tolerance;
 	});
 
-	const palette = [
-		'#3b82f6',
-		'#ef4444',
-		'#10b981',
-		'#f59e0b',
-		'#a855f7',
-		'#06b6d4',
-		'#84cc16',
-		'#ec4899'
-	];
-
-	const colorFor = (currency: string, index: number): string =>
-		currency === 'PLN' ? '#1e40af' : palette[index % palette.length];
-
 	let container: HTMLDivElement | undefined = $state();
 	let handle: ChartHandle | null = null;
 
@@ -52,7 +39,7 @@
 		const pieData = report.currencies.map((c, i) => ({
 			name: c.currency,
 			value: c.value_pln,
-			itemStyle: { color: colorFor(c.currency, i) }
+			itemStyle: { color: chartPalette[i % chartPalette.length] }
 		}));
 		handle.chart.setOption({
 			tooltip: {
@@ -214,10 +201,7 @@
 										<div class="flex-1 h-2 rounded-full bg-surface-200-800 overflow-hidden">
 											<div
 												class="h-full rounded-full"
-												style="width: {Math.min(bucket.percent, 100)}%; background: {colorFor(
-													bucket.currency,
-													i
-												)}"
+												style="width: {Math.min(bucket.percent, 100)}%; background: {chartPalette[i % chartPalette.length]}"
 											></div>
 										</div>
 										<span class="w-12 text-right tabular-nums">{bucket.percent.toFixed(1)}%</span>
