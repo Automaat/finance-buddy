@@ -93,11 +93,11 @@ func (h *Handler) GetSeries(w http.ResponseWriter, r *http.Request) {
 	years := sortedYears(indexMap)
 	points := make([]cpiPoint, 0, len(years))
 	for _, y := range years {
-		yoy, _ := yoyMap[y].Float64()
+		yoyRaw, _ := yoyMap[y].Float64()
 		idx, _ := indexMap[y].Float64()
 		points = append(points, cpiPoint{
 			Year:            y,
-			YoYRate:         wire.PyFloat(yoy),
+			YoYRate:         wire.PyFloat(yoyRaw - 100), // normalize from GUS format (114.4) to percentage (14.4)
 			CumulativeIndex: wire.PyFloat(idx),
 		})
 	}
