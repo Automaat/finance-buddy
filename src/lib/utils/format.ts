@@ -59,6 +59,10 @@ export function formatDate(value: string | Date | null | undefined): string {
 		// which shifts the displayed day backward in negative-UTC-offset zones.
 		const [year, month, day] = value.split('-').map(Number);
 		date = new Date(year, month - 1, day);
+		// Reject overflow (e.g. Feb 31 rolls into March in JS)
+		if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+			return '—';
+		}
 	} else {
 		date = value instanceof Date ? value : new Date(value as string);
 	}

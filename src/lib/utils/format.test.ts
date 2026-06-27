@@ -131,6 +131,12 @@ describe('formatDate', () => {
 		expect(formatDate('')).toBe('—');
 		expect(formatDate('not-a-date')).toBe('—');
 	});
+
+	it('returns — for date-only strings with out-of-range components', () => {
+		expect(formatDate('2026-02-31')).toBe('—');
+		expect(formatDate('2026-13-01')).toBe('—');
+		expect(formatDate('2026-00-15')).toBe('—');
+	});
 });
 
 describe('formatNumber', () => {

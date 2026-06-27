@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { resolveApiUrl } from '$lib/api';
-	import { formatPLN } from '$lib/utils/format';
+	import { formatPLN, formatDate } from '$lib/utils/format';
 	import { FileSpreadsheet, Download } from 'lucide-svelte';
 
 	interface SaleRow {
@@ -129,7 +129,7 @@
 				<tbody>
 					{#each report.rows as row (`${row.date}-${row.symbol}`)}
 						<tr>
-							<td>{row.date}</td>
+							<td>{formatDate(row.date)}</td>
 							<td>{row.symbol}</td>
 							<td>{row.currency}</td>
 							<td class="text-right">{row.quantity}</td>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import SnapshotForm from '$lib/components/SnapshotForm.svelte';
+	import { formatDate } from '$lib/utils/format';
 	import type { PageData } from './$types';
 
 	interface Props {
@@ -15,7 +16,9 @@
 
 <div class="mb-6 space-y-1">
 	<h1 class="h2">Edytuj migawkę</h1>
-	<p class="text-surface-700-300 text-sm">Zaktualizuj wartości z dnia {data.snapshot.date}</p>
+	<p class="text-surface-700-300 text-sm">
+		Zaktualizuj wartości z dnia {formatDate(data.snapshot.date)}
+	</p>
 </div>
 
 <SnapshotForm

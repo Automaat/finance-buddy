@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { formatPLN } from '$lib/utils/format';
+	import { formatPLN, formatDate } from '$lib/utils/format';
 	import {
 		Settings,
 		Umbrella,
@@ -621,8 +621,8 @@
 									{r.value}
 									<span class="text-xs text-surface-700-300">{r.unit}</span>
 								</td>
-								<td class="whitespace-nowrap">{r.effective_date}</td>
-								<td class="whitespace-nowrap">{r.last_checked_date}</td>
+								<td class="whitespace-nowrap">{formatDate(r.effective_date)}</td>
+								<td class="whitespace-nowrap">{formatDate(r.last_checked_date)}</td>
 								<td>
 									<a
 										href={r.source_url}
