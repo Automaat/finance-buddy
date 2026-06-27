@@ -86,6 +86,11 @@ describe('formatPercent', () => {
 		expect(formatPercent(50)).toMatch(/50/);
 	});
 
+	it('suppresses float precision noise from 0.07*100', () => {
+		// 0.07 * 100 === 7.000000000000001 in JS
+		expect(formatPercent(7.000000000000001)).toBe(formatPercent(7));
+	});
+
 	it('returns — for null, undefined and NaN', () => {
 		expect(formatPercent(null)).toBe('—');
 		expect(formatPercent(undefined)).toBe('—');

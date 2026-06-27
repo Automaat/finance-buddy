@@ -38,10 +38,10 @@ export async function loadConfigDefaults(fetchFn: FetchLike = fetch): Promise<Co
 		const monthlyMortgage = Number(cfg.monthly_mortgage_payment ?? NaN);
 		return {
 			annualReturnPct: Number.isFinite(expectedReturn)
-				? expectedReturn * 100
+				? parseFloat((expectedReturn * 100).toFixed(4))
 				: FALLBACK.annualReturnPct,
 			withdrawalRatePct: Number.isFinite(withdrawal)
-				? withdrawal * 100
+				? parseFloat((withdrawal * 100).toFixed(4))
 				: FALLBACK.withdrawalRatePct,
 			currentAge: birthDate ? ageFromBirthDate(birthDate) : null,
 			retirementAge,

@@ -23,7 +23,7 @@ export function formatPLN(value: number | null | undefined): string {
 
 export function formatPercent(value: number | null | undefined): string {
 	if (value == null || Number.isNaN(value)) return '—';
-	return percentFormatter.format(value / 100);
+	return percentFormatter.format(parseFloat(value.toFixed(4)) / 100);
 }
 
 export function formatDate(value: string | Date | null | undefined): string {
@@ -50,7 +50,7 @@ export function formatSignedPercent(value: number | null | undefined): string {
 	if (value == null || Number.isNaN(value)) return '—';
 	if (value === 0) return percentFormatter.format(0);
 	const sign = value > 0 ? '+' : '−';
-	return `${sign}${percentFormatter.format(Math.abs(value) / 100)}`;
+	return `${sign}${percentFormatter.format(parseFloat(Math.abs(value).toFixed(4)) / 100)}`;
 }
 
 export function calculateChange(current: number, previous: number): Change {
