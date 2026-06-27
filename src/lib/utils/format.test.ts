@@ -69,7 +69,7 @@ describe('formatSignedPercent', () => {
 	});
 
 	it('does not double-round values near a display-rounding boundary', () => {
-		// Same double-rounding hazard as formatPercent — verify both signs.
+		// Regression guard: no pre-rounding allowed — same boundary hazard as formatPercent.
 		expect(formatSignedPercent(1.04996)).toBe(formatSignedPercent(1.0));
 		expect(formatSignedPercent(-1.04996)).toBe(formatSignedPercent(-1.0));
 	});
@@ -98,8 +98,8 @@ describe('formatPercent', () => {
 	});
 
 	it('does not double-round values near a display-rounding boundary', () => {
-		// Pre-rounding 1.04996 to 4 decimals gives 1.0500, which Intl then rounds
-		// up to 1,1% — wrong. Without pre-rounding, Intl rounds 1.04996% to 1,0%.
+		// Regression guard: if pre-rounding to 4 decimals were added, 1.04996 → 1.0500
+		// and Intl would round up to 1,1% — wrong. Let Intl round directly to 1,0%.
 		expect(formatPercent(1.04996)).toBe(formatPercent(1.0));
 	});
 
