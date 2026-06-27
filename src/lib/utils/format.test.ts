@@ -156,6 +156,30 @@ describe('formatNumber', () => {
 		const result = formatNumber(-5, 2);
 		expect(result).toMatch(/[-−]5,00/);
 	});
+
+	it('uses NBSP thousands separator for 4-digit values', () => {
+		// pl-PL CLDR minimumGroupingDigits=2 would skip grouping at 1000–9999
+		// without the manual post-processing fix.
+		const result = formatNumber(1000, 2);
+		expect(result).toContain(' ');
+	});
+
+	it('uses NBSP thousands separator consistently across magnitudes', () => {
+		expect(formatNumber(1234, 0)).toContain(' ');
+		expect(formatNumber(9999, 0)).toContain(' ');
+		expect(formatNumber(10000, 0)).toContain(' ');
+	});
+
+	it('does not add separator below 1000', () => {
+		expect(formatNumber(999, 2)).toBe('999,00');
+	});
+});
+
+describe('formatPLN thousands separator', () => {
+	it('groups 4-digit values with NBSP', () => {
+		expect(formatPLN(1000)).toContain(' ');
+		expect(formatPLN(9999)).toContain(' ');
+	});
 });
 
 describe('calculateChange', () => {
