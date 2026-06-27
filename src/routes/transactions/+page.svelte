@@ -152,10 +152,12 @@
 
 {#snippet transactionRow(transaction: Transaction)}
 	<tr>
-		<td>{new Date(transaction.date).toLocaleDateString('pl-PL')}</td>
-		<td class="font-medium">{transaction.account_name}</td>
-		<td>{ownerName(owners, transaction.owner_user_id)}</td>
-		<td class="font-semibold text-primary-600-400">{formatPLN(transaction.amount)}</td>
+		<td data-label="Data zakupu">{new Date(transaction.date).toLocaleDateString('pl-PL')}</td>
+		<td class="font-medium" data-label="Konto">{transaction.account_name}</td>
+		<td data-label="Właściciel">{ownerName(owners, transaction.owner_user_id)}</td>
+		<td class="font-semibold text-primary-600-400" data-label="Kwota"
+			>{formatPLN(transaction.amount)}</td
+		>
 		<td class="text-right">
 			<button
 				type="button"
@@ -258,7 +260,7 @@
 				<p>Brak transakcji</p>
 			</div>
 		{:else}
-			<div class="table-scroll-mobile">
+			<div class="table-cards">
 				<SortableTable
 					columns={transactionColumns}
 					items={data.transactions.transactions}
