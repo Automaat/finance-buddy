@@ -101,8 +101,8 @@
 			<span class="font-semibold text-sm">Źródło*</span>
 			<select class="select" bind:value={data.source} required>
 				<option value="409a">409A</option>
-				<option value="preferred_round">Runda preferred</option>
-				<option value="tender">Tender / wykup</option>
+				<option value="preferred_round">Runda uprzywilejowana</option>
+				<option value="tender">Oferta odkupu</option>
 				<option value="estimate">Estymacja</option>
 			</select>
 		</label>
@@ -119,7 +119,7 @@
 				placeholder="np. 30"
 			/>
 			<span class="text-xs text-surface-700-300"
-				>Stosowane przy wycenie preferred → common (zwykle 20–40%)</span
+				>Stosowane przy wycenie akcji uprzywilejowanych → zwykłych (zwykle 20–40%)</span
 			>
 		</label>
 

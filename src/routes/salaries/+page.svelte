@@ -711,7 +711,7 @@
 			if (!response.ok) {
 				const errorData = await response.json();
 				const detail = errorData.detail;
-				const fallback = 'Failed to save grant';
+				const fallback = 'Nie udało się zapisać grantu';
 				let message: string;
 				if (Array.isArray(detail)) {
 					const joined = detail
@@ -760,8 +760,8 @@
 
 	const valuationSourceLabels: Record<ValuationSource, string> = {
 		'409a': '409A',
-		preferred_round: 'Runda preferred',
-		tender: 'Tender / wykup',
+		preferred_round: 'Runda uprzywilejowana',
+		tender: 'Oferta odkupu',
 		estimate: 'Estymacja'
 	};
 
@@ -851,14 +851,14 @@
 			valuationFormData.fmv_low !== null &&
 			valuationFormData.fmv_low > valuationFormData.fmv_per_share
 		) {
-			valuationError = 'fmv_low nie może być większe niż fmv_per_share';
+			valuationError = 'WR minimalna nie może być większa niż WR bazowa';
 			return;
 		}
 		if (
 			valuationFormData.fmv_high !== null &&
 			valuationFormData.fmv_high < valuationFormData.fmv_per_share
 		) {
-			valuationError = 'fmv_high nie może być mniejsze niż fmv_per_share';
+			valuationError = 'WR maksymalna nie może być mniejsza niż WR bazowa';
 			return;
 		}
 
@@ -1277,7 +1277,7 @@
 					<Wallet size={20} /> Łączne wynagrodzenie
 				</h3>
 				<p class="text-xs text-surface-700-300">
-					Roczna pensja podstawowa + bonusy + equity (opcjonalnie). Wszystko w PLN.
+					Roczna pensja podstawowa + bonusy + udziały (opcjonalnie). Wszystko w PLN.
 				</p>
 			</div>
 			<div class="flex flex-wrap gap-2">
@@ -1295,7 +1295,7 @@
 		{#if compSummary}
 			<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
 				<div class="card preset-tonal-surface p-3">
-					<div class="text-xs text-surface-700-300">Pensja podstawowa (gross)</div>
+					<div class="text-xs text-surface-700-300">Pensja podstawowa (brutto)</div>
 					<div class="text-lg font-semibold">{formatPLN(compSummary.baseAnnualGross)}</div>
 					<div class="text-xs text-surface-700-300">
 						netto: {formatPLN(compSummary.baseAnnualNet)}
@@ -1345,8 +1345,8 @@
 				</div>
 			</div>
 			<div class="text-xs text-surface-700-300">
-				Pensja, bonusy i udziały filtrowane po roku. Udziały = akcje time-vesting w wybranym roku ×
-				najnowsza wycena/akcję (intrinsic spread dla opcji, WR dla RSU).
+				Pensja, bonusy i udziały filtrowane po roku. Udziały = akcje z nabywaniem w czasie w
+				wybranym roku × najnowsza wycena/akcję (spread wewnętrzny dla opcji, WR dla RSU).
 			</div>
 			<label class="flex items-center gap-2 text-sm cursor-pointer">
 				<input type="checkbox" class="checkbox" bind:checked={includeEquityInTotal} />
@@ -1677,7 +1677,7 @@
 												{#if grant.requires_liquidity_event && !grant.liquidity_event_date}
 													<span class="text-warning-500">podwójny wyzwalacz: oczekuje</span>
 												{:else if grant.requires_liquidity_event}
-													<span class="text-success-500">trigger uruchomiony</span>
+													<span class="text-success-500">wyzwalacz uruchomiony</span>
 												{:else}
 													<span class="text-surface-700-300">pojedynczy wyzwalacz</span>
 												{/if}
