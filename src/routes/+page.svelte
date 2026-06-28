@@ -192,6 +192,7 @@
 		<div class="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
 			<MetricCard
 				label="Wartość Netto"
+				labelHeadingLevel={3}
 				valueText={formatPLN(dashboard.current_net_worth)}
 				icon={Wallet}
 				size="lg"
@@ -214,6 +215,7 @@
 
 			<MetricCard
 				label="Aktywa"
+				labelHeadingLevel={3}
 				valueText={formatPLN(dashboard.total_assets)}
 				color="green"
 				icon={TrendingUp}
@@ -237,6 +239,7 @@
 
 			<MetricCard
 				label="Zobowiązania"
+				labelHeadingLevel={3}
 				valueText={formatPLN(dashboard.total_liabilities)}
 				color="red"
 				icon={TrendingDown}

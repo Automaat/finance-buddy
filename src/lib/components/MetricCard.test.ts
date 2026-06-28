@@ -13,6 +13,11 @@ describe('MetricCard', () => {
 		expect(screen.getByText((text) => text.includes('234,5') && text.includes('PLN'))).toBeTruthy();
 	});
 
+	it('can render the label as a card heading', () => {
+		render(MetricCard, { props: { label: 'Wartość Netto', labelHeadingLevel: 3, value: 1234 } });
+		expect(screen.getByRole('heading', { name: 'Wartość Netto', level: 3 })).toBeTruthy();
+	});
+
 	it('shows an em-dash for null/NaN', () => {
 		render(MetricCard, { props: { label: 'Brak', value: null } });
 		expect(screen.getByText('—')).toBeTruthy();

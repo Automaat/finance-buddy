@@ -3,6 +3,7 @@
 
 	interface Props {
 		label: string;
+		labelHeadingLevel?: 2 | 3 | 4;
 		value?: number | null;
 		valueText?: string | null;
 		decimals?: number;
@@ -25,6 +26,7 @@
 
 	let {
 		label,
+		labelHeadingLevel,
 		value,
 		valueText,
 		decimals = 0,
@@ -39,6 +41,17 @@
 		emptyHint,
 		emptyHref
 	}: Props = $props();
+
+	type LabelTag = 'div' | 'h2' | 'h3' | 'h4';
+	const labelTag: LabelTag = $derived(
+		labelHeadingLevel === 2
+			? 'h2'
+			: labelHeadingLevel === 3
+				? 'h3'
+				: labelHeadingLevel === 4
+					? 'h4'
+					: 'div'
+	);
 
 	const formatter = $derived(
 		new Intl.NumberFormat('pl-PL', {
@@ -86,22 +99,26 @@
 
 <div class="card preset-filled-surface-100-900 p-4 space-y-1">
 	{#if tooltip}
-		<div
-			class="text-sm opacity-75 cursor-help underline decoration-dotted flex items-center gap-2"
+		<svelte:element
+			this={labelTag}
+			class="metric-card-label text-sm opacity-75 cursor-help underline decoration-dotted flex items-center gap-2"
 			title={tooltip}
 		>
 			{#if Icon}
 				<Icon size={16} />
 			{/if}
 			{label}
-		</div>
+		</svelte:element>
 	{:else}
-		<div class="text-sm opacity-75 flex items-center gap-2">
+		<svelte:element
+			this={labelTag}
+			class="metric-card-label text-sm opacity-75 flex items-center gap-2"
+		>
 			{#if Icon}
 				<Icon size={16} />
 			{/if}
 			{label}
-		</div>
+		</svelte:element>
 	{/if}
 
 	{#if showHint}
@@ -120,3 +137,10 @@
 		{@render children?.()}
 	{/if}
 </div>
+
+<style>
+	.metric-card-label {
+		margin: 0;
+		font-weight: inherit;
+	}
+</style>
