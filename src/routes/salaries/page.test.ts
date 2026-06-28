@@ -52,6 +52,33 @@ const baseData = {
 	valuations: { company_valuations: [], total_count: 0, available_companies: [] }
 };
 
+function dataWithOwnerFilter(ownerUserId: string) {
+	return {
+		...baseData,
+		filters: { ...baseData.filters, owner_user_id: ownerUserId },
+		owners: [
+			{ id: 1, name: 'Admin' },
+			{ id: 2, name: 'Marcin' }
+		],
+		salaries: {
+			...baseData.salaries,
+			salary_records: [
+				{
+					id: 10,
+					date: '2026-05-01',
+					gross_amount: 10000,
+					contract_type: 'UOP',
+					company: 'Acme',
+					owner_user_id: 2,
+					is_active: true,
+					created_at: '2026-05-01T00:00:00Z'
+				}
+			],
+			current_salaries: { '1': null, '2': null }
+		}
+	};
+}
+
 async function openNewSalaryModalAndFill(opts: {
 	date?: string;
 	gross_amount?: string;
@@ -453,6 +480,70 @@ describe('Salaries page — saveSalary validation & error display', () => {
 		});
 		await waitFor(() => expect(invalidateAll).toHaveBeenCalled());
 	});
+
+	it('defaults to the owner with existing salary records when no owner filter is set', async () => {
+		const data = {
+			...baseData,
+			owners: [
+				{ id: 1, name: 'Admin' },
+				{ id: 2, name: 'Marcin' }
+			],
+			salaries: {
+				...baseData.salaries,
+				salary_records: [
+					{
+						id: 10,
+						date: '2026-05-01',
+						gross_amount: 10000,
+						contract_type: 'UOP',
+						company: 'Acme',
+						owner_user_id: 2,
+						is_active: true,
+						created_at: '2026-05-01T00:00:00Z'
+					}
+				],
+				current_salaries: { '1': null, '2': null }
+			}
+		};
+
+		render(Page, { props: { data } });
+
+		expect(screen.getByRole('tab', { name: 'Admin' }).getAttribute('aria-selected')).toBe('false');
+		expect(screen.getByRole('tab', { name: 'Marcin' }).getAttribute('aria-selected')).toBe('true');
+		await selectSalaryTab('Historia');
+		expect(screen.getByText('Acme')).toBeTruthy();
+	});
+
+	it('creates salary and bonus records for the selected owner tab', async () => {
+		const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(Page, { props: { data: dataWithOwnerFilter('1') } });
+		await openNewSalaryModalAndFill({
+			date: '2026-05-20',
+			gross_amount: '5000',
+			company: 'ACME'
+		});
+		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+
+		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+		let body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+		expect(body.owner_user_id).toBe(1);
+
+		await waitFor(() => expect(screen.queryByLabelText(/Data zmiany/)).toBeNull());
+		await selectSalaryTab('Premie');
+		await fireEvent.click(screen.getByRole('button', { name: /Nowy bonus/i }));
+		await fireEvent.input(screen.getByLabelText(/Data wypłaty/), {
+			target: { value: '2026-05-01' }
+		});
+		await fireEvent.input(screen.getByLabelText(/Kwota/), { target: { value: '12000' } });
+		await fireEvent.input(screen.getByLabelText(/Firma\*/), { target: { value: 'ACME' } });
+		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+
+		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+		body = JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string);
+		expect(body.owner_user_id).toBe(1);
+	});
 });
 
 describe('Salaries page — equity grant flows', () => {
@@ -548,6 +639,22 @@ describe('Salaries page — equity grant flows', () => {
 			total_shares: 1000
 		});
 		await waitFor(() => expect(invalidateAll).toHaveBeenCalled());
+	});
+
+	it('creates equity grants for the selected owner tab', async () => {
+		const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(Page, { props: { data: dataWithOwnerFilter('1') } });
+		await selectSalaryTab('Udziały');
+		await fireEvent.click(screen.getByRole('button', { name: /Nowy grant/i }));
+		await fireEvent.input(screen.getByLabelText(/Firma\*/), { target: { value: 'Acme' } });
+		await fireEvent.input(screen.getByLabelText(/Liczba akcji/), { target: { value: '1000' } });
+		await fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+
+		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+		const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+		expect(body.owner_user_id).toBe(1);
 	});
 
 	it('renders 422-detail array errors joined with semicolons', async () => {

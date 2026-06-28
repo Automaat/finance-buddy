@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
+import { createRawSnippet } from 'svelte';
+import { Wallet } from 'lucide-svelte';
 import MetricCard from './MetricCard.svelte';
 
 describe('MetricCard', () => {
@@ -9,6 +11,11 @@ describe('MetricCard', () => {
 		// pl-PL uses a comma decimal + a (non-breaking) space thousands sep;
 		// match loosely on the meaningful parts rather than the exact spacing.
 		expect(screen.getByText((text) => text.includes('234,5') && text.includes('PLN'))).toBeTruthy();
+	});
+
+	it('can render the label as a card heading', () => {
+		render(MetricCard, { props: { label: 'Wartość Netto', labelHeadingLevel: 3, value: 1234 } });
+		expect(screen.getByRole('heading', { name: 'Wartość Netto', level: 3 })).toBeTruthy();
 	});
 
 	it('shows an em-dash for null/NaN', () => {
@@ -69,5 +76,46 @@ describe('MetricCard', () => {
 	it('falls back to the em-dash when value is null and no hint is given', () => {
 		render(MetricCard, { props: { label: 'Brak', value: null } });
 		expect(screen.getByText('—')).toBeTruthy();
+	});
+
+	it('renders valueText verbatim and ignores numeric formatting props', () => {
+		render(MetricCard, {
+			props: {
+				label: 'Gotowe',
+				value: 1234.5,
+				valueText: '1 234,50 zł',
+				decimals: 0,
+				suffix: ' PLN'
+			}
+		});
+		expect(screen.getByText('1 234,50 zł')).toBeTruthy();
+		expect(screen.queryByText((text) => text.includes('PLN'))).toBeNull();
+	});
+
+	it('renders a valueText-only card without a numeric value', () => {
+		render(MetricCard, { props: { label: 'Data', valueText: '2026-06-27' } });
+		expect(screen.getByText('2026-06-27')).toBeTruthy();
+		expect(screen.queryByText('—')).toBeNull();
+	});
+
+	it('renders an icon in the label row', () => {
+		const { container } = render(MetricCard, {
+			props: { label: 'Portfel', value: 100, icon: Wallet }
+		});
+		expect(screen.getByText('Portfel')).toBeTruthy();
+		expect(container.querySelector('svg')).toBeTruthy();
+	});
+
+	it('renders children below the value', () => {
+		render(MetricCard, {
+			props: {
+				label: 'Z dodatkiem',
+				value: 10,
+				children: createRawSnippet(() => ({
+					render: () => '<span>Treść dodatkowa</span>'
+				}))
+			}
+		});
+		expect(screen.getByText('Treść dodatkowa')).toBeTruthy();
 	});
 });

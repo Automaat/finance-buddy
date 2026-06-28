@@ -4,11 +4,12 @@
 	import { resolveApiUrl } from '$lib/api';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { confirm } from '$lib/stores/confirm.svelte';
+	import MetricCard from '$lib/components/MetricCard.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import PIT38Report from '$lib/components/PIT38Report.svelte';
 	import { Plus, Trash2, BarChart, RefreshCw, Coins } from 'lucide-svelte';
 	import { CrudForm } from '$lib/stores/crudForm.svelte';
-	import { formatDate } from '$lib/utils/format';
+	import { formatDate, formatPLN } from '$lib/utils/format';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -307,10 +308,30 @@
 		data.dividends.reduce((sum, d) => sum + Number(d.net_amount), 0)
 	);
 
-	function fmtPLN(n: number): string {
-		return (
-			n.toLocaleString('pl-PL', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' zł'
-		);
+	function closeActionsMenu(node: HTMLDetailsElement) {
+		function close(returnFocus: boolean) {
+			node.open = false;
+			if (returnFocus) node.querySelector('summary')?.focus();
+		}
+		function onClick(event: MouseEvent) {
+			if (node.open && event.target instanceof Node && !node.contains(event.target)) {
+				close(false);
+			}
+		}
+		function onKeydown(event: KeyboardEvent) {
+			if (node.open && event.key === 'Escape') {
+				event.preventDefault();
+				close(true);
+			}
+		}
+		document.addEventListener('click', onClick);
+		document.addEventListener('keydown', onKeydown);
+		return {
+			destroy() {
+				document.removeEventListener('click', onClick);
+				document.removeEventListener('keydown', onKeydown);
+			}
+		};
 	}
 
 	async function refreshQuotes() {
@@ -358,57 +379,74 @@
 			</p>
 		</div>
 		<div class="flex flex-wrap gap-2">
-			<button
-				type="button"
-				class="btn preset-tonal-surface"
-				onclick={refreshQuotes}
-				disabled={refreshing}
-				title="Pobierz aktualne ceny z Stooq"
-			>
-				<RefreshCw size={16} class={refreshing ? 'animate-spin' : ''} />
-				<span>{refreshing ? 'Aktualizuję…' : 'Aktualizuj ceny'}</span>
-			</button>
-			<button type="button" class="btn preset-tonal-surface" onclick={openSecurityModal}>
-				<Plus size={16} /><span>Nowy papier</span>
-			</button>
-			<button type="button" class="btn preset-tonal-surface" onclick={openQuoteModal}>
-				<BarChart size={16} /><span>Notowanie</span>
-			</button>
-			<button type="button" class="btn preset-tonal-surface" onclick={openDividendModal}>
-				<Coins size={16} /><span>Dywidenda</span>
-			</button>
 			<button type="button" class="btn preset-filled-primary-500" onclick={openLotModal}>
 				<Plus size={16} /><span>Nowa transakcja</span>
 			</button>
+			<details class="relative" use:closeActionsMenu>
+				<summary
+					class="btn preset-tonal-surface cursor-pointer list-none"
+					aria-label="Więcej akcji"
+				>
+					<span aria-hidden="true">⋯</span>
+					<span>Więcej</span>
+				</summary>
+				<div
+					class="absolute right-0 z-10 mt-2 min-w-52 card preset-filled-surface-50-950 p-2 shadow-xl flex flex-col gap-1"
+				>
+					<button
+						type="button"
+						class="btn preset-tonal-surface justify-start"
+						onclick={refreshQuotes}
+						disabled={refreshing}
+						title="Pobierz aktualne ceny z Stooq"
+					>
+						<RefreshCw size={16} class={refreshing ? 'animate-spin' : ''} />
+						<span>{refreshing ? 'Aktualizuję…' : 'Aktualizuj ceny'}</span>
+					</button>
+					<button
+						type="button"
+						class="btn preset-tonal-surface justify-start"
+						onclick={openSecurityModal}
+					>
+						<Plus size={16} /><span>Nowy papier</span>
+					</button>
+					<button
+						type="button"
+						class="btn preset-tonal-surface justify-start"
+						onclick={openQuoteModal}
+					>
+						<BarChart size={16} /><span>Notowanie</span>
+					</button>
+					<button
+						type="button"
+						class="btn preset-tonal-surface justify-start"
+						onclick={openDividendModal}
+					>
+						<Coins size={16} /><span>Dywidenda</span>
+					</button>
+				</div>
+			</details>
 		</div>
 	</div>
 
 	{#if data.holdings.length > 0}
 		<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-			<div class="card preset-filled-surface-100-900 p-4 space-y-1">
-				<header class="text-sm text-surface-700-300">Wpłacono</header>
-				<div class="text-2xl font-bold">{fmtPLN(totalPaid)}</div>
-			</div>
-			<div class="card preset-filled-surface-100-900 p-4 space-y-1">
-				<header class="text-sm text-surface-700-300">Wartość bieżąca</header>
-				<div class="text-2xl font-bold">{fmtPLN(totalValue)}</div>
-			</div>
-			<div class="card preset-filled-surface-100-900 p-4 space-y-1">
-				<header class="text-sm text-surface-700-300">Zysk</header>
-				<div class="text-2xl font-bold {totalProfit >= 0 ? 'text-success-500' : 'text-error-500'}">
-					{totalProfit >= 0 ? '+' : ''}{fmtPLN(totalProfit)}
-				</div>
+			<MetricCard label="Wpłacono" valueText={formatPLN(totalPaid)} />
+			<MetricCard label="Wartość bieżąca" valueText={formatPLN(totalValue)} color="blue" />
+			<MetricCard
+				label="Zysk"
+				valueText={`${totalProfit >= 0 ? '+' : ''}${formatPLN(totalProfit)}`}
+				color={totalProfit >= 0 ? 'green' : 'red'}
+			>
 				<div class="text-xs text-surface-600-400">
 					{totalProfit >= 0 ? '+' : ''}{profitPct.toFixed(2)}%
 				</div>
-			</div>
-			<div class="card preset-filled-surface-100-900 p-4 space-y-1">
-				<header class="text-sm text-surface-700-300">Pozycji</header>
-				<div class="text-2xl font-bold">{data.holdings.length}</div>
+			</MetricCard>
+			<MetricCard label="Pozycji" valueText={String(data.holdings.length)}>
 				<div class="text-xs text-surface-600-400">
 					{data.holdings.map((h) => h.security.symbol).join(', ')}
 				</div>
-			</div>
+			</MetricCard>
 		</div>
 		{#if skippedCount > 0}
 			<p class="text-xs text-warning-500">
@@ -419,8 +457,12 @@
 	{/if}
 
 	{#if data.holdings.length === 0}
-		<div class="card preset-tonal-surface p-6 text-center text-sm text-surface-700-300">
-			Brak otwartych pozycji. Dodaj papier wartościowy i pierwszą transakcję.
+		<div
+			class="card preset-tonal-surface p-8 text-center text-surface-700-300 flex flex-col items-center gap-2"
+		>
+			<BarChart size={32} class="opacity-60" />
+			<p class="font-semibold">Brak otwartych pozycji</p>
+			<p class="text-sm">Dodaj papier wartościowy i pierwszą transakcję.</p>
 		</div>
 	{:else}
 		<div class="table-wrap">
@@ -583,7 +625,11 @@
 			<h2 class="h3">Papiery wartościowe</h2>
 		</header>
 		{#if data.securities.length === 0}
-			<p class="text-sm text-surface-700-300">Brak papierów wartościowych.</p>
+			<div class="py-8 text-center text-surface-700-300 flex flex-col items-center gap-2">
+				<BarChart size={32} class="opacity-60" />
+				<p class="font-semibold">Brak papierów wartościowych</p>
+				<p class="text-sm">Dodaj ticker, aby móc rejestrować transakcje i notowania.</p>
+			</div>
 		{:else}
 			<ul class="space-y-2">
 				{#each data.securities as s (s.id)}
@@ -610,14 +656,18 @@
 			<h2 class="h3 flex items-center gap-2"><Coins size={18} /> Dywidendy</h2>
 			{#if data.dividends.length > 0}
 				<span class="text-sm text-surface-700-300">
-					Netto łącznie: <span class="font-semibold">{fmtPLN(totalDividendsNet)}</span>
+					Netto łącznie: <span class="font-semibold text-success-500"
+						>{formatPLN(totalDividendsNet)}</span
+					>
 				</span>
 			{/if}
 		</header>
 		{#if data.dividends.length === 0}
-			<p class="text-sm text-surface-700-300">
-				Brak zarejestrowanych dywidend. Dodaj wpłatę dywidendy, aby uwzględnić ją w zwrotach (XIRR).
-			</p>
+			<div class="py-8 text-center text-surface-700-300 flex flex-col items-center gap-2">
+				<Coins size={32} class="opacity-60" />
+				<p class="font-semibold">Brak zarejestrowanych dywidend</p>
+				<p class="text-sm">Dodaj wpłatę dywidendy, aby uwzględnić ją w zwrotach (XIRR).</p>
+			</div>
 		{:else}
 			<div class="table-wrap">
 				<table class="table table-hover text-sm">

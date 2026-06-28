@@ -6,6 +6,7 @@
 	import AllocationDriftWidget from '$lib/components/AllocationDriftWidget.svelte';
 	import DateRangePicker from '$lib/components/DateRangePicker.svelte';
 	import DeltaBadge from '$lib/components/DeltaBadge.svelte';
+	import MetricCard from '$lib/components/MetricCard.svelte';
 	import { formatPLN } from '$lib/utils/format';
 	import {
 		Wallet,
@@ -189,11 +190,13 @@
 		</div>
 	{:then dashboard}
 		<div class="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-			<div class="card preset-filled-surface-100-900 p-4 space-y-2">
-				<header>
-					<h3 class="h4 flex items-center gap-2"><Wallet size={18} /> Wartość Netto</h3>
-				</header>
-				<div class="text-3xl font-bold">{formatPLN(dashboard.current_net_worth)}</div>
+			<MetricCard
+				label="Wartość Netto"
+				labelHeadingLevel={3}
+				valueText={formatPLN(dashboard.current_net_worth)}
+				icon={Wallet}
+				size="lg"
+			>
 				<div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
 					<DeltaBadge
 						label="MoM"
@@ -208,15 +211,16 @@
 						formulaTitle="Δ YoY = bieżąca − sprzed ~12 miesięcy; % = Δ / |sprzed ~12 miesięcy|"
 					/>
 				</div>
-			</div>
+			</MetricCard>
 
-			<div class="card preset-filled-surface-100-900 p-4 space-y-2">
-				<header>
-					<h3 class="h4 flex items-center gap-2"><TrendingUp size={18} /> Aktywa</h3>
-				</header>
-				<div class="text-3xl font-bold">
-					{formatPLN(dashboard.total_assets)}
-				</div>
+			<MetricCard
+				label="Aktywa"
+				labelHeadingLevel={3}
+				valueText={formatPLN(dashboard.total_assets)}
+				color="green"
+				icon={TrendingUp}
+				size="lg"
+			>
 				<div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
 					<DeltaBadge
 						label="MoM"
@@ -231,15 +235,16 @@
 						formulaTitle="Δ YoY = bieżąca − sprzed ~12 miesięcy; % = Δ / |sprzed ~12 miesięcy|"
 					/>
 				</div>
-			</div>
+			</MetricCard>
 
-			<div class="card preset-filled-surface-100-900 p-4 space-y-2">
-				<header>
-					<h3 class="h4 flex items-center gap-2"><TrendingDown size={18} /> Zobowiązania</h3>
-				</header>
-				<div class="text-3xl font-bold">
-					{formatPLN(dashboard.total_liabilities)}
-				</div>
+			<MetricCard
+				label="Zobowiązania"
+				labelHeadingLevel={3}
+				valueText={formatPLN(dashboard.total_liabilities)}
+				color="red"
+				icon={TrendingDown}
+				size="lg"
+			>
 				<div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
 					<DeltaBadge
 						label="MoM"
@@ -254,7 +259,7 @@
 						formulaTitle="Δ YoY = bieżąca − sprzed ~12 miesięcy; % = Δ / |sprzed ~12 miesięcy| — niższe zobowiązania (znak ujemny) = poprawa"
 					/>
 				</div>
-			</div>
+			</MetricCard>
 		</div>
 
 		{@const _fire = dashboard.metric_cards}
@@ -285,6 +290,12 @@
 			{@const bridgeNeeded = fire.bridge_capital_needed}
 			{@const bridgeLiquid = fire.bridge_liquid_capital}
 			{@const bridgeGap = fire.bridge_capital_gap}
+			{@const hasFireDetails =
+				(coastNum != null && coastGap != null && coastTargetAge != null) ||
+				leanFire != null ||
+				fatFire != null ||
+				(baristaNum != null && baristaIncome != null) ||
+				(bridgeYears != null && bridgeNeeded != null && bridgeLiquid != null && bridgeGap != null)}
 			<div class="card preset-filled-surface-100-900 p-4 space-y-3">
 				<header class="flex items-start justify-between gap-2 flex-wrap">
 					<h3 class="h4 flex items-center gap-2"><Flame size={18} /> FIRE i runway</h3>
@@ -332,71 +343,6 @@
 						</div>
 					</div>
 				{/if}
-				{#if coastNum != null && coastGap != null && coastTargetAge != null}
-					{@const surplus = coastGap <= 0}
-					<div class="pt-3 border-t border-surface-200-800 grid grid-cols-1 sm:grid-cols-2 gap-3">
-						<div class="space-y-1">
-							<div
-								class="text-xs text-surface-700-300"
-								title="coast_fire_number = FIRE ÷ (1 + expected_return)^(target_age − current_age) — kapitał potrzebny dziś, aby bez dalszych wpłat osiągnąć FIRE w docelowym wieku."
-							>
-								Coast FIRE (cel {coastTargetAge} r., {coastReturnPct}%/rok)
-							</div>
-							<div class="text-2xl font-bold">{formatPLN(coastNum)}</div>
-							<div class="text-xs text-surface-700-300">kapitał dziś, by przestać inwestować</div>
-						</div>
-						<div class="space-y-1">
-							<div class="text-xs text-surface-700-300">
-								{surplus ? 'Nadwyżka' : 'Brakuje'}
-							</div>
-							<div class="text-2xl font-bold">
-								{formatPLN(Math.abs(coastGap))}
-							</div>
-							<div class="text-xs text-surface-700-300">
-								{surplus ? 'już osiągnięto Coast FIRE' : 'do osiągnięcia Coast FIRE'}
-							</div>
-						</div>
-					</div>
-				{/if}
-				{#if leanFire != null || fatFire != null}
-					<div class="{hasBase ? 'pt-3 border-t border-surface-200-800' : ''} space-y-2">
-						<div
-							class="text-xs text-surface-700-300"
-							title="Każde pasmo = roczne wydatki danego poziomu ÷ withdrawal_rate. Bazowe = Twoje zwykłe miesięczne wydatki."
-						>
-							Pasma FIRE
-						</div>
-						<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-							{#if leanFire != null}
-								<div class="space-y-1">
-									<div class="text-xs text-surface-700-300">Lean FIRE</div>
-									<div class="text-xl font-bold">{formatPLN(leanFire)}</div>
-									<div class="text-xs text-surface-700-300">
-										{leanProgress != null ? `${leanProgress.toFixed(1)}% celu` : 'brak danych'}
-									</div>
-								</div>
-							{/if}
-							{#if hasBase}
-								<div class="space-y-1">
-									<div class="text-xs text-surface-700-300">Base FIRE</div>
-									<div class="text-xl font-bold">{firePLN}</div>
-									<div class="text-xs text-surface-700-300">
-										{progress != null ? `${progress.toFixed(1)}% celu` : 'brak danych'}
-									</div>
-								</div>
-							{/if}
-							{#if fatFire != null}
-								<div class="space-y-1">
-									<div class="text-xs text-surface-700-300">Fat FIRE</div>
-									<div class="text-xl font-bold">{formatPLN(fatFire)}</div>
-									<div class="text-xs text-surface-700-300">
-										{fatProgress != null ? `${fatProgress.toFixed(1)}% celu` : 'brak danych'}
-									</div>
-								</div>
-							{/if}
-						</div>
-					</div>
-				{/if}
 				{#if fiYears != null && fiDate != null && monthlySavings != null}
 					{@const [year, month] = fiDate.split('-')}
 					<div class="pt-3 border-t border-surface-200-800 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -429,77 +375,163 @@
 						</div>
 					</div>
 				{/if}
-				{#if baristaNum != null && baristaIncome != null}
-					<div class="pt-3 border-t border-surface-200-800 space-y-2">
-						<div class="text-xs text-surface-700-300">
-							Praca dorywcza: {formatPLN(baristaIncome)}/mies.
-						</div>
-						<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-							<div class="space-y-1">
-								<div class="text-xs text-surface-700-300">FIRE — porównanie</div>
-								<div class="text-sm">
-									Klasyczne: <span class="font-bold">{firePLN}</span>
-								</div>
+				{#if hasFireDetails}
+					<details class="pt-3 border-t border-surface-200-800">
+						<summary class="cursor-pointer text-sm font-semibold py-1">Szczegóły FIRE</summary>
+						<div class="pt-3 space-y-3">
+							{#if coastNum != null && coastGap != null && coastTargetAge != null}
+								{@const surplus = coastGap <= 0}
 								<div
-									class="text-sm"
-									title="barista_fire_number = max(0, annual_expenses − barista_annual_income) ÷ withdrawal_rate"
+									class="pt-3 border-t border-surface-200-800 grid grid-cols-1 sm:grid-cols-2 gap-3"
 								>
-									Barista: <span class="font-bold">{formatPLN(baristaNum)}</span>
-								</div>
-							</div>
-							<div class="space-y-1">
-								<div class="text-xs text-surface-700-300">Barista FI progress</div>
-								<div class="text-2xl font-bold">
-									{baristaProgress != null ? `${baristaProgress.toFixed(1)}%` : '—'}
-								</div>
-								{#if baristaYears != null}
-									<div class="text-xs text-surface-700-300">
-										FI za ~{baristaYears.toFixed(1)} lat (bez dopłat, {coastReturnPct}%/rok)
+									<div class="space-y-1">
+										<div
+											class="text-xs text-surface-700-300"
+											title="coast_fire_number = FIRE ÷ (1 + expected_return)^(target_age − current_age) — kapitał potrzebny dziś, aby bez dalszych wpłat osiągnąć FIRE w docelowym wieku."
+										>
+											Coast FIRE (cel {coastTargetAge} r., {coastReturnPct}%/rok)
+										</div>
+										<div class="text-2xl font-bold">{formatPLN(coastNum)}</div>
+										<div class="text-xs text-surface-700-300">
+											kapitał dziś, by przestać inwestować
+										</div>
 									</div>
-								{:else if (baristaProgress ?? 0) >= 100}
-									<div class="text-xs text-success-600-400">już osiągnięto Barista FIRE</div>
-								{/if}
-							</div>
-						</div>
-					</div>
-				{/if}
-				{#if bridgeYears != null && bridgeNeeded != null && bridgeLiquid != null && bridgeGap != null}
-					{@const bridgeSurplus = bridgeGap < 0}
-					{@const bridgeExact = bridgeGap === 0}
-					{@const bridgeOK = bridgeGap <= 0}
-					{@const bridgeYearsLabel = plYears(bridgeYears)}
-					<div class="pt-3 border-t border-surface-200-800 space-y-2">
-						<div
-							class="text-xs text-surface-700-300"
-							title="bridge_capital_needed = annual_expenses × (60 − current_age)&#10;bridge_liquid_capital = wartość netto − (IKE + IKZE + PPK)&#10;bridge_capital_gap = needed − liquid (dodatni = niedobór, ujemny = nadwyżka)"
-						>
-							Bridge do 60 ({bridgeYears}
-							{bridgeYearsLabel})
-						</div>
-						<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-							<div class="space-y-1">
-								<div class="text-xs text-surface-700-300">Potrzebne</div>
-								<div class="text-xl font-bold">{formatPLN(bridgeNeeded)}</div>
-								<div class="text-xs text-surface-700-300">wydatki × lata do 60</div>
-							</div>
-							<div class="space-y-1">
-								<div class="text-xs text-surface-700-300">Płynne</div>
-								<div class="text-xl font-bold">{formatPLN(bridgeLiquid)}</div>
-								<div class="text-xs text-surface-700-300">netto bez IKE/IKZE/PPK</div>
-							</div>
-							<div class="space-y-1">
-								<div class="text-xs text-surface-700-300">
-									{#if bridgeSurplus}Nadwyżka{:else if bridgeExact}Pokryty{:else}Brakuje{/if}
+									<div class="space-y-1">
+										<div class="text-xs text-surface-700-300">
+											{surplus ? 'Nadwyżka' : 'Brakuje'}
+										</div>
+										<div
+											class="text-2xl font-bold {surplus
+												? 'text-success-600-400'
+												: 'text-warning-600-400'}"
+										>
+											{formatPLN(Math.abs(coastGap))}
+										</div>
+										<div class="text-xs text-surface-700-300">
+											{surplus ? 'już osiągnięto Coast FIRE' : 'do osiągnięcia Coast FIRE'}
+										</div>
+									</div>
 								</div>
-								<div class="text-xl font-bold">
-									{formatPLN(Math.abs(bridgeGap))}
+							{/if}
+							{#if leanFire != null || fatFire != null}
+								<div class="{hasBase ? 'pt-3 border-t border-surface-200-800' : ''} space-y-2">
+									<div
+										class="text-xs text-surface-700-300"
+										title="Każde pasmo = roczne wydatki danego poziomu ÷ withdrawal_rate. Bazowe = Twoje zwykłe miesięczne wydatki."
+									>
+										Pasma FIRE
+									</div>
+									<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+										{#if leanFire != null}
+											<div class="space-y-1">
+												<div class="text-xs text-surface-700-300">Lean FIRE</div>
+												<div class="text-xl font-bold">{formatPLN(leanFire)}</div>
+												<div class="text-xs text-surface-700-300">
+													{leanProgress != null
+														? `${leanProgress.toFixed(1)}% celu`
+														: 'brak danych'}
+												</div>
+											</div>
+										{/if}
+										{#if hasBase}
+											<div class="space-y-1">
+												<div class="text-xs text-surface-700-300">Base FIRE</div>
+												<div class="text-xl font-bold">{firePLN}</div>
+												<div class="text-xs text-surface-700-300">
+													{progress != null ? `${progress.toFixed(1)}% celu` : 'brak danych'}
+												</div>
+											</div>
+										{/if}
+										{#if fatFire != null}
+											<div class="space-y-1">
+												<div class="text-xs text-surface-700-300">Fat FIRE</div>
+												<div class="text-xl font-bold">{formatPLN(fatFire)}</div>
+												<div class="text-xs text-surface-700-300">
+													{fatProgress != null ? `${fatProgress.toFixed(1)}% celu` : 'brak danych'}
+												</div>
+											</div>
+										{/if}
+									</div>
 								</div>
-								<div class="text-xs text-surface-700-300">
-									{bridgeOK ? 'mostek pokryty' : 'do uzbierania w aktywach płynnych'}
+							{/if}
+							{#if baristaNum != null && baristaIncome != null}
+								<div class="pt-3 border-t border-surface-200-800 space-y-2">
+									<div class="text-xs text-surface-700-300">
+										Praca dorywcza: {formatPLN(baristaIncome)}/mies.
+									</div>
+									<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+										<div class="space-y-1">
+											<div class="text-xs text-surface-700-300">FIRE — porównanie</div>
+											<div class="text-sm">
+												Klasyczne: <span class="font-bold">{firePLN}</span>
+											</div>
+											<div
+												class="text-sm"
+												title="barista_fire_number = max(0, annual_expenses − barista_annual_income) ÷ withdrawal_rate"
+											>
+												Barista: <span class="font-bold">{formatPLN(baristaNum)}</span>
+											</div>
+										</div>
+										<div class="space-y-1">
+											<div class="text-xs text-surface-700-300">Barista FI progress</div>
+											<div class="text-2xl font-bold">
+												{baristaProgress != null ? `${baristaProgress.toFixed(1)}%` : '—'}
+											</div>
+											{#if baristaYears != null}
+												<div class="text-xs text-surface-700-300">
+													FI za ~{baristaYears.toFixed(1)} lat (bez dopłat, {coastReturnPct}%/rok)
+												</div>
+											{:else if (baristaProgress ?? 0) >= 100}
+												<div class="text-xs text-success-600-400">już osiągnięto Barista FIRE</div>
+											{/if}
+										</div>
+									</div>
 								</div>
-							</div>
+							{/if}
+							{#if bridgeYears != null && bridgeNeeded != null && bridgeLiquid != null && bridgeGap != null}
+								{@const bridgeSurplus = bridgeGap < 0}
+								{@const bridgeExact = bridgeGap === 0}
+								{@const bridgeOK = bridgeGap <= 0}
+								{@const bridgeYearsLabel = plYears(bridgeYears)}
+								<div class="pt-3 border-t border-surface-200-800 space-y-2">
+									<div
+										class="text-xs text-surface-700-300"
+										title="bridge_capital_needed = annual_expenses × (60 − current_age)&#10;bridge_liquid_capital = wartość netto − (IKE + IKZE + PPK)&#10;bridge_capital_gap = needed − liquid (dodatni = niedobór, ujemny = nadwyżka)"
+									>
+										Bridge do 60 ({bridgeYears}
+										{bridgeYearsLabel})
+									</div>
+									<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+										<div class="space-y-1">
+											<div class="text-xs text-surface-700-300">Potrzebne</div>
+											<div class="text-xl font-bold">{formatPLN(bridgeNeeded)}</div>
+											<div class="text-xs text-surface-700-300">wydatki × lata do 60</div>
+										</div>
+										<div class="space-y-1">
+											<div class="text-xs text-surface-700-300">Płynne</div>
+											<div class="text-xl font-bold">{formatPLN(bridgeLiquid)}</div>
+											<div class="text-xs text-surface-700-300">netto bez IKE/IKZE/PPK</div>
+										</div>
+										<div class="space-y-1">
+											<div class="text-xs text-surface-700-300">
+												{#if bridgeSurplus}Nadwyżka{:else if bridgeExact}Pokryty{:else}Brakuje{/if}
+											</div>
+											<div
+												class="text-xl font-bold {bridgeOK
+													? 'text-success-600-400'
+													: 'text-warning-600-400'}"
+											>
+												{formatPLN(Math.abs(bridgeGap))}
+											</div>
+											<div class="text-xs text-surface-700-300">
+												{bridgeOK ? 'mostek pokryty' : 'do uzbierania w aktywach płynnych'}
+											</div>
+										</div>
+									</div>
+								</div>
+							{/if}
 						</div>
-					</div>
+					</details>
 				{/if}
 			</div>
 		{/if}

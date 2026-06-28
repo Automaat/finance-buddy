@@ -85,6 +85,13 @@
 	const sort = $derived(parseSortParam($page.url.searchParams.get(paramName)));
 	const sortedItems = $derived(sortRows(items, columns, sort));
 
+	$effect(() => {
+		if (!sort || columns.some((column) => column.key === sort.key)) return;
+		const url = new URL($page.url);
+		url.searchParams.delete(paramName);
+		replaceState(url, $page.state);
+	});
+
 	function cycleSort(key: string): void {
 		const url = new URL($page.url);
 		const next = nextSortDirection(sort, key);

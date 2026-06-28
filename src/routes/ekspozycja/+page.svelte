@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { Globe } from 'lucide-svelte';
+	import MetricCard from '$lib/components/MetricCard.svelte';
 	import { formatPLN, formatDate } from '$lib/utils/format';
 	import { chartPalette } from '$lib/utils/theme';
 	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
@@ -132,45 +133,36 @@
 	</form>
 
 	{#if report.currencies.length === 0}
-		<div class="card preset-filled-surface-100-900 p-6 text-surface-700-300">
-			Brak snapshotu lub aktywnych kont — dodaj pierwszy snapshot, aby zobaczyć ekspozycję.
+		<div
+			class="card preset-filled-surface-100-900 p-8 text-center text-surface-700-300 flex flex-col items-center gap-2"
+		>
+			<Globe size={32} class="opacity-60" />
+			<p class="font-semibold">Brak danych o ekspozycji walutowej</p>
+			<p class="text-sm">Dodaj pierwszy snapshot lub aktywne konto, aby zobaczyć podział walut.</p>
 		</div>
 	{:else}
 		<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-			<div class="card preset-tonal-surface p-4">
-				<div class="text-xs text-surface-600-400">Udział PLN</div>
-				<div class="text-2xl font-bold">{report.pln_pct.toFixed(1)}%</div>
-			</div>
-			<div class="card preset-tonal-surface p-4">
-				<div class="text-xs text-surface-600-400">Waluty obce</div>
-				<div class="text-2xl font-bold">{report.foreign_pct.toFixed(1)}%</div>
-			</div>
-			<div class="card preset-tonal-surface p-4">
-				<div class="text-xs text-surface-600-400">Wartość portfela</div>
-				<div class="text-2xl font-bold">{formatPLN(report.total_pln)}</div>
-			</div>
-			<div class="card preset-tonal-surface p-4">
-				<div class="text-xs text-surface-600-400">Snapshot</div>
-				<div class="text-2xl font-bold">{formatDate(report.snapshot_date)}</div>
-			</div>
+			<MetricCard label="Udział PLN" valueText={`${report.pln_pct.toFixed(1)}%`} />
+			<MetricCard label="Waluty obce" valueText={`${report.foreign_pct.toFixed(1)}%`} />
+			<MetricCard label="Wartość portfela" valueText={formatPLN(report.total_pln)} />
+			<MetricCard label="Snapshot" valueText={formatDate(report.snapshot_date)} />
 		</div>
 
 		{#if report.drift}
 			{@const within = report.drift.within_tolerance}
-			<div class="card {within ? 'preset-tonal-success' : 'preset-tonal-warning'} p-4">
-				<div class="text-sm font-semibold">
-					Dryft względem celu {report.drift.target_pln_pct}% PLN
-				</div>
-				<div class="text-3xl font-bold">
-					{report.drift.drift_pln_pct >= 0 ? '+' : ''}{report.drift.drift_pln_pct.toFixed(1)} pp
-				</div>
+			<MetricCard
+				label={`Dryft względem celu ${report.drift.target_pln_pct}% PLN`}
+				valueText={`${report.drift.drift_pln_pct >= 0 ? '+' : ''}${report.drift.drift_pln_pct.toFixed(1)} pp`}
+				color={within ? 'green' : 'yellow'}
+				size="lg"
+			>
 				<div class="text-sm">
 					Aktualnie {report.drift.actual_pln_pct.toFixed(1)}% ·
 					{within
 						? `w tolerancji ±${report.drift.tolerance_pct} pp`
 						: `poza pasmem ±${report.drift.tolerance_pct} pp`}
 				</div>
-			</div>
+			</MetricCard>
 		{/if}
 
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-6">

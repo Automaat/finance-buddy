@@ -60,7 +60,26 @@
 
 	const apiUrl = resolveApiUrl();
 	const owners = $derived(data.owners as OwnerOption[]);
-	const defaultOwnerId = $derived<number | null>(owners.length > 0 ? owners[0].id : null);
+	const defaultOwnerId = $derived.by<number | null>(() => {
+		if (owners.length === 0) return null;
+		const ownerIds = new Set(owners.map((owner) => owner.id));
+		const counts = new Map<number, number>();
+		for (const record of data.salaries.salary_records) {
+			const ownerUserId = record.owner_user_id;
+			if (ownerUserId === null || !ownerIds.has(ownerUserId)) continue;
+			counts.set(ownerUserId, (counts.get(ownerUserId) ?? 0) + 1);
+		}
+		let selected = owners[0].id;
+		let bestCount = counts.get(selected) ?? 0;
+		for (const owner of owners.slice(1)) {
+			const count = counts.get(owner.id) ?? 0;
+			if (count > bestCount) {
+				selected = owner.id;
+				bestCount = count;
+			}
+		}
+		return selected;
+	});
 	const cpiSeries = $derived(data.cpiSeries as CpiSeries);
 	const inflationContext = $derived(data.salaries.inflation_context ?? {});
 
@@ -131,6 +150,7 @@
 		})
 	);
 	const filterOwnerUserId = $derived(activeOwnerId);
+	const selectedOwnerId = $derived(activeOwnerId ?? defaultOwnerId);
 
 	const inflationEntries = $derived(
 		Object.values(inflationContext).filter(
@@ -303,7 +323,7 @@
 		currency: 'PLN',
 		type: 'annual' as BonusType,
 		company: '',
-		owner_user_id: untrack(() => defaultOwnerId),
+		owner_user_id: untrack(() => selectedOwnerId),
 		contract_type: 'UOP',
 		notes: ''
 	});
@@ -323,7 +343,7 @@
 			currency: 'PLN',
 			type: 'annual',
 			company: '',
-			owner_user_id: defaultOwnerId,
+			owner_user_id: selectedOwnerId,
 			contract_type: 'UOP',
 			notes: ''
 		};
@@ -576,7 +596,7 @@
 		grant_date: new Date().toISOString().split('T')[0],
 		type: 'rsu' as EquityGrantType,
 		company: '',
-		owner_user_id: untrack(() => defaultOwnerId),
+		owner_user_id: untrack(() => selectedOwnerId),
 		total_shares: 0,
 		strike_price: null as number | null,
 		currency: 'USD',
@@ -617,7 +637,7 @@
 			grant_date: new Date().toISOString().split('T')[0],
 			type: 'rsu',
 			company: '',
-			owner_user_id: defaultOwnerId,
+			owner_user_id: selectedOwnerId,
 			total_shares: 0,
 			strike_price: null,
 			currency: 'USD',
@@ -998,7 +1018,7 @@
 			gross_amount: 0,
 			contract_type: 'UOP',
 			company: '',
-			owner_user_id: defaultOwnerId
+			owner_user_id: selectedOwnerId
 		};
 		salaryError = '';
 		showNewSalaryModal = true;
@@ -1512,8 +1532,10 @@
 						<h3 class="h3 flex items-center gap-2"><BarChart3 size={20} /> Historia zmian</h3>
 					</header>
 					{#if visibleSalaryRecords.length === 0}
-						<div class="text-center py-12 text-surface-700-300">
-							<p>Brak rekordów wynagrodzeń</p>
+						<div class="py-12 text-center text-surface-700-300 flex flex-col items-center gap-2">
+							<BarChart3 size={32} class="opacity-60" />
+							<p class="font-semibold">Brak rekordów wynagrodzeń</p>
+							<p class="text-sm">Dodaj pierwszą zmianę pensji dla wybranej osoby.</p>
 						</div>
 					{:else}
 						<div class="table-wrap">
@@ -1582,9 +1604,11 @@
 						</button>
 					</header>
 
-					{#if bonusEvents.length === 0}
-						<div class="text-center py-8 text-surface-700-300">
-							<p>Brak zarejestrowanych bonusów</p>
+					{#if visibleBonusEvents.length === 0}
+						<div class="py-10 text-center text-surface-700-300 flex flex-col items-center gap-2">
+							<Gift size={32} class="opacity-60" />
+							<p class="font-semibold">Brak zarejestrowanych bonusów</p>
+							<p class="text-sm">Dodaj bonus, aby uwzględnić go w rocznym wynagrodzeniu.</p>
 						</div>
 					{:else}
 						<div class="space-y-4">
@@ -1673,9 +1697,11 @@
 						</button>
 					</header>
 
-					{#if equityGrants.length === 0}
-						<div class="text-center py-8 text-surface-700-300">
-							<p>Brak zarejestrowanych grantów</p>
+					{#if visibleEquityGrants.length === 0}
+						<div class="py-10 text-center text-surface-700-300 flex flex-col items-center gap-2">
+							<Award size={32} class="opacity-60" />
+							<p class="font-semibold">Brak zarejestrowanych grantów</p>
+							<p class="text-sm">Dodaj grant opcji lub RSU, aby śledzić vesting.</p>
 						</div>
 					{:else}
 						<div class="space-y-4">

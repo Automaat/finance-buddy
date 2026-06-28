@@ -21,12 +21,30 @@
 	const apiUrl = resolveApiUrl();
 	let owners: OwnerOption[] = $state([]);
 	const defaultOwnerUserId = $derived(owners.length > 0 ? owners[0].id : null);
+	let showRealYield = $state(true);
 
 	$effect(() => {
 		let cancelled = false;
 		Promise.resolve(data.owners).then((p) => {
 			if (!cancelled) owners = (p ?? []) as OwnerOption[];
 		});
+		return () => {
+			cancelled = true;
+		};
+	});
+
+	$effect(() => {
+		let cancelled = false;
+		Promise.resolve(data.accountsData)
+			.then((accounts) => {
+				if (cancelled) return;
+				showRealYield = accounts.assets.some(
+					(a) => a.real_yield_pct != null || a.interest_rate_pct != null
+				);
+			})
+			.catch((err) => {
+				if (!cancelled) console.error('Failed to derive real yield column:', err);
+			});
 		return () => {
 			cancelled = true;
 		};
@@ -178,6 +196,10 @@
 		}
 		const cpi = formatNumber(a.cpi_yoy_pct, 2);
 		return `Nominalne ${nominal}% · ${belkaPart} · minus CPI ${a.cpi_as_of_year}: ${cpi}%`;
+	}
+
+	function totalValue(accounts: Account[]): number {
+		return accounts.reduce((sum, account) => sum + account.current_value, 0);
 	}
 
 	function startCreate() {
@@ -437,6 +459,41 @@
 	<title>Konta | Finansowa Forteca</title>
 </svelte:head>
 
+{#snippet accountActions(account: Account)}
+	<td class="text-right whitespace-nowrap">
+		<button
+			type="button"
+			class="btn-icon btn-icon-sm"
+			aria-label="Edytuj"
+			title="Edytuj"
+			onclick={() => startEdit(account)}
+		>
+			<Pencil size={16} />
+		</button>
+		{#if INVESTMENT_CATEGORIES.has(account.category) || account.account_wrapper}
+			<button
+				type="button"
+				class="btn preset-tonal-surface btn-sm gap-1"
+				aria-label="Transakcje: {transactionCounts[account.id] || 0}"
+				title="Liczba transakcji"
+				onclick={() => openTransactions(account.id, account.name, account.account_wrapper)}
+			>
+				<BarChart3 size={14} />
+				<span>{transactionCounts[account.id] || 0}</span>
+			</button>
+		{/if}
+		<button
+			type="button"
+			class="btn-icon btn-icon-sm preset-tonal-error"
+			aria-label="Usuń"
+			title="Usuń"
+			onclick={() => handleDelete(account.id)}
+		>
+			<Trash2 size={16} />
+		</button>
+	</td>
+{/snippet}
+
 {#snippet assetRow(account: Account)}
 	<tr>
 		<td class="font-medium" data-label="Nazwa">
@@ -455,54 +512,25 @@
 		<td class="font-semibold" data-label="Wartość">
 			{formatPLN(account.current_value)}
 		</td>
-		<td class="whitespace-nowrap" data-label="Realne %">
-			{#if account.real_yield_pct != null}
-				<span
-					class="font-semibold {realYieldColorClass(account.real_yield_pct)}"
-					title={realYieldTooltip(account)}
-				>
-					{formatPct(account.real_yield_pct)}
-				</span>
-			{:else if account.interest_rate_pct != null}
-				<span class="text-surface-700-300" title={realYieldTooltip(account)}>
-					{formatNumber(account.interest_rate_pct, 2)}%
-				</span>
-			{:else}
-				<span class="text-surface-500-500" aria-hidden="true">—</span>
-			{/if}
-		</td>
-		<td class="text-right whitespace-nowrap">
-			<button
-				type="button"
-				class="btn-icon btn-icon-sm"
-				aria-label="Edytuj"
-				title="Edytuj"
-				onclick={() => startEdit(account)}
-			>
-				<Pencil size={16} />
-			</button>
-			{#if INVESTMENT_CATEGORIES.has(account.category) || account.account_wrapper}
-				<button
-					type="button"
-					class="btn preset-tonal-surface btn-sm gap-1"
-					aria-label="Transakcje: {transactionCounts[account.id] || 0}"
-					title="Liczba transakcji"
-					onclick={() => openTransactions(account.id, account.name, account.account_wrapper)}
-				>
-					<BarChart3 size={14} />
-					<span>{transactionCounts[account.id] || 0}</span>
-				</button>
-			{/if}
-			<button
-				type="button"
-				class="btn-icon btn-icon-sm preset-tonal-error"
-				aria-label="Usuń"
-				title="Usuń"
-				onclick={() => handleDelete(account.id)}
-			>
-				<Trash2 size={16} />
-			</button>
-		</td>
+		{#if showRealYield}
+			<td class="whitespace-nowrap" data-label="Realne %">
+				{#if account.real_yield_pct != null}
+					<span
+						class="font-semibold {realYieldColorClass(account.real_yield_pct)}"
+						title={realYieldTooltip(account)}
+					>
+						{formatPct(account.real_yield_pct)}
+					</span>
+				{:else if account.interest_rate_pct != null}
+					<span class="text-surface-700-300" title={realYieldTooltip(account)}>
+						{formatNumber(account.interest_rate_pct, 2)}%
+					</span>
+				{:else}
+					<span class="text-surface-500-500" aria-hidden="true">—</span>
+				{/if}
+			</td>
+		{/if}
+		{@render accountActions(account)}
 	</tr>
 {/snippet}
 
@@ -601,17 +629,27 @@
 		{/each}
 	</div>
 {:then accounts}
+	{@const assetTotal = totalValue(accounts.assets)}
+	{@const liabilityTotal = totalValue(accounts.liabilities)}
+	{@const visibleAccountColumns = showRealYield
+		? accountColumns
+		: accountColumns.filter((column) => column.key !== 'real_yield')}
 	<div class="space-y-4">
 		<div class="card preset-filled-surface-100-900 p-4 space-y-4">
-			<header>
+			<header class="flex flex-wrap items-center justify-between gap-2">
 				<h3 class="h3 flex items-center gap-2"><Wallet size={20} /> Aktywa</h3>
+				<span class="text-sm font-semibold text-primary-600-400">{formatPLN(assetTotal)}</span>
 			</header>
 			{#if accounts.assets.length === 0}
-				<div class="text-center py-12 text-surface-700-300"><p>Brak aktywów</p></div>
+				<div class="py-12 text-center text-surface-700-300 flex flex-col items-center gap-2">
+					<Wallet size={32} class="opacity-60" />
+					<p class="font-semibold">Brak aktywów</p>
+					<p class="text-sm">Dodaj konto, inwestycję albo inny składnik majątku.</p>
+				</div>
 			{:else}
 				<div class="table-cards">
 					<SortableTable
-						columns={accountColumns}
+						columns={visibleAccountColumns}
 						items={accounts.assets}
 						row={assetRow}
 						paramName="sortA"
@@ -622,11 +660,16 @@
 		</div>
 
 		<div class="card preset-filled-surface-100-900 p-4 space-y-4">
-			<header>
+			<header class="flex flex-wrap items-center justify-between gap-2">
 				<h3 class="h3 flex items-center gap-2"><TrendingDown size={20} /> Pasywa</h3>
+				<span class="text-sm font-semibold text-error-600-400">{formatPLN(liabilityTotal)}</span>
 			</header>
 			{#if accounts.liabilities.length === 0}
-				<div class="text-center py-12 text-surface-700-300"><p>Brak pasywów</p></div>
+				<div class="py-12 text-center text-surface-700-300 flex flex-col items-center gap-2">
+					<TrendingDown size={32} class="opacity-60" />
+					<p class="font-semibold">Brak pasywów</p>
+					<p class="text-sm">Dodaj kredyt lub raty, jeśli chcesz śledzić zobowiązania.</p>
+				</div>
 			{:else}
 				<div class="table-cards">
 					<SortableTable

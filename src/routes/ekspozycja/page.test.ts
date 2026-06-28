@@ -58,7 +58,8 @@ describe('Ekspozycja page', () => {
 				data: { user: null, report: report({ currencies: [] }), targetPLNPct: null, tolerance: 5 }
 			}
 		});
-		expect(screen.getByText(/Brak snapshotu lub aktywnych kont/)).toBeTruthy();
+		expect(screen.getByText('Brak danych o ekspozycji walutowej')).toBeTruthy();
+		expect(screen.getByText(/Dodaj pierwszy snapshot lub aktywne konto/)).toBeTruthy();
 	});
 
 	it('renders the drift band when a target is set', () => {

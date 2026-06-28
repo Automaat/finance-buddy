@@ -17,7 +17,8 @@
 		inflationPct = $bindable(3),
 		withdrawalRatePct = $bindable(4),
 		monthlyPensionNetPLN = $bindable(3500),
-		pensionBasis = $bindable<PensionPriceBasis>('today')
+		pensionBasis = $bindable<PensionPriceBasis>('today'),
+		expectedReturnDisabled = false
 	}: {
 		currentAge?: number;
 		retirementAge?: number;
@@ -29,6 +30,7 @@
 		withdrawalRatePct?: number;
 		monthlyPensionNetPLN?: number;
 		pensionBasis?: PensionPriceBasis;
+		expectedReturnDisabled?: boolean;
 	} = $props();
 
 	const inputs = $derived<FireGapInputs>({
