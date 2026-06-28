@@ -244,6 +244,7 @@
 		bind:currentPortfolioPLN={currentPortfolio}
 		bind:annualContributionPLN={annualContribution}
 		bind:expectedReturnPct={expectedReturn}
+		expectedReturnDisabled={useAllocation}
 	/>
 
 	<section class="card preset-filled-surface-100-900 p-5 space-y-4">

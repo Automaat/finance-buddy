@@ -9,7 +9,7 @@
 	import PIT38Report from '$lib/components/PIT38Report.svelte';
 	import { Plus, Trash2, BarChart, RefreshCw, Coins } from 'lucide-svelte';
 	import { CrudForm } from '$lib/stores/crudForm.svelte';
-	import { formatDate } from '$lib/utils/format';
+	import { formatDate, formatPLN } from '$lib/utils/format';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -308,12 +308,6 @@
 		data.dividends.reduce((sum, d) => sum + Number(d.net_amount), 0)
 	);
 
-	function fmtPLN(n: number): string {
-		return (
-			n.toLocaleString('pl-PL', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' zł'
-		);
-	}
-
 	function closeActionsMenu(node: HTMLDetailsElement) {
 		function close(returnFocus: boolean) {
 			node.open = false;
@@ -437,11 +431,11 @@
 
 	{#if data.holdings.length > 0}
 		<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-			<MetricCard label="Wpłacono" valueText={fmtPLN(totalPaid)} />
-			<MetricCard label="Wartość bieżąca" valueText={fmtPLN(totalValue)} color="blue" />
+			<MetricCard label="Wpłacono" valueText={formatPLN(totalPaid)} />
+			<MetricCard label="Wartość bieżąca" valueText={formatPLN(totalValue)} color="blue" />
 			<MetricCard
 				label="Zysk"
-				valueText={`${totalProfit >= 0 ? '+' : ''}${fmtPLN(totalProfit)}`}
+				valueText={`${totalProfit >= 0 ? '+' : ''}${formatPLN(totalProfit)}`}
 				color={totalProfit >= 0 ? 'green' : 'red'}
 			>
 				<div class="text-xs text-surface-600-400">
@@ -662,7 +656,9 @@
 			<h2 class="h3 flex items-center gap-2"><Coins size={18} /> Dywidendy</h2>
 			{#if data.dividends.length > 0}
 				<span class="text-sm text-surface-700-300">
-					Netto łącznie: <span class="font-semibold">{fmtPLN(totalDividendsNet)}</span>
+					Netto łącznie: <span class="font-semibold text-success-500"
+						>{formatPLN(totalDividendsNet)}</span
+					>
 				</span>
 			{/if}
 		</header>

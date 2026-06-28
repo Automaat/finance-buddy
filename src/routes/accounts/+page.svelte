@@ -35,12 +35,16 @@
 
 	$effect(() => {
 		let cancelled = false;
-		Promise.resolve(data.accountsData).then((accounts) => {
-			if (cancelled) return;
-			showRealYield = accounts.assets.some(
-				(a) => a.real_yield_pct != null || a.interest_rate_pct != null
-			);
-		});
+		Promise.resolve(data.accountsData)
+			.then((accounts) => {
+				if (cancelled) return;
+				showRealYield = accounts.assets.some(
+					(a) => a.real_yield_pct != null || a.interest_rate_pct != null
+				);
+			})
+			.catch((err) => {
+				if (!cancelled) console.error('Failed to derive real yield column:', err);
+			});
 		return () => {
 			cancelled = true;
 		};

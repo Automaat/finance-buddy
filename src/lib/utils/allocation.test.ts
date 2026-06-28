@@ -55,13 +55,19 @@ describe('topNWithOther', () => {
 		).toEqual([
 			bucket('second', 20),
 			bucket('first', 10),
-			{ category: 'Inne', owner_user_id: null, value: 10 }
+			{ category: 'Inne', owner_user_id: null, value: 10, isOther: true }
 		]);
 	});
 
-	it('omits Inne when the tail sum is not positive', () => {
+	it('omits Inne when filtering leaves no tail', () => {
 		expect(topNWithOther([bucket('bank', 100), bucket('zero', 0)], 1)).toEqual([
 			bucket('bank', 100)
+		]);
+	});
+
+	it('groups every positive item under Inne when the limit is zero', () => {
+		expect(topNWithOther([bucket('bank', 100), bucket('stock', 50)], 0)).toEqual([
+			{ category: 'Inne', owner_user_id: null, value: 150, isOther: true }
 		]);
 	});
 });

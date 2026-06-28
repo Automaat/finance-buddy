@@ -13,6 +13,7 @@ export interface AllocationBucket {
 	category: string;
 	owner_user_id: number | null;
 	value: number;
+	isOther?: boolean;
 }
 
 export function topNWithOther<T extends AllocationBucket>(
@@ -23,14 +24,14 @@ export function topNWithOther<T extends AllocationBucket>(
 		.map((item, index) => ({ item, index }))
 		.filter(({ item }) => Number.isFinite(item.value) && item.value > 0);
 
-	if (ranked.length <= n) return ranked.map(({ item }) => item);
+	const limit = Math.max(0, n);
+	if (ranked.length <= limit) return ranked.map(({ item }) => item);
 
 	ranked.sort((a, b) => b.item.value - a.item.value || a.index - b.index);
 
-	const head = ranked.slice(0, n).map(({ item }) => item);
-	const tailSum = ranked.slice(n).reduce((sum, { item }) => sum + item.value, 0);
-	if (tailSum <= 0) return head;
+	const head = ranked.slice(0, limit).map(({ item }) => item);
+	const tailSum = ranked.slice(limit).reduce((sum, { item }) => sum + item.value, 0);
 
-	const other = { category: 'Inne', owner_user_id: null, value: tailSum };
+	const other = { category: 'Inne', owner_user_id: null, value: tailSum, isOther: true };
 	return [...head, other];
 }

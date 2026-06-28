@@ -150,6 +150,7 @@
 		})
 	);
 	const filterOwnerUserId = $derived(activeOwnerId);
+	const selectedOwnerId = $derived(activeOwnerId ?? defaultOwnerId);
 
 	const inflationEntries = $derived(
 		Object.values(inflationContext).filter(
@@ -322,7 +323,7 @@
 		currency: 'PLN',
 		type: 'annual' as BonusType,
 		company: '',
-		owner_user_id: untrack(() => defaultOwnerId),
+		owner_user_id: untrack(() => selectedOwnerId),
 		contract_type: 'UOP',
 		notes: ''
 	});
@@ -342,7 +343,7 @@
 			currency: 'PLN',
 			type: 'annual',
 			company: '',
-			owner_user_id: defaultOwnerId,
+			owner_user_id: selectedOwnerId,
 			contract_type: 'UOP',
 			notes: ''
 		};
@@ -595,7 +596,7 @@
 		grant_date: new Date().toISOString().split('T')[0],
 		type: 'rsu' as EquityGrantType,
 		company: '',
-		owner_user_id: untrack(() => defaultOwnerId),
+		owner_user_id: untrack(() => selectedOwnerId),
 		total_shares: 0,
 		strike_price: null as number | null,
 		currency: 'USD',
@@ -636,7 +637,7 @@
 			grant_date: new Date().toISOString().split('T')[0],
 			type: 'rsu',
 			company: '',
-			owner_user_id: defaultOwnerId,
+			owner_user_id: selectedOwnerId,
 			total_shares: 0,
 			strike_price: null,
 			currency: 'USD',
@@ -1017,7 +1018,7 @@
 			gross_amount: 0,
 			contract_type: 'UOP',
 			company: '',
-			owner_user_id: defaultOwnerId
+			owner_user_id: selectedOwnerId
 		};
 		salaryError = '';
 		showNewSalaryModal = true;

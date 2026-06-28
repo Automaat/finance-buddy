@@ -136,10 +136,7 @@
 				label: { show: !$isMobile },
 				labelLine: { show: !$isMobile },
 				data: allocationSlices.map((a) => ({
-					name:
-						a.category === 'Inne'
-							? 'Inne'
-							: `${a.category} (${ownerName(owners, a.owner_user_id)})`,
+					name: a.isOther ? 'Inne' : `${a.category} (${ownerName(owners, a.owner_user_id)})`,
 					value: a.value
 				})),
 				emphasis: {
