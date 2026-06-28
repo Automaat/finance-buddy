@@ -21,7 +21,7 @@
 	const apiUrl = resolveApiUrl();
 	let owners: OwnerOption[] = $state([]);
 	const defaultOwnerUserId = $derived(owners.length > 0 ? owners[0].id : null);
-	let showRealYield = $state(false);
+	let showRealYield = $state(true);
 
 	$effect(() => {
 		let cancelled = false;
