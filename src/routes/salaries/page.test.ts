@@ -453,6 +453,39 @@ describe('Salaries page — saveSalary validation & error display', () => {
 		});
 		await waitFor(() => expect(invalidateAll).toHaveBeenCalled());
 	});
+
+	it('defaults to the owner with existing salary records when no owner filter is set', async () => {
+		const data = {
+			...baseData,
+			owners: [
+				{ id: 1, name: 'Admin' },
+				{ id: 2, name: 'Marcin' }
+			],
+			salaries: {
+				...baseData.salaries,
+				salary_records: [
+					{
+						id: 10,
+						date: '2026-05-01',
+						gross_amount: 10000,
+						contract_type: 'UOP',
+						company: 'Acme',
+						owner_user_id: 2,
+						is_active: true,
+						created_at: '2026-05-01T00:00:00Z'
+					}
+				],
+				current_salaries: { '1': null, '2': null }
+			}
+		};
+
+		render(Page, { props: { data } });
+
+		expect(screen.getByRole('tab', { name: 'Admin' }).getAttribute('aria-selected')).toBe('false');
+		expect(screen.getByRole('tab', { name: 'Marcin' }).getAttribute('aria-selected')).toBe('true');
+		await selectSalaryTab('Historia');
+		expect(screen.getByText('Acme')).toBeTruthy();
+	});
 });
 
 describe('Salaries page — equity grant flows', () => {

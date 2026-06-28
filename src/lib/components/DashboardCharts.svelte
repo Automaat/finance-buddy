@@ -9,6 +9,7 @@
 	import { ownerName, type OwnerOption } from '$lib/types/owners';
 	import { createChart } from '$lib/utils/charts/lifecycle';
 	import { buildWaterfallOption, buildWaterfallSteps } from '$lib/utils/charts/waterfall';
+	import { topNWithOther } from '$lib/utils/allocation';
 
 	interface NetWorthHistoryPoint {
 		date: string;
@@ -61,6 +62,7 @@
 	);
 
 	const titleFontSize = $derived($isMobile ? 14 : 16);
+	const allocationSlices = $derived(topNWithOther(allocation, 6));
 
 	const lineOption = $derived<EChartsOption>({
 		title: {
@@ -133,8 +135,11 @@
 				avoidLabelOverlap: true,
 				label: { show: !$isMobile },
 				labelLine: { show: !$isMobile },
-				data: allocation.map((a) => ({
-					name: `${a.category} (${ownerName(owners, a.owner_user_id)})`,
+				data: allocationSlices.map((a) => ({
+					name:
+						a.category === 'Inne'
+							? 'Inne'
+							: `${a.category} (${ownerName(owners, a.owner_user_id)})`,
 					value: a.value
 				})),
 				emphasis: {
