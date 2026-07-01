@@ -196,7 +196,7 @@
 </script>
 
 <svelte:head>
-	<title>Metryki - Finance Buddy</title>
+	<title>Metryki | Finansowa Forteca</title>
 </svelte:head>
 
 <div class="space-y-6">

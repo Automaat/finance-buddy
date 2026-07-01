@@ -86,7 +86,7 @@
 </script>
 
 <svelte:head>
-	<title>Ekspozycja walutowa - Finance Buddy</title>
+	<title>Ekspozycja walutowa | Finansowa Forteca</title>
 </svelte:head>
 
 <div class="space-y-6">
