@@ -43,7 +43,7 @@
 	"dependencies": {
 		"@internationalized/date": "^3.10.1",
 		"@skeletonlabs/skeleton": "^5.0.0",
-		"@skeletonlabs/skeleton-svelte": "^4.15.2",
+		"@skeletonlabs/skeleton-svelte": "^5.0.0",
 		"echarts": "^6.0.0",
 		"lucide-svelte": "^1.0.1",
 		"tslib": "^2.8.1",
