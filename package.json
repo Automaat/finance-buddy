@@ -25,7 +25,7 @@
 		"@tailwindcss/vite": "^4.2.2",
 		"@testing-library/dom": "^10.4.1",
 		"@testing-library/svelte": "^5.3.1",
-		"@vitest/coverage-v8": "^4.0.17",
+		"@vitest/coverage-v8": "^5.0.0",
 		"jsdom": "^30.0.0",
 		"openapi-typescript": "^7.13.0",
 		"oxlint": "1.81.0",
@@ -37,7 +37,7 @@
 		"tailwindcss": "^4.2.2",
 		"typescript": "7.0.2",
 		"vite": "8.2.2",
-		"vitest": "^4.0.17"
+		"vitest": "^5.0.0"
 	},
 	"type": "module",
 	"dependencies": {
