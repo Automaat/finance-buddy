@@ -28,7 +28,7 @@
 		"@vitest/coverage-v8": "^5.0.0",
 		"jsdom": "^30.0.0",
 		"openapi-typescript": "^7.13.0",
-		"oxlint": "1.87.0",
+		"oxlint": "1.88.0",
 		"postcss": "^8.4.41",
 		"prettier": "3.9.10",
 		"prettier-plugin-svelte": "4.1.1",
