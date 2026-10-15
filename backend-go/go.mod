@@ -3,7 +3,7 @@ module github.com/Automaat/finance-buddy/backend-go
 go 1.26.0
 
 require (
-	github.com/getkin/kin-openapi v0.150.0
+	github.com/getkin/kin-openapi v0.151.0
 	github.com/go-chi/chi/v5 v5.5.0
 	github.com/go-chi/cors v1.2.2
 	github.com/golang-jwt/jwt/v5 v5.3.1
