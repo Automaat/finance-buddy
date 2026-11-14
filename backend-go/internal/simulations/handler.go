@@ -98,8 +98,7 @@ func (h *Handler) MortgageVsInvest(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := SimulateMortgageVsInvest(in)
 	if err != nil {
-		var budgetErr *BudgetTooLowError
-		if errors.As(err, &budgetErr) {
+		if budgetErr, ok := errors.AsType[*BudgetTooLowError](err); ok {
 			httputil.WriteDetailError(w, http.StatusBadRequest,
 				fmt.Sprintf("Total monthly budget (%.2f PLN) is less than "+
 					"the required mortgage payment (%.2f PLN)",
