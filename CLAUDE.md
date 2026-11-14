@@ -406,6 +406,14 @@ Production runs on a self-hosted NAS, managed by Ansible in a separate repo:
   proxy; `API_PROXY_TARGET=http://finance-backend-go:8000`.
 - Admin is re-seeded from `FB_ADMIN_*` on every startup (can't be locked out);
   changing `FB_JWT_SECRET` invalidates all sessions.
+- Authelia SSO (optional): `FB_OIDC_ISSUER_URL` (`https://auth.mskalski.dev`),
+  `FB_OIDC_CLIENT_ID` (`finance`), `FB_OIDC_CLIENT_SECRET`,
+  `FB_OIDC_REDIRECT_URL` (`https://finance.mskalski.dev/api/auth/oidc/callback`).
+  All four set enables the "Zaloguj przez Authelia" button; none set disables
+  it; a partial set fails startup. Authelia client: `client_secret_basic`,
+  PKCE S256, scopes `openid profile email`. Login maps `preferred_username` to
+  an **existing** user (no auto-provisioning); password login keeps working.
+  Discovery is lazy, so the backend starts while Authelia is down.
 
 ---
 

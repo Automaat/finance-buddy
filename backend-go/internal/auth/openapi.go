@@ -16,6 +16,21 @@ var APISpec = []apispec.Route{
 		Status:  204,
 	},
 	{
+		Method: "GET", Path: "/api/auth/oidc/status", Tag: "auth",
+		Summary:  "Report whether OIDC login is enabled",
+		Response: oidcStatusResponse{},
+	},
+	{
+		Method: "GET", Path: "/api/auth/oidc/login", Tag: "auth",
+		Summary: "Start OIDC login (redirects to the provider)",
+		Status:  302,
+	},
+	{
+		Method: "GET", Path: "/api/auth/oidc/callback", Tag: "auth",
+		Summary: "Finish OIDC login (redirects to the app)",
+		Status:  302,
+	},
+	{
 		Method: "GET", Path: "/api/auth/me", Tag: "auth",
 		Summary:  "Read current user",
 		Response: userResponse{},

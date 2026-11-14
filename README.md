@@ -88,6 +88,24 @@ docker-compose up -d
 `ORIGIN`, `CORS_ORIGINS`, and `PUBLIC_API_URL_BROWSER` can be overridden
 for deployments behind a custom domain.
 
+### Single sign-on (Authelia)
+
+Optional OIDC login next to the password form. Set all four variables on
+backend-go, or none to keep it off; a partial set stops the backend at
+startup:
+
+| Var                     | Example                                               |
+| ----------------------- | ----------------------------------------------------- |
+| `FB_OIDC_ISSUER_URL`    | `https://auth.mskalski.dev`                           |
+| `FB_OIDC_CLIENT_ID`     | `finance`                                             |
+| `FB_OIDC_CLIENT_SECRET` | client secret registered in Authelia                  |
+| `FB_OIDC_REDIRECT_URL`  | `https://finance.mskalski.dev/api/auth/oidc/callback` |
+
+Register the client in Authelia with the redirect URL above,
+`token_endpoint_auth_method: client_secret_basic`, PKCE `S256` and scopes
+`openid profile email`. Sign-in maps the `preferred_username` claim to an
+existing user; it never creates users. Password login keeps working.
+
 ## Project Status
 
 Actively used. Dashboard, snapshots, accounts, assets, debts, retirement

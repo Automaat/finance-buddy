@@ -1,8 +1,23 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { FB_COOKIE_SECURE } from '$app/env/private';
-import type { Actions } from './$types';
+import type { Actions, PageServerLoad } from './$types';
 
 const cookieSecure = FB_COOKIE_SECURE === 'true';
+
+export const load: PageServerLoad = async ({ fetch, url }) => {
+	const oidcError = url.searchParams.get('error');
+	try {
+		const response = await fetch('/api/auth/oidc/status');
+		if (!response.ok) {
+			return { oidcEnabled: false, oidcError };
+		}
+		const { enabled } = (await response.json()) as { enabled: boolean };
+		return { oidcEnabled: enabled === true, oidcError };
+	} catch (err) {
+		console.error('Failed to read OIDC status:', err);
+		return { oidcEnabled: false, oidcError };
+	}
+};
 
 export const actions: Actions = {
 	default: async ({ request, cookies, fetch }) => {

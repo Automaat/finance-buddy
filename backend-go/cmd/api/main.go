@@ -80,26 +80,25 @@ func run() int {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(logger)
 
-	jwtSecret := os.Getenv("FB_JWT_SECRET")
-	if jwtSecret == "" {
-		logger.Error("FB_JWT_SECRET is required")
+	authCfg, err := loadAuthEnv()
+	if err != nil {
+		logger.Error("invalid auth configuration", "err", err)
 		return 2
 	}
-	adminUsername := envOr("FB_ADMIN_USERNAME", "admin")
-	adminPassword := os.Getenv("FB_ADMIN_PASSWORD")
-	if adminPassword == "" {
-		logger.Error("FB_ADMIN_PASSWORD is required")
-		return 2
+	if authCfg.oidc.Enabled() {
+		logger.Info("oidc: login enabled", "issuer", authCfg.oidc.IssuerURL)
 	}
+	adminUsername, adminPassword := authCfg.adminUsername, authCfg.adminPassword
 
 	cfg := server.Config{
 		Addr:         envOr("FB_ADDR", ":8000"),
 		CORSOrigins:  envOrPresent("CORS_ORIGINS", "http://localhost:3000"),
-		JWTSecret:    jwtSecret,
+		JWTSecret:    authCfg.jwtSecret,
 		CookieSecure: envOr("FB_COOKIE_SECURE", "false") == "true",
 		AccessLog:    envOr("FB_ACCESS_LOG", "false") == "true",
 		StooqAPIKey:  os.Getenv("FB_STOOQ_APIKEY"),
 		FREDAPIKey:   os.Getenv("FB_FRED_API_KEY"),
+		OIDC:         authCfg.oidc,
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -191,6 +190,36 @@ func run() int {
 		}
 	}
 	return 0
+}
+
+// authEnv is the login configuration read from the environment.
+type authEnv struct {
+	jwtSecret     string
+	adminUsername string
+	adminPassword string
+	oidc          auth.OIDCConfig
+}
+
+// loadAuthEnv reads FB_JWT_SECRET, FB_ADMIN_* and FB_OIDC_*. The JWT secret
+// and admin password are required; OIDC must be fully set or fully unset.
+func loadAuthEnv() (authEnv, error) {
+	env := authEnv{
+		jwtSecret:     os.Getenv("FB_JWT_SECRET"),
+		adminUsername: envOr("FB_ADMIN_USERNAME", "admin"),
+		adminPassword: os.Getenv("FB_ADMIN_PASSWORD"),
+	}
+	if env.jwtSecret == "" {
+		return authEnv{}, errors.New("FB_JWT_SECRET is required")
+	}
+	if env.adminPassword == "" {
+		return authEnv{}, errors.New("FB_ADMIN_PASSWORD is required")
+	}
+	oidcCfg, err := auth.LoadOIDCConfig(os.Getenv)
+	if err != nil {
+		return authEnv{}, fmt.Errorf("load OIDC config: %w", err)
+	}
+	env.oidc = oidcCfg
+	return env, nil
 }
 
 // registerPoolMetrics wires the pgx pool's live stats into /metrics so pool

@@ -136,6 +136,9 @@ func TestAllRoutesIncludesAuthRoutes(t *testing.T) {
 	for _, key := range []string{
 		"POST /api/auth/login",
 		"POST /api/auth/logout",
+		"GET /api/auth/oidc/status",
+		"GET /api/auth/oidc/login",
+		"GET /api/auth/oidc/callback",
 		"GET /api/auth/me",
 		"GET /api/users",
 		"GET /api/auth/users",

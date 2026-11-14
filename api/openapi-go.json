@@ -1459,6 +1459,57 @@
         ]
       }
     },
+    "/api/auth/oidc/callback": {
+      "get": {
+        "responses": {
+          "302": {
+            "description": "status 302"
+          }
+        },
+        "summary": "Finish OIDC login (redirects to the app)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/oidc/login": {
+      "get": {
+        "responses": {
+          "302": {
+            "description": "status 302"
+          }
+        },
+        "summary": "Start OIDC login (redirects to the provider)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/oidc/status": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Report whether OIDC login is enabled",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/auth/users": {
       "get": {
         "responses": {

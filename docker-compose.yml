@@ -13,6 +13,10 @@ services:
       - FB_ACCESS_LOG=${FB_ACCESS_LOG:-false}
       - FB_STOOQ_APIKEY=${FB_STOOQ_APIKEY:-}
       - FB_FRED_API_KEY=${FB_FRED_API_KEY:-}
+      - FB_OIDC_ISSUER_URL=${FB_OIDC_ISSUER_URL:-}
+      - FB_OIDC_CLIENT_ID=${FB_OIDC_CLIENT_ID:-}
+      - FB_OIDC_CLIENT_SECRET=${FB_OIDC_CLIENT_SECRET:-}
+      - FB_OIDC_REDIRECT_URL=${FB_OIDC_REDIRECT_URL:-}
     ports:
       - '8000:8000'
     restart: unless-stopped
