@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 var errSentinel = errors.New("sentinel")
@@ -154,4 +155,8 @@ func (r *fakeRows) RawValues() [][]byte {
 
 func (r *fakeRows) Conn() *pgx.Conn {
 	return nil
+}
+
+func (r *fakeRows) TypeMap() *pgtype.Map {
+	return pgtype.NewMap()
 }
