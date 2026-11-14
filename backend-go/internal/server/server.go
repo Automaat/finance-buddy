@@ -116,6 +116,9 @@ type Config struct {
 	// Empty means the scheduler/refresh handler falls back to the keyless
 	// "latest" snapshot — daily backfill is then unavailable.
 	StooqAPIKey string
+	// OIDC is the optional Authelia single sign-on setup (FB_OIDC_*). The
+	// zero value disables OIDC login.
+	OIDC auth.OIDCConfig
 	// FREDAPIKey selects FRED (OECD-sourced GUS CPI) as the monthly CPI
 	// source. Empty falls back to Eurostat HICP (free, no key, but drifts
 	// 0.1-0.3pp).
@@ -185,11 +188,16 @@ func New(cfg Config, logger *slog.Logger, deps Deps) http.Handler {
 // /api route behind a valid session.
 func registerRoutes(r chi.Router, cfg Config, pool *pgxpool.Pool, logger *slog.Logger) {
 	tokens := auth.NewTokenService(cfg.JWTSecret)
-	authHandler := auth.NewHandler(auth.NewStore(pool), tokens, cfg.CookieSecure, logger)
+	authStore := auth.NewStore(pool)
+	authHandler := auth.NewHandler(authStore, tokens, cfg.CookieSecure, logger)
+	oidcHandler := auth.NewOIDCHandler(cfg.OIDC, authStore, tokens, cfg.CookieSecure, logger)
 
 	// Public — reachable without a session.
 	r.Post("/api/auth/login", authHandler.Login)
 	r.Post("/api/auth/logout", authHandler.Logout)
+	r.Get("/api/auth/oidc/status", oidcHandler.Status)
+	r.Get("/api/auth/oidc/login", oidcHandler.Login)
+	r.Get("/api/auth/oidc/callback", oidcHandler.Callback)
 
 	// Everything else requires authentication.
 	r.Group(func(r chi.Router) {

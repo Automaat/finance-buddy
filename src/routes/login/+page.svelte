@@ -1,10 +1,20 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { ShieldCheck } from 'lucide-svelte';
-	import type { ActionData } from './$types';
+	import { KeyRound, ShieldCheck } from 'lucide-svelte';
+	import type { ActionData, PageData } from './$types';
 
-	let { form }: { form: ActionData } = $props();
+	let { data, form }: { data: PageData; form: ActionData } = $props();
 	let submitting = $state(false);
+
+	const oidcErrorMessages: Record<string, string> = {
+		oidc_no_user:
+			'To konto Authelia nie ma użytkownika w aplikacji — poproś administratora o konto',
+		oidc_failed: 'Logowanie przez Authelia nie powiodło się — spróbuj ponownie',
+		oidc_unavailable: 'Authelia jest chwilowo niedostępna — zaloguj się hasłem'
+	};
+	const errorMessage = $derived(
+		form?.error ?? (data.oidcError ? oidcErrorMessages[data.oidcError] : undefined)
+	);
 </script>
 
 <div
@@ -55,13 +65,20 @@
 				<span>Zapamiętaj mnie</span>
 			</label>
 
-			{#if form?.error}
-				<div class="card preset-filled-error-500 p-3 text-sm">{form.error}</div>
+			{#if errorMessage}
+				<div class="card preset-filled-error-500 p-3 text-sm" role="alert">{errorMessage}</div>
 			{/if}
 
 			<button type="submit" class="btn preset-filled-primary-500 w-full" disabled={submitting}>
 				{submitting ? 'Logowanie...' : 'Zaloguj'}
 			</button>
 		</form>
+
+		{#if data.oidcEnabled}
+			<a href="/api/auth/oidc/login" class="btn preset-tonal-primary w-full" data-sveltekit-reload>
+				<KeyRound size={18} />
+				<span>Zaloguj przez Authelia</span>
+			</a>
+		{/if}
 	</div>
 </div>

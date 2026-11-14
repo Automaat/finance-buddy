@@ -18,18 +18,22 @@ On startup backend-go applies `internal/db/schema.sql` to an empty database
 
 Environment variables:
 
-| Var                 | Default                 | Purpose                                                                                                                                                                        |
-| ------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `FB_ADDR`           | `:8000`                 | Listen address                                                                                                                                                                 |
-| `CORS_ORIGINS`      | `http://localhost:3000` | Comma-separated allowed origins                                                                                                                                                |
-| `DATABASE_URL`      | —                       | Postgres DSN (or use the `PG*` libpq env vars)                                                                                                                                 |
-| `FB_JWT_SECRET`     | — (required)            | Signs session cookies                                                                                                                                                          |
-| `FB_ADMIN_USERNAME` | `admin`                 | Admin user reseeded on every startup                                                                                                                                           |
-| `FB_ADMIN_PASSWORD` | — (required)            | Admin password reseeded on every startup                                                                                                                                       |
-| `FB_COOKIE_SECURE`  | `false`                 | Mark session cookie Secure (HTTPS-only deploys)                                                                                                                                |
-| `FB_ACCESS_LOG`     | `false`                 | Emit one structured info log per HTTP request. Prometheus request metrics are always recorded.                                                                                 |
-| `FB_STOOQ_APIKEY`   | —                       | Stooq daily-history apikey for holdings backfill. Empty → keyless intraday snapshot only, no historical backfill.                                                              |
-| `FB_FRED_API_KEY`   | —                       | FRED apikey for monthly Polish CPI (POLCPIALLMINMEI). Empty → Eurostat HICP fallback (drifts 0.1-0.3pp vs Ministry GUS CPI). Free signup at fredaccount.stlouisfed.org/apikey. |
+| Var                     | Default                 | Purpose                                                                                                                                                                        |
+| ----------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `FB_ADDR`               | `:8000`                 | Listen address                                                                                                                                                                 |
+| `CORS_ORIGINS`          | `http://localhost:3000` | Comma-separated allowed origins                                                                                                                                                |
+| `DATABASE_URL`          | —                       | Postgres DSN (or use the `PG*` libpq env vars)                                                                                                                                 |
+| `FB_JWT_SECRET`         | — (required)            | Signs session cookies                                                                                                                                                          |
+| `FB_ADMIN_USERNAME`     | `admin`                 | Admin user reseeded on every startup                                                                                                                                           |
+| `FB_ADMIN_PASSWORD`     | — (required)            | Admin password reseeded on every startup                                                                                                                                       |
+| `FB_COOKIE_SECURE`      | `false`                 | Mark session cookie Secure (HTTPS-only deploys)                                                                                                                                |
+| `FB_OIDC_ISSUER_URL`    | —                       | OIDC (Authelia) issuer, e.g. `https://auth.mskalski.dev`. Set all four `FB_OIDC_*` to enable SSO, none to disable; a partial set fails startup.                                |
+| `FB_OIDC_CLIENT_ID`     | —                       | OIDC client ID, e.g. `finance`                                                                                                                                                 |
+| `FB_OIDC_CLIENT_SECRET` | —                       | OIDC client secret (sent with `client_secret_basic`)                                                                                                                           |
+| `FB_OIDC_REDIRECT_URL`  | —                       | OIDC callback, e.g. `https://finance.mskalski.dev/api/auth/oidc/callback`                                                                                                      |
+| `FB_ACCESS_LOG`         | `false`                 | Emit one structured info log per HTTP request. Prometheus request metrics are always recorded.                                                                                 |
+| `FB_STOOQ_APIKEY`       | —                       | Stooq daily-history apikey for holdings backfill. Empty → keyless intraday snapshot only, no historical backfill.                                                              |
+| `FB_FRED_API_KEY`       | —                       | FRED apikey for monthly Polish CPI (POLCPIALLMINMEI). Empty → Eurostat HICP fallback (drifts 0.1-0.3pp vs Ministry GUS CPI). Free signup at fredaccount.stlouisfed.org/apikey. |
 
 ## Layout
 

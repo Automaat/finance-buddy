@@ -39,6 +39,15 @@ def test_gated_route_rejects_unauthenticated(base_url: str) -> None:
         assert http.get("/api/accounts").status_code == 401
 
 
+def test_oidc_endpoints_public_and_disabled_by_default(base_url: str) -> None:
+    with httpx.Client(base_url=base_url, timeout=10.0) as http:
+        status = http.get("/api/auth/oidc/status")
+        assert status.status_code == 200
+        assert status.json() == {"enabled": False}
+        assert http.get("/api/auth/oidc/login").status_code == 404
+        assert http.get("/api/auth/oidc/callback").status_code == 404
+
+
 def test_me_returns_current_user(client: httpx.Client) -> None:
     response = client.get("/api/auth/me")
     assert response.status_code == 200

@@ -64,7 +64,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	const isAsset = pathname.startsWith('/_app/') || /\.\w+$/.test(pathname);
 	const isLogin = pathname === '/login';
-	const isPublicApi = pathname === '/api/auth/login' || pathname === '/api/auth/logout';
+	const isPublicApi =
+		pathname === '/api/auth/login' ||
+		pathname === '/api/auth/logout' ||
+		pathname.startsWith('/api/auth/oidc/');
 	if (isAsset || isLogin || isPublicApi) {
 		return resolve(event);
 	}

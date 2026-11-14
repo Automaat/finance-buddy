@@ -121,17 +121,12 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteDetailError(w, http.StatusUnauthorized, "Invalid username or password")
 		return
 	}
-	ttl := sessionTTL
-	if req.RememberMe {
-		ttl = rememberTTL
-	}
-	token, err := h.tokens.Sign(user.ID, user.Username, derefName(user.Name), user.IsAdmin, ttl)
+	token, err := startSession(w, h.tokens, h.cookieSecure, user, req.RememberMe)
 	if err != nil {
 		h.logger.Error("sign token", "err", err)
 		httputil.WriteDetailError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	h.setSessionCookie(w, token, req.RememberMe, ttl)
 	httputil.WriteJSON(w, http.StatusOK, loginResponse{Token: token, User: toUserResponse(user)})
 }
 
@@ -328,13 +323,28 @@ func validatePPKPair(employee, employer *decimal.Decimal) string {
 	return validatePPK(employer)
 }
 
-func (h *Handler) setSessionCookie(w http.ResponseWriter, token string, persistent bool, ttl time.Duration) {
+// startSession signs a session token for user and sets it as the session
+// cookie. Shared by password and OIDC login so both issue identical sessions.
+func startSession(w http.ResponseWriter, tokens *TokenService, cookieSecure bool, user *User, remember bool) (string, error) {
+	ttl := sessionTTL
+	if remember {
+		ttl = rememberTTL
+	}
+	token, err := tokens.Sign(user.ID, user.Username, derefName(user.Name), user.IsAdmin, ttl)
+	if err != nil {
+		return "", err
+	}
+	setSessionCookie(w, token, cookieSecure, remember, ttl)
+	return token, nil
+}
+
+func setSessionCookie(w http.ResponseWriter, token string, secure, persistent bool, ttl time.Duration) {
 	c := &http.Cookie{
 		Name:     CookieName,
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   h.cookieSecure,
+		Secure:   secure,
 		SameSite: http.SameSiteLaxMode,
 	}
 	// Persistent cookie for "remember me"; otherwise a session cookie that

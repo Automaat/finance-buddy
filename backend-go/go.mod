@@ -3,6 +3,7 @@ module github.com/Automaat/finance-buddy/backend-go
 go 1.26.0
 
 require (
+	github.com/coreos/go-oidc/v3 v3.21.0
 	github.com/getkin/kin-openapi v0.153.0
 	github.com/go-chi/chi/v5 v5.5.0
 	github.com/go-chi/cors v1.2.2
@@ -12,11 +13,13 @@ require (
 	github.com/prometheus/client_golang v1.25.0
 	github.com/shopspring/decimal v1.6.0
 	golang.org/x/crypto v0.59.0
+	golang.org/x/oauth2 v0.38.0
 )
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-openapi/jsonpointer v0.22.5 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/go-openapi/swag/jsonname v0.25.5 // indirect
