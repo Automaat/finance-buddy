@@ -89,6 +89,18 @@ describe('/api proxy — regular requests', () => {
 		expect(headers.get('cookie')).toBeNull();
 	});
 
+	it.each(['auth/oidc/../../../metrics', '../metrics', 'accounts/./1'])(
+		'rejects dot segments without calling the backend: %s',
+		async (path) => {
+			const { event, fetch } = makeEvent(path, new Response('{}'));
+
+			const res = await GET(event);
+
+			expect(res.status).toBe(404);
+			expect(fetch).not.toHaveBeenCalled();
+		}
+	);
+
 	it('returns a null body for 204 responses', async () => {
 		const { event } = makeEvent('accounts/1', new Response(null, { status: 204 }), {}, 'POST');
 

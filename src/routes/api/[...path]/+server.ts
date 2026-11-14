@@ -9,12 +9,20 @@ import type { RequestHandler } from './$types';
 /** Signed OIDC login state; the only browser cookie the backend needs to read. */
 const OIDC_STATE_COOKIE = 'fb_oidc_state';
 
+/** SvelteKit decodes `..%2F` in the rest param; a dot segment would escape /api on the backend. */
+function hasDotSegment(path: string): boolean {
+	return path.split('/').some((segment) => segment === '.' || segment === '..');
+}
+
 function backendURL(path: string, search: string): string {
 	const base = env.API_PROXY_TARGET ?? 'http://localhost:8000';
 	return `${base}/api/${path}${search}`;
 }
 
 const proxy: RequestHandler = async ({ request, params, cookies, url, fetch }) => {
+	if (hasDotSegment(params.path)) {
+		return Response.json({ detail: 'Not Found' }, { status: 404 });
+	}
 	const headers = new Headers();
 	const contentType = request.headers.get('content-type');
 	if (contentType) {

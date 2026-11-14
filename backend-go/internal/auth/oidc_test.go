@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"maps"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -48,7 +49,9 @@ type fakeProvider struct {
 	challenge        string
 	idTokenNonce     string
 	idTokenUsername  string
+	idTokenOverrides jwt.MapClaims
 	userinfoUsername string
+	userinfoSubject  string
 }
 
 func newFakeProvider(t *testing.T) *fakeProvider {
@@ -94,6 +97,7 @@ func (fp *fakeProvider) jwks(w http.ResponseWriter, _ *http.Request) {
 func (fp *fakeProvider) token(w http.ResponseWriter, r *http.Request) {
 	fp.mu.Lock()
 	challenge, nonce, username := fp.challenge, fp.idTokenNonce, fp.idTokenUsername
+	overrides := fp.idTokenOverrides
 	fp.mu.Unlock()
 	id, secret, ok := r.BasicAuth()
 	if !ok || id != testClientID || secret != testClientSecret {
@@ -118,6 +122,7 @@ func (fp *fakeProvider) token(w http.ResponseWriter, r *http.Request) {
 	if username != "" {
 		claims["preferred_username"] = username
 	}
+	maps.Copy(claims, overrides)
 	tok := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	tok.Header["kid"] = testKeyID
 	idToken, err := tok.SignedString(testRSAKey())
@@ -138,9 +143,12 @@ func (fp *fakeProvider) userinfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fp.mu.Lock()
-	username := fp.userinfoUsername
+	username, subject := fp.userinfoUsername, fp.userinfoSubject
 	fp.mu.Unlock()
-	writeTestJSON(w, map[string]string{"sub": testSubject, "preferred_username": username})
+	if subject == "" {
+		subject = testSubject
+	}
+	writeTestJSON(w, map[string]string{"sub": subject, "preferred_username": username})
 }
 
 func writeTestJSON(w http.ResponseWriter, v any) {
@@ -271,6 +279,8 @@ func TestOIDCCallback(t *testing.T) {
 		mutateQuery      func(url.Values)
 		mutateCookie     func(*http.Cookie) *http.Cookie
 		wrongNonce       bool
+		idTokenOverrides jwt.MapClaims
+		userinfoSubject  string
 		wantLocation     string
 	}{
 		{
@@ -299,6 +309,30 @@ func TestOIDCCallback(t *testing.T) {
 			idTokenUsername: "mskalski",
 			wrongNonce:      true,
 			wantLocation:    "/login?error=oidc_failed",
+		},
+		{
+			name:             "id_token for another client",
+			idTokenUsername:  "mskalski",
+			idTokenOverrides: jwt.MapClaims{"aud": "other-client"},
+			wantLocation:     "/login?error=oidc_failed",
+		},
+		{
+			name:             "id_token from another issuer",
+			idTokenUsername:  "mskalski",
+			idTokenOverrides: jwt.MapClaims{"iss": "https://evil.example.test"},
+			wantLocation:     "/login?error=oidc_failed",
+		},
+		{
+			name:             "expired id_token",
+			idTokenUsername:  "mskalski",
+			idTokenOverrides: jwt.MapClaims{"exp": time.Now().Add(-time.Hour).Unix()},
+			wantLocation:     "/login?error=oidc_failed",
+		},
+		{
+			name:             "userinfo for another subject",
+			userinfoUsername: "mskalski",
+			userinfoSubject:  "someone-else",
+			wantLocation:     "/login?error=oidc_failed",
 		},
 		{
 			name:            "missing cookie",
@@ -342,7 +376,9 @@ func TestOIDCCallback(t *testing.T) {
 				fp.idTokenNonce = "other-nonce"
 			}
 			fp.idTokenUsername = tt.idTokenUsername
+			fp.idTokenOverrides = tt.idTokenOverrides
 			fp.userinfoUsername = tt.userinfoUsername
+			fp.userinfoSubject = tt.userinfoSubject
 			fp.mu.Unlock()
 
 			query := url.Values{"code": {testCode}, "state": {authz.Get("state")}}

@@ -1,6 +1,21 @@
 import { redirect, type Handle, type HandleFetch } from '@sveltejs/kit';
 import { env } from '$env/dynamic/public';
 
+/**
+ * The OIDC callback sets a fresh fb_token. The stale-token delete in `handle`
+ * would be sent after it and override it, so it is skipped on this path.
+ */
+const OIDC_CALLBACK_PATH = '/api/auth/oidc/callback';
+
+/** Exact matches only: a prefix would let `..%2F` segments reach other backend paths. */
+const PUBLIC_API_PATHS = new Set([
+	'/api/auth/login',
+	'/api/auth/logout',
+	'/api/auth/oidc/status',
+	'/api/auth/oidc/login',
+	OIDC_CALLBACK_PATH
+]);
+
 interface SessionUser {
 	username: string;
 	name: string;
@@ -58,16 +73,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	// A lingering expired/invalid token — clear it so the browser stops sending it.
-	if (token) {
+	if (token && pathname !== OIDC_CALLBACK_PATH) {
 		event.cookies.delete('fb_token', { path: '/' });
 	}
 
 	const isAsset = pathname.startsWith('/_app/') || /\.\w+$/.test(pathname);
 	const isLogin = pathname === '/login';
-	const isPublicApi =
-		pathname === '/api/auth/login' ||
-		pathname === '/api/auth/logout' ||
-		pathname.startsWith('/api/auth/oidc/');
+	const isPublicApi = PUBLIC_API_PATHS.has(pathname);
 	if (isAsset || isLogin || isPublicApi) {
 		return resolve(event);
 	}
