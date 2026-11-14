@@ -1,7 +1,7 @@
 import type { EChartsOption } from 'echarts';
 import type { CallbackDataParams, TopLevelFormatterParams } from 'echarts/types/dist/shared';
-import type { CpiSeries } from '$lib/types/cpi';
-import { chartInk, chartContribution, chartValue } from '$lib/utils/theme';
+import type { CpiSeries } from '#lib/types/cpi.ts';
+import { chartInk, chartContribution, chartValue } from '#lib/utils/theme.ts';
 import { baseChartOption, chartTooltip, axisLine, splitLine } from './chartBase';
 
 type AxisTooltipItem = CallbackDataParams & { axisValue: string };

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import ContributionAdjustedReturns from '$lib/components/ContributionAdjustedReturns.svelte';
+	import ContributionAdjustedReturns from '#lib/components/ContributionAdjustedReturns.svelte';
 	import type { PageData } from './$types';
 
 	interface Props {

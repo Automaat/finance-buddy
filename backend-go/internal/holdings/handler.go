@@ -17,8 +17,7 @@ import (
 // pgErrorCode returns the SQLSTATE for a Postgres-driven error, or "" when
 // the error didn't originate from pgx.
 func pgErrorCode(err error) string {
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
+	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		return pgErr.Code
 	}
 	return ""

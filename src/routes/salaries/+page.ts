@@ -1,14 +1,14 @@
 import { error } from '@sveltejs/kit';
-import { resolveApiUrl } from '$lib/api';
+import { resolveApiUrl } from '#lib/api.ts';
 import type { PageLoad } from './$types';
 import type {
 	BonusEventsData,
 	CompanyValuationsData,
 	EquityGrantsData,
 	SalariesData
-} from '$lib/types/salaries';
-import type { CpiSeries } from '$lib/types/cpi';
-import type { OwnerOption } from '$lib/types/owners';
+} from '#lib/types/salaries.ts';
+import type { CpiSeries } from '#lib/types/cpi.ts';
+import type { OwnerOption } from '#lib/types/owners.ts';
 
 const EMPTY_CPI: CpiSeries = { points: [], base_year: null, latest_year: null, source: '' };
 const EMPTY_BONUSES: BonusEventsData = {

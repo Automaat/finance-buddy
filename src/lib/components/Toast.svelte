@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toast, type Toast } from '$lib/stores/toast.svelte';
+	import { toast, type Toast } from '#lib/stores/toast.svelte.ts';
 	import { CheckCircle2, AlertCircle, Info, X } from 'lucide-svelte';
 
 	const items = $derived(toast.items);

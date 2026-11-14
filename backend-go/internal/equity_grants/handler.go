@@ -349,8 +349,7 @@ func (h *Handler) writeStoreError(w http.ResponseWriter, err error, id int) {
 			fmt.Sprintf("Equity grant with id %d not found", id))
 		return
 	}
-	var inv *InvariantError
-	if errors.As(err, &inv) {
+	if inv, ok := errors.AsType[*InvariantError](err); ok {
 		httputil.WriteBodyValidationError(w, inv.Field, inv.Msg, "")
 		return
 	}

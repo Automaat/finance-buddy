@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { resolveApiUrl } from '$lib/api';
+	import { resolveApiUrl } from '#lib/api.ts';
 	import { invalidateAll } from '$app/navigation';
-	import { toast } from '$lib/stores/toast.svelte';
-	import { ownerName, type OwnerOption } from '$lib/types/owners';
-	import { sumsToHundred } from '$lib/utils/allocation';
+	import { toast } from '#lib/stores/toast.svelte.ts';
+	import { ownerName, type OwnerOption } from '#lib/types/owners.ts';
+	import { sumsToHundred } from '#lib/utils/allocation.ts';
 	import type { PageData } from './$types';
 
 	interface Target {

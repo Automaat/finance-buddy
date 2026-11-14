@@ -1,7 +1,8 @@
 import { describe, expect, it, beforeAll, vi } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, fireEvent } from '@testing-library/svelte';
+import { goto } from '$app/navigation';
 import Page from './+page.svelte';
-import type { CurrencyExposureReport } from '$lib/types/exposure';
+import type { CurrencyExposureReport } from '#lib/types/exposure.ts';
 
 beforeAll(() => {
 	Object.defineProperty(window, 'matchMedia', {
@@ -25,10 +26,7 @@ vi.mock('echarts', () => ({
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 
-vi.mock('$app/stores', async () => {
-	const { readable } = await import('svelte/store');
-	return { page: readable({ url: new URL('http://localhost/ekspozycja') }) };
-});
+vi.mock('$app/state', () => ({ page: { url: new URL('http://localhost/ekspozycja') } }));
 
 const report = (over: Partial<CurrencyExposureReport> = {}): CurrencyExposureReport => ({
 	currencies: [
@@ -91,5 +89,42 @@ describe('Ekspozycja page', () => {
 			props: { data: { user: null, report: report(), targetPLNPct: null, tolerance: 5 } }
 		});
 		expect(screen.queryByText(/Dryft względem celu/)).toBeNull();
+	});
+
+	it('applies the target via goto without resetting focus or scroll', async () => {
+		vi.mocked(goto).mockClear();
+		render(Page, {
+			props: { data: { user: null, report: report(), targetPLNPct: null, tolerance: 5 } }
+		});
+		await fireEvent.input(screen.getByLabelText('Cel PLN (%)'), { target: { value: '55' } });
+		await fireEvent.input(screen.getByLabelText('Tolerancja (pp)'), { target: { value: '3' } });
+		await fireEvent.click(screen.getByRole('button', { name: 'Zastosuj' }));
+		expect(goto).toHaveBeenCalledWith('/ekspozycja?target_pln_pct=55&tolerance=3', {
+			reset: false
+		});
+	});
+
+	it('clears the target via goto without resetting focus or scroll', async () => {
+		vi.mocked(goto).mockClear();
+		render(Page, {
+			props: {
+				data: {
+					user: null,
+					report: report({
+						drift: {
+							target_pln_pct: 50,
+							actual_pln_pct: 60,
+							drift_pln_pct: 10,
+							within_tolerance: false,
+							tolerance_pct: 5
+						}
+					}),
+					targetPLNPct: 50,
+					tolerance: 5
+				}
+			}
+		});
+		await fireEvent.click(screen.getByRole('button', { name: 'Wyczyść' }));
+		expect(goto).toHaveBeenCalledWith('/ekspozycja', { reset: false });
 	});
 });

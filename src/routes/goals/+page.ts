@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { api, ApiError } from '$lib/apiClient';
+import { api, ApiError } from '#lib/apiClient.ts';
 import type { PageLoad } from './$types';
 
 export interface Goal {

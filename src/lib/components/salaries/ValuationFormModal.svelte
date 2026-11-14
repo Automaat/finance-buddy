@@ -1,6 +1,6 @@
 <script lang="ts">
-	import Modal from '$lib/components/Modal.svelte';
-	import type { ValuationSource } from '$lib/types/salaries';
+	import Modal from '#lib/components/Modal.svelte';
+	import type { ValuationSource } from '#lib/types/salaries.ts';
 
 	export interface ValuationFormData {
 		company: string;

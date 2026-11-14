@@ -1,12 +1,12 @@
 <script lang="ts">
-	import Modal from '$lib/components/Modal.svelte';
-	import { formatPLN, formatDate } from '$lib/utils/format';
+	import Modal from '#lib/components/Modal.svelte';
+	import { formatPLN, formatDate } from '#lib/utils/format.ts';
 	import { ClipboardList, Plus, Pencil, Trash2, Wallet, CircleDollarSign } from 'lucide-svelte';
-	import { resolveApiUrl } from '$lib/api';
+	import { resolveApiUrl } from '#lib/api.ts';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount, untrack } from 'svelte';
 	import type { Debt, DebtPayment } from './+page';
-	import { ownerName, type OwnerOption } from '$lib/types/owners';
+	import { ownerName, type OwnerOption } from '#lib/types/owners.ts';
 	import type { PageData } from './$types';
 
 	interface Props {

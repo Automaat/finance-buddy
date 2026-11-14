@@ -1,7 +1,7 @@
 <script lang="ts">
-	import Modal from '$lib/components/Modal.svelte';
-	import type { OwnerOption } from '$lib/types/owners';
-	import type { BonusType } from '$lib/types/salaries';
+	import Modal from '#lib/components/Modal.svelte';
+	import type { OwnerOption } from '#lib/types/owners.ts';
+	import type { BonusType } from '#lib/types/salaries.ts';
 
 	export interface BonusFormData {
 		date: string;

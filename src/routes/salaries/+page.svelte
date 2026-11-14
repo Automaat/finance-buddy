@@ -2,23 +2,23 @@
 	import { onMount, untrack } from 'svelte';
 	import * as echarts from 'echarts';
 	import type { EChartsOption } from 'echarts';
-	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
-	import BonusFormModal from '$lib/components/salaries/BonusFormModal.svelte';
-	import EquityFormModal from '$lib/components/salaries/EquityFormModal.svelte';
-	import SalaryFormModal from '$lib/components/salaries/SalaryFormModal.svelte';
-	import ValuationFormModal from '$lib/components/salaries/ValuationFormModal.svelte';
-	import { formatPLN, formatDate } from '$lib/utils/format';
+	import { createChart, type ChartHandle } from '#lib/utils/charts/lifecycle.ts';
+	import BonusFormModal from '#lib/components/salaries/BonusFormModal.svelte';
+	import EquityFormModal from '#lib/components/salaries/EquityFormModal.svelte';
+	import SalaryFormModal from '#lib/components/salaries/SalaryFormModal.svelte';
+	import ValuationFormModal from '#lib/components/salaries/ValuationFormModal.svelte';
+	import { formatPLN, formatDate } from '#lib/utils/format.ts';
 	import {
 		formatPctSigned,
 		formatPlnSigned,
 		groupSalariesByCompany,
 		isNonNegative,
 		isoDateLocal
-	} from '$lib/utils/salaries';
-	import { computeYearlyEquityComp } from '$lib/utils/equity_vesting';
-	import { buildCpiLookup, inflationAdjust, parseIsoDate } from '$lib/utils/inflation';
-	import { grossToNet, type PlContractType } from '$lib/utils/pl_tax';
-	import { PL_RULES } from '$lib/utils/pl_rules.generated';
+	} from '#lib/utils/salaries.ts';
+	import { computeYearlyEquityComp } from '#lib/utils/equity_vesting.ts';
+	import { buildCpiLookup, inflationAdjust, parseIsoDate } from '#lib/utils/inflation.ts';
+	import { grossToNet, type PlContractType } from '#lib/utils/pl_tax.ts';
+	import { PL_RULES } from '#lib/utils/pl_rules.generated.ts';
 	import {
 		Plus,
 		TrendingUp,
@@ -32,10 +32,10 @@
 		Building2,
 		Wallet
 	} from 'lucide-svelte';
-	import { resolveApiUrl } from '$lib/api';
+	import { resolveApiUrl } from '#lib/api.ts';
 	import { goto, invalidateAll } from '$app/navigation';
-	import { toast } from '$lib/stores/toast.svelte';
-	import { confirm } from '$lib/stores/confirm.svelte';
+	import { toast } from '#lib/stores/toast.svelte.ts';
+	import { confirm } from '#lib/stores/confirm.svelte.ts';
 	import type {
 		BonusEvent,
 		BonusType,
@@ -47,9 +47,9 @@
 		SalaryRecord,
 		ValuationSource,
 		VestingFrequency
-	} from '$lib/types/salaries';
-	import type { CpiSeries } from '$lib/types/cpi';
-	import { type OwnerOption, ownerName } from '$lib/types/owners';
+	} from '#lib/types/salaries.ts';
+	import type { CpiSeries } from '#lib/types/cpi.ts';
+	import { type OwnerOption, ownerName } from '#lib/types/owners.ts';
 	import type { PageData } from './$types';
 
 	interface Props {

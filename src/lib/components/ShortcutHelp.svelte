@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Modal from './Modal.svelte';
-	import { shortcutsUI } from '$lib/stores/shortcuts.svelte';
-	import { SHORTCUT_BINDINGS } from '$lib/utils/shortcuts';
+	import { shortcutsUI } from '#lib/stores/shortcuts.svelte.ts';
+	import { SHORTCUT_BINDINGS } from '#lib/utils/shortcuts.ts';
 </script>
 
 <Modal

@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { resolveApiUrl } from '$lib/api';
-	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
-	import { buildMonteCarloFanOption, type MonteCarloResult } from '$lib/utils/charts/montecarlo';
+	import { resolveApiUrl } from '#lib/api.ts';
+	import { createChart, type ChartHandle } from '#lib/utils/charts/lifecycle.ts';
+	import { buildMonteCarloFanOption, type MonteCarloResult } from '#lib/utils/charts/montecarlo.ts';
 	import { Info, Sparkles } from 'lucide-svelte';
 	import * as echarts from 'echarts';
-	import IKZEPITTracker from '$lib/components/IKZEPITTracker.svelte';
-	import IKZEOptimizer from '$lib/components/IKZEOptimizer.svelte';
-	import FireGapChart from '$lib/components/FireGapChart.svelte';
+	import IKZEPITTracker from '#lib/components/IKZEPITTracker.svelte';
+	import IKZEOptimizer from '#lib/components/IKZEOptimizer.svelte';
+	import FireGapChart from '#lib/components/FireGapChart.svelte';
 	import type { PageData } from './$types';
 
 	interface Props {

@@ -3,27 +3,22 @@ import { render, screen, fireEvent } from '@testing-library/svelte';
 import { goto } from '$app/navigation';
 import DateRangePicker from './DateRangePicker.svelte';
 
-const mocks = vi.hoisted(async () => {
-	const { writable } = await import('svelte/store');
-	return { pageStore: writable({ url: new URL('http://localhost/') }) };
-});
+const page = vi.hoisted(() => ({ url: new URL('http://localhost/') }));
 
 vi.mock('$app/navigation', () => ({
 	goto: vi.fn()
 }));
 
-vi.mock('$app/stores', async () => ({
-	page: (await mocks).pageStore
-}));
+vi.mock('$app/state', () => ({ page }));
 
-async function setUrl(url: string) {
-	(await mocks).pageStore.set({ url: new URL(url) });
+function setUrl(url: string) {
+	page.url = new URL(url);
 }
 
 describe('DateRangePicker', () => {
 	beforeEach(async () => {
 		vi.clearAllMocks();
-		await setUrl('http://localhost/metryki');
+		setUrl('http://localhost/metryki');
 	});
 
 	it('renders all preset chips plus custom', () => {
@@ -46,7 +41,7 @@ describe('DateRangePicker', () => {
 	});
 
 	it('marks the URL preset as active', async () => {
-		await setUrl('http://localhost/metryki?range=3m');
+		setUrl('http://localhost/metryki?range=3m');
 		render(DateRangePicker, { props: {} });
 		expect(screen.getByRole('button', { name: '3M' }).getAttribute('aria-pressed')).toBe('true');
 	});
@@ -54,18 +49,18 @@ describe('DateRangePicker', () => {
 	it('navigates with range= when a preset chip is clicked', async () => {
 		render(DateRangePicker, { props: {} });
 		await fireEvent.click(screen.getByRole('button', { name: '1M' }));
-		expect(goto).toHaveBeenCalledWith('/metryki?range=1m', { keepFocus: true });
+		expect(goto).toHaveBeenCalledWith('/metryki?range=1m', { reset: false });
 	});
 
 	it('navigates without range= when "Wszystko" is clicked from another preset', async () => {
-		await setUrl('http://localhost/metryki?range=1m');
+		setUrl('http://localhost/metryki?range=1m');
 		render(DateRangePicker, { props: {} });
 		await fireEvent.click(screen.getByRole('button', { name: 'Wszystko' }));
-		expect(goto).toHaveBeenCalledWith('/metryki', { keepFocus: true });
+		expect(goto).toHaveBeenCalledWith('/metryki', { reset: false });
 	});
 
 	it('does nothing when clicking the already-active preset', async () => {
-		await setUrl('http://localhost/metryki?range=1m');
+		setUrl('http://localhost/metryki?range=1m');
 		render(DateRangePicker, { props: {} });
 		await fireEvent.click(screen.getByRole('button', { name: '1M' }));
 		expect(goto).not.toHaveBeenCalled();
@@ -74,11 +69,11 @@ describe('DateRangePicker', () => {
 	it('clicking "Własny" with no bounds sets range=custom', async () => {
 		render(DateRangePicker, { props: {} });
 		await fireEvent.click(screen.getByRole('button', { name: 'Własny' }));
-		expect(goto).toHaveBeenCalledWith('/metryki?range=custom', { keepFocus: true });
+		expect(goto).toHaveBeenCalledWith('/metryki?range=custom', { reset: false });
 	});
 
 	it('shows the custom date form when active range is custom', async () => {
-		await setUrl('http://localhost/metryki?range=custom&date_from=2024-01-01&date_to=2024-12-31');
+		setUrl('http://localhost/metryki?range=custom&date_from=2024-01-01&date_to=2024-12-31');
 		render(DateRangePicker, { props: {} });
 		expect(screen.getByLabelText('Data od')).toBeTruthy();
 		expect(screen.getByLabelText('Data do')).toBeTruthy();
@@ -86,7 +81,7 @@ describe('DateRangePicker', () => {
 	});
 
 	it('infers custom mode when only date_from/date_to are present', async () => {
-		await setUrl('http://localhost/metryki?date_from=2024-01-01');
+		setUrl('http://localhost/metryki?date_from=2024-01-01');
 		render(DateRangePicker, { props: {} });
 		expect(screen.getByRole('button', { name: 'Własny' }).getAttribute('aria-pressed')).toBe(
 			'true'
@@ -94,7 +89,7 @@ describe('DateRangePicker', () => {
 	});
 
 	it('Apply submits range=custom plus the entered bounds', async () => {
-		await setUrl('http://localhost/metryki?range=custom');
+		setUrl('http://localhost/metryki?range=custom');
 		render(DateRangePicker, { props: {} });
 		const from = screen.getByLabelText('Data od') as HTMLInputElement;
 		const to = screen.getByLabelText('Data do') as HTMLInputElement;
@@ -110,7 +105,7 @@ describe('DateRangePicker', () => {
 	});
 
 	it('Apply with empty bounds drops the date params from the URL', async () => {
-		await setUrl('http://localhost/metryki?range=custom&date_from=2024-01-01&date_to=2024-12-31');
+		setUrl('http://localhost/metryki?range=custom&date_from=2024-01-01&date_to=2024-12-31');
 		render(DateRangePicker, { props: {} });
 		const from = screen.getByLabelText('Data od') as HTMLInputElement;
 		const to = screen.getByLabelText('Data do') as HTMLInputElement;
@@ -125,9 +120,9 @@ describe('DateRangePicker', () => {
 	});
 
 	it('uses the explicit path prop instead of $page.url.pathname', async () => {
-		await setUrl('http://localhost/something-else');
+		setUrl('http://localhost/something-else');
 		render(DateRangePicker, { props: { path: '/metryki' } });
 		await fireEvent.click(screen.getByRole('button', { name: '1M' }));
-		expect(goto).toHaveBeenCalledWith('/metryki?range=1m', { keepFocus: true });
+		expect(goto).toHaveBeenCalledWith('/metryki?range=1m', { reset: false });
 	});
 });

@@ -1,7 +1,11 @@
 <script lang="ts">
-	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
-	import { projectFireGap, type FireGapInputs, type PensionPriceBasis } from '$lib/utils/fireGap';
-	import { formatPLN } from '$lib/utils/format';
+	import { createChart, type ChartHandle } from '#lib/utils/charts/lifecycle.ts';
+	import {
+		projectFireGap,
+		type FireGapInputs,
+		type PensionPriceBasis
+	} from '#lib/utils/fireGap.ts';
+	import { formatPLN } from '#lib/utils/format.ts';
 	import { Scale } from 'lucide-svelte';
 
 	// All numeric props are $bindable so the retirement page can share its

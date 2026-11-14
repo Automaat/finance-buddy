@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Modal from './Modal.svelte';
-	import { confirmDialog } from '$lib/stores/confirm.svelte';
+	import { confirmDialog } from '#lib/stores/confirm.svelte.ts';
 
 	const req = $derived(confirmDialog.current);
 </script>

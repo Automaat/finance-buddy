@@ -5,7 +5,7 @@ import {
 	chartSplitLine,
 	chartTooltipBg,
 	chartTooltipBorder
-} from '$lib/utils/theme';
+} from '#lib/utils/theme.ts';
 
 // Shared ECharts "chrome" the metryki builders all repeat: a transparent
 // background, a centered bold title, and a token-colored tooltip surface.

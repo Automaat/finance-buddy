@@ -19,6 +19,11 @@
   ],
   "packageRules": [
     {
+      "description": "Hold TypeScript below 7: TS 7 (native Go compiler) ships no JS compiler API, which @sveltejs/kit 3 (peer ^6), svelte-check (peer ^5 || ^6) and openapi-typescript import at runtime. Lift once all three support TS 7.",
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<7"
+    },
+    {
       "description": "Group the Svelte / Vite / Vitest toolchain",
       "groupName": "svelte toolchain",
       "matchPackageNames": [

@@ -3,11 +3,11 @@
 // The browser only ever talks to this SvelteKit origin; this route forwards
 // /api/* to the backend and attaches the session token from the fb_token
 // cookie as a Bearer header. Keeps the JWT out of client-side JavaScript.
-import { env } from '$env/dynamic/private';
+import { API_PROXY_TARGET } from '$app/env/private';
 import type { RequestHandler } from './$types';
 
 function backendURL(path: string, search: string): string {
-	const base = env.API_PROXY_TARGET ?? 'http://localhost:8000';
+	const base = API_PROXY_TARGET ?? 'http://localhost:8000';
 	return `${base}/api/${path}${search}`;
 }
 

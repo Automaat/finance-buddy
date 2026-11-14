@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { formatPLN, formatDate } from '$lib/utils/format';
+	import { formatPLN, formatDate } from '#lib/utils/format.ts';
 	import {
 		Settings,
 		Umbrella,
@@ -14,10 +14,10 @@
 		BookOpen,
 		ExternalLink
 	} from 'lucide-svelte';
-	import { resolveApiUrl } from '$lib/api';
+	import { resolveApiUrl } from '#lib/api.ts';
 	import { invalidateAll } from '$app/navigation';
 	import { untrack } from 'svelte';
-	import { sumsToHundred } from '$lib/utils/allocation';
+	import { sumsToHundred } from '#lib/utils/allocation.ts';
 	import type { PageData } from './$types';
 
 	interface Props {

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { TrendingUp, TrendingDown, Minus } from 'lucide-svelte';
-	import { formatSignedPLN, formatSignedPercent } from '$lib/utils/format';
+	import { formatSignedPLN, formatSignedPercent } from '#lib/utils/format.ts';
 
 	interface Props {
 		label: string;

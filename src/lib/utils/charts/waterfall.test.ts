@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildWaterfallOption, buildWaterfallSteps, type NetWorthPoint } from './waterfall';
-import { chartPositive, chartNegative } from '$lib/utils/theme';
+import { chartPositive, chartNegative } from '#lib/utils/theme.ts';
 
 function point(
 	date: string,

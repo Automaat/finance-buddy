@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { resolveApiUrl } from '$lib/api';
-	import { toast } from '$lib/stores/toast.svelte';
-	import { confirm } from '$lib/stores/confirm.svelte';
-	import MetricCard from '$lib/components/MetricCard.svelte';
-	import Modal from '$lib/components/Modal.svelte';
-	import PIT38Report from '$lib/components/PIT38Report.svelte';
+	import { resolveApiUrl } from '#lib/api.ts';
+	import { toast } from '#lib/stores/toast.svelte.ts';
+	import { confirm } from '#lib/stores/confirm.svelte.ts';
+	import MetricCard from '#lib/components/MetricCard.svelte';
+	import Modal from '#lib/components/Modal.svelte';
+	import PIT38Report from '#lib/components/PIT38Report.svelte';
 	import { Plus, Trash2, BarChart, RefreshCw, Coins } from 'lucide-svelte';
-	import { CrudForm } from '$lib/stores/crudForm.svelte';
-	import { formatDate, formatPLN } from '$lib/utils/format';
+	import { CrudForm } from '#lib/stores/crudForm.svelte.ts';
+	import { formatDate, formatPLN } from '#lib/utils/format.ts';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();

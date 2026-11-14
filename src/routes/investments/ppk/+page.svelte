@@ -1,7 +1,7 @@
 <script lang="ts">
-	import MetricCard from '$lib/components/MetricCard.svelte';
-	import { formatPLN } from '$lib/utils/format';
-	import { ownerName } from '$lib/types/owners';
+	import MetricCard from '#lib/components/MetricCard.svelte';
+	import { formatPLN } from '#lib/utils/format.ts';
+	import { ownerName } from '#lib/types/owners.ts';
 	import { PiggyBank, Wallet } from 'lucide-svelte';
 	import type { PageData } from './$types';
 

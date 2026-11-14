@@ -2,7 +2,7 @@
 
 Self-hosted personal finance dashboard for tracking net worth, goals, and investments. Replaces "Finansowa Forteca.xlsx" spreadsheet with automated tracking and visualizations.
 
-**Tech Stack:** SvelteKit 2.60, Svelte 5 (runes), TypeScript 6, Go 1.26 (chi + pgx + shopspring/decimal), PostgreSQL 18
+**Tech Stack:** SvelteKit 3, Svelte 5 (runes), TypeScript 6 (held below 7, see `renovate.json`), Go 1.26 (chi + pgx + shopspring/decimal), PostgreSQL 18
 
 **Purpose:** Track Polish personal finance (IKE/IKZE/PPK retirement accounts), monitor net worth trends, manage financial goals, analyze asset allocation.
 

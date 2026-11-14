@@ -1,13 +1,13 @@
 <script lang="ts">
 	import '../app.css';
-	import { page } from '$app/stores';
-	import Toast from '$lib/components/Toast.svelte';
-	import Confirm from '$lib/components/Confirm.svelte';
-	import KeyboardShortcuts from '$lib/components/KeyboardShortcuts.svelte';
-	import GlobalErrorCapture from '$lib/components/GlobalErrorCapture.svelte';
-	import BottomSheet from '$lib/components/BottomSheet.svelte';
-	import { navPrefs } from '$lib/stores/navPrefs.svelte';
-	import { NAV_ROUTES, type NavRoute } from '$lib/nav/routes';
+	import { page } from '$app/state';
+	import Toast from '#lib/components/Toast.svelte';
+	import Confirm from '#lib/components/Confirm.svelte';
+	import KeyboardShortcuts from '#lib/components/KeyboardShortcuts.svelte';
+	import GlobalErrorCapture from '#lib/components/GlobalErrorCapture.svelte';
+	import BottomSheet from '#lib/components/BottomSheet.svelte';
+	import { navPrefs } from '#lib/stores/navPrefs.svelte.ts';
+	import { NAV_ROUTES, type NavRoute } from '#lib/nav/routes.ts';
 	import { User, ShieldCheck, LogOut, MoreHorizontal } from 'lucide-svelte';
 	import type { LayoutData } from './$types';
 
@@ -20,8 +20,8 @@
 	);
 	const overflowItems = $derived(NAV_ROUTES.filter((i) => !navPrefs.pinned.includes(i.href)));
 
-	const isLoginPage = $derived($page.url.pathname === '/login');
-	const currentPath = $derived($page.url.pathname);
+	const isLoginPage = $derived(page.url.pathname === '/login');
+	const currentPath = $derived(page.url.pathname);
 
 	let moreOpen = $state(false);
 
@@ -32,9 +32,9 @@
 	});
 
 	function isActive(href: string): boolean {
-		if (href === '/simulations') return $page.url.pathname.startsWith('/simulations');
-		if (href === '/settings') return $page.url.pathname.startsWith('/settings');
-		return $page.url.pathname === href;
+		if (href === '/simulations') return page.url.pathname.startsWith('/simulations');
+		if (href === '/settings') return page.url.pathname.startsWith('/settings');
+		return page.url.pathname === href;
 	}
 
 	const overflowActive = $derived(overflowItems.some((i) => isActive(i.href)));

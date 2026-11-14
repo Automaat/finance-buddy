@@ -1,7 +1,7 @@
 import type { PageLoad } from './$types';
-import { resolveApiUrl } from '$lib/api';
-import { loadConfigDefaults } from '$lib/utils/configDefaults';
-import type { OptionKey } from '$lib/utils/allocationOptimizer';
+import { resolveApiUrl } from '#lib/api.ts';
+import { loadConfigDefaults } from '#lib/utils/configDefaults.ts';
+import type { OptionKey } from '#lib/utils/allocationOptimizer.ts';
 
 interface YearlyStat {
 	account_wrapper: string;

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { resolveApiUrl } from '$lib/api';
-	import { formatPLN, formatDate } from '$lib/utils/format';
+	import { resolveApiUrl } from '#lib/api.ts';
+	import { formatPLN, formatDate } from '#lib/utils/format.ts';
 	import { FileSpreadsheet, Download } from 'lucide-svelte';
 
 	interface SaleRow {

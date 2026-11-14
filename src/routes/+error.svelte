@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { invalidateAll } from '$app/navigation';
-	import { dev } from '$app/environment';
-	import { toast } from '$lib/stores/toast.svelte';
+	import { dev } from '$app/env';
+	import { toast } from '#lib/stores/toast.svelte.ts';
 	import { TriangleAlert, RefreshCw, Bug } from 'lucide-svelte';
 
 	let retrying = $state(false);
@@ -18,10 +18,10 @@
 
 	async function report() {
 		const payload = [
-			`status: ${$page.status}`,
-			`url: ${$page.url.toString()}`,
-			`message: ${$page.error?.message ?? '—'}`,
-			$page.error?.stack ? `stack:\n${$page.error.stack}` : ''
+			`status: ${page.status}`,
+			`url: ${page.url.toString()}`,
+			`message: ${page.error?.message ?? '—'}`,
+			page.error?.stack ? `stack:\n${page.error.stack}` : ''
 		]
 			.filter(Boolean)
 			.join('\n');
@@ -39,13 +39,13 @@
 	<TriangleAlert class="error-icon" size={48} />
 	<h1>Coś poszło nie tak</h1>
 	<p class="error-detail">
-		{$page.error?.message || 'Nie udało się załadować danych.'}
+		{page.error?.message || 'Nie udało się załadować danych.'}
 	</p>
-	<p class="error-status">Kod błędu: {$page.status}</p>
-	{#if dev && $page.error?.stack}
+	<p class="error-status">Kod błędu: {page.status}</p>
+	{#if dev && page.error?.stack}
 		<details class="error-stack">
 			<summary>Szczegóły dla deweloperów</summary>
-			<pre>{$page.error.stack}</pre>
+			<pre>{page.error.stack}</pre>
 		</details>
 	{/if}
 	<div class="error-actions">

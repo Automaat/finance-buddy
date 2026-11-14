@@ -1,5 +1,5 @@
-import { browser } from '$app/environment';
-import { NAV_HREFS } from '$lib/nav/routes';
+import { browser } from '$app/env';
+import { NAV_HREFS } from '#lib/nav/routes.ts';
 
 const STORAGE_KEY = 'fb.nav.pinned';
 

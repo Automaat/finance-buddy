@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
-import { resolveApiUrl } from '$lib/api';
-import type { SnapshotResponse } from '$lib/types';
+import { resolveApiUrl } from '#lib/api.ts';
+import type { SnapshotResponse } from '#lib/types.ts';
 
 export async function load({ params, fetch }) {
 	const apiUrl = resolveApiUrl();

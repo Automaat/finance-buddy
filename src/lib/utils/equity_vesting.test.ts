@@ -6,7 +6,7 @@ import {
 	perShareIntrinsicValue,
 	computeYearlyEquityComp
 } from './equity_vesting';
-import type { CompanyValuation, EquityGrant } from '$lib/types/salaries';
+import type { CompanyValuation, EquityGrant } from '#lib/types/salaries.ts';
 
 function makeGrant(overrides: Partial<EquityGrant> = {}): EquityGrant {
 	return {

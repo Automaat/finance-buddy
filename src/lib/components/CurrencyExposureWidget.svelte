@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { resolveApiUrl } from '$lib/api';
-	import { formatPLN } from '$lib/utils/format';
-	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
-	import { applyMobileChartTweaks } from '$lib/utils/charts/responsive';
-	import { isMobile } from '$lib/utils/viewport';
-	import { chartPalette } from '$lib/utils/theme';
+	import { resolveApiUrl } from '#lib/api.ts';
+	import { formatPLN } from '#lib/utils/format.ts';
+	import { createChart, type ChartHandle } from '#lib/utils/charts/lifecycle.ts';
+	import { applyMobileChartTweaks } from '#lib/utils/charts/responsive.ts';
+	import { isMobile } from '#lib/utils/viewport.ts';
+	import { chartPalette } from '#lib/utils/theme.ts';
 	import { Globe } from 'lucide-svelte';
 
 	interface CurrencyBucket {

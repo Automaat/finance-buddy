@@ -1,11 +1,11 @@
 <script lang="ts">
-	import Modal from '$lib/components/Modal.svelte';
-	import { formatPLN, formatDate } from '$lib/utils/format';
+	import Modal from '#lib/components/Modal.svelte';
+	import { formatPLN, formatDate } from '#lib/utils/format.ts';
 	import { Target, Plus, Pencil, Trash2, CheckCircle2, Calendar } from 'lucide-svelte';
-	import { api } from '$lib/apiClient';
+	import { api } from '#lib/apiClient.ts';
 	import { invalidateAll } from '$app/navigation';
-	import { CrudForm } from '$lib/stores/crudForm.svelte';
-	import { CATEGORY_LABELS, categoryLabel } from '$lib/utils/categories';
+	import { CrudForm } from '#lib/stores/crudForm.svelte.ts';
+	import { CATEGORY_LABELS, categoryLabel } from '#lib/utils/categories.ts';
 	import type { Goal, AccountOption } from './+page';
 	import type { PageData } from './$types';
 

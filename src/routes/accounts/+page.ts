@@ -1,8 +1,8 @@
 import { error } from '@sveltejs/kit';
-import { resolveApiUrl } from '$lib/api';
+import { resolveApiUrl } from '#lib/api.ts';
 import type { PageLoad } from './$types';
-import type { Transaction, TransactionsData } from '$lib/types/transactions';
-import type { OwnerOption } from '$lib/types/owners';
+import type { Transaction, TransactionsData } from '#lib/types/transactions.ts';
+import type { OwnerOption } from '#lib/types/owners.ts';
 
 export interface Account {
 	id: number;

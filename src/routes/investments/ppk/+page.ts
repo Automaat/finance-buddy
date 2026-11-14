@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
-import { resolveApiUrl } from '$lib/api';
-import type { OwnerOption } from '$lib/types/owners';
+import { resolveApiUrl } from '#lib/api.ts';
+import type { OwnerOption } from '#lib/types/owners.ts';
 import type { PageLoad } from './$types';
 
 // Per-owner PPK summary as served by GET /api/retirement/ppk-stats.

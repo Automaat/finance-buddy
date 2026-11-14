@@ -7,7 +7,7 @@ import {
 	chartValue,
 	chartPositive,
 	chartPalette
-} from '$lib/utils/theme';
+} from '#lib/utils/theme.ts';
 import { baseChartOption, chartTooltip, axisLine, splitLine } from './chartBase';
 
 type AxisTooltipItem = CallbackDataParams & { axisValue: string };
