@@ -169,4 +169,17 @@ describe('SortableTable component', () => {
 		});
 		expect(getByText('Brak danych')).toBeTruthy();
 	});
+
+	it('drops a sort param for an unknown column', () => {
+		setUrl('?sort=bogus:asc&keep=1');
+		gotoSpy.mockClear();
+		render(SortableTable<Row>, {
+			props: { columns, items, row: rowSnippet }
+		});
+		expect(gotoSpy).toHaveBeenCalledTimes(1);
+		const [url, opts] = gotoSpy.mock.calls[0] as [URL, unknown];
+		expect(url.searchParams.get('sort')).toBeNull();
+		expect(url.searchParams.get('keep')).toBe('1');
+		expect(opts).toMatchObject({ shallow: true, replace: true });
+	});
 });
