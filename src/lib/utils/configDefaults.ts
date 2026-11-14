@@ -1,4 +1,4 @@
-import { resolveApiUrl } from '$lib/api';
+import { resolveApiUrl } from '#lib/api.ts';
 
 export interface ConfigDefaults {
 	// expected_return_rate × 100 → e.g. 0.07 stored as 7.0

@@ -1,5 +1,5 @@
 import { error, redirect } from '@sveltejs/kit';
-import { resolveApiUrl } from '$lib/api';
+import { resolveApiUrl } from '#lib/api.ts';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ fetch, parent }) => {

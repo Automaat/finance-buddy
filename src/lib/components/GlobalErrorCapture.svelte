@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { dev } from '$app/environment';
-	import { toast } from '$lib/stores/toast.svelte';
+	import { dev } from '$app/env';
+	import { toast } from '#lib/stores/toast.svelte.ts';
 
 	// Errors we have already toasted in the last few seconds — dedupes runaway
 	// loops where the same error fires repeatedly (React-style infinite render

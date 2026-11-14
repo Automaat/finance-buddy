@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { resolveApiUrl } from '$lib/api';
-	import { toast } from '$lib/stores/toast.svelte';
-	import { formatPLN, formatNumber, formatSignedPLN } from '$lib/utils/format';
+	import { resolveApiUrl } from '#lib/api.ts';
+	import { toast } from '#lib/stores/toast.svelte.ts';
+	import { formatPLN, formatNumber, formatSignedPLN } from '#lib/utils/format.ts';
 
 	interface ScopeProp {
 		type: 'all' | 'category' | 'wrapper' | 'account';

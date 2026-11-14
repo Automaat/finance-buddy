@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Pin, PinOff, RotateCcw, ChevronUp, ChevronDown } from 'lucide-svelte';
-	import { navPrefs, MAX_PINNED, DEFAULT_PINNED } from '$lib/stores/navPrefs.svelte';
-	import { NAV_ROUTES } from '$lib/nav/routes';
-	import { toast } from '$lib/stores/toast.svelte';
+	import { navPrefs, MAX_PINNED, DEFAULT_PINNED } from '#lib/stores/navPrefs.svelte.ts';
+	import { NAV_ROUTES } from '#lib/nav/routes.ts';
+	import { toast } from '#lib/stores/toast.svelte.ts';
 
 	const pinned = $derived(navPrefs.pinned);
 

@@ -1,13 +1,13 @@
 import { error, isHttpError } from '@sveltejs/kit';
-import { resolveApiUrl } from '$lib/api';
-import { resolveRangeParams } from '$lib/utils/dateRange';
-import type { CpiSeries } from '$lib/types/cpi';
-import type { OwnerOption } from '$lib/types/owners';
-import type { RealYieldAccount } from '$lib/components/RealYieldsTable.svelte';
+import { resolveApiUrl } from '#lib/api.ts';
+import { resolveRangeParams } from '#lib/utils/dateRange.ts';
+import type { CpiSeries } from '#lib/types/cpi.ts';
+import type { OwnerOption } from '#lib/types/owners.ts';
+import type { RealYieldAccount } from '#lib/components/RealYieldsTable.svelte';
 
 // PpkStat / CategoryStat mirror GET /api/retirement/ppk-stats and
 // /api/investment/{stock,bond}-stats — the subset the page renders. Declared
-// here (not reused from $lib/types/retirement, whose PPKStats keys on a legacy
+// here (not reused from #lib/types/retirement, whose PPKStats keys on a legacy
 // `owner` string) so PageData keeps the owner_user_id shape +page.svelte reads.
 interface PpkStat {
 	owner_user_id: number | null;

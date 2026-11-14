@@ -1,5 +1,5 @@
-import { browser } from '$app/environment';
-import { env } from '$env/dynamic/public';
+import { browser } from '$app/env';
+import { PUBLIC_API_URL_BROWSER, PUBLIC_API_URL } from '$app/env/public';
 import { error } from '@sveltejs/kit';
 
 // resolveApiUrl returns the API base URL for the current execution context.
@@ -14,7 +14,7 @@ import { error } from '@sveltejs/kit';
 // preserve this actionable message instead of swallowing it as a
 // generic "Failed to load …".
 export function resolveApiUrl(): string {
-	const url = browser ? env.PUBLIC_API_URL_BROWSER : env.PUBLIC_API_URL;
+	const url = browser ? PUBLIC_API_URL_BROWSER : PUBLIC_API_URL;
 	if (!url) {
 		const which = browser ? 'PUBLIC_API_URL_BROWSER' : 'PUBLIC_API_URL';
 		error(500, `${which} is not configured`);

@@ -1,15 +1,15 @@
 <script lang="ts">
-	import Modal from '$lib/components/Modal.svelte';
-	import Skeleton from '$lib/components/Skeleton.svelte';
-	import SortableTable, { type SortableColumn } from '$lib/components/SortableTable.svelte';
-	import { formatPLN, formatNumber, formatDate } from '$lib/utils/format';
+	import Modal from '#lib/components/Modal.svelte';
+	import Skeleton from '#lib/components/Skeleton.svelte';
+	import SortableTable, { type SortableColumn } from '#lib/components/SortableTable.svelte';
+	import { formatPLN, formatNumber, formatDate } from '#lib/utils/format.ts';
 	import { Wallet, TrendingDown, Pencil, Trash2, Plus, BarChart3 } from 'lucide-svelte';
-	import { resolveApiUrl } from '$lib/api';
+	import { resolveApiUrl } from '#lib/api.ts';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount, untrack } from 'svelte';
-	import { INVESTMENT_CATEGORIES } from '$lib/constants';
+	import { INVESTMENT_CATEGORIES } from '#lib/constants.ts';
 	import type { Account, TransactionsData } from './+page';
-	import { ownerName, type OwnerOption } from '$lib/types/owners';
+	import { ownerName, type OwnerOption } from '#lib/types/owners.ts';
 	import type { PageData } from './$types';
 
 	interface Props {

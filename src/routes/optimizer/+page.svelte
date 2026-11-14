@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { rankOptions, type OptionInputs, type OptionKey } from '$lib/utils/allocationOptimizer';
-	import { formatPLN } from '$lib/utils/format';
+	import {
+		rankOptions,
+		type OptionInputs,
+		type OptionKey
+	} from '#lib/utils/allocationOptimizer.ts';
+	import { formatPLN } from '#lib/utils/format.ts';
 	import { Compass, TrendingUp } from 'lucide-svelte';
 	import type { PageData } from './$types';
 

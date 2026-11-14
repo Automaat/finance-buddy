@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import type { LayoutData } from './$types';
 
 	let { children, data }: { children: import('svelte').Snippet; data: LayoutData } = $props();
@@ -14,7 +14,7 @@
 
 <div class="tabs">
 	{#each tabs as tab}
-		<a href={tab.href} class="tab" class:active={$page.url.pathname === tab.href}>
+		<a href={tab.href} class="tab" class:active={page.url.pathname === tab.href}>
 			{tab.label}
 		</a>
 	{/each}

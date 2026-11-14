@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import Toast from './Toast.svelte';
-import { toast } from '$lib/stores/toast.svelte';
+import { toast } from '#lib/stores/toast.svelte.ts';
 import { flushSync, tick } from 'svelte';
 
 describe('Toast', () => {

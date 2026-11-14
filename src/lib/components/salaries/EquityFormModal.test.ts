@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import EquityFormModal, { type VestingPreset } from './EquityFormModal.svelte';
 import type { EquityFormData } from './EquityFormModal.svelte';
-import type { EquityTaxTreatment } from '$lib/types/salaries';
+import type { EquityTaxTreatment } from '#lib/types/salaries.ts';
 
 beforeAll(() => {
 	Object.defineProperty(window, 'matchMedia', {

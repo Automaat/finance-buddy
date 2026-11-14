@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import {
 		RANGE_PRESETS,
 		PRESET_LABEL,
@@ -8,7 +8,7 @@
 		isRangeValue,
 		type RangePreset,
 		type RangeValue
-	} from '$lib/utils/dateRange';
+	} from '#lib/utils/dateRange.ts';
 
 	interface Props {
 		// path is the route to navigate to when the user changes selection.
@@ -18,11 +18,11 @@
 
 	let { path }: Props = $props();
 
-	const targetPath = $derived(path ?? $page.url.pathname);
+	const targetPath = $derived(path ?? page.url.pathname);
 
-	const rawRange = $derived($page.url.searchParams.get('range'));
-	const explicitFrom = $derived($page.url.searchParams.get('date_from') ?? '');
-	const explicitTo = $derived($page.url.searchParams.get('date_to') ?? '');
+	const rawRange = $derived(page.url.searchParams.get('range'));
+	const explicitFrom = $derived(page.url.searchParams.get('date_from') ?? '');
+	const explicitTo = $derived(page.url.searchParams.get('date_to') ?? '');
 
 	const activeRange = $derived<RangeValue>(
 		isRangeValue(rawRange) ? rawRange : explicitFrom || explicitTo ? 'custom' : 'all'
@@ -39,7 +39,7 @@
 
 	function selectPreset(preset: RangePreset) {
 		if (preset === activeRange) return;
-		const params = new URLSearchParams($page.url.searchParams);
+		const params = new URLSearchParams(page.url.search);
 		params.delete('date_from');
 		params.delete('date_to');
 		if (preset === 'all') {
@@ -48,17 +48,17 @@
 			params.set('range', preset);
 		}
 		const qs = params.toString();
-		goto(qs ? `${targetPath}?${qs}` : targetPath, { keepFocus: true });
+		goto(qs ? `${targetPath}?${qs}` : targetPath, { reset: false });
 	}
 
 	function selectCustom() {
-		const params = new URLSearchParams($page.url.searchParams);
+		const params = new URLSearchParams(page.url.search);
 		params.set('range', 'custom');
 		if (customFrom) params.set('date_from', customFrom);
 		else params.delete('date_from');
 		if (customTo) params.set('date_to', customTo);
 		else params.delete('date_to');
-		goto(`${targetPath}?${params.toString()}`, { keepFocus: true });
+		goto(`${targetPath}?${params.toString()}`, { reset: false });
 	}
 
 	function applyCustom(event: SubmitEvent) {

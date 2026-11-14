@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { load } from './+page.server';
 
-vi.mock('$env/dynamic/private', () => ({ env: {} }));
+vi.mock('$app/env/private', () => ({ FB_COOKIE_SECURE: undefined }));
 
 type LoadEvent = Parameters<typeof load>[0];
 

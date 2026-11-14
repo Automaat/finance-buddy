@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { GET, POST } from './+server';
 
-vi.mock('$env/dynamic/private', () => ({ env: { API_PROXY_TARGET: 'http://backend:8000' } }));
+vi.mock('$app/env/private', () => ({ API_PROXY_TARGET: 'http://backend:8000' }));
 
 type ProxyEvent = Parameters<typeof GET>[0];
 

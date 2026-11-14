@@ -46,7 +46,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+      - uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5.2.8
         with:
           experimental: true
         env:
@@ -57,10 +57,9 @@ jobs:
 
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
 
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: backend-go/go.mod
-          cache-dependency-path: backend-go/go.sum
+      # Go comes from mise (.mise.toml). A second install via setup-go
+      # clashes with the GOROOT mise exports: "compile: version ... does
+      # not match go tool version".
 
       - name: Install frontend dependencies
         run: npm ci --include=dev
@@ -92,8 +91,8 @@ jobs:
       - name: Verify production build mode
         run: |
           echo "NODE_ENV=$NODE_ENV"
-          grep -E 'get_global_name|__sveltekit_dev' build/server/index.js | head -3
-          if grep -q '"__sveltekit_dev"' build/server/index.js; then
+          grep -rhoE '__sveltekit_[a-z0-9_]+' build/server | sort -u
+          if grep -rq '__sveltekit_dev' build/server; then
             echo "::error::SK built in DEV mode despite NODE_ENV=production"
             exit 1
           fi

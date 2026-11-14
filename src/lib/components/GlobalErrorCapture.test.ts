@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render } from '@testing-library/svelte';
 import GlobalErrorCapture from './GlobalErrorCapture.svelte';
-import { toast } from '$lib/stores/toast.svelte';
+import { toast } from '#lib/stores/toast.svelte.ts';
 
 describe('GlobalErrorCapture', () => {
 	let toastSpy: ReturnType<typeof vi.spyOn>;

@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
-	import { resolveApiUrl } from '$lib/api';
-	import { toast } from '$lib/stores/toast.svelte';
-	import { confirm } from '$lib/stores/confirm.svelte';
-	import { formatDate } from '$lib/utils/format';
-	import Modal from '$lib/components/Modal.svelte';
+	import { resolveApiUrl } from '#lib/api.ts';
+	import { toast } from '#lib/stores/toast.svelte.ts';
+	import { confirm } from '#lib/stores/confirm.svelte.ts';
+	import { formatDate } from '#lib/utils/format.ts';
+	import Modal from '#lib/components/Modal.svelte';
 	import { Plus, Play, SkipForward, Trash2, Pencil } from 'lucide-svelte';
 	import type { PageData } from './$types';
 	import type { RecurringRow, AccountOption } from './+page';

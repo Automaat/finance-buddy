@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import Skeleton from '$lib/components/Skeleton.svelte';
-	import { formatPLN, formatDate } from '$lib/utils/format';
+	import Skeleton from '#lib/components/Skeleton.svelte';
+	import { formatPLN, formatDate } from '#lib/utils/format.ts';
 	import { Plus, Camera, Pencil } from 'lucide-svelte';
 	import type { PageData } from './$types';
 

@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('$env/dynamic/public', () => ({
-	env: { PUBLIC_API_URL_BROWSER: 'http://localhost:8000', PUBLIC_API_URL: 'http://localhost:8000' }
+vi.mock('$app/env/public', () => ({
+	PUBLIC_API_URL_BROWSER: 'http://localhost:8000',
+	PUBLIC_API_URL: 'http://localhost:8000'
 }));
-vi.mock('$app/environment', () => ({ browser: true }));
+vi.mock('$app/env', () => ({ browser: true }));
 
 import { api, ApiError } from './apiClient';
 

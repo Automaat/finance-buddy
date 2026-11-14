@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { resolveApiUrl } from '$lib/api';
+	import { resolveApiUrl } from '#lib/api.ts';
 	import { invalidateAll } from '$app/navigation';
-	import { toast } from '$lib/stores/toast.svelte';
-	import Modal from '$lib/components/Modal.svelte';
+	import { toast } from '#lib/stores/toast.svelte.ts';
+	import Modal from '#lib/components/Modal.svelte';
 	import type { PageData } from './$types';
 
 	interface AppUser {

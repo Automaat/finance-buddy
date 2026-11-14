@@ -1,13 +1,13 @@
 <script lang="ts">
-	import Modal from '$lib/components/Modal.svelte';
+	import Modal from '#lib/components/Modal.svelte';
 	import { Plus, Trash2 } from 'lucide-svelte';
-	import type { OwnerOption } from '$lib/types/owners';
+	import type { OwnerOption } from '#lib/types/owners.ts';
 	import type {
 		CustomVestingEvent,
 		EquityGrantType,
 		EquityTaxTreatment,
 		VestingFrequency
-	} from '$lib/types/salaries';
+	} from '#lib/types/salaries.ts';
 
 	export interface EquityFormData {
 		grant_date: string;

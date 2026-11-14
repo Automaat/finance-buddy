@@ -1,6 +1,6 @@
 import { error, isHttpError } from '@sveltejs/kit';
-import { resolveApiUrl } from '$lib/api';
-import { resolveRangeParams } from '$lib/utils/dateRange';
+import { resolveApiUrl } from '#lib/api.ts';
+import { resolveRangeParams } from '#lib/utils/dateRange.ts';
 
 export async function load({ fetch, url }) {
 	const apiUrl = resolveApiUrl();

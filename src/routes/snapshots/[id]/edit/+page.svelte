@@ -1,6 +1,6 @@
 <script lang="ts">
-	import SnapshotForm from '$lib/components/SnapshotForm.svelte';
-	import { formatDate } from '$lib/utils/format';
+	import SnapshotForm from '#lib/components/SnapshotForm.svelte';
+	import { formatDate } from '#lib/utils/format.ts';
 	import type { PageData } from './$types';
 
 	interface Props {

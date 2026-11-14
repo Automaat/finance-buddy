@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { resolveApiUrl } from '$lib/api';
-	import { formatPLN, formatPercent } from '$lib/utils/format';
-	import { ownerName, type OwnerOption } from '$lib/types/owners';
+	import { resolveApiUrl } from '#lib/api.ts';
+	import { formatPLN, formatPercent } from '#lib/utils/format.ts';
+	import { ownerName, type OwnerOption } from '#lib/types/owners.ts';
 	import { Calculator, Wallet } from 'lucide-svelte';
-	import { limitFromRules, optimizeIKZE, type IKZELimitKind } from '$lib/utils/ikzeOptimizer';
+	import { limitFromRules, optimizeIKZE, type IKZELimitKind } from '#lib/utils/ikzeOptimizer.ts';
 
 	interface YearlyStat {
 		year: number;

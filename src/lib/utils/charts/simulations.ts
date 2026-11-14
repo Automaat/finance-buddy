@@ -1,6 +1,6 @@
 import type { EChartsOption, LineSeriesOption } from 'echarts';
 import type { TopLevelFormatterParams } from 'echarts/types/dist/shared';
-import { chartPalette, chartInkMuted } from '$lib/utils/theme';
+import { chartPalette, chartInkMuted } from '#lib/utils/theme.ts';
 
 export interface YearlyProjection {
 	year: number;

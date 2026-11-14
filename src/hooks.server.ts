@@ -1,5 +1,6 @@
-import { redirect, type Handle, type HandleFetch } from '@sveltejs/kit';
-import { env } from '$env/dynamic/public';
+import { redirect } from '@sveltejs/kit';
+import type { Handle, HandleFetch } from '@sveltejs/kit/hooks';
+import { PUBLIC_API_URL } from '$app/env/public';
 
 /**
  * The OIDC callback sets a fresh fb_token. The stale-token delete in `handle`
@@ -98,7 +99,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 // straight to the backend (PUBLIC_API_URL). Browser-side calls instead route
 // through the /api proxy, which adds the token itself.
 export const handleFetch: HandleFetch = async ({ event, request, fetch }) => {
-	const backend = env.PUBLIC_API_URL;
+	const backend = PUBLIC_API_URL;
 	if (backend && request.url.startsWith(backend)) {
 		const token = event.cookies.get('fb_token');
 		if (token) {

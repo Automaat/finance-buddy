@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
-import { resolveApiUrl } from '$lib/api';
+import { resolveApiUrl } from '#lib/api.ts';
 import type { PageLoad } from './$types';
-import type { paths } from '$lib/types/api.generated';
+import type { paths } from '#lib/types/api.generated.ts';
 
 // Response shape generated from backend-go's OpenAPI spec — the wire contract,
 // not a hand-maintained guess. Regenerate with `npm run gen:api-types`.

@@ -1,8 +1,8 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
+import { FB_COOKIE_SECURE } from '$app/env/private';
 import type { Actions, PageServerLoad } from './$types';
 
-const cookieSecure = env.FB_COOKIE_SECURE === 'true';
+const cookieSecure = FB_COOKIE_SECURE === 'true';
 
 export const load: PageServerLoad = async ({ fetch, url }) => {
 	const oidcError = url.searchParams.get('error');

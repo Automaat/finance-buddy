@@ -1,6 +1,6 @@
 import type { EChartsOption, LineSeriesOption } from 'echarts';
 import type { TopLevelFormatterParams } from 'echarts/types/dist/shared';
-import { chartValue, chartPalette } from '$lib/utils/theme';
+import { chartValue, chartPalette } from '#lib/utils/theme.ts';
 
 export interface MonteCarloBand {
 	age: number;

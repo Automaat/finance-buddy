@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { onMount, tick, untrack } from 'svelte';
-	import { resolveApiUrl } from '$lib/api';
-	import { applyMobileChartTweaks } from '$lib/utils/charts/responsive';
-	import { isMobile } from '$lib/utils/viewport';
+	import { resolveApiUrl } from '#lib/api.ts';
+	import { applyMobileChartTweaks } from '#lib/utils/charts/responsive.ts';
+	import { isMobile } from '#lib/utils/viewport.ts';
 	import * as echarts from 'echarts';
 	import type { EChartsOption } from 'echarts';
-	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
+	import { createChart, type ChartHandle } from '#lib/utils/charts/lifecycle.ts';
 	import type { PageData } from './$types';
 
 	interface Props {

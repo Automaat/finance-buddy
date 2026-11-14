@@ -3,7 +3,7 @@ import type {
 	CustomVestingEvent,
 	EquityGrant,
 	VestingFrequency
-} from '$lib/types/salaries';
+} from '#lib/types/salaries.ts';
 
 const FREQ_MONTHS: Record<VestingFrequency, number> = {
 	monthly: 1,

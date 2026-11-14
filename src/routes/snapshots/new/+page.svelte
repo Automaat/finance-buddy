@@ -1,5 +1,5 @@
 <script lang="ts">
-	import SnapshotForm from '$lib/components/SnapshotForm.svelte';
+	import SnapshotForm from '#lib/components/SnapshotForm.svelte';
 	import type { PageData } from './$types';
 
 	interface Props {

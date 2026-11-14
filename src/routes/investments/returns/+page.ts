@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
-import { resolveApiUrl } from '$lib/api';
-import { INVESTMENT_CATEGORIES } from '$lib/constants';
+import { resolveApiUrl } from '#lib/api.ts';
+import { INVESTMENT_CATEGORIES } from '#lib/constants.ts';
 import type { PageLoad } from './$types';
 
 export interface ReturnsAccountOption {

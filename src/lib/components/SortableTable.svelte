@@ -58,8 +58,8 @@
 </script>
 
 <script lang="ts" generics="T">
-	import { replaceState } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import type { Snippet } from 'svelte';
 
 	interface Props {
@@ -82,22 +82,24 @@
 		getKey
 	}: Props = $props();
 
-	const sort = $derived(parseSortParam($page.url.searchParams.get(paramName)));
+	// A shallow goto leaves page.url on the routed URL; the sort lives in page.shallow.
+	const currentUrl = $derived(page.shallow?.url ?? page.url);
+	const sort = $derived(parseSortParam(currentUrl.searchParams.get(paramName)));
 	const sortedItems = $derived(sortRows(items, columns, sort));
 
 	$effect(() => {
 		if (!sort || columns.some((column) => column.key === sort.key)) return;
-		const url = new URL($page.url);
+		const url = new URL(currentUrl.href);
 		url.searchParams.delete(paramName);
-		replaceState(url, $page.state);
+		goto(url, { shallow: true, replace: true, state: page.state });
 	});
 
 	function cycleSort(key: string): void {
-		const url = new URL($page.url);
+		const url = new URL(currentUrl.href);
 		const next = nextSortDirection(sort, key);
 		if (next) url.searchParams.set(paramName, formatSortParam(next));
 		else url.searchParams.delete(paramName);
-		replaceState(url, $page.state);
+		goto(url, { shallow: true, replace: true, state: page.state });
 	}
 
 	let sentinel: HTMLDivElement;

@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { handle } from './hooks.server';
 
-vi.mock('$env/dynamic/public', () => ({ env: {} }));
+vi.mock('$app/env/public', () => ({ PUBLIC_API_URL: undefined }));
 
 type HandleInput = Parameters<typeof handle>[0];
 

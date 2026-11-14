@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
-	import { resolveApiUrl } from '$lib/api';
-	import { applyMobileChartTweaks } from '$lib/utils/charts/responsive';
-	import { isMobile } from '$lib/utils/viewport';
+	import { resolveApiUrl } from '#lib/api.ts';
+	import { applyMobileChartTweaks } from '#lib/utils/charts/responsive.ts';
+	import { isMobile } from '#lib/utils/viewport.ts';
 	import * as echarts from 'echarts';
 	import type { PageData } from './$types';
 	import {
@@ -10,10 +10,10 @@
 		buildRetirementProjectionOption,
 		getTotalBalanceAtAge,
 		type AccountSimulation
-	} from '$lib/utils/charts/simulations';
-	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
-	import { ownerName, type OwnerOption } from '$lib/types/owners';
-	import { PL_RULES } from '$lib/utils/pl_rules.generated';
+	} from '#lib/utils/charts/simulations.ts';
+	import { createChart, type ChartHandle } from '#lib/utils/charts/lifecycle.ts';
+	import { ownerName, type OwnerOption } from '#lib/types/owners.ts';
+	import { PL_RULES } from '#lib/utils/pl_rules.generated.ts';
 
 	interface SimulationSummary {
 		total_final_balance: number;

@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { goto, invalidateAll } from '$app/navigation';
-	import { resolveApiUrl } from '$lib/api';
+	import { resolveApiUrl } from '#lib/api.ts';
 	import { Wallet, Umbrella, TrendingUp, Home, CreditCard } from 'lucide-svelte';
-	import type { Account, Asset, SnapshotResponse } from '$lib/types';
-	import type { OwnerOption } from '$lib/types/owners';
-	import { categoryLabel } from '$lib/utils/categories';
-	import { round2, staleQuotes, type HoldingQuote } from '$lib/utils/quoteFreshness';
-	import { formatDate } from '$lib/utils/format';
+	import type { Account, Asset, SnapshotResponse } from '#lib/types.ts';
+	import type { OwnerOption } from '#lib/types/owners.ts';
+	import { categoryLabel } from '#lib/utils/categories.ts';
+	import { round2, staleQuotes, type HoldingQuote } from '#lib/utils/quoteFreshness.ts';
+	import { formatDate } from '#lib/utils/format.ts';
 	import NewAccountModal from './snapshot/NewAccountModal.svelte';
 	import NewAssetModal from './snapshot/NewAssetModal.svelte';
 	import ValueRow from './snapshot/ValueRow.svelte';

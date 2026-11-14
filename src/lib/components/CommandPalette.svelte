@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { shortcutsUI } from '$lib/stores/shortcuts.svelte';
+	import { shortcutsUI } from '#lib/stores/shortcuts.svelte.ts';
 
 	interface Command {
 		label: string;

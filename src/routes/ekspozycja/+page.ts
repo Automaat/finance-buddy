@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
-import { resolveApiUrl } from '$lib/api';
-import type { CurrencyExposureReport } from '$lib/types/exposure';
+import { resolveApiUrl } from '#lib/api.ts';
+import type { CurrencyExposureReport } from '#lib/types/exposure.ts';
 import type { PageLoad } from './$types';
 
 // Target PLN share + tolerance are URL-driven so the drift band is shareable
