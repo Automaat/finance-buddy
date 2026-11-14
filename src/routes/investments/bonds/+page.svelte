@@ -2,17 +2,17 @@
 	import { onMount, untrack } from 'svelte';
 	import * as echarts from 'echarts';
 	import type { EChartsOption } from 'echarts';
-	import Modal from '$lib/components/Modal.svelte';
-	import BondsMaturityLadder from '$lib/components/BondsMaturityLadder.svelte';
-	import { formatPLN, formatDate } from '$lib/utils/format';
-	import { chartValue, chartValueGradient } from '$lib/utils/theme';
-	import { createChart } from '$lib/utils/charts/lifecycle';
+	import Modal from '#lib/components/Modal.svelte';
+	import BondsMaturityLadder from '#lib/components/BondsMaturityLadder.svelte';
+	import { formatPLN, formatDate } from '#lib/utils/format.ts';
+	import { chartValue, chartValueGradient } from '#lib/utils/theme.ts';
+	import { createChart } from '#lib/utils/charts/lifecycle.ts';
 	import { Banknote, Pencil, Plus, Trash2, TrendingUp } from 'lucide-svelte';
-	import { resolveApiUrl } from '$lib/api';
-	import { api } from '$lib/apiClient';
+	import { resolveApiUrl } from '#lib/api.ts';
+	import { api } from '#lib/apiClient.ts';
 	import { invalidateAll } from '$app/navigation';
-	import { CrudForm } from '$lib/stores/crudForm.svelte';
-	import { ownerName } from '$lib/types/owners';
+	import { CrudForm } from '#lib/stores/crudForm.svelte.ts';
+	import { ownerName } from '#lib/types/owners.ts';
 	import type { TreasuryBond } from './+page';
 	import type { PageData } from './$types';
 

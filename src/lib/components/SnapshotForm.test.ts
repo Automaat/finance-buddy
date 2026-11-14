@@ -2,13 +2,11 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
 import { goto, invalidateAll } from '$app/navigation';
 import SnapshotForm from './SnapshotForm.svelte';
-import type { Account, Asset, SnapshotResponse, SnapshotValueResponse } from '$lib/types';
+import type { Account, Asset, SnapshotResponse, SnapshotValueResponse } from '#lib/types.ts';
 
-vi.mock('$env/dynamic/public', () => ({
-	env: {
-		PUBLIC_API_URL_BROWSER: 'http://localhost:8000',
-		PUBLIC_API_URL: 'http://localhost:8000'
-	}
+vi.mock('$app/env/public', () => ({
+	PUBLIC_API_URL_BROWSER: 'http://localhost:8000',
+	PUBLIC_API_URL: 'http://localhost:8000'
 }));
 
 vi.mock('$app/navigation', () => ({

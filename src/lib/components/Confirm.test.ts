@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import Confirm from './Confirm.svelte';
-import { confirm, confirmDialog } from '$lib/stores/confirm.svelte';
+import { confirm, confirmDialog } from '#lib/stores/confirm.svelte.ts';
 
 describe('Confirm', () => {
 	afterEach(() => {

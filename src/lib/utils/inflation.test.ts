@@ -6,7 +6,7 @@ import {
 	parseIsoDate,
 	realChange
 } from './inflation';
-import type { CpiSeries } from '$lib/types/cpi';
+import type { CpiSeries } from '#lib/types/cpi.ts';
 
 const series: CpiSeries = {
 	points: [

@@ -18,11 +18,9 @@ beforeAll(() => {
 	});
 });
 
-vi.mock('$env/dynamic/public', () => ({
-	env: {
-		PUBLIC_API_URL_BROWSER: 'http://localhost:8000',
-		PUBLIC_API_URL: 'http://localhost:8000'
-	}
+vi.mock('$app/env/public', () => ({
+	PUBLIC_API_URL_BROWSER: 'http://localhost:8000',
+	PUBLIC_API_URL: 'http://localhost:8000'
 }));
 
 vi.mock('$app/navigation', () => ({

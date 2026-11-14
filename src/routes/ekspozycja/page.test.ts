@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeAll, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import Page from './+page.svelte';
-import type { CurrencyExposureReport } from '$lib/types/exposure';
+import type { CurrencyExposureReport } from '#lib/types/exposure.ts';
 
 beforeAll(() => {
 	Object.defineProperty(window, 'matchMedia', {
@@ -25,10 +25,7 @@ vi.mock('echarts', () => ({
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 
-vi.mock('$app/stores', async () => {
-	const { readable } = await import('svelte/store');
-	return { page: readable({ url: new URL('http://localhost/ekspozycja') }) };
-});
+vi.mock('$app/state', () => ({ page: { url: new URL('http://localhost/ekspozycja') } }));
 
 const report = (over: Partial<CurrencyExposureReport> = {}): CurrencyExposureReport => ({
 	currencies: [

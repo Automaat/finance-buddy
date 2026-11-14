@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import { browser } from '$app/environment';
+	import { browser } from '$app/env';
 	import * as echarts from 'echarts';
 	import type { EChartsOption } from 'echarts';
-	import type { SalaryRecord } from '$lib/types/salaries';
-	import { type OwnerOption, ownerName } from '$lib/types/owners';
+	import type { SalaryRecord } from '#lib/types/salaries.ts';
+	import { type OwnerOption, ownerName } from '#lib/types/owners.ts';
 	import {
 		type OfferInput,
 		type OfferBreakdown,
@@ -13,8 +13,8 @@
 		ZUSTier,
 		calculateOffer,
 		findBreakEvenAmount
-	} from '$lib/utils/compensation';
-	import { formatPLN, formatNumber } from '$lib/utils/format';
+	} from '#lib/utils/compensation.ts';
+	import { formatPLN, formatNumber } from '#lib/utils/format.ts';
 
 	interface Props {
 		data: { latestSalaries: SalaryRecord[]; owners: OwnerOption[] };

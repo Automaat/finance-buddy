@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { formatPLN, formatSignedPLN } from '$lib/utils/format';
-	import { ownerName, type OwnerOption } from '$lib/types/owners';
+	import { formatPLN, formatSignedPLN } from '#lib/utils/format.ts';
+	import { ownerName, type OwnerOption } from '#lib/types/owners.ts';
 	import { Scale, AlertTriangle, CheckCircle2, ArrowUp, ArrowDown } from 'lucide-svelte';
 
 	interface DriftItem {

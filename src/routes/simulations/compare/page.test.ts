@@ -18,14 +18,12 @@ beforeAll(() => {
 	});
 });
 
-vi.mock('$env/dynamic/public', () => ({
-	env: {
-		PUBLIC_API_URL_BROWSER: 'http://localhost:8000',
-		PUBLIC_API_URL: 'http://localhost:8000'
-	}
+vi.mock('$app/env/public', () => ({
+	PUBLIC_API_URL_BROWSER: 'http://localhost:8000',
+	PUBLIC_API_URL: 'http://localhost:8000'
 }));
 
-vi.mock('$app/environment', () => ({ browser: true }));
+vi.mock('$app/env', () => ({ browser: true }));
 
 function scenarioFixture(id: number, name: string) {
 	return {

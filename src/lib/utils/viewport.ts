@@ -1,5 +1,5 @@
 import { readable, type Readable } from 'svelte/store';
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 
 function mediaQueryStore(query: string): Readable<boolean> {
 	return readable(false, (set) => {

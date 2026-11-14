@@ -3,13 +3,13 @@
 	import { goto } from '$app/navigation';
 	import * as echarts from 'echarts';
 	import type { ECElementEvent, EChartsOption } from 'echarts';
-	import { formatPLN, formatNumber, formatDate } from '$lib/utils/format';
-	import { isMobile, isTablet } from '$lib/utils/viewport';
-	import { chartPalette, chartValue, chartValueGradient } from '$lib/utils/theme';
-	import { ownerName, type OwnerOption } from '$lib/types/owners';
-	import { createChart } from '$lib/utils/charts/lifecycle';
-	import { buildWaterfallOption, buildWaterfallSteps } from '$lib/utils/charts/waterfall';
-	import { topNWithOther } from '$lib/utils/allocation';
+	import { formatPLN, formatNumber, formatDate } from '#lib/utils/format.ts';
+	import { isMobile, isTablet } from '#lib/utils/viewport.ts';
+	import { chartPalette, chartValue, chartValueGradient } from '#lib/utils/theme.ts';
+	import { ownerName, type OwnerOption } from '#lib/types/owners.ts';
+	import { createChart } from '#lib/utils/charts/lifecycle.ts';
+	import { buildWaterfallOption, buildWaterfallSteps } from '#lib/utils/charts/waterfall.ts';
+	import { topNWithOther } from '#lib/utils/allocation.ts';
 
 	interface NetWorthHistoryPoint {
 		date: string;

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { formatPLN, formatDate } from '$lib/utils/format';
-	import { daysLabel } from '$lib/utils/yearEnd';
+	import { formatPLN, formatDate } from '#lib/utils/format.ts';
+	import { daysLabel } from '#lib/utils/yearEnd.ts';
 	import { CalendarClock, Coins, ArrowDownToLine } from 'lucide-svelte';
 	import type {
 		MaturityLadderEvent,

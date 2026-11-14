@@ -1,6 +1,6 @@
 import type { BarSeriesOption, EChartsOption, LineSeriesOption } from 'echarts';
 import type { TopLevelFormatterParams } from 'echarts/types/dist/shared';
-import { chartPositive, chartNegative, chartValue } from '$lib/utils/theme';
+import { chartPositive, chartNegative, chartValue } from '#lib/utils/theme.ts';
 import { formatDate } from '../format';
 
 export interface NetWorthPoint {

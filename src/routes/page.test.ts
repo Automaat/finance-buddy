@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
 import { vi } from 'vitest';
 import { invalidateAll } from '$app/navigation';
 import Page from './+page.svelte';
-import { toast } from '$lib/stores/toast.svelte';
+import { toast } from '#lib/stores/toast.svelte.ts';
 
 // Mock window.matchMedia for media query tests
 beforeAll(() => {
@@ -23,11 +23,9 @@ beforeAll(() => {
 });
 
 // Mock SvelteKit env module
-vi.mock('$env/dynamic/public', () => ({
-	env: {
-		PUBLIC_API_URL_BROWSER: 'http://localhost:8000',
-		PUBLIC_API_URL: 'http://localhost:8000'
-	}
+vi.mock('$app/env/public', () => ({
+	PUBLIC_API_URL_BROWSER: 'http://localhost:8000',
+	PUBLIC_API_URL: 'http://localhost:8000'
 }));
 
 // Mock echarts to avoid canvas issues in tests
@@ -57,12 +55,9 @@ vi.mock('$app/navigation', () => ({
 	goto: vi.fn()
 }));
 
-vi.mock('$app/stores', async () => {
-	const { readable } = await import('svelte/store');
-	return {
-		page: readable({ url: new URL('http://localhost/') })
-	};
-});
+vi.mock('$app/state', () => ({
+	page: { url: new URL('http://localhost/') }
+}));
 
 const baseTileDeltas = {
 	net_worth: {

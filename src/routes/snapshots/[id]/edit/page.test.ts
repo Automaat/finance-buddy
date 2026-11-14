@@ -3,15 +3,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const browserState = { value: false };
 const envState: { PUBLIC_API_URL?: string; PUBLIC_API_URL_BROWSER?: string } = {};
 
-vi.mock('$app/environment', () => ({
+vi.mock('$app/env', () => ({
 	get browser() {
 		return browserState.value;
 	}
 }));
 
-vi.mock('$env/dynamic/public', () => ({
-	get env() {
-		return envState;
+vi.mock('$app/env/public', () => ({
+	get PUBLIC_API_URL() {
+		return envState.PUBLIC_API_URL;
+	},
+	get PUBLIC_API_URL_BROWSER() {
+		return envState.PUBLIC_API_URL_BROWSER;
 	}
 }));
 

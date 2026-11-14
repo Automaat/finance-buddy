@@ -1,8 +1,8 @@
 <script lang="ts">
-	import Modal from '$lib/components/Modal.svelte';
-	import { formatPLN } from '$lib/utils/format';
+	import Modal from '#lib/components/Modal.svelte';
+	import { formatPLN } from '#lib/utils/format.ts';
 	import { Pencil, Plus, Trash2 } from 'lucide-svelte';
-	import { resolveApiUrl } from '$lib/api';
+	import { resolveApiUrl } from '#lib/api.ts';
 	import { invalidateAll } from '$app/navigation';
 	import type { Asset } from './+page';
 	import type { PageData } from './$types';

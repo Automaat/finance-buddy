@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import MetricCard from '$lib/components/MetricCard.svelte';
-	import DateRangePicker from '$lib/components/DateRangePicker.svelte';
+	import MetricCard from '#lib/components/MetricCard.svelte';
+	import DateRangePicker from '#lib/components/DateRangePicker.svelte';
 	import { TrendingUp, CheckCircle2, Lightbulb } from 'lucide-svelte';
 	import {
 		buildAllocationChartOption,
@@ -9,16 +9,16 @@
 		buildInvestmentTrendChartOption,
 		buildWrapperTrendChartOption,
 		buildYearlyRoiChartOption
-	} from '$lib/utils/charts/metryki';
-	import { buildCumulativeInflationChartOption } from '$lib/utils/charts/inflation';
-	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
-	import { applyMobileChartTweaks } from '$lib/utils/charts/responsive';
-	import { isMobile } from '$lib/utils/viewport';
-	import { ownerName, type OwnerOption } from '$lib/types/owners';
-	import { formatDate } from '$lib/utils/format';
-	import ContributionAdjustedReturns from '$lib/components/ContributionAdjustedReturns.svelte';
-	import CurrencyExposureWidget from '$lib/components/CurrencyExposureWidget.svelte';
-	import RealYieldsTable from '$lib/components/RealYieldsTable.svelte';
+	} from '#lib/utils/charts/metryki.ts';
+	import { buildCumulativeInflationChartOption } from '#lib/utils/charts/inflation.ts';
+	import { createChart, type ChartHandle } from '#lib/utils/charts/lifecycle.ts';
+	import { applyMobileChartTweaks } from '#lib/utils/charts/responsive.ts';
+	import { isMobile } from '#lib/utils/viewport.ts';
+	import { ownerName, type OwnerOption } from '#lib/types/owners.ts';
+	import { formatDate } from '#lib/utils/format.ts';
+	import ContributionAdjustedReturns from '#lib/components/ContributionAdjustedReturns.svelte';
+	import CurrencyExposureWidget from '#lib/components/CurrencyExposureWidget.svelte';
+	import RealYieldsTable from '#lib/components/RealYieldsTable.svelte';
 
 	import type { PageData } from './$types';
 

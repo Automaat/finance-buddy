@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
-	import Modal from '$lib/components/Modal.svelte';
-	import Skeleton from '$lib/components/Skeleton.svelte';
-	import DashboardCharts from '$lib/components/DashboardCharts.svelte';
-	import AllocationDriftWidget from '$lib/components/AllocationDriftWidget.svelte';
-	import DateRangePicker from '$lib/components/DateRangePicker.svelte';
-	import DeltaBadge from '$lib/components/DeltaBadge.svelte';
-	import MetricCard from '$lib/components/MetricCard.svelte';
-	import { formatPLN } from '$lib/utils/format';
+	import Modal from '#lib/components/Modal.svelte';
+	import Skeleton from '#lib/components/Skeleton.svelte';
+	import DashboardCharts from '#lib/components/DashboardCharts.svelte';
+	import AllocationDriftWidget from '#lib/components/AllocationDriftWidget.svelte';
+	import DateRangePicker from '#lib/components/DateRangePicker.svelte';
+	import DeltaBadge from '#lib/components/DeltaBadge.svelte';
+	import MetricCard from '#lib/components/MetricCard.svelte';
+	import { formatPLN } from '#lib/utils/format.ts';
 	import {
 		Wallet,
 		TrendingUp,
@@ -19,16 +19,16 @@
 		Coins,
 		Flame
 	} from 'lucide-svelte';
-	import { resolveApiUrl } from '$lib/api';
+	import { resolveApiUrl } from '#lib/api.ts';
 	import { invalidateAll } from '$app/navigation';
-	import { toast } from '$lib/stores/toast.svelte';
-	import { ownerName, type OwnerOption } from '$lib/types/owners';
+	import { toast } from '#lib/stores/toast.svelte.ts';
+	import { ownerName, type OwnerOption } from '#lib/types/owners.ts';
 	import {
 		countdownTier,
 		daysLabel,
 		daysUntilYearEnd,
 		type CountdownTier
-	} from '$lib/utils/yearEnd';
+	} from '#lib/utils/yearEnd.ts';
 	import type { PageData } from './$types';
 
 	interface Props {

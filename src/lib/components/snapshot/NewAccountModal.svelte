@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { OwnerOption } from '$lib/types/owners';
+	import type { OwnerOption } from '#lib/types/owners.ts';
 
 	type NewAccountSection = 'financial' | 'retirement' | 'investment' | 'majatek' | 'liabilities';
 

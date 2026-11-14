@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { Globe } from 'lucide-svelte';
-	import MetricCard from '$lib/components/MetricCard.svelte';
-	import { formatPLN, formatDate } from '$lib/utils/format';
-	import { chartPalette } from '$lib/utils/theme';
-	import { createChart, type ChartHandle } from '$lib/utils/charts/lifecycle';
+	import MetricCard from '#lib/components/MetricCard.svelte';
+	import { formatPLN, formatDate } from '#lib/utils/format.ts';
+	import { chartPalette } from '#lib/utils/theme.ts';
+	import { createChart, type ChartHandle } from '#lib/utils/charts/lifecycle.ts';
 	import type { PageData } from './$types';
 
 	interface Props {
@@ -67,7 +67,7 @@
 
 	function applyTarget(event: SubmitEvent) {
 		event.preventDefault();
-		const params = new URLSearchParams($page.url.searchParams);
+		const params = new URLSearchParams(page.url.search);
 		if (targetInput != null && Number.isFinite(targetInput)) {
 			params.set('target_pln_pct', String(targetInput));
 			params.set('tolerance', String(toleranceInput ?? 5));
@@ -76,12 +76,12 @@
 			params.delete('tolerance');
 		}
 		const qs = params.toString();
-		void goto(qs ? `/ekspozycja?${qs}` : '/ekspozycja', { keepFocus: true });
+		void goto(qs ? `/ekspozycja?${qs}` : '/ekspozycja', { reset: false });
 	}
 
 	function clearTarget() {
 		targetInput = null;
-		void goto('/ekspozycja', { keepFocus: true });
+		void goto('/ekspozycja', { reset: false });
 	}
 </script>
 

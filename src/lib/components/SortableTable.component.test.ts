@@ -23,40 +23,25 @@ interface Row {
 	amount: number;
 }
 
-interface PageState {
-	url: URL;
-	state: Record<string, unknown>;
-}
-
-const { pageStore, replaceStateSpy } = vi.hoisted(() => {
-	let value: PageState = { url: new URL('http://localhost/test'), state: {} };
-	const subs = new Set<(v: PageState) => void>();
-	const store = {
-		subscribe(fn: (v: PageState) => void): () => void {
-			subs.add(fn);
-			fn(value);
-			return () => subs.delete(fn);
-		},
-		set(next: PageState): void {
-			value = next;
-			subs.forEach((fn) => fn(value));
-		}
+const { page, gotoSpy } = await vi.hoisted(async () => {
+	const { SvelteURL } = await import('svelte/reactivity');
+	const url = 'http://localhost/test';
+	return {
+		page: { url: new SvelteURL(url), shallow: { url: new SvelteURL(url) }, state: {} },
+		gotoSpy: vi.fn()
 	};
-	const spy = vi.fn();
-	return { pageStore: store, replaceStateSpy: spy };
 });
 
 vi.mock('$app/navigation', () => ({
-	replaceState: (url: URL | string, state: unknown) => {
+	goto: (url: URL | string, opts: unknown) => {
 		const nextUrl = typeof url === 'string' ? new URL(url) : url;
-		replaceStateSpy(nextUrl, state);
-		pageStore.set({ url: nextUrl, state: (state ?? {}) as Record<string, unknown> });
+		gotoSpy(nextUrl, opts);
+		// Shallow routing in SvelteKit 3 updates page.shallow, not page.url.
+		page.shallow.url.href = nextUrl.href;
 	}
 }));
 
-vi.mock('$app/stores', () => ({
-	page: pageStore
-}));
+vi.mock('$app/state', () => ({ page }));
 
 const columns: SortableColumn<Row>[] = [
 	{ key: 'name', label: 'Nazwa', sortable: true, accessor: (r) => r.name },
@@ -78,10 +63,8 @@ const rowSnippet = createRawSnippet<[Row]>((getRow) => ({
 }));
 
 function setUrl(search: string) {
-	pageStore.set({
-		url: new URL(`http://localhost/test${search}`),
-		state: {}
-	});
+	page.url.href = `http://localhost/test${search}`;
+	page.shallow.url.href = page.url.href;
 }
 
 describe('SortableTable component', () => {
@@ -148,9 +131,9 @@ describe('SortableTable component', () => {
 		expect(rows[0].getAttribute('data-testid')).toBe('row-2'); // A
 	});
 
-	it('cycles sort state via replaceState on header click', async () => {
+	it('cycles sort state via shallow goto on header click', async () => {
 		setUrl('');
-		replaceStateSpy.mockClear();
+		gotoSpy.mockClear();
 		const { container } = render(SortableTable<Row>, {
 			props: { columns, items, row: rowSnippet }
 		});
@@ -158,14 +141,14 @@ describe('SortableTable component', () => {
 		expect(nameButton).toBeTruthy();
 
 		await fireEvent.click(nameButton);
-		expect(replaceStateSpy).toHaveBeenCalledTimes(1);
-		expect((replaceStateSpy.mock.calls[0][0] as URL).searchParams.get('sort')).toBe('name:asc');
+		expect(gotoSpy).toHaveBeenCalledTimes(1);
+		expect((gotoSpy.mock.calls[0][0] as URL).searchParams.get('sort')).toBe('name:asc');
 
 		await fireEvent.click(nameButton);
-		expect((replaceStateSpy.mock.calls[1][0] as URL).searchParams.get('sort')).toBe('name:desc');
+		expect((gotoSpy.mock.calls[1][0] as URL).searchParams.get('sort')).toBe('name:desc');
 
 		await fireEvent.click(nameButton);
-		expect((replaceStateSpy.mock.calls[2][0] as URL).searchParams.get('sort')).toBeNull();
+		expect((gotoSpy.mock.calls[2][0] as URL).searchParams.get('sort')).toBeNull();
 	});
 
 	it('sets aria-sort on sorted column', () => {

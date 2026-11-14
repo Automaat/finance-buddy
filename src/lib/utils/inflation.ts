@@ -1,4 +1,4 @@
-import type { CpiPoint, CpiSeries } from '$lib/types/cpi';
+import type { CpiPoint, CpiSeries } from '#lib/types/cpi.ts';
 
 /**
  * Pre-built lookup over a CPI series. Build once with {@link buildCpiLookup}

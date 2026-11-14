@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
-import { resolveApiUrl } from '$lib/api';
+import { resolveApiUrl } from '#lib/api.ts';
 import type { PageLoad } from './$types';
-import type { OwnerOption } from '$lib/types/owners';
+import type { OwnerOption } from '#lib/types/owners.ts';
 
 export const load: PageLoad = async ({ fetch }) => {
 	try {

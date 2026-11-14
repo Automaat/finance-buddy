@@ -1,6 +1,6 @@
 <script lang="ts">
-	import Modal from '$lib/components/Modal.svelte';
-	import type { OwnerOption } from '$lib/types/owners';
+	import Modal from '#lib/components/Modal.svelte';
+	import type { OwnerOption } from '#lib/types/owners.ts';
 
 	export interface SalaryFormData {
 		date: string;

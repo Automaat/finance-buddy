@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { baseChartOption, chartTooltip, axisLine, splitLine } from './chartBase';
-import { chartInk, chartAxisLine, chartSplitLine, chartTooltipBg } from '$lib/utils/theme';
+import { chartInk, chartAxisLine, chartSplitLine, chartTooltipBg } from '#lib/utils/theme.ts';
 
 describe('chartBase', () => {
 	it('baseChartOption sets a transparent background, title and tooltip', () => {

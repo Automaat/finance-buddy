@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { shortcutsUI } from '$lib/stores/shortcuts.svelte';
-	import { GOTO_ROUTES, isModifierKeyPressed, isTypingTarget } from '$lib/utils/shortcuts';
+	import { shortcutsUI } from '#lib/stores/shortcuts.svelte.ts';
+	import { GOTO_ROUTES, isModifierKeyPressed, isTypingTarget } from '#lib/utils/shortcuts.ts';
 	import ShortcutHelp from './ShortcutHelp.svelte';
 	import CommandPalette from './CommandPalette.svelte';
 

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { formatPercent, formatSignedPercent } from '$lib/utils/format';
-	import { categoryLabel } from '$lib/utils/categories';
+	import { formatPercent, formatSignedPercent } from '#lib/utils/format.ts';
+	import { categoryLabel } from '#lib/utils/categories.ts';
 
 	// Minimal shape of the /api/accounts rows this table needs. real_yield_pct
 	// is populated server-side only for interest-bearing accounts (post-Belka,

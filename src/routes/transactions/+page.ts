@@ -1,8 +1,8 @@
 import { error } from '@sveltejs/kit';
-import { resolveApiUrl } from '$lib/api';
+import { resolveApiUrl } from '#lib/api.ts';
 import type { PageLoad } from './$types';
-import type { Transaction, TransactionsData } from '$lib/types/transactions';
-import { INVESTMENT_CATEGORIES } from '$lib/constants';
+import type { Transaction, TransactionsData } from '#lib/types/transactions.ts';
+import { INVESTMENT_CATEGORIES } from '#lib/constants.ts';
 
 export type { Transaction, TransactionsData };
 

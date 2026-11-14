@@ -19,14 +19,12 @@ beforeAll(() => {
 	});
 });
 
-vi.mock('$env/dynamic/public', () => ({
-	env: {
-		PUBLIC_API_URL_BROWSER: 'http://localhost:8000',
-		PUBLIC_API_URL: 'http://localhost:8000'
-	}
+vi.mock('$app/env/public', () => ({
+	PUBLIC_API_URL_BROWSER: 'http://localhost:8000',
+	PUBLIC_API_URL: 'http://localhost:8000'
 }));
 
-vi.mock('$app/environment', () => ({ browser: false }));
+vi.mock('$app/env', () => ({ browser: false }));
 
 vi.mock('echarts', () => ({
 	init: vi.fn(() => ({ setOption: vi.fn(), resize: vi.fn(), dispose: vi.fn() }))
@@ -37,12 +35,9 @@ vi.mock('$app/navigation', () => ({
 	invalidateAll: vi.fn()
 }));
 
-vi.mock('$app/stores', async () => {
-	const { readable } = await import('svelte/store');
-	return {
-		page: readable({ url: new URL('http://localhost/metryki') })
-	};
-});
+vi.mock('$app/state', () => ({
+	page: { url: new URL('http://localhost/metryki') }
+}));
 
 const metricCards = {
 	property_sqm: 0,

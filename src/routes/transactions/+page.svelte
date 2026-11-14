@@ -1,16 +1,16 @@
 <script lang="ts">
-	import Modal from '$lib/components/Modal.svelte';
-	import SortableTable, { type SortableColumn } from '$lib/components/SortableTable.svelte';
-	import { formatPLN, formatDate } from '$lib/utils/format';
+	import Modal from '#lib/components/Modal.svelte';
+	import SortableTable, { type SortableColumn } from '#lib/components/SortableTable.svelte';
+	import { formatPLN, formatDate } from '#lib/utils/format.ts';
 	import { Plus, Landmark, Search, BarChart3, Trash2 } from 'lucide-svelte';
-	import { api } from '$lib/apiClient';
+	import { api } from '#lib/apiClient.ts';
 	import { goto, invalidateAll } from '$app/navigation';
-	import { toast } from '$lib/stores/toast.svelte';
-	import { confirm } from '$lib/stores/confirm.svelte';
-	import { CrudForm } from '$lib/stores/crudForm.svelte';
-	import { ownerName, type OwnerOption } from '$lib/types/owners';
+	import { toast } from '#lib/stores/toast.svelte.ts';
+	import { confirm } from '#lib/stores/confirm.svelte.ts';
+	import { CrudForm } from '#lib/stores/crudForm.svelte.ts';
+	import { ownerName, type OwnerOption } from '#lib/types/owners.ts';
 	import { untrack } from 'svelte';
-	import type { Transaction } from '$lib/types/transactions';
+	import type { Transaction } from '#lib/types/transactions.ts';
 	import type { PageData } from './$types';
 
 	interface Props {

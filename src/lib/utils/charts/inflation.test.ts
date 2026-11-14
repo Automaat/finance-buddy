@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildCumulativeInflationChartOption } from './inflation';
-import type { CpiSeries } from '$lib/types/cpi';
+import type { CpiSeries } from '#lib/types/cpi.ts';
 
 const series: CpiSeries = {
 	points: [

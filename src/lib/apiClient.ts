@@ -1,4 +1,4 @@
-import { resolveApiUrl } from '$lib/api';
+import { resolveApiUrl } from '#lib/api.ts';
 
 // ApiError carries the HTTP status plus a human message extracted from the
 // backend's error body, so callers can branch on `status` (e.g. 404 vs 422)
