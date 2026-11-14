@@ -162,8 +162,7 @@ func (h *Handler) writeStoreError(w http.ResponseWriter, err error, id int, date
 		httputil.WriteDetailError(w, http.StatusBadRequest,
 			"Duplicate account IDs in snapshot values")
 	default:
-		var mre *MissingReferencesError
-		if errors.As(err, &mre) {
+		if mre, ok := errors.AsType[*MissingReferencesError](err); ok {
 			if len(mre.MissingAssets) > 0 {
 				httputil.WriteDetailError(w, http.StatusNotFound,
 					fmt.Sprintf("Assets not found: %s", setLiteral(mre.MissingAssets)))
